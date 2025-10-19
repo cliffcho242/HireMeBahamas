@@ -107,6 +107,120 @@ DB_PATH = Path(__file__).parent / "hiremebahamas.db"
 print(f"Database path: {DB_PATH}")
 print(f"Database exists: {DB_PATH.exists()}")
 
+def init_database():
+    """Initialize database with all required tables"""
+    if not DB_PATH.exists():
+        print("📦 Database not found - creating new database...")
+        conn = sqlite3.connect(str(DB_PATH))
+        cursor = conn.cursor()
+        
+        # Create users table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            first_name TEXT,
+            last_name TEXT,
+            user_type TEXT DEFAULT 'user',
+            location TEXT,
+            phone TEXT,
+            bio TEXT,
+            avatar_url TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_login TIMESTAMP,
+            is_active BOOLEAN DEFAULT 1,
+            is_available_for_hire BOOLEAN DEFAULT 0,
+            trade TEXT DEFAULT ''
+        )''')
+        
+        # Create posts table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            image_url TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )''')
+        
+        # Create post_likes table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS post_likes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            post_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+            FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+            UNIQUE(user_id, post_id)
+        )''')
+        
+        # Create friendships table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS friendships (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id INTEGER NOT NULL,
+            receiver_id INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (sender_id) REFERENCES users (id),
+            FOREIGN KEY (receiver_id) REFERENCES users (id),
+            UNIQUE(sender_id, receiver_id)
+        )''')
+        
+        # Create friend_requests table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS friend_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id INTEGER NOT NULL,
+            receiver_id INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (sender_id) REFERENCES users (id),
+            FOREIGN KEY (receiver_id) REFERENCES users (id),
+            UNIQUE(sender_id, receiver_id)
+        )''')
+        
+        # Create stories table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS stories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            image_url TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            video_url TEXT DEFAULT '',
+            image_path TEXT DEFAULT '',
+            video_path TEXT DEFAULT '',
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )''')
+        
+        # Create default admin user
+        print("👤 Creating default admin user...")
+        password_hash = bcrypt.hashpw('AdminPass123!'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        cursor.execute('''INSERT INTO users 
+            (email, password_hash, first_name, last_name, user_type, location, phone, bio, created_at, last_login)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            'admin@hiremebahamas.com',
+            password_hash,
+            'Admin',
+            'User',
+            'admin',
+            'Nassau, Bahamas',
+            '+1-242-555-0100',
+            'HireMeBahamas Platform Administrator',
+            datetime.now(timezone.utc),
+            datetime.now(timezone.utc)
+        ))
+        
+        conn.commit()
+        conn.close()
+        print("✅ Database initialized successfully!")
+        print("✅ Admin user created: admin@hiremebahamas.com")
+    else:
+        print("✅ Database already exists")
+
+# Initialize database on startup
+init_database()
+
 @app.route('/health')
 def health():
     """Enhanced health check with system monitoring"""
