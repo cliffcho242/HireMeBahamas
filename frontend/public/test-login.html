@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        h1 { text-align: center; color: #333; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover { background: #5a67d8; }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success { background: #d1fae5; color: #065f46; display: block; }
+        .error { background: #fee2e2; color: #991b1b; display: block; }
+        .log {
+            background: #f3f4f6;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔐 Simple Login Test</h1>
+        
+        <input type="email" id="email" placeholder="Email" value="admin@hiremebahamas.com">
+        <input type="password" id="password" placeholder="Password" value="admin123">
+        <button onclick="testLogin()">Login</button>
+        
+        <div id="result" class="result"></div>
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'blue';
+            log.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+            console.log(message);
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            log.innerHTML = '';
+            resultDiv.className = 'result';
+            resultDiv.style.display = 'none';
+            
+            addLog('Starting login test...');
+            addLog(`Email: ${email}`);
+            addLog(`API URL: /api/auth/login`);
+            
+            try {
+                addLog('Sending POST request...');
+                
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                addLog(`Response status: ${response.status}`);
+                addLog(`Response OK: ${response.ok}`);
+                
+                const data = await response.json();
+                addLog(`Response received`, 'success');
+                
+                if (response.ok && data.token) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <strong>✓ Login Successful!</strong><br>
+                        Token: ${data.token.substring(0, 20)}...<br>
+                        User: ${data.user.email}<br>
+                        Name: ${data.user.first_name} ${data.user.last_name}
+                    `;
+                    addLog('Login successful!', 'success');
+                    addLog(`Token length: ${data.token.length}`, 'success');
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `<strong>✗ Login Failed</strong><br>${JSON.stringify(data)}`;
+                    addLog('Login failed', 'error');
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <strong>✗ Network Error</strong><br>
+                    ${error.message}
+                `;
+                addLog(`Network error: ${error.message}`, 'error');
+                addLog(`Error details: ${error.stack}`, 'error');
+            }
+        }
+
+        // Test on page load
+        window.addEventListener('load', () => {
+            addLog('Page loaded successfully');
+            addLog(`Current URL: ${window.location.href}`);
+            addLog('Ready to test login');
+        });
+    </script>
+</body>
+</html>

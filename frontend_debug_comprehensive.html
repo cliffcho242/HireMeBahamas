@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Login Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; width: 200px; }
+        .log { height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Frontend Login Debug Tool</h1>
+        
+        <div class="test-section info">
+            <h3>Environment Check</h3>
+            <p>Frontend URL: <span id="frontend-url"></span></p>
+            <p>Backend URL: <span id="backend-url"></span></p>
+            <button onclick="checkEnvironment()">Check Environment</button>
+        </div>
+
+        <div class="test-section">
+            <h3>Direct API Test</h3>
+            <button onclick="testBackendDirect()">Test Backend Direct</button>
+            <button onclick="testBackendCORS()">Test CORS</button>
+            <div id="direct-test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Frontend API Test</h3>
+            <input type="email" id="test-email" value="admin@hiremebahamas.com" placeholder="Email">
+            <input type="password" id="test-password" value="admin123" placeholder="Password">
+            <br>
+            <button onclick="testFrontendAPI()">Test via Frontend API</button>
+            <div id="frontend-test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Network Inspector</h3>
+            <button onclick="inspectNetwork()">Inspect Network Requests</button>
+            <div id="network-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Console Log</h3>
+            <div id="console-log" class="log"></div>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <script>
+        const log = document.getElementById('console-log');
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logEntry.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            log.appendChild(logEntry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function clearLog() {
+            log.innerHTML = '';
+        }
+
+        function checkEnvironment() {
+            const frontendUrl = window.location.origin;
+            const backendUrl = import.meta?.env?.VITE_API_URL || 'http://127.0.0.1:8008';
+            
+            document.getElementById('frontend-url').textContent = frontendUrl;
+            document.getElementById('backend-url').textContent = backendUrl;
+            
+            addLog(`Frontend running on: ${frontendUrl}`, 'info');
+            addLog(`Backend configured at: ${backendUrl}`, 'info');
+        }
+
+        async function testBackendDirect() {
+            addLog('Testing backend directly...', 'info');
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8008/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addLog('✅ Backend health check successful', 'success');
+                    addLog(`Response: ${JSON.stringify(data)}`, 'info');
+                    document.getElementById('direct-test-result').innerHTML = '<div class="success">Backend is healthy!</div>';
+                } else {
+                    addLog('❌ Backend health check failed', 'error');
+                    document.getElementById('direct-test-result').innerHTML = '<div class="error">Backend health check failed</div>';
+                }
+            } catch (error) {
+                addLog(`❌ Backend connection error: ${error.message}`, 'error');
+                document.getElementById('direct-test-result').innerHTML = '<div class="error">Cannot connect to backend</div>';
+            }
+        }
+
+        async function testBackendCORS() {
+            addLog('Testing CORS...', 'info');
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8008/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@hiremebahamas.com',
+                        password: 'admin123'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addLog('✅ CORS test successful - login worked!', 'success');
+                    addLog(`Token received: ${data.token ? 'Yes' : 'No'}`, 'info');
+                } else {
+                    addLog(`❌ CORS test failed - Status: ${response.status}`, 'error');
+                    addLog(`Error: ${data.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                addLog(`❌ CORS error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testFrontendAPI() {
+            addLog('Testing via frontend API service...', 'info');
+            
+            const email = document.getElementById('test-email').value;
+            const password = document.getElementById('test-password').value;
+            
+            try {
+                // Simulate the frontend API call
+                const apiUrl = 'http://127.0.0.1:8008/api/auth/login';
+                
+                addLog(`Making request to: ${apiUrl}`, 'info');
+                addLog(`Credentials: ${email} / ${password}`, 'info');
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addLog('✅ Frontend API test successful!', 'success');
+                    addLog(`User: ${data.user?.email}`, 'info');
+                    document.getElementById('frontend-test-result').innerHTML = '<div class="success">Login successful!</div>';
+                } else {
+                    addLog(`❌ Frontend API test failed - Status: ${response.status}`, 'error');
+                    addLog(`Error: ${data.error || JSON.stringify(data)}`, 'error');
+                    document.getElementById('frontend-test-result').innerHTML = '<div class="error">Login failed</div>';
+                }
+            } catch (error) {
+                addLog(`❌ Frontend API error: ${error.message}`, 'error');
+                document.getElementById('frontend-test-result').innerHTML = '<div class="error">API call failed</div>';
+            }
+        }
+
+        function inspectNetwork() {
+            addLog('Network inspection - check browser DevTools Network tab', 'info');
+            addLog('Make sure to have DevTools open before clicking login', 'info');
+            document.getElementById('network-result').innerHTML = '<div class="info">Open DevTools > Network tab and watch for requests</div>';
+        }
+
+        // Initialize
+        checkEnvironment();
+        addLog('Debug tool initialized', 'info');
+        
+        // Capture console errors
+        window.addEventListener('error', (e) => {
+            addLog(`JavaScript Error: ${e.error?.message || e.message}`, 'error');
+        });
+
+        window.addEventListener('unhandledrejection', (e) => {
+            addLog(`Unhandled Promise Rejection: ${e.reason}`, 'error');
+        });
+    </script>
+</body>
+</html>

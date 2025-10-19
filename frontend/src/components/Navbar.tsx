@@ -1,0 +1,279 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Bars3Icon,
+  XMarkIcon,
+  BellIcon,
+  ChatBubbleLeftRightIcon,
+  UserIcon,
+  HomeIcon,
+  BriefcaseIcon,
+  PlusIcon,
+  Cog6ToothIcon
+} from '@heroicons/react/24/outline';
+import { HomeIcon as HomeIconSolid } from '@heroicons/react/24/solid';
+import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../contexts/SocketContext';
+
+const Navbar: React.FC = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
+  const { isConnected } = useSocket();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    setIsProfileMenuOpen(false);
+  };
+
+  return (
+    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          {/* Logo */}
+          <div className="flex items-center">
+            <Link to="/" className="flex-shrink-0 flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">HB</span>
+              </div>
+              <span className="text-xl font-bold text-gray-900">HireMeBahamas</span>
+            </Link>
+          </div>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-1">
+            <Link
+              to="/"
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors text-gray-700 hover:text-blue-600"
+            >
+              <HomeIconSolid className="w-5 h-5 text-blue-600" />
+              <span className="font-medium">Home</span>
+            </Link>
+
+            <Link
+              to="/hireme"
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors text-gray-700 hover:text-blue-600"
+            >
+              <UserIcon className="w-5 h-5" />
+              <span>HireMe</span>
+            </Link>
+
+            <Link
+              to="/jobs"
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors text-gray-700 hover:text-blue-600"
+            >
+              <BriefcaseIcon className="w-5 h-5" />
+              <span>Jobs</span>
+            </Link>
+
+            <Link
+              to="/messages"
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors text-gray-700 hover:text-blue-600 relative"
+            >
+              <ChatBubbleLeftRightIcon className="w-5 h-5" />
+              <span>Messages</span>
+              {isConnected && (
+                <span className="absolute -top-1 -right-1 h-2 w-2 bg-green-400 rounded-full"></span>
+              )}
+            </Link>
+
+            {isAuthenticated ? (
+              <>
+                {/* Notifications */}
+                <div className="relative">
+                  <button className="p-2 text-gray-600 hover:text-blue-600 rounded-xl hover:bg-gray-50 transition-colors">
+                    <BellIcon className="h-6 w-6" />
+                  </button>
+                </div>
+
+                {/* Profile Dropdown */}
+                <div className="relative ml-2">
+                  <button
+                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                    className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    {user?.profileImage ? (
+                      <img
+                        src={user.profileImage}
+                        alt="Profile"
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm">
+                          {user?.first_name?.[0]}{user?.last_name?.[0]}
+                        </span>
+                      </div>
+                    )}
+                  </button>
+
+                  {isProfileMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg py-2 z-50 border border-gray-200">
+                      <div className="px-4 py-3 border-b border-gray-200">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {user?.first_name} {user?.last_name}
+                        </p>
+                        <p className="text-sm text-blue-600 font-medium">
+                          @{user?.username || user?.email?.split('@')[0] || `${user?.first_name?.toLowerCase()}${user?.last_name?.toLowerCase()}`}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {user?.occupation || user?.company_name || user?.user_type?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                        </p>
+                      </div>
+                      <Link
+                        to="/profile"
+                        className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        <UserIcon className="w-5 h-5" />
+                        <span>Your Profile</span>
+                      </Link>
+                      <Link
+                        to="/dashboard"
+                        className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        <Cog6ToothIcon className="w-5 h-5" />
+                        <span>Settings</span>
+                      </Link>
+                      {user?.user_type === 'employer' && (
+                        <Link
+                          to="/post-job"
+                          className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                        >
+                          <PlusIcon className="w-5 h-5" />
+                          <span>Post Job</span>
+                        </Link>
+                      )}
+                      <div className="border-t border-gray-200 my-1"></div>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center space-x-3 w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <span>Sign out</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center space-x-4 ml-4">
+                <Link
+                  to="/login"
+                  className="text-gray-700 hover:text-blue-600 px-4 py-2 rounded-xl font-medium transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile menu button */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+            >
+              {isMenuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      {isMenuOpen && (
+        <div className="md:hidden">
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-200">
+            <Link
+              to="/"
+              className="flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <HomeIcon className="w-5 h-5" />
+              <span>Home</span>
+            </Link>
+            <Link
+              to="/jobs"
+              className="flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <BriefcaseIcon className="w-5 h-5" />
+              <span>Jobs</span>
+            </Link>
+            <Link
+              to="/messages"
+              className="flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <ChatBubbleLeftRightIcon className="w-5 h-5" />
+              <span>Messages</span>
+            </Link>
+
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/profile"
+                  className="flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <UserIcon className="w-5 h-5" />
+                  <span>Profile</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center space-x-3 w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                >
+                  <span>Sign out</span>
+                </button>
+              </>
+            ) : (
+              <div className="pt-4 pb-3 border-t border-gray-200">
+                <div className="flex items-center px-5">
+                  <div className="flex-shrink-0">
+                    <div className="h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center">
+                      <UserIcon className="h-6 w-6 text-gray-600" />
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <div className="text-base font-medium text-gray-800">Join HireMeBahamas</div>
+                    <div className="text-sm font-medium text-gray-500">Connect and discover opportunities</div>
+                  </div>
+                </div>
+                <div className="mt-3 px-2 space-y-1">
+                  <Link
+                    to="/register"
+                    className="block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white text-center hover:bg-blue-700"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-blue-600 text-center hover:text-blue-700"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+};
+
+export default Navbar;

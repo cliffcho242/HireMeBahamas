@@ -1,0 +1,379 @@
+import axios from 'axios';
+import { User } from '../types/user';
+import { Job } from '../types/job';
+
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://127.0.0.1:9999';
+
+// Create axios instance with retry logic
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 30000, // 30 seconds timeout
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: false,
+});
+
+// Retry configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+
+// Add auth token to requests
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  
+  // Add retry count
+  config.headers['X-Retry-Count'] = config.headers['X-Retry-Count'] || 0;
+  
+  console.log('API Request:', config.method?.toUpperCase(), config.url);
+  return config;
+});
+
+// Handle auth errors with automatic retry
+api.interceptors.response.use(
+  (response) => {
+    console.log('API Response:', response.config.url, response.status);
+    return response;
+  },
+  async (error) => {
+    const config = error.config;
+    
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data
+    });
+    
+    // Retry logic for network errors
+    if (
+      error.code === 'ECONNABORTED' ||
+      error.code === 'ERR_NETWORK' ||
+      error.message.includes('Network Error') ||
+      error.message.includes('timeout')
+    ) {
+      const retryCount = parseInt(config.headers['X-Retry-Count'] || '0');
+      
+      if (retryCount < MAX_RETRIES) {
+        config.headers['X-Retry-Count'] = retryCount + 1;
+        console.log(`Retrying request (${retryCount + 1}/${MAX_RETRIES})...`);
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+        
+        return api(config);
+      }
+      
+      console.error('Max retries reached. Network error persists.');
+    }
+    
+    // Handle auth errors
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+// Auth API
+export const authAPI = {
+  login: async (credentials: { email: string; password: string }) => {
+    const response = await api.post('/api/auth/login', credentials);
+    return response.data;
+  },
+
+  register: async (userData: {
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    user_type: 'freelancer' | 'client' | 'employer' | 'recruiter';
+    location: string;
+    phone?: string;
+  }) => {
+    const response = await api.post('/api/auth/register', userData);
+    return response.data;
+  },
+
+  getProfile: async (): Promise<User> => {
+    const response = await api.get('/api/auth/profile');
+    return response.data;
+  },
+
+  updateProfile: async (data: Partial<User>): Promise<User> => {
+    const response = await api.put('/api/auth/profile', data);
+    return response.data;
+  },
+
+  changePassword: async (data: {
+    current_password: string;
+    new_password: string;
+  }) => {
+    const response = await api.put('/api/auth/change-password', data);
+    return response.data;
+  },
+};
+
+// Jobs API
+export const jobsAPI = {
+  getJobs: async (params?: {
+    skip?: number;
+    limit?: number;
+    category?: string;
+    location?: string;
+    is_remote?: boolean;
+    budget_min?: number;
+    budget_max?: number;
+    search?: string;
+  }) => {
+    const response = await api.get('/api/jobs', { params });
+    return response.data;
+  },
+
+  getJob: async (id: string): Promise<Job> => {
+    const response = await api.get(`/api/jobs/${id}`);
+    return response.data;
+  },
+
+  createJob: async (jobData: {
+    title: string;
+    description: string;
+    category: string;
+    budget: number;
+    budget_type: 'fixed' | 'hourly';
+    location: string;
+    is_remote: boolean;
+    skills?: string[];
+  }) => {
+    const response = await api.post('/api/jobs', jobData);
+    return response.data;
+  },
+
+  updateJob: async (id: string, data: Partial<Job>) => {
+    const response = await api.put(`/api/jobs/${id}`, data);
+    return response.data;
+  },
+
+  deleteJob: async (id: string) => {
+    const response = await api.delete(`/api/jobs/${id}`);
+    return response.data;
+  },
+
+  applyToJob: async (
+    id: string,
+    applicationData: {
+      cover_letter: string;
+      proposed_budget: number;
+    }
+  ) => {
+    const response = await api.post(`/api/jobs/${id}/apply`, applicationData);
+    return response.data;
+  },
+
+  getJobApplications: async (id: string) => {
+    const response = await api.get(`/api/jobs/${id}/applications`);
+    return response.data;
+  },
+
+  getMyPostedJobs: async () => {
+    const response = await api.get('/api/jobs/my/posted');
+    return response.data;
+  },
+
+  getMyApplications: async () => {
+    const response = await api.get('/api/jobs/my/applications');
+    return response.data;
+  },
+};
+
+// Messages API
+export const messagesAPI = {
+  getConversations: async () => {
+    const response = await api.get('/api/messages/conversations');
+    return response.data;
+  },
+
+  createConversation: async (participantId: string) => {
+    const response = await api.post('/api/messages/conversations', {
+      participant_id: participantId,
+    });
+    return response.data;
+  },
+
+  getConversationMessages: async (
+    conversationId: string,
+    params?: { skip?: number; limit?: number }
+  ) => {
+    const response = await api.get(
+      `/api/messages/conversations/${conversationId}/messages`,
+      { params }
+    );
+    return response.data;
+  },
+
+  sendMessage: async (conversationId: string, content: string) => {
+    const response = await api.post(
+      `/api/messages/conversations/${conversationId}/messages`,
+      { content }
+    );
+    return response.data;
+  },
+
+  markMessageRead: async (messageId: string) => {
+    const response = await api.put(`/api/messages/messages/${messageId}/read`);
+    return response.data;
+  },
+
+  getUnreadCount: async () => {
+    const response = await api.get('/api/messages/unread-count');
+    return response.data;
+  },
+};
+
+// Reviews API
+export const reviewsAPI = {
+  createReview: async (reviewData: {
+    job_id: string;
+    reviewee_id: string;
+    rating: number;
+    comment?: string;
+  }) => {
+    const response = await api.post('/api/reviews', reviewData);
+    return response.data;
+  },
+
+  getUserReviews: async (
+    userId: string,
+    params?: { skip?: number; limit?: number }
+  ) => {
+    const response = await api.get(`/api/reviews/user/${userId}`, { params });
+    return response.data;
+  },
+
+  getJobReviews: async (jobId: string) => {
+    const response = await api.get(`/api/reviews/job/${jobId}`);
+    return response.data;
+  },
+
+  getMyGivenReviews: async () => {
+    const response = await api.get('/api/reviews/my/given');
+    return response.data;
+  },
+
+  getMyReceivedReviews: async () => {
+    const response = await api.get('/api/reviews/my/received');
+    return response.data;
+  },
+
+  updateReview: async (
+    reviewId: string,
+    data: { rating?: number; comment?: string }
+  ) => {
+    const response = await api.put(`/api/reviews/${reviewId}`, data);
+    return response.data;
+  },
+
+  deleteReview: async (reviewId: string) => {
+    const response = await api.delete(`/api/reviews/${reviewId}`);
+    return response.data;
+  },
+
+  getUserReviewStats: async (userId: string) => {
+    const response = await api.get(`/api/reviews/stats/${userId}`);
+    return response.data;
+  },
+};
+
+// Upload API
+export const uploadAPI = {
+  uploadAvatar: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/api/upload/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  uploadPortfolioImages: async (files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    const response = await api.post('/api/upload/portfolio', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deletePortfolioImage: async (fileUrl: string) => {
+    const formData = new FormData();
+    formData.append('file_url', fileUrl);
+    const response = await api.delete('/api/upload/portfolio', {
+      data: formData,
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  uploadDocument: async (file: File, description?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (description) formData.append('description', description);
+    const response = await api.post('/api/upload/document', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  getMyFiles: async () => {
+    const response = await api.get('/api/upload/my-files');
+    return response.data;
+  },
+
+  deleteFile: async (fileId: string) => {
+    const response = await api.delete(`/api/upload/file/${fileId}`);
+    return response.data;
+  },
+};
+
+// Posts API
+export const postsAPI = {
+  getPosts: async () => {
+    const response = await api.get('/api/posts');
+    return response.data.posts || []; // Return the posts array, default to empty array
+  },
+
+  createPost: async (postData: {
+    content: string;
+    image_url?: string;
+  }) => {
+    const response = await api.post('/api/posts', postData);
+    return response.data;
+  },
+
+  likePost: async (postId: string) => {
+    const response = await api.post(`/api/posts/${postId}/like`);
+    return response.data;
+  },
+};
+
+// HireMe API
+export const hireMeAPI = {
+  getAvailableUsers: async (searchQuery: string = '') => {
+    const params = searchQuery ? { search: searchQuery } : {};
+    const response = await api.get('/api/hireme/available', { params });
+    return response.data;
+  },
+
+  toggleAvailability: async () => {
+    const response = await api.post('/api/hireme/toggle');
+    return response.data;
+  },
+};
+
+export default api;

@@ -1,0 +1,14 @@
+{
+  "name": "hiremebahamas-root",
+  "version": "1.0.0",
+  "description": "HireMeBahamas Platform - Root package.json for convenience",
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "install-frontend": "cd frontend && npm install",
+    "build": "cd frontend && npm run build",
+    "start": "cd frontend && npm run dev"
+  },
+  "keywords": ["hiremebahamas", "platform"],
+  "author": "HireMeBahamas Team",
+  "license": "MIT"
+}

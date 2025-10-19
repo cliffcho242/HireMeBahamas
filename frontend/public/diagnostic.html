@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HireBahamas - Network Diagnostic</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .status-box {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #22c55e; font-weight: bold; }
+        .error { color: #ef4444; font-weight: bold; }
+        .testing { color: #f59e0b; font-weight: bold; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #2563eb; }
+        pre {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 HireBahamas Network Diagnostic</h1>
+    
+    <div class="status-box">
+        <h2>Server Status</h2>
+        <p>Backend: <span id="backend-status" class="testing">Testing...</span></p>
+        <p>Frontend: <span id="frontend-status" class="testing">Testing...</span></p>
+        <p>Proxy: <span id="proxy-status" class="testing">Testing...</span></p>
+    </div>
+
+    <div class="status-box">
+        <h2>Login Test</h2>
+        <button onclick="testLogin()">Test Login (admin@hirebahamas.com)</button>
+        <p>Status: <span id="login-status">Not tested</span></p>
+        <pre id="login-result">Click button to test login...</pre>
+    </div>
+
+    <div class="status-box">
+        <h2>Network Details</h2>
+        <button onclick="checkNetwork()">Check Network Configuration</button>
+        <pre id="network-details">Click button to check network...</pre>
+    </div>
+
+    <div class="status-box">
+        <h2>Browser Console</h2>
+        <p>Open DevTools (F12) to see detailed logs</p>
+        <button onclick="clearConsole()">Clear Console</button>
+    </div>
+
+    <script>
+        console.log('🔍 Network Diagnostic Tool Loaded');
+
+        // Test Backend
+        async function testBackend() {
+            const status = document.getElementById('backend-status');
+            try {
+                const response = await fetch('http://127.0.0.1:8008/health');
+                const data = await response.json();
+                status.className = 'success';
+                status.textContent = `✓ Running (${data.status})`;
+                console.log('✓ Backend:', data);
+            } catch (error) {
+                status.className = 'error';
+                status.textContent = '✗ Not accessible';
+                console.error('✗ Backend error:', error);
+            }
+        }
+
+        // Test Frontend
+        async function testFrontend() {
+            const status = document.getElementById('frontend-status');
+            try {
+                const response = await fetch('/');
+                if (response.ok) {
+                    status.className = 'success';
+                    status.textContent = '✓ Running';
+                    console.log('✓ Frontend accessible');
+                }
+            } catch (error) {
+                status.className = 'error';
+                status.textContent = '✗ Not accessible';
+                console.error('✗ Frontend error:', error);
+            }
+        }
+
+        // Test Proxy
+        async function testProxy() {
+            const status = document.getElementById('proxy-status');
+            try {
+                console.log('Testing proxy: /api/health');
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                status.className = 'success';
+                status.textContent = `✓ Working (${data.status})`;
+                console.log('✓ Proxy working:', data);
+            } catch (error) {
+                status.className = 'error';
+                status.textContent = '✗ Not working';
+                console.error('✗ Proxy error:', error);
+            }
+        }
+
+        // Test Login
+        async function testLogin() {
+            const statusEl = document.getElementById('login-status');
+            const resultEl = document.getElementById('login-result');
+            
+            statusEl.className = 'testing';
+            statusEl.textContent = 'Testing...';
+            resultEl.textContent = 'Sending login request...';
+
+            try {
+                console.log('🔐 Testing login...');
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@hirebahamas.com',
+                        password: 'admin123'
+                    })
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (response.ok && data.token) {
+                    statusEl.className = 'success';
+                    statusEl.textContent = '✓ Login successful!';
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    statusEl.className = 'error';
+                    statusEl.textContent = '✗ Login failed';
+                    resultEl.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                statusEl.className = 'error';
+                statusEl.textContent = '✗ Network error';
+                resultEl.textContent = `Error: ${error.message}\n\nStack: ${error.stack}`;
+            }
+        }
+
+        // Check Network
+        function checkNetwork() {
+            const details = document.getElementById('network-details');
+            const info = {
+                userAgent: navigator.userAgent,
+                online: navigator.onLine,
+                connection: navigator.connection ? {
+                    effectiveType: navigator.connection.effectiveType,
+                    downlink: navigator.connection.downlink,
+                    rtt: navigator.connection.rtt
+                } : 'Not available',
+                currentURL: window.location.href,
+                apiBaseURL: window.location.origin + '/api',
+                backendURL: 'http://127.0.0.1:8008'
+            };
+            details.textContent = JSON.stringify(info, null, 2);
+            console.log('Network Info:', info);
+        }
+
+        function clearConsole() {
+            console.clear();
+            console.log('🔍 Console cleared - Network Diagnostic Tool Ready');
+        }
+
+        // Run tests on load
+        window.addEventListener('load', () => {
+            console.log('🚀 Starting automatic tests...');
+            testBackend();
+            testFrontend();
+            testProxy();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""
+Test the toggle functionality with corrected API endpoints
+"""
+
+import requests
+
+BASE_URL = "http://127.0.0.1:8008"
+
+def test_toggle_fix():
+    print("🔧 Testing Toggle Fix")
+    print("=" * 30)
+
+    # Login
+    login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
+        "email": "admin@hirebahamas.com",
+        "password": "AdminPass123!"
+    })
+
+    if login_response.status_code != 200:
+        print("❌ Login failed")
+        return
+
+    token = login_response.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Check current state
+    profile_response = requests.get(f"{BASE_URL}/api/auth/profile", headers=headers)
+    current_state = profile_response.json().get("is_available_for_hire", False)
+    print(f"📊 Current: {'On' if current_state else 'Off'}")
+
+    # Toggle
+    toggle_response = requests.post(f"{BASE_URL}/api/hireme/toggle", headers=headers)
+    if toggle_response.status_code == 200:
+        new_state = toggle_response.json()["is_available"]
+        print(f"✅ Toggle: {'On' if new_state else 'Off'}")
+
+        # Check available users
+        available_response = requests.get(f"{BASE_URL}/api/hireme/available")
+        user_count = len(available_response.json()["users"])
+        print(f"👥 Available users: {user_count}")
+
+        print("🎉 Toggle is working!")
+    else:
+        print(f"❌ Toggle failed: {toggle_response.status_code}")
+        print(f"Response: {toggle_response.text}")
+
+if __name__ == "__main__":
+    test_toggle_fix()

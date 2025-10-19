@@ -1,0 +1,151 @@
+# 🚀 Video Call Event Feature - Quick Start
+
+## Create Your First Business Video Call
+
+### Step 1: Open Event Creator
+1. Go to **Home page** (http://localhost:3000)
+2. Look for the **Create Post** section
+3. Click the **📅 Event** button (blue background)
+
+### Step 2: Fill Event Details (Step 1/3)
+- Choose event type: **📹 Video Call** (or Meeting, Interview, etc.)
+- Enter title: e.g., "Client Strategy Meeting"
+- Add description (optional)
+- Click **Next**
+
+### Step 3: Schedule Meeting (Step 2/3)
+- Select **date** from calendar
+- Choose **start time**
+- Set **duration** (15, 30, 45, 60 min buttons or custom)
+- Select **video platform**: Zoom, Teams, or Google Meet
+- Paste **meeting link** (optional)
+- Click **Next**
+
+### Step 4: Set Reminders (Step 3/3)
+- Default reminders already set:
+  * 15 minutes before
+  * 1 hour before
+  * 24 hours before
+- Add custom reminders if needed
+- Click **Create Event**
+
+### Step 5: Get Reminders
+- System automatically checks every minute
+- You'll see notifications based on time:
+  * **2 hours before**: Info notification (blue)
+  * **15 minutes before**: Warning notification (yellow)
+  * **5 minutes before**: Urgent notification (red) + Toast popup
+
+### Step 6: Join Meeting
+- When reminder appears, click **"Join Call"** button
+- Meeting opens in new tab
+- Or click **"Dismiss"** to hide reminder
+
+---
+
+## 🎯 Features at a Glance
+
+✅ **3-Step Wizard** - Easy event creation
+✅ **6 Event Types** - Video Call, Meeting, Interview, Webinar, Consultation, Other
+✅ **4 Video Platforms** - Zoom, Teams, Google Meet, Other
+✅ **Smart Reminders** - 15min, 1hr, 24hrs (default) + custom
+✅ **Auto Notifications** - Checks every minute
+✅ **Color-Coded Alerts** - Red (urgent), Yellow (warning), Blue (info)
+✅ **One-Click Join** - Direct meeting link access
+✅ **Dismissible Reminders** - Hide notifications you've seen
+
+---
+
+## 🔔 Reminder Timeline Example
+
+**Event: Client Meeting at 3:00 PM**
+
+- **11:00 AM** (24 hrs before): Email reminder sent
+- **2:00 PM** (1 hr before): Push notification - Blue info card
+- **2:45 PM** (15 min before): Warning notification - Yellow card
+- **2:55 PM** (5 min before): Urgent notification - Red card + Toast popup
+- **3:00 PM**: Event starts
+
+---
+
+## 💡 Pro Tips
+
+1. **Always add meeting link** - Enables one-click join
+2. **Set multiple reminders** - Belt and suspenders approach
+3. **Use descriptive titles** - Easy to identify events
+4. **Test notifications** - Create test event 5 mins in future
+5. **Dismiss after joining** - Clean up reminder panel
+
+---
+
+## 🛠️ Files Added
+
+### Frontend Components
+```
+frontend/src/components/CreateEventModal.tsx       (700 lines)
+frontend/src/components/EventReminderSystem.tsx   (300 lines)
+frontend/src/types/event.ts                       (120 lines)
+```
+
+### Modified Files
+```
+frontend/src/pages/Home.tsx                       (Added modal integration)
+```
+
+### Documentation
+```
+VIDEO_CALL_EVENT_FEATURE.md                       (Comprehensive guide)
+VIDEO_CALL_QUICK_START.txt                        (This file)
+```
+
+---
+
+## 🎨 Visual Guide
+
+### Event Button Location
+```
+┌────────────────────────────────────┐
+│  What's on your mind?              │
+├────────────────────────────────────┤
+│  [📸 Photo] [🎥 Live] [📅 Event]  │  ← Click here!
+└────────────────────────────────────┘
+```
+
+### 3-Step Progress
+```
+Step 1: [✓] ────── Step 2: [2] ────── Step 3: [3]
+  Info            Schedule          Reminders
+```
+
+### Reminder Types
+```
+🚨 URGENT (Red)    ⚠️ WARNING (Yellow)    ℹ️ INFO (Blue)
+0-5 minutes        6-15 minutes           16-120 minutes
+Pulsing bell       Static bell            Static bell
+Toast popup        Card only              Card only
+```
+
+---
+
+## 🔗 Next Steps
+
+1. **Test the feature** - Create a test event
+2. **Verify reminders** - Set event 10 mins in future
+3. **Check notifications** - Wait for reminders to appear
+4. **Join meeting** - Click "Join Call" button
+5. **Dismiss reminder** - Click "Dismiss" when done
+
+---
+
+## 📞 Need Help?
+
+- **Feature not working?** Check browser console for errors
+- **Reminders not appearing?** Verify event date/time is in future
+- **Modal not opening?** Check Home page is loaded
+- **Meeting link not working?** Verify URL format (must include https://)
+
+---
+
+**Ready to schedule your first video call!** 🎉
+
+Open http://localhost:3000 and click the 📅 Event button!

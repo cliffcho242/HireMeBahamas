@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["python39", "gcc"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[phases.build]
+cmds = ["python -c 'import final_backend; print("Backend OK")'"]
+
+[start]
+cmd = "gunicorn -w 4 -b 0.0.0.0:$PORT final_backend:app --timeout 120"
