@@ -192,6 +192,22 @@ def init_database():
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )''')
         
+        # Create jobs table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            company TEXT NOT NULL,
+            location TEXT NOT NULL,
+            job_type TEXT NOT NULL,
+            description TEXT NOT NULL,
+            requirements TEXT,
+            salary_range TEXT,
+            status TEXT DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )''')
+        
         # Create default admin user
         print("👤 Creating default admin user...")
         password_hash = bcrypt.hashpw('AdminPass123!'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -1558,6 +1574,195 @@ def get_friend_suggestions():
         return jsonify({
             'success': False,
             'message': 'Failed to get friend suggestions'
+        }), 500
+
+# ============================================
+# JOBS ENDPOINTS
+# ============================================
+
+@app.route('/api/jobs', methods=['GET', 'OPTIONS'])
+def get_jobs():
+    """Get all job postings"""
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT j.*, u.first_name, u.last_name, u.email, u.avatar_url
+            FROM jobs j
+            LEFT JOIN users u ON j.user_id = u.id
+            WHERE j.status = 'active'
+            ORDER BY j.created_at DESC
+        ''')
+
+        jobs = []
+        for row in cursor.fetchall():
+            jobs.append({
+                'id': row['id'],
+                'title': row['title'],
+                'company': row['company'],
+                'location': row['location'],
+                'job_type': row['job_type'],
+                'description': row['description'],
+                'requirements': row['requirements'],
+                'salary_range': row['salary_range'] or '',
+                'created_at': row['created_at'],
+                'user': {
+                    'first_name': row['first_name'] or '',
+                    'last_name': row['last_name'] or '',
+                    'email': row['email'],
+                    'avatar_url': row['avatar_url'] or ''
+                }
+            })
+
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'jobs': jobs
+        }), 200
+
+    except Exception as e:
+        print(f"Error getting jobs: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to get jobs'
+        }), 500
+
+@app.route('/api/jobs', methods=['POST', 'OPTIONS'])
+def create_job():
+    """Create a new job posting"""
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({
+                'success': False,
+                'message': 'Authorization token required'
+            }), 401
+
+        token = auth_header.split(' ')[1]
+
+        try:
+            payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            user_id = payload['user_id']
+        except jwt.ExpiredSignatureError:
+            return jsonify({
+                'success': False,
+                'message': 'Token expired'
+            }), 401
+        except jwt.InvalidTokenError:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid token'
+            }), 401
+
+        data = request.get_json()
+
+        # Validate required fields
+        if not all(k in data for k in ['title', 'company', 'location', 'job_type', 'description']):
+            return jsonify({
+                'success': False,
+                'message': 'Missing required fields'
+            }), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            INSERT INTO jobs (user_id, title, company, location, job_type, description, requirements, salary_range, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)
+        ''', (
+            user_id,
+            data['title'],
+            data['company'],
+            data['location'],
+            data['job_type'],
+            data['description'],
+            data.get('requirements', ''),
+            data.get('salary_range', ''),
+            datetime.now(timezone.utc)
+        ))
+
+        job_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Job created successfully',
+            'job_id': job_id
+        }), 201
+
+    except Exception as e:
+        print(f"Error creating job: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to create job'
+        }), 500
+
+@app.route('/api/jobs/<int:job_id>', methods=['GET', 'OPTIONS'])
+def get_job(job_id):
+    """Get a specific job posting"""
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT j.*, u.first_name, u.last_name, u.email, u.avatar_url, u.phone
+            FROM jobs j
+            LEFT JOIN users u ON j.user_id = u.id
+            WHERE j.id = ?
+        ''', (job_id,))
+
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row:
+            return jsonify({
+                'success': False,
+                'message': 'Job not found'
+            }), 404
+
+        job = {
+            'id': row['id'],
+            'title': row['title'],
+            'company': row['company'],
+            'location': row['location'],
+            'job_type': row['job_type'],
+            'description': row['description'],
+            'requirements': row['requirements'],
+            'salary_range': row['salary_range'] or '',
+            'status': row['status'],
+            'created_at': row['created_at'],
+            'user': {
+                'first_name': row['first_name'] or '',
+                'last_name': row['last_name'] or '',
+                'email': row['email'],
+                'phone': row['phone'] or '',
+                'avatar_url': row['avatar_url'] or ''
+            }
+        }
+
+        return jsonify({
+            'success': True,
+            'job': job
+        }), 200
+
+    except Exception as e:
+        print(f"Error getting job: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to get job'
         }), 500
 
 if __name__ == '__main__':
