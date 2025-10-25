@@ -26,6 +26,8 @@ const PostFeed: React.FC = () => {
   const [commentText, setCommentText] = useState<{ [key: number]: string }>({});
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState<string>('');
+  const [comments, setComments] = useState<{ [key: number]: any[] }>({});
+  const [loadingComments, setLoadingComments] = useState<{ [key: number]: boolean }>({});
   const { user } = useAuth();
 
   useEffect(() => {
@@ -75,16 +77,21 @@ const PostFeed: React.FC = () => {
   // };
 
   const handleLikePost = async (postId: number) => {
+    if (!user) {
+      toast.error('Please log in to like posts');
+      return;
+    }
+
     try {
-      await postsAPI.likePost(postId.toString());
-      // Update local state optimistically
+      const response = await postsAPI.likePost(postId);
+      // Update local state with response from server
       setPosts(prevPosts =>
         prevPosts.map(post =>
           post.id === postId
             ? {
               ...post,
-              likes_count: post.likes_count + 1,
-              is_liked: !post.is_liked
+              likes_count: response.likes_count,
+              is_liked: response.liked
             }
             : post
         )
@@ -99,12 +106,82 @@ const PostFeed: React.FC = () => {
     const text = commentText[postId]?.trim();
     if (!text) return;
 
+    if (!user) {
+      toast.error('Please log in to comment');
+      return;
+    }
+
     try {
-      // For now, just show a toast - in a real app you'd call an API
-      toast.success('Comment added!');
+      const response = await postsAPI.createComment(postId, text);
+      
+      // Add comment to local state
+      setComments(prev => ({
+        ...prev,
+        [postId]: [...(prev[postId] || []), response.comment]
+      }));
+      
+      // Update comment count
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { ...post, comments_count: post.comments_count + 1 }
+            : post
+        )
+      );
+      
       setCommentText(prev => ({ ...prev, [postId]: '' }));
+      toast.success('Comment added!');
     } catch (error) {
+      console.error('Failed to add comment:', error);
       toast.error('Failed to add comment');
+    }
+  };
+
+  const handleDeleteComment = async (postId: number, commentId: number) => {
+    if (!window.confirm('Delete this comment?')) return;
+
+    try {
+      await postsAPI.deleteComment(postId, commentId);
+      
+      // Remove comment from local state
+      setComments(prev => ({
+        ...prev,
+        [postId]: (prev[postId] || []).filter(c => c.id !== commentId)
+      }));
+      
+      // Update comment count
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { ...post, comments_count: Math.max(0, post.comments_count - 1) }
+            : post
+        )
+      );
+      
+      toast.success('Comment deleted!');
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+      toast.error('Failed to delete comment');
+    }
+  };
+
+  const loadComments = async (postId: number) => {
+    if (comments[postId]) {
+      // Already loaded, just toggle
+      setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
+      return;
+    }
+
+    setLoadingComments(prev => ({ ...prev, [postId]: true }));
+    try {
+      const commentsData = await postsAPI.getComments(postId);
+      setComments(prev => ({ ...prev, [postId]: commentsData }));
+      setShowComments(prev => ({ ...prev, [postId]: true }));
+    } catch (error) {
+      console.error('Failed to load comments:', error);
+      toast.error('Failed to load comments');
+    } finally {
+      setLoadingComments(prev => ({ ...prev, [postId]: false }));
     }
   };
 
@@ -156,7 +233,13 @@ const PostFeed: React.FC = () => {
   };
 
   const toggleComments = (postId: number) => {
-    setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
+    if (showComments[postId]) {
+      // Just hide comments
+      setShowComments(prev => ({ ...prev, [postId]: false }));
+    } else {
+      // Load and show comments
+      loadComments(postId);
+    }
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -358,38 +441,70 @@ const PostFeed: React.FC = () => {
                       className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       onKeyPress={(e) => e.key === 'Enter' && handleComment(post.id)}
                     />
-                    <button className="p-2 text-gray-400 hover:text-blue-600">
-                      <FaceSmileIcon className="w-5 h-5" />
-                    </button>
-                    <button className="p-2 text-gray-400 hover:text-green-600">
-                      <PhotoIcon className="w-5 h-5" />
+                    <button
+                      onClick={() => handleComment(post.id)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
+                      disabled={!commentText[post.id]?.trim()}
+                    >
+                      Post
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Comments List */}
-              <div className="space-y-3">
-                {/* Sample comments - in real app these would come from API */}
-                <div className="flex space-x-3">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold text-xs">JD</span>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="bg-white rounded-2xl px-3 py-2">
-                      <p className="text-sm font-medium text-gray-900">John Doe</p>
-                      <p className="text-sm text-gray-700">Great post! Very inspiring.</p>
-                    </div>
-                    <div className="flex items-center space-x-4 mt-1 ml-3">
-                      <button className="text-xs text-gray-500 hover:text-gray-700">Like</button>
-                      <button className="text-xs text-gray-500 hover:text-gray-700">Reply</button>
-                      <span className="text-xs text-gray-400">2h</span>
-                    </div>
-                  </div>
+              {/* Loading Comments */}
+              {loadingComments[post.id] && (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                 </div>
-              </div>
+              )}
+
+              {/* Comments List */}
+              {!loadingComments[post.id] && comments[post.id] && (
+                <div className="space-y-3">
+                  {comments[post.id].length === 0 ? (
+                    <p className="text-center text-gray-500 text-sm py-4">
+                      No comments yet. Be the first to comment!
+                    </p>
+                  ) : (
+                    comments[post.id].map((comment: any) => (
+                      <div key={comment.id} className="flex space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                            <span className="text-white font-semibold text-xs">
+                              {comment.user.first_name[0]}{comment.user.last_name[0]}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="bg-white rounded-2xl px-3 py-2">
+                            <div className="flex items-start justify-between">
+                              <p className="text-sm font-medium text-gray-900">
+                                {comment.user.first_name} {comment.user.last_name}
+                              </p>
+                              {user && comment.user.id === user.id && (
+                                <button
+                                  onClick={() => handleDeleteComment(post.id, comment.id)}
+                                  className="text-red-600 hover:text-red-700 text-xs"
+                                  title="Delete comment"
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-700">{comment.content}</p>
+                          </div>
+                          <div className="flex items-center space-x-4 mt-1 ml-3">
+                            <span className="text-xs text-gray-400">
+                              {formatTimeAgo(comment.created_at)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           )}
         </motion.div>

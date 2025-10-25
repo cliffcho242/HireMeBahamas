@@ -154,6 +154,17 @@ def init_database():
             UNIQUE(user_id, post_id)
         )''')
         
+        # Create comments table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            post_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+            FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
+        )''')
+        
         # Create friendships table
         cursor.execute('''CREATE TABLE IF NOT EXISTS friendships (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -582,6 +593,17 @@ def get_posts():
         print("GET POSTS ENDPOINT CALLED")
         print("Getting posts")
 
+        # Get current user ID from token (if provided)
+        current_user_id = None
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            token = auth_header.replace('Bearer ', '')
+            try:
+                payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+                current_user_id = payload['user_id']
+            except:
+                pass  # Guest user, no authentication
+
         # Test database connection
         conn = get_db_connection()
         print("Database connection successful")
@@ -604,14 +626,29 @@ def get_posts():
 
         posts_data = cursor.fetchall()
         print(f"Fetched {len(posts_data)} posts")
-        conn.close()
-        print("Connection closed")
 
-        # Format posts for frontend
+        # Format posts for frontend with actual counts
         posts = []
         for row in posts_data:
+            post_id = row['id']
+            
+            # Get likes count
+            cursor.execute('SELECT COUNT(*) FROM post_likes WHERE post_id = ?', (post_id,))
+            likes_count = cursor.fetchone()[0]
+            
+            # Get comments count
+            cursor.execute('SELECT COUNT(*) FROM comments WHERE post_id = ?', (post_id,))
+            comments_count = cursor.fetchone()[0]
+            
+            # Check if current user liked this post
+            is_liked = False
+            if current_user_id:
+                cursor.execute('SELECT id FROM post_likes WHERE user_id = ? AND post_id = ?', 
+                             (current_user_id, post_id))
+                is_liked = cursor.fetchone() is not None
+            
             posts.append({
-                'id': row['id'],
+                'id': post_id,
                 'content': row['content'],
                 'image_url': row['image_url'],
                 'created_at': row['created_at'],
@@ -622,9 +659,13 @@ def get_posts():
                     'email': row['email'],
                     'user_type': row['user_type']
                 },
-                'likes_count': 0,  # We'll implement this later
-                'comments_count': 0  # We'll implement this later
+                'likes_count': likes_count,
+                'comments_count': comments_count,
+                'is_liked': is_liked
             })
+        
+        conn.close()
+        print("Connection closed")
 
         print(f"Retrieved {len(posts)} posts")
         return jsonify({
@@ -749,12 +790,58 @@ def like_post(post_id):
         except jwt.InvalidTokenError:
             return jsonify({"success": False, "message": "Invalid token"}), 401
 
-        # For now, just return success since we don't have likes table fully implemented
-        print(f"Post {post_id} liked by user {user_id}")
-        return jsonify({
-            "success": True,
-            "message": "Post liked successfully"
-        }), 200
+        # Check if post exists
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT id FROM posts WHERE id = ?', (post_id,))
+        post = cursor.fetchone()
+
+        if not post:
+            conn.close()
+            return jsonify({"success": False, "message": "Post not found"}), 404
+
+        # Check if user already liked this post
+        cursor.execute('SELECT id FROM post_likes WHERE user_id = ? AND post_id = ?', 
+                      (user_id, post_id))
+        existing_like = cursor.fetchone()
+
+        if existing_like:
+            # Unlike: Remove the like
+            cursor.execute('DELETE FROM post_likes WHERE user_id = ? AND post_id = ?',
+                          (user_id, post_id))
+            conn.commit()
+            
+            # Get updated like count
+            cursor.execute('SELECT COUNT(*) FROM post_likes WHERE post_id = ?', (post_id,))
+            likes_count = cursor.fetchone()[0]
+            
+            conn.close()
+            print(f"Post {post_id} unliked by user {user_id}")
+            return jsonify({
+                "success": True,
+                "message": "Post unliked successfully",
+                "liked": False,
+                "likes_count": likes_count
+            }), 200
+        else:
+            # Like: Add the like
+            cursor.execute('INSERT INTO post_likes (user_id, post_id) VALUES (?, ?)',
+                          (user_id, post_id))
+            conn.commit()
+            
+            # Get updated like count
+            cursor.execute('SELECT COUNT(*) FROM post_likes WHERE post_id = ?', (post_id,))
+            likes_count = cursor.fetchone()[0]
+            
+            conn.close()
+            print(f"Post {post_id} liked by user {user_id}")
+            return jsonify({
+                "success": True,
+                "message": "Post liked successfully",
+                "liked": True,
+                "likes_count": likes_count
+            }), 200
 
     except Exception as e:
         print(f"Like post error: {str(e)}")
@@ -926,6 +1013,217 @@ def update_post(post_id):
         return jsonify({
             "success": False,
             "message": "Failed to update post"
+        }), 500
+
+@app.route('/api/posts/<int:post_id>/comments', methods=['GET', 'OPTIONS'])
+def get_comments(post_id):
+    """Get all comments for a post"""
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if post exists
+        cursor.execute('SELECT id FROM posts WHERE id = ?', (post_id,))
+        post = cursor.fetchone()
+
+        if not post:
+            conn.close()
+            return jsonify({"success": False, "message": "Post not found"}), 404
+
+        # Get comments with user info
+        cursor.execute('''
+            SELECT 
+                c.id, c.content, c.created_at,
+                u.id as user_id, u.first_name, u.last_name, u.email
+            FROM comments c
+            JOIN users u ON c.user_id = u.id
+            WHERE c.post_id = ?
+            ORDER BY c.created_at ASC
+        ''', (post_id,))
+
+        comments_data = cursor.fetchall()
+        conn.close()
+
+        comments = []
+        for row in comments_data:
+            comments.append({
+                'id': row['id'],
+                'content': row['content'],
+                'created_at': row['created_at'],
+                'user': {
+                    'id': row['user_id'],
+                    'first_name': row['first_name'],
+                    'last_name': row['last_name'],
+                    'email': row['email']
+                }
+            })
+
+        return jsonify({
+            "success": True,
+            "comments": comments
+        }), 200
+
+    except Exception as e:
+        print(f"Get comments error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": "Failed to get comments"
+        }), 500
+
+@app.route('/api/posts/<int:post_id>/comments', methods=['POST', 'OPTIONS'])
+def create_comment(post_id):
+    """Create a comment on a post"""
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        # Check authentication
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.replace('Bearer ', '')
+
+        try:
+            payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            user_id = payload['user_id']
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        # Get comment content
+        data = request.get_json()
+        content = data.get('content', '').strip()
+
+        if not content:
+            return jsonify({"success": False, "message": "Comment cannot be empty"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if post exists
+        cursor.execute('SELECT id FROM posts WHERE id = ?', (post_id,))
+        post = cursor.fetchone()
+
+        if not post:
+            conn.close()
+            return jsonify({"success": False, "message": "Post not found"}), 404
+
+        # Insert comment
+        cursor.execute('''
+            INSERT INTO comments (user_id, post_id, content, created_at)
+            VALUES (?, ?, ?, ?)
+        ''', (user_id, post_id, content, datetime.utcnow()))
+
+        comment_id = cursor.lastrowid
+        conn.commit()
+
+        # Get the created comment with user info
+        cursor.execute('''
+            SELECT 
+                c.id, c.content, c.created_at,
+                u.id as user_id, u.first_name, u.last_name, u.email
+            FROM comments c
+            JOIN users u ON c.user_id = u.id
+            WHERE c.id = ?
+        ''', (comment_id,))
+
+        comment_row = cursor.fetchone()
+        conn.close()
+
+        comment = {
+            'id': comment_row['id'],
+            'content': comment_row['content'],
+            'created_at': comment_row['created_at'],
+            'user': {
+                'id': comment_row['user_id'],
+                'first_name': comment_row['first_name'],
+                'last_name': comment_row['last_name'],
+                'email': comment_row['email']
+            }
+        }
+
+        print(f"Comment created on post {post_id} by user {user_id}")
+        return jsonify({
+            "success": True,
+            "message": "Comment created successfully",
+            "comment": comment
+        }), 201
+
+    except Exception as e:
+        print(f"Create comment error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": "Failed to create comment"
+        }), 500
+
+@app.route('/api/posts/<int:post_id>/comments/<int:comment_id>', methods=['DELETE', 'OPTIONS'])
+def delete_comment(post_id, comment_id):
+    """Delete a comment (owner only)"""
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        # Check authentication
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.replace('Bearer ', '')
+
+        try:
+            payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            user_id = payload['user_id']
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if comment exists and belongs to user
+        cursor.execute('SELECT user_id FROM comments WHERE id = ? AND post_id = ?', 
+                      (comment_id, post_id))
+        comment = cursor.fetchone()
+
+        if not comment:
+            conn.close()
+            return jsonify({"success": False, "message": "Comment not found"}), 404
+
+        if comment['user_id'] != user_id:
+            conn.close()
+            return jsonify({
+                "success": False,
+                "message": "You can only delete your own comments"
+            }), 403
+
+        # Delete the comment
+        cursor.execute('DELETE FROM comments WHERE id = ?', (comment_id,))
+        conn.commit()
+        conn.close()
+
+        print(f"Comment {comment_id} deleted by user {user_id}")
+        return jsonify({
+            "success": True,
+            "message": "Comment deleted successfully"
+        }), 200
+
+    except Exception as e:
+        print(f"Delete comment error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": "Failed to delete comment"
         }), 500
 
 @app.route('/api/upload/story-file', methods=['POST', 'OPTIONS'])

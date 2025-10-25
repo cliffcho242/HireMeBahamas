@@ -399,7 +399,7 @@ export const postsAPI = {
     return response.data;
   },
 
-  likePost: async (postId: string) => {
+  likePost: async (postId: number) => {
     const response = await api.post(`/api/posts/${postId}/like`);
     return response.data;
   },
@@ -411,6 +411,21 @@ export const postsAPI = {
 
   updatePost: async (postId: number, postData: { content: string }) => {
     const response = await api.put(`/api/posts/${postId}`, postData);
+    return response.data;
+  },
+
+  getComments: async (postId: number) => {
+    const response = await api.get(`/api/posts/${postId}/comments`);
+    return response.data.comments || [];
+  },
+
+  createComment: async (postId: number, content: string) => {
+    const response = await api.post(`/api/posts/${postId}/comments`, { content });
+    return response.data;
+  },
+
+  deleteComment: async (postId: number, commentId: number) => {
+    const response = await api.delete(`/api/posts/${postId}/comments/${commentId}`);
     return response.data;
   },
 };
