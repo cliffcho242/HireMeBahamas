@@ -763,6 +763,171 @@ def like_post(post_id):
             "message": "Failed to like post"
         }), 500
 
+@app.route('/api/posts/<int:post_id>', methods=['DELETE', 'OPTIONS'])
+def delete_post(post_id):
+    """Delete a post (owner only)"""
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        # Check authentication
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.replace('Bearer ', '')
+
+        try:
+            payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            user_id = payload['user_id']
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        # Check if post exists and belongs to user
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT user_id FROM posts WHERE id = ?', (post_id,))
+        post = cursor.fetchone()
+
+        if not post:
+            conn.close()
+            return jsonify({
+                "success": False,
+                "message": "Post not found"
+            }), 404
+
+        if post['user_id'] != user_id:
+            conn.close()
+            return jsonify({
+                "success": False,
+                "message": "You can only delete your own posts"
+            }), 403
+
+        # Delete the post
+        cursor.execute('DELETE FROM posts WHERE id = ?', (post_id,))
+        conn.commit()
+        conn.close()
+
+        print(f"Post {post_id} deleted by user {user_id}")
+        return jsonify({
+            "success": True,
+            "message": "Post deleted successfully"
+        }), 200
+
+    except Exception as e:
+        print(f"Delete post error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": "Failed to delete post"
+        }), 500
+
+@app.route('/api/posts/<int:post_id>', methods=['PUT', 'OPTIONS'])
+def update_post(post_id):
+    """Update a post (owner only)"""
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    try:
+        # Check authentication
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.replace('Bearer ', '')
+
+        try:
+            payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            user_id = payload['user_id']
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        # Get new content
+        data = request.get_json()
+        new_content = data.get('content', '').strip()
+
+        if not new_content:
+            return jsonify({"success": False, "message": "Content cannot be empty"}), 400
+
+        # Check if post exists and belongs to user
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT user_id FROM posts WHERE id = ?', (post_id,))
+        post = cursor.fetchone()
+
+        if not post:
+            conn.close()
+            return jsonify({
+                "success": False,
+                "message": "Post not found"
+            }), 404
+
+        if post['user_id'] != user_id:
+            conn.close()
+            return jsonify({
+                "success": False,
+                "message": "You can only edit your own posts"
+            }), 403
+
+        # Update the post
+        cursor.execute('''
+            UPDATE posts 
+            SET content = ?
+            WHERE id = ?
+        ''', (new_content, post_id))
+        conn.commit()
+
+        # Get the updated post with user info
+        cursor.execute('''
+            SELECT p.id, p.content, p.image_url, p.created_at,
+                   u.id as user_id, u.first_name, u.last_name, u.email, u.user_type
+            FROM posts p
+            JOIN users u ON p.user_id = u.id
+            WHERE p.id = ?
+        ''', (post_id,))
+
+        updated_post_row = cursor.fetchone()
+        conn.close()
+
+        updated_post = {
+            'id': updated_post_row['id'],
+            'content': updated_post_row['content'],
+            'image_url': updated_post_row['image_url'],
+            'created_at': updated_post_row['created_at'],
+            'user': {
+                'id': updated_post_row['user_id'],
+                'first_name': updated_post_row['first_name'],
+                'last_name': updated_post_row['last_name'],
+                'email': updated_post_row['email'],
+                'user_type': updated_post_row['user_type']
+            },
+            'likes_count': 0,
+            'comments_count': 0
+        }
+
+        print(f"Post {post_id} updated by user {user_id}")
+        return jsonify({
+            "success": True,
+            "message": "Post updated successfully",
+            "post": updated_post
+        }), 200
+
+    except Exception as e:
+        print(f"Update post error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": "Failed to update post"
+        }), 500
+
 @app.route('/api/upload/story-file', methods=['POST', 'OPTIONS'])
 def upload_story_file():
     """Upload a file for stories (image or video)"""

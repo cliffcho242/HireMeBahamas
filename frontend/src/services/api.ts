@@ -403,6 +403,16 @@ export const postsAPI = {
     const response = await api.post(`/api/posts/${postId}/like`);
     return response.data;
   },
+
+  deletePost: async (postId: number) => {
+    const response = await api.delete(`/api/posts/${postId}`);
+    return response.data;
+  },
+
+  updatePost: async (postId: number, postData: { content: string }) => {
+    const response = await api.put(`/api/posts/${postId}`, postData);
+    return response.data;
+  },
 };
 
 // HireMe API

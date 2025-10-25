@@ -7,6 +7,8 @@ import {
   EllipsisHorizontalIcon,
   PhotoIcon,
   FaceSmileIcon,
+  TrashIcon,
+  PencilIcon,
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { postsAPI } from '../services/api';
@@ -22,6 +24,8 @@ const PostFeed: React.FC = () => {
   // const [postType, setPostType] = useState<'post' | 'job'>('post');
   const [showComments, setShowComments] = useState<{ [key: number]: boolean }>({});
   const [commentText, setCommentText] = useState<{ [key: number]: string }>({});
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState<string>('');
   const { user } = useAuth();
 
   useEffect(() => {
@@ -104,6 +108,53 @@ const PostFeed: React.FC = () => {
     }
   };
 
+  const handleDeletePost = async (postId: number) => {
+    if (!window.confirm('Are you sure you want to delete this post? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await postsAPI.deletePost(postId);
+      setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
+      toast.success('Post deleted successfully!');
+    } catch (error) {
+      console.error('Failed to delete post:', error);
+      toast.error('Failed to delete post. Please try again.');
+    }
+  };
+
+  const handleEditPost = (post: Post) => {
+    setEditingPostId(post.id);
+    setEditContent(post.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPostId(null);
+    setEditContent('');
+  };
+
+  const handleSaveEdit = async (postId: number) => {
+    if (!editContent.trim()) {
+      toast.error('Post content cannot be empty');
+      return;
+    }
+
+    try {
+      const response = await postsAPI.updatePost(postId, { content: editContent.trim() });
+      setPosts(prevPosts =>
+        prevPosts.map(p =>
+          p.id === postId ? { ...p, content: response.post.content } : p
+        )
+      );
+      setEditingPostId(null);
+      setEditContent('');
+      toast.success('Post updated successfully!');
+    } catch (error) {
+      console.error('Failed to update post:', error);
+      toast.error('Failed to update post. Please try again.');
+    }
+  };
+
   const toggleComments = (postId: number) => {
     setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
   };
@@ -165,23 +216,79 @@ const PostFeed: React.FC = () => {
                   {post.user.occupation || post.user.company_name || 'Professional'}
                 </p>
               </div>
-              <button className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
-                <EllipsisHorizontalIcon className="w-5 h-5" />
-              </button>
+              {/* Show Edit/Delete buttons only for post owner */}
+              {user && post.user.id === user.id && (
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => handleEditPost(post)}
+                    className="text-blue-600 hover:text-blue-700 p-2 rounded-full hover:bg-blue-50 transition-colors"
+                    title="Edit post"
+                  >
+                    <PencilIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeletePost(post.id)}
+                    className="text-red-600 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"
+                    title="Delete post"
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              {/* Show menu button for non-owners */}
+              {(!user || post.user.id !== user.id) && (
+                <button
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                  title="More options"
+                >
+                  <EllipsisHorizontalIcon className="w-5 h-5" />
+                </button>
+              )}
             </div>
           </div>
 
           {/* Post Content */}
           <div className="px-4 pb-3">
-            <p className="text-gray-900 whitespace-pre-wrap text-sm leading-relaxed">{post.content}</p>
-            {post.image_url && (
-              <div className="mt-3 rounded-lg overflow-hidden border border-gray-200">
-                <img
-                  src={post.image_url}
-                  alt="Post image"
-                  className="w-full h-auto max-h-96 object-cover"
+            {editingPostId === post.id ? (
+              // Edit mode
+              <div className="space-y-2">
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={4}
+                  placeholder="Edit your post..."
                 />
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={handleCancelEdit}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleSaveEdit(post.id)}
+                    disabled={!editContent.trim()}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Save Changes
+                  </button>
+                </div>
               </div>
+            ) : (
+              // View mode
+              <>
+                <p className="text-gray-900 whitespace-pre-wrap text-sm leading-relaxed">{post.content}</p>
+                {post.image_url && (
+                  <div className="mt-3 rounded-lg overflow-hidden border border-gray-200">
+                    <img
+                      src={post.image_url}
+                      alt="Post image"
+                      className="w-full h-auto max-h-96 object-cover"
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
 
