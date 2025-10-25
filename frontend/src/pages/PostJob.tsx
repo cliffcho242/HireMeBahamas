@@ -87,20 +87,50 @@ const PostJob: React.FC = () => {
       navigate('/jobs');
     } catch (error: any) {
       console.error('Error posting job:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        code: error.code
+      });
       
-      // Better error messages
-      let errorMessage = 'Error posting job. ';
+      // Better error messages with auto-fix suggestions
+      let errorMessage = 'Error posting job.\n\n';
+      
       if (error.response?.status === 401) {
-        errorMessage += 'Please sign in again.';
-        navigate('/login');
+        errorMessage += '🔐 Authentication issue detected.\n';
+        errorMessage += 'Redirecting to login page...';
+        alert(errorMessage);
+        // Wait a moment so user can read the message
+        setTimeout(() => navigate('/login'), 1500);
+        return;
       } else if (error.response?.status === 400) {
+        errorMessage += '❌ Validation Error:\n';
         errorMessage += error.response.data?.message || 'Please fill in all required fields.';
+      } else if (error.response?.status === 500) {
+        errorMessage += '⚠️ Server Error:\n';
+        errorMessage += error.response.data?.message || 'The server encountered an error. Please try again.';
+      } else if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
+        errorMessage += '🌐 Network Error:\n';
+        errorMessage += 'Cannot connect to server. Please check:\n';
+        errorMessage += '• Your internet connection\n';
+        errorMessage += '• The server might be starting up (wait 30 seconds)\n';
+        errorMessage += '• Try refreshing the page';
+      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        errorMessage += '⏱️ Request Timeout:\n';
+        errorMessage += 'The server is taking too long to respond.\n';
+        errorMessage += 'Please try again in a moment.';
       } else if (error.response?.data?.message) {
         errorMessage += error.response.data.message;
       } else if (error.message) {
         errorMessage += error.message;
       } else {
-        errorMessage += 'Please try again.';
+        errorMessage += '❓ Unknown error occurred.\n';
+        errorMessage += 'Please try:\n';
+        errorMessage += '• Refreshing the page (Ctrl+Shift+R)\n';
+        errorMessage += '• Signing out and back in\n';
+        errorMessage += '• Waiting a moment and trying again';
       }
       
       alert(errorMessage);

@@ -17,6 +17,21 @@ const api = axios.create({
 // Retry configuration
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
+const BACKEND_WAKE_TIME = 30000; // 30 seconds for Render.com free tier
+
+// Helper to check if backend is sleeping (Render free tier)
+const isBackendSleeping = (error: any): boolean => {
+  // Render.com returns 503 when service is sleeping
+  if (error.response?.status === 503) return true;
+  
+  // Long timeout suggests cold start
+  if (error.code === 'ECONNABORTED' && error.config?.timeout > 15000) return true;
+  
+  // Connection refused during wake-up
+  if (error.code === 'ECONNREFUSED') return true;
+  
+  return false;
+};
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
@@ -48,6 +63,25 @@ api.interceptors.response.use(
       message: error.message,
       data: error.response?.data
     });
+    
+    // Check if backend is sleeping (Render.com free tier)
+    if (isBackendSleeping(error)) {
+      const retryCount = parseInt(config.headers['X-Retry-Count'] || '0');
+      
+      if (retryCount === 0) {
+        console.log('Backend appears to be sleeping. Waking it up...');
+        console.log('This may take 30-60 seconds on first request.');
+        
+        // Increase timeout for wake-up
+        config.timeout = BACKEND_WAKE_TIME;
+        config.headers['X-Retry-Count'] = 1;
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        return api(config);
+      }
+    }
     
     // Retry logic for network errors
     if (
