@@ -52,5 +52,6 @@ export interface Post {
     company_name?: string;
   };
   likes_count: number;
+  comments_count: number;
   is_liked?: boolean;
 }

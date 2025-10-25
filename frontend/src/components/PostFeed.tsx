@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import {
   HeartIcon,
   ChatBubbleLeftIcon,
   ShareIcon,
   EllipsisHorizontalIcon,
-  PhotoIcon,
   FaceSmileIcon,
   TrashIcon,
   PencilIcon,
@@ -28,6 +28,7 @@ const PostFeed: React.FC = () => {
   const [editContent, setEditContent] = useState<string>('');
   const [comments, setComments] = useState<{ [key: number]: any[] }>({});
   const [loadingComments, setLoadingComments] = useState<{ [key: number]: boolean }>({});
+  const [showEmojiPicker, setShowEmojiPicker] = useState<{ [key: number]: boolean }>({});
   const { user } = useAuth();
 
   useEffect(() => {
@@ -164,6 +165,34 @@ const PostFeed: React.FC = () => {
       toast.error('Failed to delete comment');
     }
   };
+
+  const handleEmojiClick = (postId: number, emojiData: EmojiClickData) => {
+    setCommentText(prev => ({
+      ...prev,
+      [postId]: (prev[postId] || '') + emojiData.emoji
+    }));
+    setShowEmojiPicker(prev => ({ ...prev, [postId]: false }));
+  };
+
+  const toggleEmojiPicker = (postId: number) => {
+    setShowEmojiPicker(prev => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const isEmojiButton = target.closest('.emoji-picker-button');
+      const isEmojiPicker = target.closest('.emoji-picker-container');
+      
+      if (!isEmojiButton && !isEmojiPicker) {
+        setShowEmojiPicker({});
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const loadComments = async (postId: number) => {
     if (comments[postId]) {
@@ -432,22 +461,42 @@ const PostFeed: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="flex-1 flex space-x-2">
-                    <input
-                      type="text"
-                      value={commentText[post.id] || ''}
-                      onChange={(e) => setCommentText(prev => ({ ...prev, [post.id]: e.target.value }))}
-                      placeholder="Write a comment..."
-                      className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      onKeyPress={(e) => e.key === 'Enter' && handleComment(post.id)}
-                    />
-                    <button
-                      onClick={() => handleComment(post.id)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
-                      disabled={!commentText[post.id]?.trim()}
-                    >
-                      Post
-                    </button>
+                  <div className="flex-1">
+                    <div className="flex space-x-2 relative">
+                      <input
+                        type="text"
+                        value={commentText[post.id] || ''}
+                        onChange={(e) => setCommentText(prev => ({ ...prev, [post.id]: e.target.value }))}
+                        placeholder="Write a comment..."
+                        className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onKeyPress={(e) => e.key === 'Enter' && handleComment(post.id)}
+                      />
+                      <button
+                        onClick={() => toggleEmojiPicker(post.id)}
+                        className="emoji-picker-button p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                        title="Add emoji"
+                      >
+                        <FaceSmileIcon className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleComment(post.id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!commentText[post.id]?.trim()}
+                      >
+                        Post
+                      </button>
+                    </div>
+                    
+                    {/* Emoji Picker */}
+                    {showEmojiPicker[post.id] && (
+                      <div className="emoji-picker-container absolute z-50 mt-2">
+                        <EmojiPicker
+                          onEmojiClick={(emojiData) => handleEmojiClick(post.id, emojiData)}
+                          width={300}
+                          height={400}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
