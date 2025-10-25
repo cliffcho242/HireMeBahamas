@@ -30,24 +30,80 @@ const PostJob: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
+      alert('Please sign in to post a job');
       navigate('/login');
+      return;
+    }
+
+    // Client-side validation
+    if (!formData.title.trim()) {
+      alert('Please enter a job title');
+      return;
+    }
+    if (!formData.company.trim()) {
+      alert('Please enter a company name');
+      return;
+    }
+    if (!formData.location.trim()) {
+      alert('Please enter a location');
+      return;
+    }
+    if (!formData.job_type) {
+      alert('Please select a job type');
+      return;
+    }
+    if (!formData.description.trim()) {
+      alert('Please enter a job description');
       return;
     }
 
     setLoading(true);
     try {
+      // Build salary range string
+      let salaryRange = '';
+      if (formData.salary_min && formData.salary_max) {
+        salaryRange = `$${formData.salary_min} - $${formData.salary_max}`;
+      } else if (formData.salary_min) {
+        salaryRange = `From $${formData.salary_min}`;
+      } else if (formData.salary_max) {
+        salaryRange = `Up to $${formData.salary_max}`;
+      }
+
       const jobData = {
-        ...formData,
-        salary_min: formData.salary_min ? parseInt(formData.salary_min) : null,
-        salary_max: formData.salary_max ? parseInt(formData.salary_max) : null,
+        title: formData.title.trim(),
+        company: formData.company.trim(),
+        location: formData.location.trim(),
+        job_type: formData.job_type,
+        description: formData.description.trim(),
+        requirements: formData.requirements?.trim() || '',
+        salary_range: salaryRange,
       };
 
-      await api.post('/api/jobs', jobData);
+      console.log('Posting job:', jobData);
+      const response = await api.post('/api/jobs', jobData);
+      console.log('Job posted:', response.data);
+      
       alert('Job posted successfully!');
       navigate('/jobs');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error posting job:', error);
-      alert('Error posting job. Please try again.');
+      
+      // Better error messages
+      let errorMessage = 'Error posting job. ';
+      if (error.response?.status === 401) {
+        errorMessage += 'Please sign in again.';
+        navigate('/login');
+      } else if (error.response?.status === 400) {
+        errorMessage += error.response.data?.message || 'Please fill in all required fields.';
+      } else if (error.response?.data?.message) {
+        errorMessage += error.response.data.message;
+      } else if (error.message) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += 'Please try again.';
+      }
+      
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }

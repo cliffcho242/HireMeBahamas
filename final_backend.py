@@ -1663,10 +1663,26 @@ def create_job():
         data = request.get_json()
 
         # Validate required fields
-        if not all(k in data for k in ['title', 'company', 'location', 'job_type', 'description']):
+        required_fields = ['title', 'company', 'location', 'job_type', 'description']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        
+        if missing_fields:
             return jsonify({
                 'success': False,
-                'message': 'Missing required fields'
+                'message': f'Missing required fields: {", ".join(missing_fields)}'
+            }), 400
+
+        # Validate data types
+        if not isinstance(data.get('title'), str) or len(data.get('title', '').strip()) == 0:
+            return jsonify({
+                'success': False,
+                'message': 'Job title is required'
+            }), 400
+
+        if not isinstance(data.get('company'), str) or len(data.get('company', '').strip()) == 0:
+            return jsonify({
+                'success': False,
+                'message': 'Company name is required'
             }), 400
 
         conn = get_db_connection()
@@ -1677,13 +1693,13 @@ def create_job():
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)
         ''', (
             user_id,
-            data['title'],
-            data['company'],
-            data['location'],
+            data['title'].strip(),
+            data['company'].strip(),
+            data['location'].strip(),
             data['job_type'],
-            data['description'],
-            data.get('requirements', ''),
-            data.get('salary_range', ''),
+            data['description'].strip(),
+            data.get('requirements', '').strip(),
+            data.get('salary_range', '').strip(),
             datetime.now(timezone.utc)
         ))
 
@@ -1699,9 +1715,15 @@ def create_job():
 
     except Exception as e:
         print(f"Error creating job: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error details: {repr(e)}")
+        import traceback
+        traceback.print_exc()
+        
         return jsonify({
             'success': False,
-            'message': 'Failed to create job'
+            'message': 'Failed to create job',
+            'error': str(e) if app.debug else 'Internal server error'
         }), 500
 
 @app.route('/api/jobs/<int:job_id>', methods=['GET', 'OPTIONS'])
