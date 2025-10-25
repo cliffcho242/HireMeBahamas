@@ -73,8 +73,17 @@ api.interceptors.response.use(
     
     // Handle auth errors
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Only auto-logout for auth endpoints or profile endpoints
+      const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/profile');
+      
+      if (isAuthEndpoint) {
+        console.log('Authentication failed - logging out');
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      } else {
+        // For other endpoints, just log the error but don't force logout
+        console.warn('Unauthorized access to:', config.url);
+      }
     }
     
     return Promise.reject(error);

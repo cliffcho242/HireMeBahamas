@@ -1620,10 +1620,7 @@ def get_jobs():
 
         conn.close()
 
-        return jsonify({
-            'success': True,
-            'jobs': jobs
-        }), 200
+        return jsonify(jobs), 200
 
     except Exception as e:
         print(f"Error getting jobs: {str(e)}")

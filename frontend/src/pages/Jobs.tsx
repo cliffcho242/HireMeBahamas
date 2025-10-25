@@ -33,14 +33,18 @@ const Jobs: React.FC = () => {
   const fetchJobs = async () => {
     try {
       const response = await api.get('/api/jobs');
-      setJobs(response.data);
-      setSearchResults(response.data.map((job: Job) => ({
+      const jobsData = Array.isArray(response.data) ? response.data : (response.data?.jobs || []);
+      setJobs(jobsData);
+      setSearchResults(jobsData.map((job: Job) => ({
         ...job,
         relevanceScore: 100,
         matchedFields: []
       })));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching jobs:', error);
+      // Don't throw error - just show empty jobs list
+      setJobs([]);
+      setSearchResults([]);
     } finally {
       setLoading(false);
     }
