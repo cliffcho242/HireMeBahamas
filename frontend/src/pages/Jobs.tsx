@@ -32,7 +32,7 @@ const Jobs: React.FC = () => {
 
   const fetchJobs = async () => {
     try {
-      const response = await api.get('/jobs/');
+      const response = await api.get('/api/jobs');
       setJobs(response.data);
       setSearchResults(response.data.map((job: Job) => ({
         ...job,

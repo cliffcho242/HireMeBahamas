@@ -42,7 +42,7 @@ const PostJob: React.FC = () => {
         salary_max: formData.salary_max ? parseInt(formData.salary_max) : null,
       };
 
-      await api.post('/jobs/', jobData);
+      await api.post('/api/jobs', jobData);
       alert('Job posted successfully!');
       navigate('/jobs');
     } catch (error) {

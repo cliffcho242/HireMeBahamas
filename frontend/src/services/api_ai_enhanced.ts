@@ -145,27 +145,27 @@ export const authAPI = {
 // AI-Enhanced Job Functions
 export const jobAPI = {
   getAllJobs: async () => {
-    const response = await api.get('/jobs');
+    const response = await api.get('/api/jobs');
     return response.data;
   },
 
   getJobById: async (id: string) => {
-    const response = await api.get(`/jobs/${id}`);
+    const response = await api.get(`/api/jobs/${id}`);
     return response.data;
   },
 
   createJob: async (jobData: Partial<Job>) => {
-    const response = await api.post('/jobs', jobData);
+    const response = await api.post('/api/jobs', jobData);
     return response.data;
   },
 
   updateJob: async (id: string, jobData: Partial<Job>) => {
-    const response = await api.put(`/jobs/${id}`, jobData);
+    const response = await api.put(`/api/jobs/${id}`, jobData);
     return response.data;
   },
 
   deleteJob: async (id: string) => {
-    const response = await api.delete(`/jobs/${id}`);
+    const response = await api.delete(`/api/jobs/${id}`);
     return response.data;
   }
 };

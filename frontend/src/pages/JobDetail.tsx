@@ -20,7 +20,7 @@ const JobDetail: React.FC = () => {
 
   const fetchJob = async () => {
     try {
-      const response = await api.get(`/jobs/${id}`);
+      const response = await api.get(`/api/jobs/${id}`);
       setJob(response.data);
     } catch (error) {
       console.error('Error fetching job:', error);
@@ -37,7 +37,7 @@ const JobDetail: React.FC = () => {
 
     setApplying(true);
     try {
-      await api.post(`/jobs/${id}/apply`);
+      await api.post(`/api/jobs/${id}/apply`);
       alert('Application submitted successfully!');
     } catch (error) {
       console.error('Error applying for job:', error);
