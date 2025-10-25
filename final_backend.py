@@ -460,9 +460,9 @@ def login():
             "message": "Login failed"
         }), 500
 
-@app.route('/api/auth/profile', methods=['GET', 'OPTIONS'])
-def get_profile():
-    """Get current user profile"""
+@app.route('/api/auth/profile', methods=['GET', 'PUT', 'OPTIONS'])
+def profile():
+    """Get or update current user profile"""
     if request.method == 'OPTIONS':
         return '', 200
 
@@ -494,6 +494,40 @@ def get_profile():
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # Handle PUT request (update profile)
+        if request.method == 'PUT':
+            data = request.get_json()
+            
+            if not data:
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'message': 'No data provided'
+                }), 400
+
+            # Update user profile
+            cursor.execute('''
+                UPDATE users SET
+                    first_name = ?,
+                    last_name = ?,
+                    location = ?,
+                    phone = ?,
+                    bio = ?,
+                    last_login = ?
+                WHERE id = ?
+            ''', (
+                data.get('first_name'),
+                data.get('last_name'),
+                data.get('location'),
+                data.get('phone'),
+                data.get('bio'),
+                datetime.now(timezone.utc),
+                user_id
+            ))
+
+            conn.commit()
+
+        # Get user data (for both GET and PUT)
         cursor.execute('''
             SELECT id, email, first_name, last_name, user_type, location, phone, bio,
                    avatar_url, created_at, last_login, is_active, is_available_for_hire
@@ -527,10 +561,13 @@ def get_profile():
         }), 200
 
     except Exception as e:
-        print(f"Error getting profile: {str(e)}")
+        print(f"Error with profile: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'message': 'Failed to get profile'
+            'message': 'Failed to process profile request',
+            'error': str(e) if app.debug else None
         }), 500
 
 # Posts API endpoints
@@ -1077,97 +1114,6 @@ def toggle_availability():
         }), 500
 
 # Removed duplicate get_user_profile function - using get_profile instead
-
-@app.route('/api/auth/profile', methods=['PUT', 'OPTIONS'])
-def update_profile():
-    """Update current user profile"""
-    if request.method == 'OPTIONS':
-        return '', 200
-
-    try:
-        # Get token from Authorization header
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({
-                'success': False,
-                'message': 'Authorization token required'
-            }), 401
-
-        token = auth_header.split(' ')[1]
-
-        try:
-            payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-            user_id = payload['user_id']
-        except jwt.ExpiredSignatureError:
-            return jsonify({
-                'success': False,
-                'message': 'Token expired'
-            }), 401
-        except jwt.InvalidTokenError:
-            return jsonify({
-                'success': False,
-                'message': 'Invalid token'
-            }), 401
-
-        data = request.get_json()
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Update user profile
-        cursor.execute('''
-            UPDATE users SET
-                first_name = ?,
-                last_name = ?,
-                location = ?,
-                phone = ?,
-                bio = ?,
-                last_login = CURRENT_TIMESTAMP
-            WHERE id = ?
-        ''', (
-            data.get('first_name'),
-            data.get('last_name'),
-            data.get('location'),
-            data.get('phone'),
-            data.get('bio'),
-            user_id
-        ))
-
-        conn.commit()
-
-        # Get updated user data
-        cursor.execute('''
-            SELECT id, email, first_name, last_name, user_type, location, phone, bio,
-                   avatar_url, created_at, last_login, is_active, is_available_for_hire
-            FROM users WHERE id = ?
-        ''', (user_id,))
-
-        user = cursor.fetchone()
-        conn.close()
-
-        return jsonify({
-            'success': True,
-            'id': user[0],
-            'email': user[1],
-            'first_name': user[2] or '',
-            'last_name': user[3] or '',
-            'user_type': user[4] or 'user',
-            'location': user[5] or '',
-            'phone': user[6] or '',
-            'bio': user[7] or '',
-            'avatar_url': user[8] or '',
-            'created_at': user[9],
-            'last_login': user[10],
-            'is_active': bool(user[11]),
-            'is_available_for_hire': bool(user[12])
-        }), 200
-
-    except Exception as e:
-        print(f"Error updating profile: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': 'Failed to update profile'
-        }), 500
 
 # Friends endpoints
 @app.route('/api/friends/send-request/<int:user_id>', methods=['POST', 'OPTIONS'])
