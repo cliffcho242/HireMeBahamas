@@ -20,6 +20,7 @@ import HireMe from './pages/HireMe';
 import Friends from './pages/Friends';
 import UserProfile from './pages/UserProfile';
 import Download from './pages/Download';
+import DownloadTest from './pages/DownloadTest';
 
 // Components
 import Navbar from './components/Navbar';
@@ -101,6 +102,7 @@ function AppContent() {
 
           {/* Download Page - Public route for app installation */}
           <Route path="/download" element={<Download />} />
+          <Route path="/download-test" element={<DownloadTest />} />
 
           {/* Protected Routes - Everything else requires authentication */}
           <Route
