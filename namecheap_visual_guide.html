@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Namecheap DNS Configuration Guide - Visual</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .domain {
+            text-align: center;
+            color: #667eea;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 40px;
+        }
+        .step {
+            background: #f7fafc;
+            border-left: 5px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            margin-right: 15px;
+        }
+        .step-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2d3748;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .dns-record {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .dns-record.a-record {
+            border-left: 5px solid #48bb78;
+        }
+        .dns-record.cname-record {
+            border-left: 5px solid #4299e1;
+        }
+        .field {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 6px;
+        }
+        .field-label {
+            font-weight: bold;
+            color: #4a5568;
+            width: 100px;
+            flex-shrink: 0;
+        }
+        .field-value {
+            background: #2d3748;
+            color: #48bb78;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            flex-grow: 1;
+        }
+        .warning {
+            background: #fff5e6;
+            border-left: 5px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .success {
+            background: #e6ffe6;
+            border-left: 5px solid #48bb78;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .button-demo {
+            background: #48bb78;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+            display: block;
+            margin: 20px auto;
+        }
+        .screenshot-placeholder {
+            background: #e2e8f0;
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 60px 20px;
+            text-align: center;
+            color: #718096;
+            font-style: italic;
+            margin: 20px 0;
+        }
+        .timer {
+            text-align: center;
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 30px 0;
+        }
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f7fafc;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+        }
+        .checklist li:before {
+            content: '☐';
+            font-size: 24px;
+            margin-right: 15px;
+            color: #cbd5e0;
+        }
+        .url-box {
+            background: #2d3748;
+            color: #48bb78;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            margin: 20px 0;
+            word-break: break-all;
+        }
+        .copy-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Namecheap DNS Configuration Guide</h1>
+        <div class="domain">hiremebahamas.com</div>
+
+        <!-- Step 1 -->
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-title">Log in to Namecheap</div>
+            <p>Go to: <a href="https://ap.www.namecheap.com/Domains/DomainControlPanel/hiremebahamas.com/advancedns" target="_blank">
+                https://ap.www.namecheap.com/Domains/DomainControlPanel/hiremebahamas.com/advancedns
+            </a></p>
+            <div class="screenshot-placeholder">
+                Namecheap login page will appear here
+            </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-title">Go to Advanced DNS Tab</div>
+            <p>After logging in:</p>
+            <ul>
+                <li>Click "Domain List" in the left sidebar</li>
+                <li>Click "MANAGE" button next to hiremebahamas.com</li>
+                <li>Click "Advanced DNS" tab at the top</li>
+            </ul>
+            <div class="screenshot-placeholder">
+                Advanced DNS tab location
+            </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-title">Delete Existing Records</div>
+            <div class="warning">
+                <strong>⚠️ Important:</strong> Delete any existing A records or CNAME records that point to parking pages or old servers.
+                <ul>
+                    <li>Look for trash/delete icons (🗑️) next to records</li>
+                    <li>Click them to remove old records</li>
+                    <li>This prevents conflicts with new records</li>
+                </ul>
+            </div>
+            <div class="screenshot-placeholder">
+                Delete button next to existing records
+            </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-title">Add A Record</div>
+            <button class="button-demo">+ ADD NEW RECORD</button>
+            <div class="dns-record a-record">
+                <h3 style="color: #48bb78; margin-top: 0;">✅ A Record Configuration</h3>
+                <div class="field">
+                    <span class="field-label">Type:</span>
+                    <span class="field-value">A Record</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Host:</span>
+                    <span class="field-value">@</span>
+                    <button class="copy-btn" onclick="copyText('@')">Copy</button>
+                </div>
+                <div class="field">
+                    <span class="field-label">Value:</span>
+                    <span class="field-value">76.76.21.21</span>
+                    <button class="copy-btn" onclick="copyText('76.76.21.21')">Copy</button>
+                </div>
+                <div class="field">
+                    <span class="field-label">TTL:</span>
+                    <span class="field-value">Automatic</span>
+                </div>
+            </div>
+            <p><strong>What this does:</strong> Points your root domain (hiremebahamas.com) to Vercel's servers.</p>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="step">
+            <div class="step-number">5</div>
+            <div class="step-title">Add CNAME Record (for www)</div>
+            <button class="button-demo">+ ADD NEW RECORD</button>
+            <div class="dns-record cname-record">
+                <h3 style="color: #4299e1; margin-top: 0;">✅ CNAME Record Configuration</h3>
+                <div class="field">
+                    <span class="field-label">Type:</span>
+                    <span class="field-value">CNAME Record</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Host:</span>
+                    <span class="field-value">www</span>
+                    <button class="copy-btn" onclick="copyText('www')">Copy</button>
+                </div>
+                <div class="field">
+                    <span class="field-label">Value:</span>
+                    <span class="field-value">cname.vercel-dns.com</span>
+                    <button class="copy-btn" onclick="copyText('cname.vercel-dns.com')">Copy</button>
+                </div>
+                <div class="field">
+                    <span class="field-label">TTL:</span>
+                    <span class="field-value">Automatic</span>
+                </div>
+            </div>
+            <p><strong>What this does:</strong> Points www.hiremebahamas.com to Vercel's CDN.</p>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="step">
+            <div class="step-number">6</div>
+            <div class="step-title">Save All Changes</div>
+            <button class="button-demo">💾 SAVE ALL CHANGES</button>
+            <div class="success">
+                <strong>✅ Success!</strong> Click the green "SAVE ALL CHANGES" button at the bottom of the page.
+                You should see a confirmation message saying "Your changes have been saved successfully."
+            </div>
+        </div>
+
+        <!-- Step 7 -->
+        <div class="step">
+            <div class="step-number">7</div>
+            <div class="step-title">Wait for Propagation</div>
+            <div class="timer">⏱️ 10-15 min</div>
+            <p style="text-align: center;">DNS changes typically take 10-15 minutes on Namecheap.<br>
+            In rare cases, it may take up to 30 minutes.</p>
+            <div class="warning">
+                <strong>💡 Pro Tip:</strong> Clear your browser cache after 10 minutes:
+                <ul>
+                    <li>Press <code>Ctrl + Shift + Delete</code></li>
+                    <li>Select "Cached images and files"</li>
+                    <li>Click "Clear data"</li>
+                    <li>Or use incognito mode: <code>Ctrl + Shift + N</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Step 8 -->
+        <div class="step">
+            <div class="step-number">8</div>
+            <div class="step-title">Test Your Website</div>
+            <h3>After 10-15 minutes, visit:</h3>
+            <div class="url-box">
+                https://hiremebahamas.com
+            </div>
+            <div class="url-box">
+                https://www.hiremebahamas.com
+            </div>
+            <div class="url-box">
+                https://hiremebahamas.com/download
+            </div>
+            
+            <h3>Verification Checklist:</h3>
+            <ul class="checklist">
+                <li>Site loads without DNS error</li>
+                <li>You see the HireMeBahamas homepage</li>
+                <li>URL shows 🔒 HTTPS (secure)</li>
+                <li>www version redirects correctly</li>
+                <li>/download page loads successfully</li>
+            </ul>
+        </div>
+
+        <!-- Temporary URL -->
+        <div class="step" style="background: #fff5e6; border-left-color: #f59e0b;">
+            <div class="step-number" style="background: #f59e0b;">⚡</div>
+            <div class="step-title">Use This While Waiting</div>
+            <p>This URL works <strong>right now</strong> (no DNS needed):</p>
+            <div class="url-box">
+                <a href="https://frontend-8hx9eshko-cliffs-projects-a84c76c9.vercel.app" target="_blank" style="color: #48bb78;">
+                    https://frontend-8hx9eshko-cliffs-projects-a84c76c9.vercel.app
+                </a>
+            </div>
+            <p style="text-align: center;">
+                <button class="button-demo" onclick="window.open('https://frontend-8hx9eshko-cliffs-projects-a84c76c9.vercel.app', '_blank')">
+                    🚀 Open Temporary URL
+                </button>
+            </p>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div class="step" style="background: #fee; border-left-color: #e53e3e;">
+            <h2>🆘 Still Not Working After 30 Minutes?</h2>
+            <ol>
+                <li><strong>Check DNS online:</strong> Visit <a href="https://dnschecker.org/#A/hiremebahamas.com" target="_blank">DNSChecker.org</a></li>
+                <li><strong>Verify records:</strong> Run <code>nslookup hiremebahamas.com</code> in PowerShell</li>
+                <li><strong>Expected result:</strong> Should show IP <code>76.76.21.21</code></li>
+                <li><strong>If still wrong:</strong> Double-check you entered values exactly as shown above</li>
+                <li><strong>Common mistakes:</strong>
+                    <ul>
+                        <li>Using "hiremebahamas.com" instead of "@" for Host</li>
+                        <li>Adding "https://" or extra spaces in Value</li>
+                        <li>Not clicking "SAVE ALL CHANGES"</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied: ' + text);
+            });
+        }
+    </script>
+</body>
+</html>
