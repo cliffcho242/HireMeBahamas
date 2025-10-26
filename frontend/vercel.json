@@ -1,4 +1,8 @@
 {
+  "alias": [
+    "hiremebahamas.com",
+    "www.hiremebahamas.com"
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
