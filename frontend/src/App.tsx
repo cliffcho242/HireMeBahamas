@@ -19,6 +19,7 @@ import PostJob from './pages/PostJob';
 import HireMe from './pages/HireMe';
 import Friends from './pages/Friends';
 import UserProfile from './pages/UserProfile';
+import Download from './pages/Download';
 
 // Components
 import Navbar from './components/Navbar';
@@ -26,6 +27,7 @@ import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthGuard from './components/AuthGuard';
 import { AIErrorBoundary } from './components/AIErrorBoundary';
+import InstallPWA from './components/InstallPWA';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -96,6 +98,9 @@ function AppContent() {
               )
             }
           />
+
+          {/* Download Page - Public route for app installation */}
+          <Route path="/download" element={<Download />} />
 
           {/* Protected Routes - Everything else requires authentication */}
           <Route
@@ -178,6 +183,9 @@ function AppContent() {
 
       {/* Only show footer for authenticated users */}
       {isAuthenticated && <Footer />}
+
+      {/* PWA Install Prompt */}
+      <InstallPWA />
 
       {/* Global toast notifications */}
       <Toaster

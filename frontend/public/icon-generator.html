@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate HireMeBahamas Icons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .icon {
+            margin: 10px;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <h1>HireMeBahamas Icon Generator</h1>
+    <p>Click buttons below to download icons for PWA</p>
+    
+    <div id="icons"></div>
+    
+    <script>
+        const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+        const iconsDiv = document.getElementById('icons');
+        
+        sizes.forEach(size => {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // Create gradient background
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#2563eb');
+            gradient.addColorStop(1, '#7c3aed');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add rounded corners
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.beginPath();
+            const radius = size * 0.2;
+            ctx.moveTo(radius, 0);
+            ctx.lineTo(size - radius, 0);
+            ctx.quadraticCurveTo(size, 0, size, radius);
+            ctx.lineTo(size, size - radius);
+            ctx.quadraticCurveTo(size, size, size - radius, size);
+            ctx.lineTo(radius, size);
+            ctx.quadraticCurveTo(0, size, 0, size - radius);
+            ctx.lineTo(0, radius);
+            ctx.quadraticCurveTo(0, 0, radius, 0);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.globalCompositeOperation = 'source-over';
+            
+            // Add text
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${size * 0.4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('HB', size / 2, size / 2);
+            
+            const container = document.createElement('div');
+            container.className = 'icon';
+            container.appendChild(canvas);
+            
+            const button = document.createElement('button');
+            button.textContent = `Download ${size}x${size}`;
+            button.onclick = () => {
+                canvas.toBlob(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `icon-${size}x${size}.png`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+            };
+            container.appendChild(button);
+            
+            iconsDiv.appendChild(container);
+        });
+        
+        // Generate Apple touch icon
+        const appleSize = 180;
+        const appleCanvas = document.createElement('canvas');
+        appleCanvas.width = appleSize;
+        appleCanvas.height = appleSize;
+        const appleCtx = appleCanvas.getContext('2d');
+        
+        const appleGradient = appleCtx.createLinearGradient(0, 0, appleSize, appleSize);
+        appleGradient.addColorStop(0, '#2563eb');
+        appleGradient.addColorStop(1, '#7c3aed');
+        appleCtx.fillStyle = appleGradient;
+        appleCtx.fillRect(0, 0, appleSize, appleSize);
+        
+        appleCtx.fillStyle = 'white';
+        appleCtx.font = `bold ${appleSize * 0.4}px Arial`;
+        appleCtx.textAlign = 'center';
+        appleCtx.textBaseline = 'middle';
+        appleCtx.fillText('HB', appleSize / 2, appleSize / 2);
+        
+        const appleContainer = document.createElement('div');
+        appleContainer.className = 'icon';
+        appleContainer.appendChild(appleCanvas);
+        
+        const appleButton = document.createElement('button');
+        appleButton.textContent = 'Download Apple Touch Icon (180x180)';
+        appleButton.onclick = () => {
+            appleCanvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'apple-touch-icon.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        };
+        appleContainer.appendChild(appleButton);
+        iconsDiv.appendChild(appleContainer);
+    </script>
+</body>
+</html>
