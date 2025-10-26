@@ -25,15 +25,30 @@ const Download: React.FC = () => {
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
-    // Detect platform
-    const userAgent = navigator.userAgent;
-    const iOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
-    const android = /Android/.test(userAgent);
-    const desktop = !/Android|iPhone|iPad|iPod/.test(userAgent);
+    // Detect platform with better desktop detection
+    const userAgent = navigator.userAgent.toLowerCase();
+    const iOS = /ipad|iphone|ipod/.test(userAgent) && !(window as any).MSStream;
+    const android = /android/.test(userAgent);
+    const desktop = !/android|iphone|ipad|ipod|mobile/.test(userAgent);
+    
+    // Enhanced desktop detection
+    const isWindows = /windows/.test(userAgent);
+    const isMac = /macintosh|mac os x/.test(userAgent);
+    const isLinux = /linux/.test(userAgent) && !/android/.test(userAgent);
+    const isChrome = /chrome/.test(userAgent) && !/edge|edg/.test(userAgent);
+    const isEdge = /edge|edg/.test(userAgent);
+    const isFirefox = /firefox/.test(userAgent);
+    
+    console.log('Platform detected:', { 
+      iOS, android, desktop, 
+      isWindows, isMac, isLinux,
+      isChrome, isEdge, isFirefox,
+      userAgent 
+    });
     
     setIsIOS(iOS);
     setIsAndroid(android);
-    setIsDesktop(desktop);
+    setIsDesktop(desktop || isWindows || isMac || isLinux);
 
     // Check if already installed
     const standalone = window.matchMedia('(display-mode: standalone)').matches ||
@@ -199,7 +214,9 @@ const Download: React.FC = () => {
               >
                 <ArrowDownTrayIcon className="w-6 h-6" />
                 <span>
-                  {isIOS ? 'View Install Instructions' : 'Install Now'}
+                  {isIOS ? 'View Install Instructions' : 
+                   isDesktop ? 'Install as Desktop App' : 
+                   'Install Now'}
                 </span>
               </button>
               <button
@@ -286,39 +303,94 @@ const Download: React.FC = () => {
             </motion.div>
           )}
 
-          {/* Desktop Instructions */}
+          {/* Desktop Instructions - Always show on desktop/laptop */}
           {isDesktop && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="bg-white rounded-2xl shadow-lg p-8"
+              className="bg-white rounded-2xl shadow-lg p-8 border-2 border-purple-200"
             >
               <div className="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
                 <ComputerDesktopIcon className="w-8 h-8 text-purple-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Install on Desktop</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Install on Desktop/Laptop</h3>
+              
+              <div className="mb-4 p-3 bg-purple-50 rounded-lg">
+                <p className="text-sm font-semibold text-purple-900 mb-2">✅ Works on:</p>
+                <ul className="text-xs text-purple-700 space-y-1">
+                  <li>• Windows 10/11 (Chrome, Edge, Firefox)</li>
+                  <li>• macOS (Chrome, Edge, Safari)</li>
+                  <li>• Linux (Chrome, Firefox)</li>
+                </ul>
+              </div>
+
               <ol className="space-y-3 text-gray-600">
                 <li className="flex items-start">
                   <span className="font-bold mr-2 text-purple-600">1.</span>
-                  <span>Click the <strong>install icon</strong> in the address bar</span>
+                  <span>Look for the <strong>install icon</strong> (
+                    <svg className="inline w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
+                    </svg>
+                  ) in address bar</span>
                 </li>
                 <li className="flex items-start">
                   <span className="font-bold mr-2 text-purple-600">2.</span>
-                  <span>Click <strong>"Install"</strong> in the popup</span>
+                  <span>Or click "Install Now" button above</span>
                 </li>
                 <li className="flex items-start">
                   <span className="font-bold mr-2 text-purple-600">3.</span>
-                  <span>The app will open in its own window</span>
+                  <span>Confirm installation in the popup</span>
                 </li>
                 <li className="flex items-start">
                   <span className="font-bold mr-2 text-purple-600">4.</span>
-                  <span>Access from your applications!</span>
+                  <span>App opens in standalone window</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="font-bold mr-2 text-purple-600">5.</span>
+                  <span>Find in Start Menu / Applications</span>
                 </li>
               </ol>
+
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-600">
+                  💡 <strong>Keyboard shortcut:</strong> Press Ctrl+Click (Windows) or Cmd+Click (Mac) on "Install Now" button
+                </p>
+              </div>
             </motion.div>
           )}
         </div>
+
+        {/* Desktop-specific benefits section */}
+        {isDesktop && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-8 mb-16"
+          >
+            <h2 className="text-3xl font-bold text-center text-gray-900 mb-6">
+              Why Install on Desktop/Laptop?
+            </h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="text-4xl mb-3">⚡</div>
+                <h3 className="font-bold text-gray-900 mb-2">Faster Access</h3>
+                <p className="text-sm text-gray-600">Launch instantly from Start Menu or Dock. No need to open browser and type URL.</p>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="text-4xl mb-3">🖥️</div>
+                <h3 className="font-bold text-gray-900 mb-2">Native Experience</h3>
+                <p className="text-sm text-gray-600">Runs in its own window. Works like a native Windows, Mac, or Linux application.</p>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="text-4xl mb-3">🔔</div>
+                <h3 className="font-bold text-gray-900 mb-2">Desktop Notifications</h3>
+                <p className="text-sm text-gray-600">Get job alerts and messages directly on your desktop, even when browser is closed.</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Features Grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
