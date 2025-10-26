@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   DevicePhoneMobileIcon,
@@ -9,25 +10,77 @@ import {
   GlobeAltIcon,
 } from '@heroicons/react/24/outline';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 const Download: React.FC = () => {
+  const navigate = useNavigate();
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
     // Detect platform
     const userAgent = navigator.userAgent;
-    setIsIOS(/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream);
-    setIsAndroid(/Android/.test(userAgent));
-    setIsDesktop(!/Android|iPhone|iPad|iPod/.test(userAgent));
+    const iOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
+    const android = /Android/.test(userAgent);
+    const desktop = !/Android|iPhone|iPad|iPod/.test(userAgent);
+    
+    setIsIOS(iOS);
+    setIsAndroid(android);
+    setIsDesktop(desktop);
 
     // Check if already installed
     const standalone = window.matchMedia('(display-mode: standalone)').matches ||
       (navigator as any).standalone ||
       document.referrer.includes('android-app://');
     setIsInstalled(standalone);
+
+    // Listen for beforeinstallprompt event (Android/Desktop)
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
+
+  const handleInstallClick = async () => {
+    if (isIOS) {
+      // Show iOS instructions
+      setShowIOSInstructions(true);
+      return;
+    }
+
+    if (deferredPrompt) {
+      // Android/Desktop install
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        if (outcome === 'accepted') {
+          console.log('User accepted install');
+          setIsInstalled(true);
+        }
+        
+        setDeferredPrompt(null);
+      } catch (error) {
+        console.error('Install prompt error:', error);
+      }
+    } else {
+      // If no install prompt available, just go to app
+      navigate('/');
+    }
+  };
 
   const features = [
     {
@@ -64,12 +117,12 @@ const Download: React.FC = () => {
               </div>
               <span className="text-xl font-bold text-gray-900">HireMeBahamas</span>
             </div>
-            <a
-              href="/"
+            <Link
+              to="/"
               className="text-blue-600 hover:text-blue-700 font-medium"
             >
               Open App
-            </a>
+            </Link>
           </div>
         </div>
       </nav>
@@ -105,27 +158,29 @@ const Download: React.FC = () => {
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <a
-                href="/"
-                className="inline-flex items-center space-x-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+              <button
+                onClick={handleInstallClick}
+                className="inline-flex items-center space-x-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
               >
                 <ArrowDownTrayIcon className="w-6 h-6" />
-                <span>Install Now</span>
-              </a>
-              <a
-                href="/"
+                <span>
+                  {isIOS ? 'View Install Instructions' : 'Install Now'}
+                </span>
+              </button>
+              <Link
+                to="/"
                 className="inline-flex items-center space-x-2 px-8 py-4 bg-white text-gray-700 rounded-full font-semibold text-lg shadow-md hover:shadow-lg transition-all"
               >
                 <span>Use Web Version</span>
-              </a>
+              </Link>
             </div>
           )}
         </motion.div>
 
         {/* Installation Instructions */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {/* iOS Instructions */}
-          {isIOS && (
+          {/* iOS Instructions - Show when iOS or when user clicks button */}
+          {(isIOS || showIOSInstructions) && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -139,7 +194,11 @@ const Download: React.FC = () => {
               <ol className="space-y-3 text-gray-600">
                 <li className="flex items-start">
                   <span className="font-bold mr-2 text-blue-600">1.</span>
-                  <span>Tap the <strong>Share</strong> button in Safari</span>
+                  <span>Tap the <strong>Share</strong> button (
+                    <svg className="inline w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"/>
+                    </svg>
+                  ) in Safari</span>
                 </li>
                 <li className="flex items-start">
                   <span className="font-bold mr-2 text-blue-600">2.</span>
@@ -256,13 +315,13 @@ const Download: React.FC = () => {
           <p className="text-lg sm:text-xl mb-8 text-blue-100">
             Join thousands of professionals connecting in the Bahamas
           </p>
-          <a
-            href="/"
-            className="inline-flex items-center space-x-2 px-8 py-4 bg-white text-blue-600 rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+          <button
+            onClick={handleInstallClick}
+            className="inline-flex items-center space-x-2 px-8 py-4 bg-white text-blue-600 rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
           >
             <ArrowDownTrayIcon className="w-6 h-6" />
-            <span>Open HireMeBahamas</span>
-          </a>
+            <span>{isInstalled ? 'Open HireMeBahamas' : 'Install HireMeBahamas'}</span>
+          </button>
         </motion.div>
       </div>
 
