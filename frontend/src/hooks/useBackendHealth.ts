@@ -17,7 +17,7 @@ export const useBackendHealth = () => {
   });
 
   useEffect(() => {
-    let checkInterval: number;
+    let checkInterval: NodeJS.Timeout;
     let isChecking = false;
 
     const checkHealth = async () => {
