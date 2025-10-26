@@ -4,15 +4,24 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     
-    <!-- Enhanced Viewport for Mobile, Tablet, Desktop -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <!-- Enhanced Viewport for ALL Devices - Mobile, Tablet, Desktop -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, user-scalable=yes, viewport-fit=cover" />
     
-    <!-- PWA Configuration -->
-    <meta name="theme-color" content="#2563eb" />
-    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- iOS Safari & WebKit Support -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="HireMeBahamas" />
+    <meta name="apple-touch-fullscreen" content="yes" />
+    
+    <!-- Android Chrome Support -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#2563eb" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1e40af" />
+    
+    <!-- Windows Support -->
+    <meta name="msapplication-TileColor" content="#2563eb" />
+    <meta name="msapplication-tap-highlight" content="no" />
     
     <!-- SEO & Social -->
     <meta name="description" content="HireMeBahamas - The Bahamas' premier professional social network. Connect with employers, showcase talents, and discover opportunities." />
@@ -23,25 +32,38 @@
     <meta property="og:description" content="Connect. Share. Grow Your Career in the Bahamas" />
     <meta property="og:type" content="website" />
     
-    <!-- Performance & Compatibility -->
+    <!-- Performance & Cross-Browser Compatibility -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="format-detection" content="telephone=no" />
+    <meta name="format-detection" content="date=no" />
+    <meta name="format-detection" content="address=no" />
+    <meta name="format-detection" content="email=no" />
     
     <!-- Preconnect for Performance -->
     <link rel="preconnect" href="http://127.0.0.1:8008" />
     
     <title>HireMeBahamas - Caribbean Job Platform</title>
     
-    <!-- Touch Icons for Mobile -->
+    <!-- Touch Icons for All Platforms -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     
     <style>
-      /* Critical CSS for faster initial render */
+      /* Critical CSS for Responsive Design & Cross-Platform Compatibility */
       * {
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
+        box-sizing: border-box;
+      }
+      
+      html {
+        /* Prevent font scaling in landscape on iOS */
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+        /* Enable smooth scrolling */
+        scroll-behavior: smooth;
       }
       
       body {
@@ -50,6 +72,29 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         overscroll-behavior: none;
+        /* Prevent pull-to-refresh on mobile */
+        overscroll-behavior-y: contain;
+        /* Support safe areas for notched devices */
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      
+      /* Responsive font sizing */
+      @media (max-width: 640px) {
+        html { font-size: 14px; }
+      }
+      
+      @media (min-width: 641px) and (max-width: 1024px) {
+        html { font-size: 15px; }
+      }
+      
+      @media (min-width: 1025px) {
+        html { font-size: 16px; }
+      }
+      
+      /* Support for iOS safe areas */
+      #root {
+        min-height: -webkit-fill-available;
+        min-height: 100vh;
       }
       
       /* Loading spinner */

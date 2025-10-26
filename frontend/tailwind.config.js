@@ -6,18 +6,28 @@ export default {
   ],
   theme: {
     extend: {
-      // Custom breakpoints for mobile, tablet, and desktop
+      // Enhanced breakpoints for ALL devices - Mobile, Tablet, Desktop
       screens: {
-        'xs': '375px',      // Small phones
-        'sm': '640px',      // Large phones
-        'md': '768px',      // Tablets
-        'lg': '1024px',     // Small laptops
-        'xl': '1280px',     // Desktops
+        'xs': '320px',      // Extra small phones (iPhone SE, older Android)
+        'sm': '640px',      // Large phones (iPhone 12/13/14, most Android)
+        'md': '768px',      // Tablets (iPad Mini, Android tablets)
+        'lg': '1024px',     // Small laptops / iPad Pro
+        'xl': '1280px',     // Desktops / Large laptops
         '2xl': '1536px',    // Large desktops
-        '3xl': '1920px',    // Ultra-wide
+        '3xl': '1920px',    // Ultra-wide monitors
+        // Landscape orientations
+        'landscape': { 'raw': '(orientation: landscape)' },
+        'portrait': { 'raw': '(orientation: portrait)' },
+        // Device-specific
+        'touch': { 'raw': '(hover: none) and (pointer: coarse)' },
+        'mouse': { 'raw': '(hover: hover) and (pointer: fine)' },
       },
       // Enhanced spacing for better mobile UX
       spacing: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
         '18': '4.5rem',
         '88': '22rem',
         '128': '32rem',
@@ -35,12 +45,14 @@ export default {
         '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
         '5xl': ['3rem', { lineHeight: '1' }],
       },
-      // Touch-friendly sizes
+      // Touch-friendly sizes (Apple/Android HIG guidelines)
       minHeight: {
-        'touch': '44px',  // Minimum touch target size
+        'touch': '44px',  // iOS minimum
+        'touch-android': '48px',  // Android minimum
       },
       minWidth: {
         'touch': '44px',
+        'touch-android': '48px',
       },
       // Animations optimized for mobile performance
       animation: {

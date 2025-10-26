@@ -53,46 +53,46 @@ const Home: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Top Navigation Bar */}
+    <div className="min-h-screen min-h-[100dvh] bg-gray-100">
+      {/* Top Navigation Bar - Responsive */}
       <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 h-12 sm:h-14 flex items-center justify-between">
           {/* Left Section - Logo and Search */}
-          <div className="flex items-center space-x-4">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold">HB</span>
+          <div className="flex items-center space-x-2 sm:space-x-4 flex-1">
+            <Link to="/" className="flex items-center space-x-1 sm:space-x-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-sm sm:text-base">HB</span>
               </div>
-              <span className="text-xl font-bold text-gray-900 hidden sm:block">HireMeBahamas</span>
+              <span className="text-lg sm:text-xl font-bold text-gray-900 hidden sm:block truncate">HireMeBahamas</span>
             </Link>
 
-            <div className="hidden md:block relative">
+            <div className="hidden md:block relative flex-1 max-w-xs">
               <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search HireMeBahamas"
-                className="pl-10 pr-4 py-2 w-64 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-10 pr-4 py-2 w-full bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
           </div>
 
-          {/* Center Section - Main Navigation with Icons */}
-          <div className="hidden md:flex items-center space-x-1">
+          {/* Center Section - Main Navigation with Icons - Hidden on mobile */}
+          <div className="hidden md:flex items-center space-x-1 mx-4">
             <Link 
               to="/" 
-              className="relative p-3 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 text-blue-600 hover:from-blue-100 hover:to-blue-200 transition-all duration-200 shadow-sm"
+              className="relative p-2 lg:p-3 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 text-blue-600 hover:from-blue-100 hover:to-blue-200 transition-all duration-200 shadow-sm"
               title="Home"
             >
-              <HomeIconSolid className="w-7 h-7" />
-              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-10 h-1 bg-blue-600 rounded-full"></div>
+              <HomeIconSolid className="w-6 h-6 lg:w-7 lg:h-7" />
+              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-8 lg:w-10 h-1 bg-blue-600 rounded-full"></div>
             </Link>
             <Link 
               to="/friends" 
-              className="relative p-3 rounded-xl hover:bg-gray-100 transition-all duration-200 group"
+              className="relative p-2 lg:p-3 rounded-xl hover:bg-gray-100 transition-all duration-200 group"
               title="Friends"
             >
-              <UserGroupIcon className="w-7 h-7 text-gray-600 group-hover:text-blue-600 transition-colors" />
-              <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+              <UserGroupIcon className="w-6 h-6 lg:w-7 lg:h-7 text-gray-600 group-hover:text-blue-600 transition-colors" />
+              <span className="absolute top-0 right-0 w-4 h-4 lg:w-5 lg:h-5 bg-red-500 text-white text-[10px] lg:text-xs font-bold rounded-full flex items-center justify-center">
                 3
               </span>
             </Link>
@@ -133,30 +133,30 @@ const Home: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Sidebar - Enhanced with badges and sections */}
+      {/* Main Content - Responsive Grid */}
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-6">
+          {/* Left Sidebar - Hidden on mobile and tablet */}
           <div className="hidden lg:block lg:col-span-1">
             <div className="space-y-4">
               {/* User Profile Card */}
               {user && (
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                   <Link to="/profile" className="block hover:bg-gray-50 transition-colors">
-                    <div className="relative h-20 bg-gradient-to-r from-blue-500 to-purple-600"></div>
-                    <div className="px-4 pb-4 -mt-8">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
-                        <span className="text-white font-bold text-xl">
+                    <div className="relative h-16 lg:h-20 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+                    <div className="px-3 lg:px-4 pb-3 lg:pb-4 -mt-6 lg:-mt-8">
+                      <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
+                        <span className="text-white font-bold text-base lg:text-xl">
                           {user.first_name?.[0]}{user.last_name?.[0]}
                         </span>
                       </div>
-                      <h3 className="mt-2 font-semibold text-gray-900 text-lg">
+                      <h3 className="mt-2 font-semibold text-gray-900 text-base lg:text-lg truncate">
                         {user.first_name} {user.last_name}
                       </h3>
-                      <p className="text-sm text-blue-600 font-medium">
+                      <p className="text-xs lg:text-sm text-blue-600 font-medium truncate">
                         @{user.username || user.email?.split('@')[0] || `${user.first_name?.toLowerCase()}${user.last_name?.toLowerCase()}`}
                       </p>
-                      <p className="text-sm text-gray-700 mt-1 font-medium">
+                      <p className="text-xs lg:text-sm text-gray-700 mt-1 font-medium truncate">
                         {user.occupation || user.company_name || user.user_type?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                       </p>
                     </div>
@@ -165,24 +165,24 @@ const Home: React.FC = () => {
               )}
 
               {/* Main Navigation */}
-              <div className="bg-white rounded-xl shadow-sm p-3 sticky top-20">
+              <div className="bg-white rounded-xl shadow-sm p-2 lg:p-3 sticky top-20">
                 <div className="space-y-1">
                   {sidebarItems.map((item) => (
                     <Link
                       key={item.label}
                       to={item.href}
-                      className={`flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${
+                      className={`flex items-center justify-between p-2 lg:p-3 rounded-lg transition-all duration-200 ${
                         item.active
                           ? 'bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600 shadow-sm'
                           : 'hover:bg-gray-50 text-gray-700'
                       }`}
                     >
-                      <div className="flex items-center space-x-3">
-                        <item.icon className={`w-6 h-6 ${item.active ? 'text-blue-600' : ''}`} />
-                        <span className="font-medium">{item.label}</span>
+                      <div className="flex items-center space-x-2 lg:space-x-3">
+                        <item.icon className={`w-5 h-5 lg:w-6 lg:h-6 ${item.active ? 'text-blue-600' : ''}`} />
+                        <span className="font-medium text-sm lg:text-base">{item.label}</span>
                       </div>
                       {item.badge && (
-                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                        <span className={`px-1.5 lg:px-2 py-0.5 text-[10px] lg:text-xs font-semibold rounded-full ${
                           item.active 
                             ? 'bg-blue-600 text-white' 
                             : 'bg-red-500 text-white'
@@ -195,8 +195,8 @@ const Home: React.FC = () => {
                 </div>
 
                 {/* Quick Links Section */}
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <h4 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                <div className="mt-3 lg:mt-4 pt-3 lg:pt-4 border-t border-gray-100">
+                  <h4 className="px-2 lg:px-3 text-[10px] lg:text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                     Quick Access
                   </h4>
                   <div className="space-y-1">
@@ -216,33 +216,35 @@ const Home: React.FC = () => {
             </div>
           </div>
 
-          {/* Main Feed */}
-          <div className="lg:col-span-2">
-            {/* Stories */}
-            <Stories />
+          {/* Main Feed - Full width on mobile, centered on desktop */}
+          <div className="lg:col-span-2 w-full">
+            {/* Stories - Responsive */}
+            <div className="mb-3 sm:mb-4">
+              <Stories />
+            </div>
 
-            {/* Create Post Card */}
+            {/* Create Post Card - Responsive */}
             {user && (
-              <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-                <div className="flex space-x-3">
+              <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-3 sm:p-4 mb-3 sm:mb-4">
+                <div className="flex space-x-2 sm:space-x-3">
                   <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-semibold text-sm sm:text-base">
                         {user.first_name?.[0]}{user.last_name?.[0]}
                       </span>
                     </div>
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <button
                       onClick={() => setIsCreatePostModalOpen(true)}
-                      className="w-full text-left p-3 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200 transition-colors"
+                      className="w-full text-left p-2 sm:p-3 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200 transition-colors text-sm sm:text-base truncate"
                     >
                       What's on your mind, {user.first_name}?
                     </button>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100 gap-2">
+                <div className="flex justify-between items-center mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100 gap-1 sm:gap-2">
                   {createPostOptions.map((option) => (
                     <button
                       key={option.label}

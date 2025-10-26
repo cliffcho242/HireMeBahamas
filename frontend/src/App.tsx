@@ -59,11 +59,11 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen min-h-[100dvh] bg-gray-50 flex flex-col overflow-x-hidden">
       {/* Only show navbar and footer for authenticated users */}
       {isAuthenticated && <Navbar />}
 
-      <main className="flex-grow">
+      <main className="flex-grow w-full">
         <Routes>
           {/* Public Routes - Only Login and Register (redirect authenticated users) */}
           <Route
