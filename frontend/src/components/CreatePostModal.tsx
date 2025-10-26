@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import {
   XMarkIcon,
   PhotoIcon,
@@ -22,36 +23,86 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const fileArray = Array.from(files).slice(0, 4); // Limit to 4 images
+      setSelectedImages(fileArray);
+      
+      // Create previews
+      const previews: string[] = [];
+      fileArray.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          previews.push(e.target?.result as string);
+          if (previews.length === fileArray.length) {
+            setImagePreviews(previews);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    const emoji = emojiData.emoji;
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newContent = content.substring(0, start) + emoji + content.substring(end);
+      setContent(newContent);
+      
+      // Set cursor position after emoji
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+        textarea.focus();
+      }, 0);
+    } else {
+      setContent(content + emoji);
+    }
+    setShowEmojiPicker(false);
+  };
+
   const handleSubmit = async () => {
-    if (!content.trim() && !selectedImage) return;
+    if (!content.trim() && selectedImages.length === 0) return;
 
     setIsPosting(true);
     try {
-      // For now, just create post without image upload
-      // TODO: Implement proper image upload to a storage service
+      // For now, just create post with first image
+      // TODO: Implement proper multi-image upload to a storage service
       await postsAPI.createPost({
         content: content.trim(),
-        image_url: imagePreview || undefined
+        image_url: imagePreviews[0] || undefined
       });
-      toast.success('Post created successfully!');
+      toast.success('Post created successfully! 🎉');
       setContent('');
-      setSelectedImage(null);
-      setImagePreview(null);
+      setSelectedImages([]);
+      setImagePreviews([]);
+      setShowEmojiPicker(false);
       onPostCreated?.();
       onClose();
     } catch (error) {
@@ -61,9 +112,20 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
     }
   };
 
-  const removeImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
+  const removeImage = (index?: number) => {
+    if (index !== undefined && selectedImages.length > 0) {
+      // Remove specific image from gallery
+      const newImages = [...selectedImages];
+      const newPreviews = [...imagePreviews];
+      newImages.splice(index, 1);
+      newPreviews.splice(index, 1);
+      setSelectedImages(newImages);
+      setImagePreviews(newPreviews);
+    } else {
+      // Remove all images
+      setSelectedImages([]);
+      setImagePreviews([]);
+    }
   };
 
   return (
@@ -127,6 +189,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
 
                 {/* Text Input */}
                 <textarea
+                  ref={textareaRef}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder={`What's on your mind, ${user?.first_name}?`}
@@ -140,48 +203,71 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                   {content.length}/280
                 </div>
 
-                {/* Image Preview */}
-                {imagePreview && (
-                  <div className="relative mb-4">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full max-h-64 object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={removeImage}
-                      className="absolute top-2 right-2 p-1 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70 transition-colors"
-                    >
-                      <XMarkIcon className="w-4 h-4" />
-                    </button>
+                {/* Image Gallery Preview */}
+                {imagePreviews.length > 0 && (
+                  <div className={`grid gap-2 mb-4 ${
+                    imagePreviews.length === 1 ? 'grid-cols-1' :
+                    imagePreviews.length === 2 ? 'grid-cols-2' :
+                    imagePreviews.length === 3 ? 'grid-cols-3' :
+                    'grid-cols-2'
+                  }`}>
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => removeImage(index)}
+                          className="absolute top-2 right-2 p-1 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70 transition-colors"
+                          title="Remove image"
+                        >
+                          <XMarkIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
 
                 {/* Add to Post Options */}
                 <div className="border border-gray-200 rounded-lg p-4 mb-4">
                   <p className="text-sm font-medium text-gray-900 mb-3">Add to your post</p>
-                  <div className="flex items-center space-x-2">
-                    <label className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                  <div className="flex items-center space-x-2 relative">
+                    <label className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors" title="Add photos">
                       <input
                         type="file"
                         accept="image/*"
+                        multiple
                         onChange={handleImageSelect}
                         className="hidden"
+                        aria-label="Upload images"
                       />
                       <PhotoIcon className="w-6 h-6 text-green-600" />
                     </label>
-                    <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                      <TagIcon className="w-6 h-6 text-blue-600" />
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <button 
+                      className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                      title="Add emoji"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    >
                       <FaceSmileIcon className="w-6 h-6 text-yellow-600" />
                     </button>
-                    <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors" title="Tag people">
+                      <TagIcon className="w-6 h-6 text-blue-600" />
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors" title="Add location">
                       <MapPinIcon className="w-6 h-6 text-red-600" />
                     </button>
-                    <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors" title="More options">
                       <EllipsisHorizontalIcon className="w-6 h-6 text-gray-600" />
                     </button>
+                    
+                    {/* Emoji Picker */}
+                    {showEmojiPicker && (
+                      <div ref={emojiPickerRef} className="absolute bottom-12 left-0 z-50">
+                        <EmojiPicker onEmojiClick={handleEmojiClick} />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -190,7 +276,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
               <div className="border-t border-gray-200 p-4">
                 <button
                   onClick={handleSubmit}
-                  disabled={!content.trim() && !selectedImage || isPosting}
+                  disabled={(content.trim().length === 0 && selectedImages.length === 0) || isPosting}
                   className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isPosting ? 'Posting...' : 'Post'}
