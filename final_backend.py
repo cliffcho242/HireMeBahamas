@@ -581,6 +581,80 @@ def profile():
             'error': str(e) if app.debug else None
         }), 500
 
+# Get public user profile by ID or username
+@app.route('/api/users/<identifier>', methods=['GET', 'OPTIONS'])
+def get_user_profile(identifier):
+    """Get public user profile by ID or username"""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Try to determine if identifier is ID or username
+        try:
+            user_id = int(identifier)
+            cursor.execute('''
+                SELECT id, email, first_name, last_name, user_type, location, phone, bio,
+                       avatar_url, created_at, is_active, is_available_for_hire,
+                       occupation, company_name, username
+                FROM users WHERE id = ? AND is_active = 1
+            ''', (user_id,))
+        except ValueError:
+            # It's a username
+            cursor.execute('''
+                SELECT id, email, first_name, last_name, user_type, location, phone, bio,
+                       avatar_url, created_at, is_active, is_available_for_hire,
+                       occupation, company_name, username
+                FROM users WHERE username = ? AND is_active = 1
+            ''', (identifier,))
+        
+        user = cursor.fetchone()
+        
+        if not user:
+            conn.close()
+            return jsonify({
+                'success': False,
+                'message': 'User not found'
+            }), 404
+        
+        # Get user's posts count
+        cursor.execute('SELECT COUNT(*) FROM posts WHERE user_id = ?', (user[0],))
+        posts_count = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'id': user[0],
+            'email': user[1],  # In production, consider hiding email for privacy
+            'first_name': user[2] or '',
+            'last_name': user[3] or '',
+            'user_type': user[4] or 'user',
+            'location': user[5] or '',
+            'phone': user[6] or '',  # In production, consider hiding phone for privacy
+            'bio': user[7] or '',
+            'avatar_url': user[8] or '',
+            'created_at': user[9],
+            'is_active': bool(user[10]),
+            'is_available_for_hire': bool(user[11]),
+            'occupation': user[12] or '',
+            'company_name': user[13] or '',
+            'username': user[14] or '',
+            'posts_count': posts_count
+        }), 200
+        
+    except Exception as e:
+        print(f"Error getting user profile: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': 'Failed to get user profile',
+            'error': str(e) if app.debug else None
+        }), 500
+
 # Posts API endpoints
 @app.route('/api/posts', methods=['GET', 'OPTIONS'])
 def get_posts():

@@ -18,6 +18,7 @@ import Messages from './pages/Messages';
 import PostJob from './pages/PostJob';
 import HireMe from './pages/HireMe';
 import Friends from './pages/Friends';
+import UserProfile from './pages/UserProfile';
 
 // Components
 import Navbar from './components/Navbar';
@@ -134,6 +135,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/user/:userId"
+            element={
+              <ProtectedRoute>
+                <UserProfile />
               </ProtectedRoute>
             }
           />

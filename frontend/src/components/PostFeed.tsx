@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import {
   HeartIcon,
@@ -19,6 +20,7 @@ import toast from 'react-hot-toast';
 const PostFeed: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
   // const [newPostContent, setNewPostContent] = useState('');
   // const [isPosting, setIsPosting] = useState(false);
   // const [postType, setPostType] = useState<'post' | 'job'>('post');
@@ -304,26 +306,35 @@ const PostFeed: React.FC = () => {
           {/* Post Header */}
           <div className="p-4 pb-3">
             <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <button
+                onClick={() => navigate(`/user/${post.user.id}`)}
+                className="flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
+              >
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer">
                   <span className="text-white font-semibold text-sm">
                     {post.user.first_name[0]}{post.user.last_name[0]}
                   </span>
                 </div>
-              </div>
+              </button>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-2">
-                  <h3 className="text-sm font-semibold text-gray-900 truncate">
+                  <button
+                    onClick={() => navigate(`/user/${post.user.id}`)}
+                    className="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors"
+                  >
                     {post.user.first_name} {post.user.last_name}
-                  </h3>
+                  </button>
                   <span className="text-sm text-gray-500">·</span>
                   <span className="text-sm text-gray-500">
                     {formatTimeAgo(post.created_at)}
                   </span>
                 </div>
-                <p className="text-xs text-blue-600 font-medium truncate">
+                <button
+                  onClick={() => navigate(`/user/${post.user.id}`)}
+                  className="text-xs text-blue-600 font-medium truncate hover:text-blue-700 transition-colors"
+                >
                   @{post.user.username || post.user.email.split('@')[0]}
-                </p>
+                </button>
                 <p className="text-xs text-gray-600 truncate">
                   {post.user.occupation || post.user.company_name || 'Professional'}
                 </p>
@@ -518,19 +529,25 @@ const PostFeed: React.FC = () => {
                   ) : (
                     comments[post.id].map((comment: any) => (
                       <div key={comment.id} className="flex space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                        <button
+                          onClick={() => navigate(`/user/${comment.user.id}`)}
+                          className="flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
+                        >
+                          <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer">
                             <span className="text-white font-semibold text-xs">
                               {comment.user.first_name[0]}{comment.user.last_name[0]}
                             </span>
                           </div>
-                        </div>
+                        </button>
                         <div className="flex-1">
                           <div className="bg-white rounded-2xl px-3 py-2">
                             <div className="flex items-start justify-between">
-                              <p className="text-sm font-medium text-gray-900">
+                              <button
+                                onClick={() => navigate(`/user/${comment.user.id}`)}
+                                className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                              >
                                 {comment.user.first_name} {comment.user.last_name}
-                              </p>
+                              </button>
                               {user && comment.user.id === user.id && (
                                 <button
                                   onClick={() => handleDeleteComment(post.id, comment.id)}

@@ -161,6 +161,11 @@ export const authAPI = {
     const response = await api.put('/api/auth/change-password', data);
     return response.data;
   },
+
+  getUserProfile: async (identifier: string | number): Promise<User> => {
+    const response = await api.get(`/api/users/${identifier}`);
+    return response.data;
+  },
 };
 
 // Jobs API
