@@ -54,32 +54,57 @@ const Download: React.FC = () => {
     };
   }, []);
 
-  const handleInstallClick = async () => {
+  const handleInstallClick = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log('Install button clicked!', { isIOS, isAndroid, isDesktop, deferredPrompt });
+
     if (isIOS) {
       // Show iOS instructions
       setShowIOSInstructions(true);
+      // Scroll to instructions
+      setTimeout(() => {
+        const instructionsElement = document.getElementById('ios-instructions');
+        instructionsElement?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
       return;
     }
 
     if (deferredPrompt) {
       // Android/Desktop install
       try {
+        console.log('Triggering install prompt...');
         await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         
+        console.log('Install outcome:', outcome);
         if (outcome === 'accepted') {
-          console.log('User accepted install');
           setIsInstalled(true);
         }
         
         setDeferredPrompt(null);
       } catch (error) {
         console.error('Install prompt error:', error);
+        // Fallback: navigate to app
+        navigate('/');
       }
     } else {
       // If no install prompt available, just go to app
+      console.log('No install prompt available, navigating to app...');
       navigate('/');
     }
+  };
+
+  const handleOpenApp = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    console.log('Opening app...');
+    navigate('/');
   };
 
   const features = [
@@ -152,27 +177,38 @@ const Download: React.FC = () => {
           </p>
 
           {isInstalled ? (
-            <div className="inline-flex items-center space-x-2 px-6 py-3 bg-green-100 text-green-700 rounded-full">
-              <CheckCircleIcon className="w-6 h-6" />
-              <span className="font-semibold">Already Installed!</span>
+            <div className="flex flex-col items-center space-y-4">
+              <div className="inline-flex items-center space-x-2 px-6 py-3 bg-green-100 text-green-700 rounded-full">
+                <CheckCircleIcon className="w-6 h-6" />
+                <span className="font-semibold">Already Installed!</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenApp}
+                className="inline-flex items-center space-x-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <span>Open App</span>
+              </button>
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               <button
+                type="button"
                 onClick={handleInstallClick}
-                className="inline-flex items-center space-x-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+                className="inline-flex items-center space-x-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer touch-manipulation"
               >
                 <ArrowDownTrayIcon className="w-6 h-6" />
                 <span>
                   {isIOS ? 'View Install Instructions' : 'Install Now'}
                 </span>
               </button>
-              <Link
-                to="/"
-                className="inline-flex items-center space-x-2 px-8 py-4 bg-white text-gray-700 rounded-full font-semibold text-lg shadow-md hover:shadow-lg transition-all"
+              <button
+                type="button"
+                onClick={handleOpenApp}
+                className="inline-flex items-center space-x-2 px-8 py-4 bg-white text-gray-700 rounded-full font-semibold text-lg shadow-md hover:shadow-lg transition-all cursor-pointer hover:scale-105 active:scale-95 touch-manipulation"
               >
                 <span>Use Web Version</span>
-              </Link>
+              </button>
             </div>
           )}
         </motion.div>
@@ -182,10 +218,11 @@ const Download: React.FC = () => {
           {/* iOS Instructions - Show when iOS or when user clicks button */}
           {(isIOS || showIOSInstructions) && (
             <motion.div
+              id="ios-instructions"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white rounded-2xl shadow-lg p-8"
+              className="bg-white rounded-2xl shadow-lg p-8 border-2 border-blue-200"
             >
               <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
                 <DevicePhoneMobileIcon className="w-8 h-8 text-blue-600" />
@@ -316,8 +353,9 @@ const Download: React.FC = () => {
             Join thousands of professionals connecting in the Bahamas
           </p>
           <button
+            type="button"
             onClick={handleInstallClick}
-            className="inline-flex items-center space-x-2 px-8 py-4 bg-white text-blue-600 rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+            className="inline-flex items-center space-x-2 px-8 py-4 bg-white text-blue-600 rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer touch-manipulation"
           >
             <ArrowDownTrayIcon className="w-6 h-6" />
             <span>{isInstalled ? 'Open HireMeBahamas' : 'Install HireMeBahamas'}</span>
