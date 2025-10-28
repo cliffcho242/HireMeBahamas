@@ -5,13 +5,14 @@ providers = ["python"]
 NIXPACKS_NO_MUSL = "1"
 
 [phases.setup]
-nixPkgs = ["python39", "gcc"]
+nixPkgs = ["python39", "gcc", "pip"]
+nixLibs = ["zlib"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = ["python3 -m pip install --upgrade pip", "python3 -m pip install -r requirements.txt"]
 
 [phases.build]
-cmds = ["python -c 'import final_backend; print(\"Backend OK\")'"]
+cmds = ["python3 -c 'import final_backend; print(\"Backend OK\")'"]
 
 [start]
 cmd = "gunicorn -w 4 -b 0.0.0.0:$PORT final_backend:app --timeout 120"
