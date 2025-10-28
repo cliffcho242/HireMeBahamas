@@ -4,5 +4,8 @@ providers = ["python"]
 [variables]
 NIXPACKS_NO_MUSL = "1"
 
+[phases.setup]
+aptPkgs = ["build-essential", "libffi-dev"]
+
 [start]
 cmd = "gunicorn -w 4 -b 0.0.0.0:$PORT final_backend:app --timeout 120"
