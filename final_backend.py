@@ -319,6 +319,23 @@ def health():
     )
 
 
+@app.route("/api/routes")
+def list_routes():
+    """Debug endpoint to list all registered routes"""
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append(
+            {
+                "path": rule.rule,
+                "methods": list(rule.methods - {"HEAD"}),
+                "endpoint": rule.endpoint,
+            }
+        )
+    return jsonify(
+        {"total_routes": len(routes), "routes": sorted(routes, key=lambda x: x["path"])}
+    )
+
+
 @app.route("/api/auth/register", methods=["POST", "OPTIONS"])
 def register():
     """Register a new user"""
