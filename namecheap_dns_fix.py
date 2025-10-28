@@ -3,22 +3,25 @@ Automated Namecheap DNS Configuration Helper
 This script will guide you through fixing hiremebahamas.com DNS on Namecheap
 """
 
-import webbrowser
-import time
 import subprocess
+import time
+import webbrowser
+
 
 def print_header(text):
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print(f"  {text}")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
+
 
 def print_box(text):
-    lines = text.split('\n')
+    lines = text.split("\n")
     max_len = max(len(line) for line in lines)
     print("\n┌" + "─" * (max_len + 2) + "┐")
     for line in lines:
         print(f"│ {line.ljust(max_len)} │")
     print("└" + "─" * (max_len + 2) + "┘\n")
+
 
 print_header("Namecheap DNS Auto-Fix for hiremebahamas.com")
 
@@ -44,9 +47,9 @@ except:
 time.sleep(2)
 
 # Step 2: Instructions
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("Step 2: Configure DNS Records on Namecheap")
-print("="*70 + "\n")
+print("=" * 70 + "\n")
 
 print("You should now see the Namecheap Advanced DNS page.\n")
 
@@ -59,18 +62,22 @@ print("    ✗ Click the trash/delete icon next to them")
 print("    ✗ Remove parking page or placeholder records\n")
 
 print("2️⃣  ADD NEW A RECORD")
-print_box("Click 'ADD NEW RECORD'\n\n" +
-          "Type:  A Record\n" +
-          "Host:  @\n" +
-          "Value: 76.76.21.21\n" +
-          "TTL:   Automatic (or 1 min)")
+print_box(
+    "Click 'ADD NEW RECORD'\n\n"
+    + "Type:  A Record\n"
+    + "Host:  @\n"
+    + "Value: 76.76.21.21\n"
+    + "TTL:   Automatic (or 1 min)"
+)
 
 print("3️⃣  ADD NEW CNAME RECORD (for www)")
-print_box("Click 'ADD NEW RECORD'\n\n" +
-          "Type:  CNAME Record\n" +
-          "Host:  www\n" +
-          "Value: cname.vercel-dns.com\n" +
-          "TTL:   Automatic (or 1 min)")
+print_box(
+    "Click 'ADD NEW RECORD'\n\n"
+    + "Type:  CNAME Record\n"
+    + "Host:  www\n"
+    + "Value: cname.vercel-dns.com\n"
+    + "TTL:   Automatic (or 1 min)"
+)
 
 print("4️⃣  SAVE ALL CHANGES")
 print("    ✓ Click the green 'SAVE ALL CHANGES' button at the bottom")

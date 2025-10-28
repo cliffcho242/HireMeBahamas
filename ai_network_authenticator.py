@@ -4,16 +4,18 @@ AI-Powered Network & Authentication Diagnostic System
 Automatically detects and fixes network errors, authentication issues, and connection problems
 """
 
-import os
-import sys
-import subprocess
-import requests
-import time
 import json
+import os
 import socket
-from pathlib import Path
+import subprocess
+import sys
 import threading
+import time
+from pathlib import Path
+
 import psutil
+import requests
+
 
 class AINetworkAuthenticator:
     def __init__(self):
@@ -38,7 +40,10 @@ class AINetworkAuthenticator:
                     if response.status_code == 200:
                         # Check if it contains typical frontend content
                         content = response.text.lower()
-                        if any(keyword in content for keyword in ['html', 'react', 'vite', 'hirebahamas']):
+                        if any(
+                            keyword in content
+                            for keyword in ["html", "react", "vite", "hirebahamas"]
+                        ):
                             self.frontend_port = port
                             self.frontend_url = f"http://localhost:{port}"
                             print(f"✅ Frontend detected on port {port}")
@@ -52,8 +57,13 @@ class AINetworkAuthenticator:
     def run_command(self, cmd, shell=True, capture_output=True, timeout=30):
         """Run a command with proper error handling"""
         try:
-            result = subprocess.run(cmd, shell=shell, capture_output=capture_output,
-                                  text=True, timeout=timeout)
+            result = subprocess.run(
+                cmd,
+                shell=shell,
+                capture_output=capture_output,
+                text=True,
+                timeout=timeout,
+            )
             return result.returncode == 0, result.stdout, result.stderr
         except Exception as e:
             return False, "", str(e)
@@ -85,7 +95,9 @@ class AINetworkAuthenticator:
                 self.diagnostic_results["backend_health"] = "HEALTHY"
                 return True
             else:
-                self.diagnostic_results["backend_health"] = f"HTTP {response.status_code}"
+                self.diagnostic_results["backend_health"] = (
+                    f"HTTP {response.status_code}"
+                )
                 return False
         except requests.exceptions.RequestException as e:
             self.diagnostic_results["backend_connection"] = str(e)
@@ -103,17 +115,23 @@ class AINetworkAuthenticator:
 
         # Check if the detected port is still available
         if not self.check_port_availability("localhost", self.frontend_port):
-            self.diagnostic_results["frontend_port"] = f"CLOSED (port {self.frontend_port})"
+            self.diagnostic_results["frontend_port"] = (
+                f"CLOSED (port {self.frontend_port})"
+            )
             return False
 
         try:
             response = requests.get(self.frontend_url, timeout=5)
             if response.status_code == 200:
                 self.diagnostic_results["frontend_health"] = "HEALTHY"
-                self.diagnostic_results["frontend_port"] = f"ACTIVE (port {self.frontend_port})"
+                self.diagnostic_results["frontend_port"] = (
+                    f"ACTIVE (port {self.frontend_port})"
+                )
                 return True
             else:
-                self.diagnostic_results["frontend_health"] = f"HTTP {response.status_code}"
+                self.diagnostic_results["frontend_health"] = (
+                    f"HTTP {response.status_code}"
+                )
                 return False
         except requests.exceptions.RequestException as e:
             self.diagnostic_results["frontend_connection"] = str(e)
@@ -125,6 +143,7 @@ class AINetworkAuthenticator:
 
         try:
             import sqlite3
+
             db_path = Path(__file__).parent / "hirebahamas.db"
             conn = sqlite3.connect(str(db_path), timeout=5)
             cursor = conn.cursor()
@@ -143,14 +162,12 @@ class AINetworkAuthenticator:
         """Test admin login functionality"""
         print("🔍 Testing admin login...")
 
-        login_data = {
-            "email": "admin@hirebahamas.com",
-            "password": "AdminPass123!"
-        }
+        login_data = {"email": "admin@hirebahamas.com", "password": "AdminPass123!"}
 
         try:
-            response = requests.post(f"{self.backend_url}/auth/login",
-                                   json=login_data, timeout=10)
+            response = requests.post(
+                f"{self.backend_url}/auth/login", json=login_data, timeout=10
+            )
 
             if response.status_code == 200:
                 data = response.json()
@@ -159,7 +176,9 @@ class AINetworkAuthenticator:
                     self.diagnostic_results["admin_token"] = data.get("token")
                     return True
                 else:
-                    self.diagnostic_results["admin_login"] = f"FAILED: {data.get('message')}"
+                    self.diagnostic_results["admin_login"] = (
+                        f"FAILED: {data.get('message')}"
+                    )
                     return False
             else:
                 self.diagnostic_results["admin_login"] = f"HTTP {response.status_code}"
@@ -174,22 +193,26 @@ class AINetworkAuthenticator:
         print("🔧 Starting backend server...")
 
         # Kill any existing backend processes
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
             try:
-                if 'python' in proc.info['name'].lower():
-                    cmdline = ' '.join(proc.info['cmdline'])
-                    if 'final_backend.py' in cmdline:
-                        print(f"Killing existing backend process (PID: {proc.info['pid']})")
+                if "python" in proc.info["name"].lower():
+                    cmdline = " ".join(proc.info["cmdline"])
+                    if "final_backend.py" in cmdline:
+                        print(
+                            f"Killing existing backend process (PID: {proc.info['pid']})"
+                        )
                         proc.kill()
             except:
                 pass
 
         # Start new backend server
         try:
-            backend_process = subprocess.Popen([sys.executable, 'final_backend.py'],
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.PIPE,
-                                             cwd=os.getcwd())
+            backend_process = subprocess.Popen(
+                [sys.executable, "final_backend.py"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=os.getcwd(),
+            )
 
             # Wait for server to start
             time.sleep(3)
@@ -226,11 +249,13 @@ class AINetworkAuthenticator:
                 return False
 
             # Start frontend server
-            frontend_process = subprocess.Popen([npm_cmd, 'run', 'dev'],
-                                             cwd=str(frontend_dir),
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.PIPE,
-                                             creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+            frontend_process = subprocess.Popen(
+                [npm_cmd, "run", "dev"],
+                cwd=str(frontend_dir),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
 
             # Wait for server to start (give it more time)
             print("Waiting for frontend server to start...")
@@ -242,7 +267,9 @@ class AINetworkAuthenticator:
                 if self.detect_frontend_port():
                     if self.check_frontend_health():
                         self.fixes_applied.append("Started frontend server")
-                        print(f"✅ Frontend server started successfully on port {self.frontend_port}")
+                        print(
+                            f"✅ Frontend server started successfully on port {self.frontend_port}"
+                        )
                         return True
                 time.sleep(2)
 
@@ -259,7 +286,7 @@ class AINetworkAuthenticator:
             "npm.cmd",  # Windows npm command
             "npm",
             r"C:\Program Files\nodejs\npm.cmd",
-            r"C:\Program Files (x86)\nodejs\npm.cmd"
+            r"C:\Program Files (x86)\nodejs\npm.cmd",
         ]
 
         for path in npm_paths:
@@ -279,11 +306,16 @@ class AINetworkAuthenticator:
 
         # Check if CORS headers are present
         try:
-            response = requests.options(f"{self.backend_url}/auth/login",
-                                      headers={'Origin': self.frontend_url},
-                                      timeout=5)
+            response = requests.options(
+                f"{self.backend_url}/auth/login",
+                headers={"Origin": self.frontend_url},
+                timeout=5,
+            )
 
-            cors_headers = ['access-control-allow-origin', 'access-control-allow-methods']
+            cors_headers = [
+                "access-control-allow-origin",
+                "access-control-allow-methods",
+            ]
             missing_headers = []
 
             for header in cors_headers:
@@ -364,7 +396,11 @@ class AINetworkAuthenticator:
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "diagnostic_results": self.diagnostic_results,
             "fixes_applied": self.fixes_applied,
-            "status": "SUCCESS" if not self.diagnostic_results.get("admin_login_error") else "ISSUES_REMAINING"
+            "status": (
+                "SUCCESS"
+                if not self.diagnostic_results.get("admin_login_error")
+                else "ISSUES_REMAINING"
+            ),
         }
 
         return report
@@ -374,12 +410,25 @@ class AINetworkAuthenticator:
         print("🔧 Killing existing frontend processes...")
 
         killed_count = 0
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
             try:
-                if 'node' in proc.info['name'].lower() or 'npm' in ' '.join(proc.info['cmdline']):
-                    cmdline = ' '.join(proc.info['cmdline'])
-                    if any(keyword in cmdline for keyword in ['vite', 'npm', 'react', 'frontend', 'hirebahamas']):
-                        print(f"Killing frontend process (PID: {proc.info['pid']}) - {cmdline[:50]}...")
+                if "node" in proc.info["name"].lower() or "npm" in " ".join(
+                    proc.info["cmdline"]
+                ):
+                    cmdline = " ".join(proc.info["cmdline"])
+                    if any(
+                        keyword in cmdline
+                        for keyword in [
+                            "vite",
+                            "npm",
+                            "react",
+                            "frontend",
+                            "hirebahamas",
+                        ]
+                    ):
+                        print(
+                            f"Killing frontend process (PID: {proc.info['pid']}) - {cmdline[:50]}..."
+                        )
                         proc.kill()
                         killed_count += 1
                         time.sleep(0.5)  # Give it time to die
@@ -393,6 +442,7 @@ class AINetworkAuthenticator:
             time.sleep(2)  # Wait for processes to fully terminate
         else:
             print("ℹ️ No existing frontend processes found")
+
 
 def main():
     """Main function"""
@@ -433,6 +483,7 @@ def main():
         print("\n❌ ISSUES REMAIN - Check diagnostic results above")
 
     return 0 if success else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -12,14 +12,15 @@ from pathlib import Path
 backend_dir = Path(__file__).parent / "backend"
 sys.path.insert(0, str(backend_dir))
 
+import bcrypt
 from app.database import AsyncSessionLocal
 from app.models import User
 from sqlalchemy import select
-import bcrypt
+
 
 async def create_admin_user():
     """Create an admin user for the HireBahamas platform"""
-    
+
     # Admin user details
     admin_data = {
         "email": "admin@hiremebahamas.com",
@@ -34,9 +35,9 @@ async def create_admin_user():
         "education": "Administrative Experience",
         "is_active": True,
         "is_admin": True,
-        "role": "admin"
+        "role": "admin",
     }
-    
+
     async with AsyncSessionLocal() as session:
         try:
             # Check if admin user already exists
@@ -44,23 +45,23 @@ async def create_admin_user():
                 select(User).where(User.email == admin_data["email"])
             )
             existing_user = result.scalar_one_or_none()
-            
+
             if existing_user:
                 print(f"❌ Admin user already exists with email: {admin_data['email']}")
                 print(f"   User ID: {existing_user.id}")
                 print(f"   Name: {existing_user.full_name}")
                 print(f"   Is Admin: {existing_user.is_admin}")
                 return False
-            
+
             # Hash the password
-            password_bytes = admin_data["password"].encode('utf-8')
+            password_bytes = admin_data["password"].encode("utf-8")
             salt = bcrypt.gensalt()
             hashed_password = bcrypt.hashpw(password_bytes, salt)
-            
+
             # Create admin user
             admin_user = User(
                 email=admin_data["email"],
-                hashed_password=hashed_password.decode('utf-8'),
+                hashed_password=hashed_password.decode("utf-8"),
                 first_name=admin_data["first_name"],
                 last_name=admin_data["last_name"],
                 phone=admin_data["phone"],
@@ -71,13 +72,13 @@ async def create_admin_user():
                 education=admin_data["education"],
                 is_active=admin_data["is_active"],
                 is_admin=admin_data["is_admin"],
-                role=admin_data["role"]
+                role=admin_data["role"],
             )
-            
+
             session.add(admin_user)
             await session.commit()
             await session.refresh(admin_user)
-            
+
             print("✅ Admin user created successfully!")
             print("=" * 50)
             print("📧 ADMIN LOGIN CREDENTIALS")
@@ -96,19 +97,20 @@ async def create_admin_user():
             print("   3. Enable two-factor authentication if available")
             print("   4. Keep admin credentials secure")
             print("=" * 50)
-            
+
             return True
-            
+
         except Exception as e:
             await session.rollback()
             print(f"❌ Error creating admin user: {e}")
             return False
 
+
 async def main():
     """Main function"""
     print("🎯 HireMeBahamas Admin User Creation")
     print("=" * 40)
-    
+
     try:
         success = await create_admin_user()
         if success:
@@ -118,6 +120,7 @@ async def main():
             print("\n❌ Admin account setup failed or already exists")
     except Exception as e:
         print(f"\n❌ Unexpected error: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

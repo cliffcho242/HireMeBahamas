@@ -2,11 +2,13 @@
 SIMPLE HEALTH TEST - Force start backend and test health endpoint
 """
 
-import subprocess
-import time
-import requests
 import os
+import subprocess
 import sys
+import time
+
+import requests
+
 
 def test_health():
     """Test the health endpoint"""
@@ -15,6 +17,7 @@ def test_health():
         return response.status_code == 200
     except:
         return False
+
 
 def start_backend():
     """Start the backend server"""
@@ -36,6 +39,7 @@ def start_backend():
         print("   ❌ No backend file found")
         return None
 
+
 def main():
     print("🔍 Testing backend health...")
 
@@ -48,7 +52,7 @@ def main():
 
     # Kill any existing processes
     try:
-        subprocess.run(['taskkill', '/F', '/IM', 'python.exe'], capture_output=True)
+        subprocess.run(["taskkill", "/F", "/IM", "python.exe"], capture_output=True)
     except:
         pass
 
@@ -73,6 +77,7 @@ def main():
 
     print("❌ Backend failed to start")
     return False
+
 
 if __name__ == "__main__":
     success = main()

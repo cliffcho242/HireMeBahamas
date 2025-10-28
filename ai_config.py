@@ -2,14 +2,15 @@
 # 100x Enhanced AI Platform - Complete Configuration
 
 import os
-from pathlib import Path
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 class AIModelType(Enum):
     """AI Model Types for the enhanced system"""
+
     NLP = "nlp"
     COMPUTER_VISION = "computer_vision"
     RECOMMENDATION = "recommendation"
@@ -20,6 +21,7 @@ class AIModelType(Enum):
 
 class AIServiceProvider(Enum):
     """AI Service Providers"""
+
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
@@ -30,6 +32,7 @@ class AIServiceProvider(Enum):
 @dataclass
 class AIModelConfig:
     """Configuration for individual AI models"""
+
     name: str
     provider: AIServiceProvider
     model_type: AIModelType
@@ -44,6 +47,7 @@ class AIModelConfig:
 @dataclass
 class AIServiceConfig:
     """Configuration for AI services"""
+
     name: str
     endpoint: str
     timeout: int = 30
@@ -51,9 +55,11 @@ class AIServiceConfig:
     rate_limit: int = 100
     enabled: bool = True
 
+
 @dataclass
 class AIOrchestratorConfig:
     """Main AI Orchestrator Configuration"""
+
     # System Settings
     enable_gpu: bool = True
     max_workers: int = 8
@@ -93,7 +99,7 @@ class AIOrchestratorConfig:
                 model_type=AIModelType.GENERATIVE,
                 model_id="gpt-4",
                 api_key_env="OPENAI_API_KEY",
-                parameters={"temperature": 0.7, "max_tokens": 2000}
+                parameters={"temperature": 0.7, "max_tokens": 2000},
             ),
             AIModelConfig(
                 name="Claude-3",
@@ -101,7 +107,7 @@ class AIOrchestratorConfig:
                 model_type=AIModelType.GENERATIVE,
                 model_id="claude-3-sonnet-20240229",
                 api_key_env="ANTHROPIC_API_KEY",
-                parameters={"temperature": 0.7, "max_tokens": 2000}
+                parameters={"temperature": 0.7, "max_tokens": 2000},
             ),
             AIModelConfig(
                 name="Gemini Pro",
@@ -109,9 +115,8 @@ class AIOrchestratorConfig:
                 model_type=AIModelType.GENERATIVE,
                 model_id="gemini-pro",
                 api_key_env="GOOGLE_API_KEY",
-                parameters={"temperature": 0.7}
+                parameters={"temperature": 0.7},
             ),
-
             # Embedding Models
             AIModelConfig(
                 name="MiniLM Embedding",
@@ -119,9 +124,8 @@ class AIOrchestratorConfig:
                 model_type=AIModelType.EMBEDDING,
                 model_id="sentence-transformers/all-MiniLM-L6-v2",
                 api_key_env="",
-                cache_dir="./ai_models/embeddings"
+                cache_dir="./ai_models/embeddings",
             ),
-
             # Computer Vision Models
             AIModelConfig(
                 name="Face Recognition",
@@ -129,9 +133,8 @@ class AIOrchestratorConfig:
                 model_type=AIModelType.COMPUTER_VISION,
                 model_id="face_recognition",
                 api_key_env="",
-                parameters={"model": "cnn"}
+                parameters={"model": "cnn"},
             ),
-
             # Recommendation Models
             AIModelConfig(
                 name="Job Matching",
@@ -139,8 +142,8 @@ class AIOrchestratorConfig:
                 model_type=AIModelType.RECOMMENDATION,
                 model_id="job_matching_v1",
                 api_key_env="",
-                parameters={"algorithm": "cosine_similarity"}
-            )
+                parameters={"algorithm": "cosine_similarity"},
+            ),
         ]
         self.models.extend(default_models)
 
@@ -152,35 +155,37 @@ class AIOrchestratorConfig:
                 endpoint="https://api.openai.com/v1",
                 timeout=30,
                 retries=3,
-                rate_limit=100
+                rate_limit=100,
             ),
             AIServiceConfig(
                 name="Anthropic API",
                 endpoint="https://api.anthropic.com",
                 timeout=30,
                 retries=3,
-                rate_limit=50
+                rate_limit=50,
             ),
             AIServiceConfig(
                 name="Google AI API",
                 endpoint="https://generativelanguage.googleapis.com",
                 timeout=30,
                 retries=3,
-                rate_limit=60
+                rate_limit=60,
             ),
             AIServiceConfig(
                 name="AI API Server",
                 endpoint="http://localhost:8009",
                 timeout=10,
                 retries=2,
-                rate_limit=1000
-            )
+                rate_limit=1000,
+            ),
         ]
         self.services.extend(default_services)
+
 
 @dataclass
 class AIPerformanceConfig:
     """AI System Performance Configuration"""
+
     # Processing Limits
     max_concurrent_requests: int = 50
     max_queue_size: int = 1000
@@ -199,9 +204,11 @@ class AIPerformanceConfig:
     metrics_interval: int = 30
     health_check_interval: int = 60
 
+
 @dataclass
 class AIIntegrationConfig:
     """AI System Integration Configuration"""
+
     # Database Integration
     vector_db_enabled: bool = True
     vector_db_url: str = "http://localhost:6333"
@@ -221,12 +228,16 @@ class AIIntegrationConfig:
     wandb_enabled: bool = False
     wandb_project: str = "hirebahamas-ai"
 
+
 @dataclass
 class AIAdvancedConfig:
     """Advanced AI Configuration"""
+
     # Multi-modal Processing
     enable_multi_modal: bool = True
-    supported_modalities: List[str] = field(default_factory=lambda: ["text", "image", "audio"])
+    supported_modalities: List[str] = field(
+        default_factory=lambda: ["text", "image", "audio"]
+    )
 
     # Advanced Features
     enable_federated_learning: bool = False
@@ -240,6 +251,7 @@ class AIAdvancedConfig:
     # Experimental
     enable_neural_architecture_search: bool = False
     enable_auto_ml: bool = True
+
 
 class AIConfigManager:
     """Central AI Configuration Manager"""
@@ -260,19 +272,31 @@ class AIConfigManager:
             if model.api_key_env:
                 api_key = os.getenv(model.api_key_env)
                 if api_key:
-                    model.parameters['api_key'] = api_key
+                    model.parameters["api_key"] = api_key
 
         # Load performance settings
-        self.performance_config.max_concurrent_requests = int(os.getenv("AI_MAX_WORKERS", 8))
-        self.performance_config.request_timeout = int(os.getenv("AI_REQUEST_TIMEOUT", 60))
+        self.performance_config.max_concurrent_requests = int(
+            os.getenv("AI_MAX_WORKERS", 8)
+        )
+        self.performance_config.request_timeout = int(
+            os.getenv("AI_REQUEST_TIMEOUT", 60)
+        )
 
         # Load integration settings
-        self.integration_config.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-        self.integration_config.elasticsearch_url = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
+        self.integration_config.redis_url = os.getenv(
+            "REDIS_URL", "redis://localhost:6379"
+        )
+        self.integration_config.elasticsearch_url = os.getenv(
+            "ELASTICSEARCH_URL", "http://localhost:9200"
+        )
 
         # Load advanced settings
-        self.orchestrator_config.enable_gpu = os.getenv("AI_ENABLE_GPU", "true").lower() == "true"
-        self.advanced_config.enable_multi_modal = os.getenv("AI_ENABLE_MULTI_MODAL", "true").lower() == "true"
+        self.orchestrator_config.enable_gpu = (
+            os.getenv("AI_ENABLE_GPU", "true").lower() == "true"
+        )
+        self.advanced_config.enable_multi_modal = (
+            os.getenv("AI_ENABLE_MULTI_MODAL", "true").lower() == "true"
+        )
 
     def get_model_config(self, model_name: str) -> Optional[AIModelConfig]:
         """Get configuration for a specific model"""
@@ -303,13 +327,14 @@ class AIConfigManager:
     def save_config(self, file_path: str = None):
         """Save current configuration to file"""
         import json
+
         config_path = file_path or self.config_file
 
         config_data = {
             "orchestrator": self.orchestrator_config.__dict__,
             "performance": self.performance_config.__dict__,
             "integration": self.integration_config.__dict__,
-            "advanced": self.advanced_config.__dict__
+            "advanced": self.advanced_config.__dict__,
         }
 
         # Convert enums to strings for JSON serialization
@@ -317,18 +342,19 @@ class AIConfigManager:
             model["provider"] = model["provider"].value
             model["model_type"] = model["model_type"].value
 
-        with open(config_path, 'w') as f:
+        with open(config_path, "w") as f:
             json.dump(config_data, f, indent=2, default=str)
 
     def load_config(self, file_path: str = None):
         """Load configuration from file"""
         import json
+
         config_path = file_path or self.config_file
 
         if not Path(config_path).exists():
             return
 
-        with open(config_path, 'r') as f:
+        with open(config_path, "r") as f:
             config_data = json.load(f)
 
         # Update configurations
@@ -352,27 +378,31 @@ class AIConfigManager:
                 if hasattr(self.advanced_config, key):
                     setattr(self.advanced_config, key, value)
 
+
 # Global configuration instance
 ai_config = AIConfigManager()
+
 
 def get_ai_config() -> AIConfigManager:
     """Get the global AI configuration instance"""
     return ai_config
+
 
 def reload_ai_config():
     """Reload AI configuration from environment and files"""
     global ai_config
     ai_config = AIConfigManager()
 
+
 # Export configurations
 __all__ = [
-    'AIConfigManager',
-    'AIOrchestratorConfig',
-    'AIPerformanceConfig',
-    'AIIntegrationConfig',
-    'AIAdvancedConfig',
-    'AIModelType',
-    'AIServiceProvider',
-    'get_ai_config',
-    'reload_ai_config'
+    "AIConfigManager",
+    "AIOrchestratorConfig",
+    "AIPerformanceConfig",
+    "AIIntegrationConfig",
+    "AIAdvancedConfig",
+    "AIModelType",
+    "AIServiceProvider",
+    "get_ai_config",
+    "reload_ai_config",
 ]

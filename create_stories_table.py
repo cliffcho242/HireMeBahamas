@@ -1,6 +1,7 @@
 import sqlite3
 from pathlib import Path
 
+
 def create_stories_table():
     """Create stories table in the existing database"""
 
@@ -16,7 +17,8 @@ def create_stories_table():
         cursor = conn.cursor()
 
         # Create stories table
-        cursor.execute('''
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS stories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -26,7 +28,8 @@ def create_stories_table():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             )
-        ''')
+        """
+        )
 
         conn.commit()
         conn.close()
@@ -37,6 +40,7 @@ def create_stories_table():
     except Exception as e:
         print(f"Error creating stories table: {str(e)}")
         return False
+
 
 if __name__ == "__main__":
     create_stories_table()

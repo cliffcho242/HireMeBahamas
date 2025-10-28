@@ -4,26 +4,28 @@ FORCED BACKEND AUTOMATION - Guaranteed to start and keep backend running
 Kills conflicts, forces startup, monitors health, auto-restarts on failure
 """
 
-import subprocess
-import time
-import requests
-import os
-import sys
-import signal
-import psutil
 import logging
+import os
+import signal
+import subprocess
+import sys
+import time
 from pathlib import Path
+
+import psutil
+import requests
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('forced_backend.log')
-    ]
+        logging.FileHandler("forced_backend.log"),
+    ],
 )
 logger = logging.getLogger(__name__)
+
 
 class ForcedBackendManager:
     def __init__(self):
@@ -37,18 +39,24 @@ class ForcedBackendManager:
         logger.info("🔪 Killing all Python processes...")
         try:
             # Kill by name
-            subprocess.run(['taskkill', '/F', '/IM', 'python.exe'], capture_output=True)
-            subprocess.run(['taskkill', '/F', '/IM', 'python3.exe'], capture_output=True)
+            subprocess.run(["taskkill", "/F", "/IM", "python.exe"], capture_output=True)
+            subprocess.run(
+                ["taskkill", "/F", "/IM", "python3.exe"], capture_output=True
+            )
 
             # Kill by port
             try:
-                result = subprocess.run(['netstat', '-ano'], capture_output=True, text=True)
-                for line in result.stdout.split('\n'):
-                    if ':8008' in line and 'LISTENING' in line:
+                result = subprocess.run(
+                    ["netstat", "-ano"], capture_output=True, text=True
+                )
+                for line in result.stdout.split("\n"):
+                    if ":8008" in line and "LISTENING" in line:
                         parts = line.split()
                         if len(parts) >= 5:
                             pid = parts[-1]
-                            subprocess.run(['taskkill', '/F', '/PID', pid], capture_output=True)
+                            subprocess.run(
+                                ["taskkill", "/F", "/PID", pid], capture_output=True
+                            )
             except:
                 pass
 
@@ -61,14 +69,16 @@ class ForcedBackendManager:
         """Clear port 8008 if occupied"""
         logger.info("🧹 Clearing port 8008...")
         try:
-            result = subprocess.run(['netstat', '-ano'], capture_output=True, text=True)
-            for line in result.stdout.split('\n'):
-                if ':8008' in line:
+            result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True)
+            for line in result.stdout.split("\n"):
+                if ":8008" in line:
                     parts = line.split()
                     if len(parts) >= 5:
                         pid = parts[-1]
                         logger.info(f"Killing process {pid} using port 8008")
-                        subprocess.run(['taskkill', '/F', '/PID', pid], capture_output=True)
+                        subprocess.run(
+                            ["taskkill", "/F", "/PID", pid], capture_output=True
+                        )
             time.sleep(1)
         except Exception as e:
             logger.warning(f"Port clearing warning: {e}")
@@ -98,7 +108,7 @@ class ForcedBackendManager:
                 [sys.executable, str(self.backend_file)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
             )
 
             logger.info(f"✅ Backend started with PID: {self.backend_process.pid}")
@@ -128,7 +138,9 @@ class ForcedBackendManager:
                     logger.info("✅ Backend healthy")
                 else:
                     consecutive_failures += 1
-                    logger.warning(f"⚠️  Health check failed ({consecutive_failures}/{max_failures})")
+                    logger.warning(
+                        f"⚠️  Health check failed ({consecutive_failures}/{max_failures})"
+                    )
 
                     if consecutive_failures >= max_failures:
                         logger.error("❌ Too many health failures, restarting...")
@@ -192,6 +204,7 @@ class ForcedBackendManager:
                 except:
                     pass
 
+
 def main():
     manager = ForcedBackendManager()
     try:
@@ -202,6 +215,7 @@ def main():
         logger.error(f"Fatal error: {e}")
         manager.cleanup()
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

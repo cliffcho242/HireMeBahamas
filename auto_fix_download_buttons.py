@@ -4,28 +4,27 @@ This script diagnoses and fixes button interactivity problems
 """
 
 import os
-import sys
 import subprocess
+import sys
 import time
 
+
 def print_header(text):
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(f"  {text}")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
+
 
 def run_command(cmd, cwd=None):
     """Run a command and return output"""
     try:
         result = subprocess.run(
-            cmd,
-            shell=True,
-            capture_output=True,
-            text=True,
-            cwd=cwd
+            cmd, shell=True, capture_output=True, text=True, cwd=cwd
         )
         return result.returncode == 0, result.stdout, result.stderr
     except Exception as e:
         return False, "", str(e)
+
 
 print_header("Download Button Auto-Fix Starting...")
 
@@ -48,20 +47,20 @@ if not os.path.exists(download_file):
     print(f"✗ Download.tsx not found at {download_file}")
     sys.exit(1)
 
-with open(download_file, 'r', encoding='utf-8') as f:
+with open(download_file, "r", encoding="utf-8") as f:
     content = f.read()
 
 issues = []
 fixes_applied = []
 
 # Check for common issues
-if 'onClick' not in content:
+if "onClick" not in content:
     issues.append("Missing onClick handlers")
-    
+
 if 'type="button"' not in content:
     issues.append("Missing button type attributes")
-    
-if 'cursor-pointer' not in content:
+
+if "cursor-pointer" not in content:
     issues.append("Missing cursor-pointer class")
 
 if issues:
@@ -73,7 +72,7 @@ else:
 
 # Step 3: Create a simplified test version
 print("\nStep 3: Creating simplified Download page test...")
-test_content = '''import React from 'react';
+test_content = """import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
@@ -147,10 +146,10 @@ const DownloadTest: React.FC = () => {
 };
 
 export default DownloadTest;
-'''
+"""
 
 test_file = os.path.join(frontend_dir, "src", "pages", "DownloadTest.tsx")
-with open(test_file, 'w', encoding='utf-8') as f:
+with open(test_file, "w", encoding="utf-8") as f:
     f.write(test_content)
 print(f"✓ Created test file: {test_file}")
 fixes_applied.append("Created DownloadTest.tsx for debugging")
@@ -159,28 +158,28 @@ fixes_applied.append("Created DownloadTest.tsx for debugging")
 print("\nStep 4: Adding test route to App.tsx...")
 app_file = os.path.join(frontend_dir, "src", "App.tsx")
 
-with open(app_file, 'r', encoding='utf-8') as f:
+with open(app_file, "r", encoding="utf-8") as f:
     app_content = f.read()
 
-if 'DownloadTest' not in app_content:
+if "DownloadTest" not in app_content:
     # Add import
     import_line = "import DownloadTest from './pages/DownloadTest';"
     if "import Download from './pages/Download';" in app_content:
         app_content = app_content.replace(
             "import Download from './pages/Download';",
-            "import Download from './pages/Download';\n" + import_line
+            "import Download from './pages/Download';\n" + import_line,
         )
-    
+
     # Add route
     if '<Route path="/download" element={<Download />} />' in app_content:
         app_content = app_content.replace(
             '<Route path="/download" element={<Download />} />',
-            '<Route path="/download" element={<Download />} />\n          <Route path="/download-test" element={<DownloadTest />} />'
+            '<Route path="/download" element={<Download />} />\n          <Route path="/download-test" element={<DownloadTest />} />',
         )
-    
-    with open(app_file, 'w', encoding='utf-8') as f:
+
+    with open(app_file, "w", encoding="utf-8") as f:
         f.write(app_content)
-    
+
     print("✓ Added /download-test route")
     fixes_applied.append("Added test route to App.tsx")
 else:
@@ -224,8 +223,8 @@ print("  2. Test all three buttons")
 print("  3. Check console for errors")
 print("  4. Compare with actual /download page")
 
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("Test file created: src/pages/DownloadTest.tsx")
 print("Test route added: /download-test")
 print("Original file unchanged: src/pages/Download.tsx")
-print("="*60)
+print("=" * 60)

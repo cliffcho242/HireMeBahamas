@@ -1,6 +1,6 @@
 import sqlite3
 
-conn = sqlite3.connect('hirebahamas.db')
+conn = sqlite3.connect("hirebahamas.db")
 cursor = conn.cursor()
 
 # Get all tables
@@ -12,7 +12,7 @@ for table in tables:
     print(f"  - {table}")
 
 # Check posts table specifically
-if 'posts' in tables:
+if "posts" in tables:
     cursor.execute("SELECT COUNT(*) FROM posts")
     count = cursor.fetchone()[0]
     print(f"\nPosts table exists with {count} posts")

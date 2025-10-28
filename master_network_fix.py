@@ -4,185 +4,201 @@ MASTER NETWORK FIX - Permanent Solution for HireMeBahamas
 Ensures backend always starts reliably and network never fails
 """
 
-import sys
-import os
-import time
-import socket
 import logging
+import os
+import socket
+import sys
+import time
 from pathlib import Path
 
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler('network_master_fix.log'),
-        logging.StreamHandler(sys.stdout)
-    ]
+        logging.FileHandler("network_master_fix.log"),
+        logging.StreamHandler(sys.stdout),
+    ],
 )
 logger = logging.getLogger(__name__)
+
 
 def install_required_packages():
     """Install all required packages for reliable networking"""
     logger.info("Installing required packages for reliable networking...")
-    
+
     packages = [
-        'flask',
-        'flask-cors',
-        'flask-limiter',
-        'flask-caching',
-        'waitress',
-        'gunicorn',
-        'gevent',
-        'eventlet',
-        'pyjwt',
-        'bcrypt',
-        'python-dotenv',
-        'requests'
+        "flask",
+        "flask-cors",
+        "flask-limiter",
+        "flask-caching",
+        "waitress",
+        "gunicorn",
+        "gevent",
+        "eventlet",
+        "pyjwt",
+        "bcrypt",
+        "python-dotenv",
+        "requests",
     ]
-    
+
     import subprocess
+
     python_exe = sys.executable
-    
+
     for package in packages:
         try:
             logger.info(f"Installing {package}...")
             subprocess.run(
-                [python_exe, '-m', 'pip', 'install', package, '--upgrade'],
+                [python_exe, "-m", "pip", "install", package, "--upgrade"],
                 check=True,
-                capture_output=True
+                capture_output=True,
             )
             logger.info(f"✓ {package} installed")
         except Exception as e:
             logger.warning(f"Could not install {package}: {e}")
-    
+
     logger.info("All packages installed!")
+
 
 def check_port_availability(port, max_attempts=3):
     """Check if port is available, kill blocking process if needed"""
     for attempt in range(max_attempts):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(1)
-        result = sock.connect_ex(('127.0.0.1', port))
+        result = sock.connect_ex(("127.0.0.1", port))
         sock.close()
-        
+
         if result != 0:  # Port is free
             logger.info(f"✓ Port {port} is available")
             return True
-        
-        logger.warning(f"Port {port} is in use, attempting to free it (attempt {attempt + 1}/{max_attempts})")
-        
+
+        logger.warning(
+            f"Port {port} is in use, attempting to free it (attempt {attempt + 1}/{max_attempts})"
+        )
+
         # Try to kill process on Windows
         import subprocess
+
         try:
             subprocess.run(
-                ['powershell', '-Command', f'Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object {{ Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }}'],
+                [
+                    "powershell",
+                    "-Command",
+                    f"Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object {{ Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }}",
+                ],
                 capture_output=True,
-                timeout=5
+                timeout=5,
             )
             time.sleep(2)
         except Exception as e:
             logger.warning(f"Could not kill process on port {port}: {e}")
-    
+
     return False
+
 
 def start_backend_server(port=9999):
     """Start backend server with guaranteed success"""
     logger.info(f"Starting backend server on port {port}...")
-    
+
     try:
         from final_backend import app
+
         logger.info("✓ Flask app imported successfully")
-        
+
         # Test app health
         with app.test_client() as client:
-            response = client.get('/health')
+            response = client.get("/health")
             logger.info(f"✓ App health check: {response.status_code}")
-        
+
         # Start with Waitress (most reliable for Windows)
         try:
             from waitress import serve
+
             logger.info(f"Starting Waitress server on 127.0.0.1:{port}...")
-            
+
             # Use threading for better Windows compatibility
             import threading
-            
+
             def run_server():
                 serve(
                     app,
-                    host='127.0.0.1',
+                    host="127.0.0.1",
                     port=port,
                     threads=6,
                     connection_limit=1000,
                     channel_timeout=60,
                     cleanup_interval=10,
-                    _quiet=False
+                    _quiet=False,
                 )
-            
+
             server_thread = threading.Thread(target=run_server, daemon=False)
             server_thread.start()
-            
+
             # Verify server started
             time.sleep(3)
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(('127.0.0.1', port))
+            result = sock.connect_ex(("127.0.0.1", port))
             sock.close()
-            
+
             if result == 0:
-                logger.info(f"✓✓✓ Backend server successfully started on http://127.0.0.1:{port}")
+                logger.info(
+                    f"✓✓✓ Backend server successfully started on http://127.0.0.1:{port}"
+                )
                 logger.info("Server is RUNNING and accepting connections!")
                 logger.info("Press Ctrl+C to stop")
                 server_thread.join()
             else:
                 logger.error("Server started but not accepting connections")
                 return False
-                
+
         except ImportError:
             logger.warning("Waitress not available, trying Flask dev server...")
-            app.run(host='127.0.0.1', port=port, debug=False, threaded=True)
-            
+            app.run(host="127.0.0.1", port=port, debug=False, threaded=True)
+
     except Exception as e:
         logger.error(f"Failed to start server: {e}")
         import traceback
+
         traceback.print_exc()
         return False
-    
+
     return True
+
 
 def configure_windows_networking():
     """Configure Windows networking for optimal Flask performance"""
     logger.info("Configuring Windows networking...")
-    
+
     import subprocess
-    
+
     commands = [
         # Reset network stack
-        'netsh winsock reset',
+        "netsh winsock reset",
         # Reset TCP/IP
-        'netsh int ip reset',
+        "netsh int ip reset",
         # Flush DNS
-        'ipconfig /flushdns',
+        "ipconfig /flushdns",
         # Enable IPv4
-        'netsh interface ipv4 set global defaultcurhoplimit=64',
+        "netsh interface ipv4 set global defaultcurhoplimit=64",
     ]
-    
+
     for cmd in commands:
         try:
             logger.info(f"Running: {cmd}")
             subprocess.run(
-                ['powershell', '-Command', cmd],
-                capture_output=True,
-                timeout=10
+                ["powershell", "-Command", cmd], capture_output=True, timeout=10
             )
         except Exception as e:
             logger.warning(f"Could not run {cmd}: {e}")
-    
+
     logger.info("✓ Windows networking configured")
+
 
 def create_network_test():
     """Create a network test to verify connection"""
     logger.info("Creating network test...")
-    
+
     test_script = """
 import requests
 import json
@@ -220,26 +236,27 @@ def test_admin_login():
 if __name__ == '__main__':
     test_admin_login()
 """
-    
-    with open('test_admin_network.py', 'w') as f:
+
+    with open("test_admin_network.py", "w") as f:
         f.write(test_script)
-    
+
     logger.info("✓ Network test created: test_admin_network.py")
+
 
 def main():
     """Master network fix - ensures everything works permanently"""
-    logger.info("="*60)
+    logger.info("=" * 60)
     logger.info("MASTER NETWORK FIX - HireMeBahamas")
-    logger.info("="*60)
-    
+    logger.info("=" * 60)
+
     # Step 1: Install all required packages
     logger.info("\n[1/5] Installing required packages...")
     install_required_packages()
-    
+
     # Step 2: Configure Windows networking
     logger.info("\n[2/5] Configuring Windows networking...")
     configure_windows_networking()
-    
+
     # Step 3: Check and free port
     logger.info("\n[3/5] Checking port availability...")
     if not check_port_availability(9999):
@@ -250,21 +267,22 @@ def main():
         port = 8080
     else:
         port = 9999
-    
+
     # Step 4: Create network test
     logger.info("\n[4/5] Creating network test...")
     create_network_test()
-    
+
     # Step 5: Start server
     logger.info("\n[5/5] Starting backend server...")
-    logger.info("="*60)
+    logger.info("=" * 60)
     if start_backend_server(port):
         logger.info("✓✓✓ MASTER FIX COMPLETE - Server is running!")
     else:
         logger.error("Server failed to start. Check logs above.")
         sys.exit(1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
@@ -273,5 +291,6 @@ if __name__ == '__main__':
     except Exception as e:
         logger.error(f"Fatal error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

@@ -3,12 +3,14 @@ AUTOMATED BACKEND HEALTH TEST AND FORCE START
 Tests backend health and forces startup if needed
 """
 
-import subprocess
-import time
-import requests
 import os
 import signal
+import subprocess
 import sys
+import time
+
+import requests
+
 
 def kill_existing_processes():
     """Force kill all Python processes"""
@@ -16,19 +18,19 @@ def kill_existing_processes():
 
     # Kill by process name
     try:
-        subprocess.run(['taskkill', '/F', '/IM', 'python.exe'], capture_output=True)
-        subprocess.run(['taskkill', '/F', '/IM', 'pythonw.exe'], capture_output=True)
+        subprocess.run(["taskkill", "/F", "/IM", "python.exe"], capture_output=True)
+        subprocess.run(["taskkill", "/F", "/IM", "pythonw.exe"], capture_output=True)
     except:
         pass
 
     # Kill by port 8008
     try:
-        result = subprocess.run(['netstat', '-ano'], capture_output=True, text=True)
-        for line in result.stdout.split('\n'):
-            if ':8008' in line and 'LISTENING' in line:
+        result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True)
+        for line in result.stdout.split("\n"):
+            if ":8008" in line and "LISTENING" in line:
                 pid = line.split()[-1]
                 try:
-                    subprocess.run(['taskkill', '/F', '/PID', pid], capture_output=True)
+                    subprocess.run(["taskkill", "/F", "/PID", pid], capture_output=True)
                     print(f"   Killed process PID: {pid}")
                 except:
                     pass
@@ -37,12 +39,12 @@ def kill_existing_processes():
 
     # Kill by port 3000 (frontend)
     try:
-        result = subprocess.run(['netstat', '-ano'], capture_output=True, text=True)
-        for line in result.stdout.split('\n'):
-            if ':3000' in line and 'LISTENING' in line:
+        result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True)
+        for line in result.stdout.split("\n"):
+            if ":3000" in line and "LISTENING" in line:
                 pid = line.split()[-1]
                 try:
-                    subprocess.run(['taskkill', '/F', '/PID', pid], capture_output=True)
+                    subprocess.run(["taskkill", "/F", "/PID", pid], capture_output=True)
                     print(f"   Killed process PID: {pid}")
                 except:
                     pass
@@ -51,6 +53,7 @@ def kill_existing_processes():
 
     time.sleep(3)
     print("✅ Process cleanup complete")
+
 
 def start_backend():
     """Start the backend server"""
@@ -64,7 +67,7 @@ def start_backend():
         "ULTIMATE_BACKEND_FIXED.py",
         "final_backend.py",
         "facebook_like_backend.py",
-        "minimal_backend.py"
+        "minimal_backend.py",
     ]
 
     for backend_file in backend_files:
@@ -72,9 +75,12 @@ def start_backend():
             print(f"   Trying: {backend_file}")
             try:
                 # Start in background
-                process = subprocess.Popen([
-                    sys.executable, backend_file
-                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=os.getcwd())
+                process = subprocess.Popen(
+                    [sys.executable, backend_file],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    cwd=os.getcwd(),
+                )
 
                 print(f"   Started {backend_file} (PID: {process.pid})")
                 return process
@@ -84,6 +90,7 @@ def start_backend():
 
     print("❌ No backend file could be started")
     return None
+
 
 def wait_for_backend(max_wait=30):
     """Wait for backend to be ready"""
@@ -103,6 +110,7 @@ def wait_for_backend(max_wait=30):
 
     print("❌ Backend failed to start within timeout")
     return False
+
 
 def test_health_endpoint():
     """Test the health endpoint multiple times"""
@@ -133,25 +141,21 @@ def test_health_endpoint():
 
     return success_rate >= 80
 
+
 def test_login_endpoint():
     """Test the login endpoint"""
     print("🔐 Testing login endpoint...")
 
-    login_data = {
-        "email": "admin@hirebahamas.com",
-        "password": "AdminPass123!"
-    }
+    login_data = {"email": "admin@hirebahamas.com", "password": "AdminPass123!"}
 
     try:
         response = requests.post(
-            "http://127.0.0.1:8008/api/auth/login",
-            json=login_data,
-            timeout=10
+            "http://127.0.0.1:8008/api/auth/login", json=login_data, timeout=10
         )
 
         if response.status_code == 200:
             data = response.json()
-            if 'token' in data and 'user' in data:
+            if "token" in data and "user" in data:
                 print("   ✅ Login successful!")
                 print(f"   User: {data['user'].get('email', 'N/A')}")
                 return True
@@ -169,6 +173,7 @@ def test_login_endpoint():
     except Exception as e:
         print(f"   ❌ Login error: {str(e)[:100]}")
         return False
+
 
 def main():
     print("=" * 60)
@@ -224,6 +229,7 @@ def main():
         backend_process.wait()
 
     return True
+
 
 if __name__ == "__main__":
     try:

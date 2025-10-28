@@ -4,9 +4,11 @@ Complete HireMe Functionality Test
 Tests the entire HireMe workflow from login to profile display to HireMe board
 """
 
-import requests
 import json
 import time
+
+import requests
+
 
 def test_complete_hireme_workflow():
     print("🚀 Testing Complete HireMe Workflow")
@@ -16,10 +18,7 @@ def test_complete_hireme_workflow():
 
     # Step 1: Login to get token
     print("\n1. Logging in...")
-    login_data = {
-        "email": "admin@hirebahamas.com",
-        "password": "AdminPass123!"
-    }
+    login_data = {"email": "admin@hirebahamas.com", "password": "AdminPass123!"}
 
     try:
         login_response = requests.post(f"{base_url}/api/auth/login", json=login_data)
@@ -29,12 +28,12 @@ def test_complete_hireme_workflow():
             print("❌ Login failed")
             return False
 
-        token = login_response.json().get('token')
+        token = login_response.json().get("token")
         if not token:
             print("❌ No token received")
             return False
 
-        headers = {'Authorization': f'Bearer {token}'}
+        headers = {"Authorization": f"Bearer {token}"}
         print("✅ Login successful")
 
     except Exception as e:
@@ -52,7 +51,7 @@ def test_complete_hireme_workflow():
             return False
 
         profile_data = profile_response.json()
-        is_available = profile_data.get('is_available_for_hire', False)
+        is_available = profile_data.get("is_available_for_hire", False)
         print(f"✅ Profile loaded - Available for hire: {is_available}")
 
     except Exception as e:
@@ -62,7 +61,9 @@ def test_complete_hireme_workflow():
     # Step 3: Test HireMe available endpoint
     print("\n3. Testing HireMe available endpoint...")
     try:
-        hireme_response = requests.get(f"{base_url}/api/hireme/available", headers=headers)
+        hireme_response = requests.get(
+            f"{base_url}/api/hireme/available", headers=headers
+        )
         print(f"HireMe status: {hireme_response.status_code}")
 
         if hireme_response.status_code != 200:
@@ -70,7 +71,7 @@ def test_complete_hireme_workflow():
             return False
 
         hireme_data = hireme_response.json()
-        available_users = hireme_data.get('users', [])
+        available_users = hireme_data.get("users", [])
         print(f"✅ HireMe board loaded - {len(available_users)} users available")
 
         for user in available_users:
@@ -84,7 +85,9 @@ def test_complete_hireme_workflow():
     print("\n4. Testing availability toggle...")
     try:
         # Toggle to unavailable
-        toggle_response = requests.post(f"{base_url}/api/hireme/toggle", headers=headers)
+        toggle_response = requests.post(
+            f"{base_url}/api/hireme/toggle", headers=headers
+        )
         print(f"Toggle status: {toggle_response.status_code}")
 
         if toggle_response.status_code != 200:
@@ -94,14 +97,16 @@ def test_complete_hireme_workflow():
         # Check profile again
         profile_response = requests.get(f"{base_url}/api/auth/profile", headers=headers)
         profile_data = profile_response.json()
-        is_available = profile_data.get('is_available_for_hire', False)
+        is_available = profile_data.get("is_available_for_hire", False)
         print(f"✅ After toggle - Available for hire: {is_available}")
 
         # Toggle back to available
-        toggle_response = requests.post(f"{base_url}/api/hireme/toggle", headers=headers)
+        toggle_response = requests.post(
+            f"{base_url}/api/hireme/toggle", headers=headers
+        )
         profile_response = requests.get(f"{base_url}/api/auth/profile", headers=headers)
         profile_data = profile_response.json()
-        is_available = profile_data.get('is_available_for_hire', False)
+        is_available = profile_data.get("is_available_for_hire", False)
         print(f"✅ After second toggle - Available for hire: {is_available}")
 
     except Exception as e:
@@ -111,13 +116,17 @@ def test_complete_hireme_workflow():
     # Step 5: Verify HireMe board updates
     print("\n5. Verifying HireMe board updates...")
     try:
-        hireme_response = requests.get(f"{base_url}/api/hireme/available", headers=headers)
+        hireme_response = requests.get(
+            f"{base_url}/api/hireme/available", headers=headers
+        )
         hireme_data = hireme_response.json()
-        available_users = hireme_data.get('users', [])
+        available_users = hireme_data.get("users", [])
         print(f"✅ HireMe board updated - {len(available_users)} users available")
 
         # Check if current user is in the list
-        current_user_in_list = any(user.get('email') == 'admin@hirebahamas.com' for user in available_users)
+        current_user_in_list = any(
+            user.get("email") == "admin@hirebahamas.com" for user in available_users
+        )
         print(f"✅ Current user in HireMe list: {current_user_in_list}")
 
     except Exception as e:
@@ -133,6 +142,7 @@ def test_complete_hireme_workflow():
     print("✅ HireMe board updates after toggle")
     print("\n🚀 HireMe functionality is fully operational!")
     return True
+
 
 if __name__ == "__main__":
     success = test_complete_hireme_workflow()

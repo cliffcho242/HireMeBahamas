@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HireBahamas API Test - Browser</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2563eb;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9fafb;
+            border-left: 4px solid #3b82f6;
+            border-radius: 5px;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        .warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #f59e0b;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        .info {
+            background: #dbeafe;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        pre {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 HireBahamas API Browser Test</h1>
+        
+        <div class="info">
+            <strong>Purpose:</strong> This test runs directly in your browser to diagnose 405 errors.<br>
+            <strong>Current Domain:</strong> <span id="currentDomain"></span><br>
+            <strong>API Backend:</strong> https://hiremebahamas.onrender.com
+        </div>
+
+        <div class="test-section">
+            <h3>Test Controls</h3>
+            <button onclick="runAllTests()">🚀 Run All Tests</button>
+            <button onclick="clearResults()">🗑️ Clear Results</button>
+            <button onclick="testLogin()">🔐 Test Login Only</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://hiremebahamas.onrender.com';
+        const resultsDiv = document.getElementById('results');
+        
+        document.getElementById('currentDomain').textContent = window.location.hostname || 'localhost';
+
+        function addResult(title, message, type = 'success') {
+            const div = document.createElement('div');
+            div.className = 'test-section';
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <div class="result ${type}">${message}</div>
+            `;
+            resultsDiv.appendChild(div);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(
+                        '✅ Test 1: Health Check',
+                        `Status: ${response.status} OK<br>Backend: ${data.status}<br>Version: ${data.version}`,
+                        'success'
+                    );
+                } else {
+                    addResult(
+                        '❌ Test 1: Health Check Failed',
+                        `Status: ${response.status}<br>Response: ${JSON.stringify(data)}`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                addResult(
+                    '❌ Test 1: Health Check Error',
+                    `Error: ${error.message}<br>This might indicate CORS or network issues`,
+                    'error'
+                );
+            }
+        }
+
+        async function testLogin() {
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'testuser@example.com',
+                        password: 'TestPass123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 405) {
+                    addResult(
+                        '❌ Test 2: Login - 405 ERROR DETECTED!',
+                        `Status: 405 Method Not Allowed<br>
+                        Response: ${JSON.stringify(data)}<br>
+                        <strong style="color: #dc2626;">This is the 405 error you're seeing!</strong><br>
+                        <br><strong>Possible Causes:</strong><br>
+                        1. Backend is sleeping (despite keep-alive)<br>
+                        2. Backend route configuration issue<br>
+                        3. Render.com deployment issue<br>
+                        4. Browser cached old response`,
+                        'error'
+                    );
+                } else if (response.status === 200) {
+                    addResult(
+                        '✅ Test 2: Login Success',
+                        `Status: ${response.status} OK<br>Token received: ${data.access_token ? 'Yes' : 'No'}<br>User: ${data.user?.email || 'N/A'}`,
+                        'success'
+                    );
+                } else if (response.status === 401) {
+                    addResult(
+                        '✅ Test 2: Login Endpoint Working',
+                        `Status: ${response.status} (Unauthorized - endpoint is working correctly)<br>Message: ${data.message}`,
+                        'success'
+                    );
+                } else {
+                    addResult(
+                        '⚠️ Test 2: Login Unexpected Status',
+                        `Status: ${response.status}<br>Response: ${JSON.stringify(data, null, 2)}`,
+                        'warning'
+                    );
+                }
+            } catch (error) {
+                addResult(
+                    '❌ Test 2: Login Error',
+                    `Error: ${error.message}<br>
+                    Network Error: ${error.name}<br>
+                    This usually means:<br>
+                    - CORS blocking the request<br>
+                    - Backend is unreachable<br>
+                    - Network connectivity issue`,
+                    'error'
+                );
+            }
+        }
+
+        async function testRegister() {
+            const testEmail = `test${Date.now()}@example.com`;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        password: 'TestPass123',
+                        first_name: 'Test',
+                        last_name: 'User',
+                        user_type: 'freelancer',
+                        location: 'Nassau'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 405) {
+                    addResult(
+                        '❌ Test 3: Register - 405 ERROR!',
+                        `Status: 405 Method Not Allowed<br>Response: ${JSON.stringify(data)}`,
+                        'error'
+                    );
+                } else if (response.status === 201 || response.status === 200) {
+                    addResult(
+                        '✅ Test 3: Register Success',
+                        `Status: ${response.status}<br>User created: ${data.user?.email || testEmail}`,
+                        'success'
+                    );
+                } else {
+                    addResult(
+                        '⚠️ Test 3: Register Status',
+                        `Status: ${response.status}<br>Response: ${JSON.stringify(data, null, 2)}`,
+                        'warning'
+                    );
+                }
+            } catch (error) {
+                addResult(
+                    '❌ Test 3: Register Error',
+                    `Error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        async function testCORS() {
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                
+                const allowOrigin = response.headers.get('Access-Control-Allow-Origin');
+                const allowMethods = response.headers.get('Access-Control-Allow-Methods');
+                
+                if (response.ok) {
+                    addResult(
+                        '✅ Test 4: CORS Preflight',
+                        `Status: ${response.status} OK<br>
+                        Allow-Origin: ${allowOrigin || 'Not set'}<br>
+                        Allow-Methods: ${allowMethods || 'Not set'}<br>
+                        CORS is properly configured`,
+                        'success'
+                    );
+                } else {
+                    addResult(
+                        '❌ Test 4: CORS Preflight Failed',
+                        `Status: ${response.status}<br>CORS may be misconfigured`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                addResult(
+                    '❌ Test 4: CORS Test Error',
+                    `Error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        async function runAllTests() {
+            clearResults();
+            
+            addResult(
+                '🚀 Starting Tests',
+                'Running comprehensive API tests from browser...',
+                'warning'
+            );
+            
+            await testHealth();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testLogin();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testRegister();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testCORS();
+            
+            addResult(
+                '✅ Tests Complete',
+                `All tests finished. Check results above.<br>
+                Domain tested: ${window.location.hostname}<br>
+                If you see 405 errors, check the detailed messages for solutions.`,
+                'warning'
+            );
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            console.log('HireBahamas API Test Page Loaded');
+            console.log('Click "Run All Tests" to start testing');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+{
+  "timestamp": "2025-10-28T16:43:24.147776",
+  "summary": {
+    "backend_health": true,
+    "cors_ok": true,
+    "login_post_ok": true,
+    "signup_ok": true
+  },
+  "issues": [],
+  "recommendations": [
+    "\u2705 No major issues detected. The 405 error might be intermittent or client-side.",
+    "\ud83d\udd0d Check browser network tab during login attempt for detailed error info.",
+    "\ud83d\udd04 Try clearing browser cache and cookies."
+  ],
+  "detailed_results": [
+    {
+      "timestamp": "2025-10-28T16:43:01.851748",
+      "test": "Backend Health Check",
+      "status": "PASS",
+      "details": "Backend is healthy (status: healthy)",
+      "data": {
+        "concurrency": {
+          "active_connections": 0,
+          "max_connections": 100
+        },
+        "database": "healthy",
+        "message": "HireMeBahamas API is running",
+        "status": "healthy",
+        "timestamp": "2025-10-28T20:42:59.545505+00:00",
+        "version": "1.0.0"
+      }
+    },
+    {
+      "timestamp": "2025-10-28T16:43:02.592341",
+      "test": "CORS Preflight Check",
+      "status": "PASS",
+      "details": "OPTIONS request successful",
+      "data": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET,PUT,POST,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Retry-Count"
+      }
+    },
+    {
+      "timestamp": "2025-10-28T16:43:03.829589",
+      "test": "Login GET Method Check",
+      "status": "PASS",
+      "details": "Correctly rejects GET requests with 405",
+      "data": null
+    },
+    {
+      "timestamp": "2025-10-28T16:43:06.048158",
+      "test": "Login POST Method Check",
+      "status": "PASS",
+      "details": "POST request successful",
+      "data": {
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6ImFkbWluQGhpcmVtZWJhaGFtYXMuY29tIiwiZXhwIjoxNzYyMjg4OTgzfQ.HjCRksdsVAv4CEVfHtVqVEKOImapLYacqjjkF0deln8",
+        "message": "Login successful",
+        "success": true,
+        "token_type": "bearer",
+        "user": {
+          "avatar_url": "",
+          "bio": "HireMeBahamas Platform Administrator",
+          "email": "admin@hiremebahamas.com",
+          "first_name": "Admin",
+          "id": 1,
+          "is_available_for_hire": false,
+          "last_name": "User",
+          "location": "Nassau, Bahamas",
+          "phone": "+1-242-555-0100",
+          "user_type": "admin"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-10-28T16:43:08.417213",
+      "test": "Signup Endpoint Check",
+      "status": "PASS",
+      "details": "Registration successful",
+      "data": {
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJlbWFpbCI6InRlc3RfMTc2MTY4NDE4NkBoaXJlYmFoYW1hcy5jb20iLCJleHAiOjE3NjIyODg5ODZ9.dkMgvilsAfOTvCD0029oS79z5D39Pqyz0j3j--DkKT8",
+        "message": "Registration successful",
+        "success": true,
+        "token_type": "bearer",
+        "user": {
+          "avatar_url": "",
+          "bio": "",
+          "email": "test_1761684186@hirebahamas.com",
+          "first_name": "Test",
+          "id": 3,
+          "is_available_for_hire": false,
+          "last_name": "User",
+          "location": "Nassau",
+          "phone": "",
+          "user_type": "freelancer"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-10-28T16:43:10.622936",
+      "test": "Endpoint Route Test (/api/auth/login)",
+      "status": "INFO",
+      "details": "Status: 200",
+      "data": {
+        "endpoint": "/api/auth/login",
+        "status": 200
+      }
+    },
+    {
+      "timestamp": "2025-10-28T16:43:12.615642",
+      "test": "Endpoint Route Test (/auth/login)",
+      "status": "WARN",
+      "details": "Status: 404",
+      "data": {
+        "endpoint": "/auth/login",
+        "status": 404
+      }
+    },
+    {
+      "timestamp": "2025-10-28T16:43:13.513545",
+      "test": "Endpoint Route Test (/login)",
+      "status": "WARN",
+      "details": "Status: 404",
+      "data": {
+        "endpoint": "/login",
+        "status": 404
+      }
+    },
+    {
+      "timestamp": "2025-10-28T16:43:14.227026",
+      "test": "Endpoint Route Test (/api/login)",
+      "status": "WARN",
+      "details": "Status: 404",
+      "data": {
+        "endpoint": "/api/login",
+        "status": 404
+      }
+    },
+    {
+      "timestamp": "2025-10-28T16:43:16.497969",
+      "test": "Header Analysis",
+      "status": "INFO",
+      "details": "Headers {'User-Agent': 'Mozilla/5.0 (Chrome/91.0.4472.124)'} -> Status: 200",
+      "data": {
+        "request_headers": {
+          "User-Agent": "Mozilla/5.0 (Chrome/91.0.4472.124)"
+        },
+        "response_status": 200
+      }
+    },
+    {
+      "timestamp": "2025-10-28T16:43:19.569589",
+      "test": "Header Analysis",
+      "status": "INFO",
+      "details": "Headers {'User-Agent': 'HireMeBahamas-Frontend/1.0'} -> Status: 200",
+      "data": {
+        "request_headers": {
+          "User-Agent": "HireMeBahamas-Frontend/1.0"
+        },
+        "response_status": 200
+      }
+    },
+    {
+      "timestamp": "2025-10-28T16:43:21.930143",
+      "test": "Header Analysis",
+      "status": "INFO",
+      "details": "Headers {'Origin': 'https://hiremebahamas.vercel.app'} -> Status: 200",
+      "data": {
+        "request_headers": {
+          "Origin": "https://hiremebahamas.vercel.app"
+        },
+        "response_status": 200
+      }
+    },
+    {
+      "timestamp": "2025-10-28T16:43:24.142780",
+      "test": "Header Analysis",
+      "status": "INFO",
+      "details": "Headers {'Referer': 'https://hiremebahamas.vercel.app/login'} -> Status: 200",
+      "data": {
+        "request_headers": {
+          "Referer": "https://hiremebahamas.vercel.app/login"
+        },
+        "response_status": 200
+      }
+    }
+  ]
+}

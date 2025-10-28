@@ -4,17 +4,19 @@ AI-Powered Permanent Network Error Resolution System
 Continuously monitors and fixes network errors, authentication issues, and connection problems
 """
 
-import os
-import sys
-import subprocess
-import requests
-import time
 import json
-import socket
-import threading
-import psutil
-from pathlib import Path
 import logging
+import os
+import socket
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+import psutil
+import requests
+
 
 class AIPermanentNetworkFixer:
     def __init__(self):
@@ -32,18 +34,23 @@ class AIPermanentNetworkFixer:
     def setup_logging(self):
         """Setup comprehensive logging"""
         logging.basicConfig(
-            filename='ai_network_monitor.log',
+            filename="ai_network_monitor.log",
             level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            format="%(asctime)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
-        self.logger = logging.getLogger('AINetworkFixer')
+        self.logger = logging.getLogger("AINetworkFixer")
 
     def run_command(self, cmd, shell=True, capture_output=True, timeout=30):
         """Run a command with proper error handling"""
         try:
-            result = subprocess.run(cmd, shell=shell, capture_output=capture_output,
-                                  text=True, timeout=timeout)
+            result = subprocess.run(
+                cmd,
+                shell=shell,
+                capture_output=capture_output,
+                text=True,
+                timeout=timeout,
+            )
             return result.returncode == 0, result.stdout, result.stderr
         except Exception as e:
             return False, "", str(e)
@@ -69,7 +76,10 @@ class AIPermanentNetworkFixer:
                     response = requests.get(f"http://localhost:{port}", timeout=3)
                     if response.status_code == 200:
                         content = response.text.lower()
-                        if any(keyword in content for keyword in ['html', 'react', 'vite', 'hirebahamas']):
+                        if any(
+                            keyword in content
+                            for keyword in ["html", "react", "vite", "hirebahamas"]
+                        ):
                             self.frontend_port = port
                             self.frontend_url = f"http://localhost:{port}"
                             return True
@@ -105,12 +115,10 @@ class AIPermanentNetworkFixer:
     def test_admin_login(self):
         """Test admin login functionality"""
         try:
-            login_data = {
-                "email": "admin@hirebahamas.com",
-                "password": "AdminPass123!"
-            }
-            response = requests.post(f"{self.backend_url}/auth/login",
-                                   json=login_data, timeout=10)
+            login_data = {"email": "admin@hirebahamas.com", "password": "AdminPass123!"}
+            response = requests.post(
+                f"{self.backend_url}/auth/login", json=login_data, timeout=10
+            )
             return response.status_code == 200 and response.json().get("success")
         except:
             return False
@@ -119,13 +127,15 @@ class AIPermanentNetworkFixer:
         """Kill any process running on a specific port"""
         try:
             # Find process using the port
-            for proc in psutil.process_iter(['pid', 'name', 'connections']):
+            for proc in psutil.process_iter(["pid", "name", "connections"]):
                 try:
-                    if proc.info['connections']:
-                        for conn in proc.info['connections']:
-                            if hasattr(conn, 'laddr') and conn.laddr.port == port:
+                    if proc.info["connections"]:
+                        for conn in proc.info["connections"]:
+                            if hasattr(conn, "laddr") and conn.laddr.port == port:
                                 proc.kill()
-                                self.logger.info(f"Killed process {proc.info['pid']} on port {port}")
+                                self.logger.info(
+                                    f"Killed process {proc.info['pid']} on port {port}"
+                                )
                                 return True
                 except:
                     continue
@@ -138,22 +148,24 @@ class AIPermanentNetworkFixer:
         self.logger.info("Starting backend server...")
 
         # Kill any existing backend processes
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
             try:
-                if 'python' in proc.info['name'].lower():
-                    cmdline = ' '.join(proc.info['cmdline'])
-                    if 'final_backend.py' in cmdline:
+                if "python" in proc.info["name"].lower():
+                    cmdline = " ".join(proc.info["cmdline"])
+                    if "final_backend.py" in cmdline:
                         proc.kill()
                         time.sleep(1)
             except:
                 pass
 
         try:
-            backend_process = subprocess.Popen([sys.executable, 'final_backend.py'],
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.PIPE,
-                                             cwd=os.getcwd(),
-                                             creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+            backend_process = subprocess.Popen(
+                [sys.executable, "final_backend.py"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=os.getcwd(),
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
             time.sleep(5)  # Wait for startup
 
             if self.check_backend_health():
@@ -171,11 +183,13 @@ class AIPermanentNetworkFixer:
         self.logger.info("Starting frontend server...")
 
         # Kill existing frontend processes
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
             try:
-                if 'node' in proc.info['name'].lower() or 'npm' in ' '.join(proc.info['cmdline']):
-                    cmdline = ' '.join(proc.info['cmdline'])
-                    if any(keyword in cmdline for keyword in ['vite', 'npm', 'react']):
+                if "node" in proc.info["name"].lower() or "npm" in " ".join(
+                    proc.info["cmdline"]
+                ):
+                    cmdline = " ".join(proc.info["cmdline"])
+                    if any(keyword in cmdline for keyword in ["vite", "npm", "react"]):
                         proc.kill()
                         time.sleep(1)
             except:
@@ -191,17 +205,21 @@ class AIPermanentNetworkFixer:
             if not npm_cmd:
                 return False
 
-            frontend_process = subprocess.Popen([npm_cmd, 'run', 'dev'],
-                                             cwd=str(frontend_dir),
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.PIPE,
-                                             creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+            frontend_process = subprocess.Popen(
+                [npm_cmd, "run", "dev"],
+                cwd=str(frontend_dir),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
 
             # Wait for startup and detect port
             time.sleep(10)
 
             if self.detect_frontend_port() and self.check_frontend_health():
-                self.logger.info(f"Frontend server started successfully on port {self.frontend_port}")
+                self.logger.info(
+                    f"Frontend server started successfully on port {self.frontend_port}"
+                )
                 return True
             else:
                 frontend_process.terminate()
@@ -212,7 +230,12 @@ class AIPermanentNetworkFixer:
 
     def find_npm_command(self):
         """Find the npm command path"""
-        npm_paths = ["npm.cmd", "npm", r"C:\Program Files\nodejs\npm.cmd", r"C:\Program Files (x86)\nodejs\npm.cmd"]
+        npm_paths = [
+            "npm.cmd",
+            "npm",
+            r"C:\Program Files\nodejs\npm.cmd",
+            r"C:\Program Files (x86)\nodejs\npm.cmd",
+        ]
 
         for path in npm_paths:
             try:
@@ -286,7 +309,9 @@ class AIPermanentNetworkFixer:
                     self.logger.warning(f"Issues detected: {issues}")
 
                     if self.error_count >= self.max_errors_before_restart:
-                        self.logger.warning("Too many errors, performing emergency restart")
+                        self.logger.warning(
+                            "Too many errors, performing emergency restart"
+                        )
                         self.emergency_restart()
                     else:
                         # Try to fix individual issues
@@ -318,7 +343,9 @@ class AIPermanentNetworkFixer:
             self.emergency_restart()
 
         # Start monitoring thread
-        monitor_thread = threading.Thread(target=self.continuous_monitoring_loop, daemon=True)
+        monitor_thread = threading.Thread(
+            target=self.continuous_monitoring_loop, daemon=True
+        )
         monitor_thread.start()
 
         print("✅ Continuous monitoring started!")
@@ -357,6 +384,7 @@ class AIPermanentNetworkFixer:
             print("❌ Some issues could not be resolved automatically")
             return False
 
+
 def main():
     """Main function"""
     try:
@@ -364,7 +392,9 @@ def main():
         import requests
     except ImportError:
         print("Installing required packages...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "psutil", "requests"], check=True)
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "psutil", "requests"], check=True
+        )
 
     fixer = AIPermanentNetworkFixer()
 
@@ -373,6 +403,7 @@ def main():
     else:
         success = fixer.run_diagnostic_mode()
         sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()

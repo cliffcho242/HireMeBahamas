@@ -6,20 +6,22 @@ Direct table creation script
 import sqlite3
 from pathlib import Path
 
+
 def create_tables_direct():
     """Create tables directly with SQLite"""
-    
+
     db_path = Path(__file__).parent / "hirebahamas.db"
-    
+
     # Remove existing database
     if db_path.exists():
         db_path.unlink()
-    
+
     conn = sqlite3.connect(str(db_path))
     cursor = conn.cursor()
-    
+
     # Create users table with admin fields
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email VARCHAR(255) NOT NULL UNIQUE,
@@ -39,10 +41,12 @@ def create_tables_direct():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """)
-    
+    """
+    )
+
     # Create other essential tables
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE jobs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title VARCHAR(200) NOT NULL,
@@ -58,13 +62,15 @@ def create_tables_direct():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (employer_id) REFERENCES users (id)
         )
-    """)
-    
+    """
+    )
+
     conn.commit()
     conn.close()
-    
+
     print("✅ Tables created successfully with admin support!")
     return True
+
 
 if __name__ == "__main__":
     create_tables_direct()

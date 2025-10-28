@@ -1,7 +1,8 @@
-from pydantic import BaseModel, validator
-from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel, validator
 
 
 class BudgetType(str, Enum):
@@ -31,11 +32,11 @@ class JobBase(BaseModel):
     location: str
     is_remote: bool = False
     skills: Optional[List[str]] = None
-    
-    @validator('budget')
+
+    @validator("budget")
     def validate_budget(cls, v):
         if v <= 0:
-            raise ValueError('Budget must be greater than 0')
+            raise ValueError("Budget must be greater than 0")
         return v
 
 
@@ -61,7 +62,7 @@ class ClientInfo(BaseModel):
     last_name: str
     profile_image: Optional[str] = None
     average_rating: Optional[float] = None
-    
+
     class Config:
         from_attributes = True
 
@@ -73,7 +74,7 @@ class FreelancerInfo(BaseModel):
     profile_image: Optional[str] = None
     skills: Optional[List[str]] = None
     average_rating: Optional[float] = None
-    
+
     class Config:
         from_attributes = True
 
@@ -81,11 +82,11 @@ class FreelancerInfo(BaseModel):
 class JobApplicationCreate(BaseModel):
     cover_letter: str
     proposed_budget: float
-    
-    @validator('proposed_budget')
+
+    @validator("proposed_budget")
     def validate_proposed_budget(cls, v):
         if v <= 0:
-            raise ValueError('Proposed budget must be greater than 0')
+            raise ValueError("Proposed budget must be greater than 0")
         return v
 
 
@@ -98,7 +99,7 @@ class JobApplicationResponse(BaseModel):
     proposed_budget: float
     status: ApplicationStatus
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -112,7 +113,7 @@ class JobResponse(JobBase):
     application_count: int = 0
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True
 

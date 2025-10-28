@@ -4,32 +4,38 @@ HireMeBahamas Backend Server Monitor
 Keeps the Flask server running and monitors its health
 """
 
-import subprocess
-import time
-import requests
-import sys
 import os
+import subprocess
+import sys
+import time
 from datetime import datetime
+
+import requests
+
 
 def log_message(message):
     """Log a message with timestamp"""
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {message}")
+
 
 def check_server_health():
     """Check if the server is responding to health requests"""
     try:
-        response = requests.get('http://127.0.0.1:8008/health', timeout=5)
+        response = requests.get("http://127.0.0.1:8008/health", timeout=5)
         return response.status_code == 200
     except Exception:
         return False
+
 
 def start_server():
     """Start the Flask server process"""
     try:
         # Get the path to the virtual environment Python
-        venv_python = os.path.join(os.path.dirname(__file__), '.venv', 'Scripts', 'python.exe')
-        backend_script = os.path.join(os.path.dirname(__file__), 'final_backend.py')
+        venv_python = os.path.join(
+            os.path.dirname(__file__), ".venv", "Scripts", "python.exe"
+        )
+        backend_script = os.path.join(os.path.dirname(__file__), "final_backend.py")
 
         log_message(f"Starting server with: {venv_python} {backend_script}")
 
@@ -39,13 +45,14 @@ def start_server():
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
-            cwd=os.path.dirname(__file__)
+            cwd=os.path.dirname(__file__),
         )
 
         return process
     except Exception as e:
         log_message(f"Error starting server: {e}")
         return None
+
 
 def main():
     log_message("Starting HireMeBahamas Backend Server Monitor")
@@ -118,5 +125,6 @@ def main():
     log_message("Maximum retries exceeded. Giving up.")
     sys.exit(1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

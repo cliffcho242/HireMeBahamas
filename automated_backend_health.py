@@ -7,18 +7,16 @@ Ensures backend is running and healthy, handles login and posts testing
 import subprocess
 import sys
 import time
-import requests
 from pathlib import Path
+
+import requests
 
 
 def kill_python_processes():
     """Kill any existing Python processes that might be blocking the port"""
     try:
         if sys.platform == "win32":
-            subprocess.run(
-                ["taskkill", "/f", "/im", "python.exe"],
-                capture_output=True
-            )
+            subprocess.run(["taskkill", "/f", "/im", "python.exe"], capture_output=True)
         else:
             subprocess.run(["pkill", "-f", "python"], capture_output=True)
         print("✓ Killed existing Python processes")
@@ -38,9 +36,8 @@ def start_backend():
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             creationflags=(
-                subprocess.CREATE_NEW_PROCESS_GROUP
-                if sys.platform == "win32" else 0
-            )
+                subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
+            ),
         )
         print(f"✓ Backend started with PID: {process.pid}")
         return process
@@ -54,7 +51,7 @@ def wait_for_backend(max_wait=30):
     print("Waiting for backend to be ready...")
     for i in range(max_wait):
         try:
-            r = requests.get('http://127.0.0.1:8008/health', timeout=2)
+            r = requests.get("http://127.0.0.1:8008/health", timeout=2)
             if r.status_code == 200:
                 print("✓ Backend is healthy")
                 return True
@@ -71,10 +68,9 @@ def test_login():
     """Test login functionality"""
     try:
         r = requests.post(
-            'http://127.0.0.1:8008/api/auth/login',
-            json={'email': 'admin@hirebahamas.com',
-                  'password': 'AdminPass123!'},
-            timeout=5
+            "http://127.0.0.1:8008/api/auth/login",
+            json={"email": "admin@hirebahamas.com", "password": "AdminPass123!"},
+            timeout=5,
         )
         if r.status_code == 200:
             print("✓ Login test passed")
@@ -90,7 +86,7 @@ def test_login():
 def test_posts():
     """Test posts endpoint"""
     try:
-        r = requests.get('http://127.0.0.1:8008/api/posts', timeout=5)
+        r = requests.get("http://127.0.0.1:8008/api/posts", timeout=5)
         if r.status_code == 200:
             print("✓ Posts test passed")
             return True

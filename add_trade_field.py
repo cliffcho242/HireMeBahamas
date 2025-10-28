@@ -3,12 +3,13 @@
 Add trade/skill field to users table for HireMe search functionality
 """
 
-import sqlite3
 import os
+import sqlite3
+
 
 def add_trade_field():
     """Add trade field to users table"""
-    db_path = os.path.join(os.path.dirname(__file__), 'hirebahamas.db')
+    db_path = os.path.join(os.path.dirname(__file__), "hirebahamas.db")
 
     if not os.path.exists(db_path):
         print("Database not found!")
@@ -22,7 +23,7 @@ def add_trade_field():
         cursor.execute("PRAGMA table_info(users)")
         columns = [col[1] for col in cursor.fetchall()]
 
-        if 'trade' not in columns:
+        if "trade" not in columns:
             print("Adding trade column to users table...")
             cursor.execute("ALTER TABLE users ADD COLUMN trade TEXT DEFAULT ''")
             conn.commit()
@@ -33,12 +34,12 @@ def add_trade_field():
         # Add some sample trades to existing users
         print("Adding sample trades to users...")
         sample_trades = [
-            ('Plumber', 'admin@hirebahamas.com'),
-            ('Electrician', 'testuser@example.com'),
-            ('Software Developer', 'admin@hirebahamas.com'),
-            ('Graphic Designer', 'testuser@example.com'),
-            ('Carpenter', 'admin@hirebahamas.com'),
-            ('Chef', 'testuser@example.com')
+            ("Plumber", "admin@hirebahamas.com"),
+            ("Electrician", "testuser@example.com"),
+            ("Software Developer", "admin@hirebahamas.com"),
+            ("Graphic Designer", "testuser@example.com"),
+            ("Carpenter", "admin@hirebahamas.com"),
+            ("Chef", "testuser@example.com"),
         ]
 
         for trade, email in sample_trades:
@@ -53,6 +54,7 @@ def add_trade_field():
     except Exception as e:
         print(f"❌ Error: {str(e)}")
         return False
+
 
 if __name__ == "__main__":
     print("🔧 Adding trade field to HireBahamas database...")

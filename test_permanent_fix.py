@@ -3,36 +3,41 @@
 Quick Test for AI Permanent Network Fix System
 """
 
-import requests
 import subprocess
 import sys
 import time
 
+import requests
+
+
 def test_backend():
     try:
-        r = requests.get('http://127.0.0.1:8008/health', timeout=5)
+        r = requests.get("http://127.0.0.1:8008/health", timeout=5)
         return r.status_code == 200
     except:
         return False
+
 
 def test_frontend():
     # Test multiple possible ports
     for port in [3000, 3001, 3002]:
         try:
-            r = requests.get(f'http://localhost:{port}', timeout=5)
+            r = requests.get(f"http://localhost:{port}", timeout=5)
             if r.status_code == 200:
                 return True, port
         except:
             continue
     return False, None
 
+
 def test_admin_login():
     try:
         data = {"email": "admin@hirebahamas.com", "password": "AdminPass123!"}
-        r = requests.post('http://127.0.0.1:8008/auth/login', json=data, timeout=10)
-        return r.status_code == 200 and r.json().get('success')
+        r = requests.post("http://127.0.0.1:8008/auth/login", json=data, timeout=10)
+        return r.status_code == 200 and r.json().get("success")
     except:
         return False
+
 
 def main():
     print("🧪 AI Permanent Network Fix - System Test")
@@ -61,8 +66,12 @@ def main():
     else:
         print("❌ ISSUES DETECTED - Running AI Fixer...")
         try:
-            result = subprocess.run([sys.executable, 'ai_permanent_network_fixer.py'],
-                                  capture_output=True, text=True, timeout=60)
+            result = subprocess.run(
+                [sys.executable, "ai_permanent_network_fixer.py"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
             if result.returncode == 0:
                 print("✅ AI Fixer completed successfully")
                 return 0
@@ -72,6 +81,7 @@ def main():
         except:
             print("❌ Could not run AI Fixer")
             return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

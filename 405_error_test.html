@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HireMeBahamas 405 Error Test</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .result { margin: 15px 0; padding: 15px; border-radius: 8px; }
+        .success { background-color: #d4edda; border-left: 4px solid #28a745; }
+        .error { background-color: #f8d7da; border-left: 4px solid #dc3545; }
+        .warning { background-color: #fff3cd; border-left: 4px solid #ffc107; }
+        button { background: #007bff; color: white; border: none; padding: 12px 20px; margin: 8px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        button:hover { background: #0056b3; }
+        .clear-btn { background: #6c757d; }
+        .clear-btn:hover { background: #545b62; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 12px; border: 1px solid #e9ecef; }
+        h1 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 10px; }
+        .badge-success { background: #28a745; color: white; }
+        .badge-error { background: #dc3545; color: white; }
+        .instructions { background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 HireMeBahamas 405 Error Diagnostic</h1>
+        
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Open browser DevTools (F12) and go to Network tab</li>
+                <li>Click the test buttons below</li>
+                <li>Check for any 405 errors in the Network tab</li>
+                <li>Compare results with what you see on the actual website</li>
+            </ol>
+        </div>
+        
+        <div>
+            <button onclick="testHealth()">🏥 Test Health</button>
+            <button onclick="testLogin()">🔐 Test Login</button>
+            <button onclick="testSignup()">📝 Test Signup</button>
+            <button onclick="testCORS()">🌐 Test CORS</button>
+            <button onclick="clearResults()" class="clear-btn">🗑️ Clear Results</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://hiremebahamas.onrender.com';
+        
+        function addResult(title, success, data, isWarning = false) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            const statusClass = isWarning ? 'warning' : (success ? 'success' : 'error');
+            const statusBadge = isWarning ? 'Warning' : (success ? 'Success' : 'Error');
+            const badgeClass = isWarning ? 'badge-warning' : (success ? 'badge-success' : 'badge-error');
+            
+            div.className = `result ${statusClass}`;
+            div.innerHTML = `
+                <h3>${title} <span class="status-badge ${badgeClass}">${statusBadge}</span></h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            results.appendChild(div);
+            
+            // Auto-scroll to new result
+            div.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        async function testHealth() {
+            try {
+                console.log('Testing health endpoint...');
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                addResult('Health Check', response.ok, {
+                    status: response.status,
+                    url: response.url,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    data: data
+                });
+                
+                console.log('Health test completed:', response.status);
+            } catch (error) {
+                console.error('Health test error:', error);
+                addResult('Health Check', false, {
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
+        }
+        
+        async function testLogin() {
+            try {
+                console.log('Testing login endpoint...');
+                
+                // First test OPTIONS request (CORS preflight)
+                const optionsResponse = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type,Authorization'
+                    }
+                });
+                
+                console.log('OPTIONS response:', optionsResponse.status);
+                
+                // Then test actual POST request
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': window.location.origin
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@hiremebahamas.com',
+                        password: 'AdminPass123!'
+                    })
+                });
+                
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = { error: 'Could not parse JSON response', response_text: await response.text() };
+                }
+                
+                addResult('Login Test', response.ok, {
+                    status: response.status,
+                    url: response.url,
+                    options_status: optionsResponse.status,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    data: data
+                });
+                
+                console.log('Login test completed:', response.status);
+                
+                // Special check for 405 error
+                if (response.status === 405) {
+                    addResult('❌ 405 Error Detected!', false, {
+                        message: 'The server returned a 405 Method Not Allowed error',
+                        possible_causes: [
+                            'Server routing issue',
+                            'CORS preflight failure', 
+                            'Backend deployment problem',
+                            'Load balancer configuration'
+                        ],
+                        next_steps: [
+                            'Check server logs',
+                            'Verify backend deployment status',
+                            'Test with different browser/incognito mode',
+                            'Contact backend administrator'
+                        ]
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Login test error:', error);
+                addResult('Login Test', false, {
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
+        }
+        
+        async function testSignup() {
+            try {
+                console.log('Testing signup endpoint...');
+                const response = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': window.location.origin
+                    },
+                    body: JSON.stringify({
+                        email: `test_${Date.now()}@example.com`,
+                        password: 'TestPassword123!',
+                        first_name: 'Test',
+                        last_name: 'User',
+                        user_type: 'freelancer',
+                        location: 'Nassau'
+                    })
+                });
+                
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = { error: 'Could not parse JSON response', response_text: await response.text() };
+                }
+                
+                addResult('Signup Test', response.ok, {
+                    status: response.status,
+                    url: response.url,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    data: data
+                });
+                
+                console.log('Signup test completed:', response.status);
+            } catch (error) {
+                console.error('Signup test error:', error);
+                addResult('Signup Test', false, {
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
+        }
+        
+        async function testCORS() {
+            try {
+                console.log('Testing CORS configuration...');
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type,Authorization'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
+                    'Access-Control-Allow-Credentials': response.headers.get('Access-Control-Allow-Credentials')
+                };
+                
+                addResult('CORS Preflight', response.ok, {
+                    status: response.status,
+                    cors_headers: corsHeaders,
+                    all_headers: Object.fromEntries(response.headers.entries())
+                });
+                
+                console.log('CORS test completed:', response.status);
+            } catch (error) {
+                console.error('CORS test error:', error);
+                addResult('CORS Preflight', false, {
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            console.clear();
+            console.log('Results cleared. Ready for new tests.');
+        }
+        
+        // Show current page info
+        console.log('HireMeBahamas 405 Error Diagnostic loaded');
+        console.log('Current origin:', window.location.origin);
+        console.log('Target API:', API_BASE);
+        console.log('User agent:', navigator.userAgent);
+        
+        // Auto-run health check on load
+        window.addEventListener('load', () => {
+            setTimeout(testHealth, 1000);
+        });
+    </script>
+</body>
+</html>

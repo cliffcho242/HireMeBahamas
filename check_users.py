@@ -1,10 +1,10 @@
 import sqlite3
 
-conn = sqlite3.connect('hiremebahamas.db')
+conn = sqlite3.connect("hiremebahamas.db")
 cursor = conn.cursor()
 
 try:
-    cursor.execute('SELECT * FROM users')
+    cursor.execute("SELECT * FROM users")
     users = cursor.fetchall()
     print(f"Found {len(users)} users in database:")
     for user in users:

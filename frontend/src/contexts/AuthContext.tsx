@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
       
       localStorage.setItem('token', response.access_token);
-      setToken(response.token);
+      setToken(response.access_token);
       setUser(response.user);
       console.log('AuthContext: Login successful, user set:', response.user);
       toast.success('Login successful!');
@@ -93,12 +93,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const register = async (userData: RegisterData) => {
     try {
       const response = await authAPI.register(userData);
+      if (!response?.access_token || !response?.user) {
+        throw new Error(response?.message || 'Registration failed');
+      }
       localStorage.setItem('token', response.access_token);
       setToken(response.access_token);
       setUser(response.user);
       toast.success('Registration successful!');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      const message = error?.response?.data?.message || error?.message || 'Registration failed';
+      toast.error(message);
       throw error;
     }
   };

@@ -4,25 +4,27 @@ TEST BACKEND - Testing different ports
 """
 
 import http.server
-import socketserver
 import json
-import time
+import socketserver
 import sys
+import time
+
 
 class TestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header("Content-type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         response = {
             "status": "working",
             "message": "TEST BACKEND SUCCESS",
             "timestamp": time.time(),
-            "port": self.server.server_address[1]
+            "port": self.server.server_address[1],
         }
         self.wfile.write(json.dumps(response).encode())
         print(f"✅ Request served on port {self.server.server_address[1]}")
+
 
 def test_ports():
     ports_to_test = [8008, 8080, 3000, 5000, 9000]
@@ -36,8 +38,11 @@ def test_ports():
 
                 # Test the server immediately
                 import urllib.request
+
                 try:
-                    response = urllib.request.urlopen(f"http://127.0.0.1:{port}", timeout=2)
+                    response = urllib.request.urlopen(
+                        f"http://127.0.0.1:{port}", timeout=2
+                    )
                     data = json.loads(response.read().decode())
                     print(f"✅ Self-test successful: {data['message']}")
                     return port  # Return the working port
@@ -48,6 +53,7 @@ def test_ports():
             print(f"❌ Port {port} failed: {e}")
 
     return None
+
 
 if __name__ == "__main__":
     print("🔍 TESTING PORT AVAILABILITY")

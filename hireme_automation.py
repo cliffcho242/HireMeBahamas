@@ -4,31 +4,32 @@ HireMe Availability Automation Manager
 Automatically manages user availability for HireMe feature with robust error handling
 """
 
-import sqlite3
-import random
-import time
 import logging
-import sys
 import os
+import random
+import sqlite3
+import sys
+import time
 from datetime import datetime, timedelta
 
 # Setup logging
 logging.basicConfig(
-    filename='hireme_automation.log',
+    filename="hireme_automation.log",
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+
 class HireMeAutomation:
-    def __init__(self, db_path='hirebahamas.db', interval_minutes=5):
+    def __init__(self, db_path="hirebahamas.db", interval_minutes=5):
         self.db_path = db_path
         self.interval_seconds = interval_minutes * 60
         self.running = True
 
         # Ensure log file exists
-        if not os.path.exists('hireme_automation.log'):
-            open('hireme_automation.log', 'w').close()
+        if not os.path.exists("hireme_automation.log"):
+            open("hireme_automation.log", "w").close()
 
         logging.info("HireMe Automation Manager initialized")
         print("🚀 HireMe Availability Automation Manager Started")
@@ -54,7 +55,7 @@ class HireMeAutomation:
             cursor = conn.cursor()
 
             # Get all users
-            cursor.execute('SELECT id, email, first_name, last_name FROM users')
+            cursor.execute("SELECT id, email, first_name, last_name FROM users")
             users = cursor.fetchall()
 
             if not users:
@@ -74,8 +75,8 @@ class HireMeAutomation:
                 available = random.choice([True, True, True, False, True, True, True])
 
                 cursor.execute(
-                    'UPDATE users SET is_available_for_hire = ? WHERE id = ?',
-                    (available, user_id)
+                    "UPDATE users SET is_available_for_hire = ? WHERE id = ?",
+                    (available, user_id),
                 )
 
                 status = "AVAILABLE" if available else "NOT AVAILABLE"
@@ -91,8 +92,12 @@ class HireMeAutomation:
             conn.commit()
             conn.close()
 
-            logging.info(f"Updated {updated_count} users, {available_count} now available")
-            print(f"\n✅ Updated {updated_count} users - {available_count} now available for hire")
+            logging.info(
+                f"Updated {updated_count} users, {available_count} now available"
+            )
+            print(
+                f"\n✅ Updated {updated_count} users - {available_count} now available for hire"
+            )
 
         except Exception as e:
             logging.error(f"Error updating availability: {e}")
@@ -104,7 +109,7 @@ class HireMeAutomation:
 
         while self.running:
             cycle_count += 1
-            current_time = datetime.now().strftime('%H:%M:%S')
+            current_time = datetime.now().strftime("%H:%M:%S")
 
             print(f"\n🔄 Cycle #{cycle_count} - {current_time}")
             logging.info(f"Starting automation cycle #{cycle_count}")
@@ -120,9 +125,11 @@ class HireMeAutomation:
 
             # Log completion
             next_update = datetime.now() + timedelta(seconds=self.interval_seconds)
-            next_time = next_update.strftime('%H:%M:%S')
+            next_time = next_update.strftime("%H:%M:%S")
             print(f"⏰ Next update at {next_time}")
-            logging.info(f"Cycle #{cycle_count} completed, next update in {self.interval_seconds//60} minutes")
+            logging.info(
+                f"Cycle #{cycle_count} completed, next update in {self.interval_seconds//60} minutes"
+            )
 
             # Wait for next cycle
             time.sleep(self.interval_seconds)
@@ -133,13 +140,14 @@ class HireMeAutomation:
         logging.info("HireMe Automation stopped")
         print("\n🛑 HireMe Automation stopped")
 
+
 def main():
     """Main entry point"""
     print("🎯 HireMe Availability Automation Manager")
     print("=" * 50)
 
     # Check if database exists
-    if not os.path.exists('hirebahamas.db'):
+    if not os.path.exists("hirebahamas.db"):
         print("❌ Database file 'hirebahamas.db' not found!")
         print("   Please run the backend first to create the database.")
         sys.exit(1)
@@ -163,6 +171,7 @@ def main():
         print(f"❌ Unexpected error: {e}")
         automation.stop()
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

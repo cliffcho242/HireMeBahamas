@@ -4,27 +4,26 @@ Checks if hiremebahamas.com is properly configured for Vercel
 """
 
 import subprocess
-import time
 import sys
+import time
+
 
 def print_header(text):
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print(f"  {text}")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
+
 
 def check_dns(domain):
     """Check DNS resolution for domain"""
     try:
         result = subprocess.run(
-            f"nslookup {domain}",
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=10
+            f"nslookup {domain}", shell=True, capture_output=True, text=True, timeout=10
         )
         return result.stdout
     except Exception as e:
         return f"Error: {str(e)}"
+
 
 def check_vercel_domain():
     """Check Vercel domain configuration"""
@@ -35,11 +34,12 @@ def check_vercel_domain():
             capture_output=True,
             text=True,
             cwd=r"C:\Users\Dell\OneDrive\Desktop\HireBahamas\frontend",
-            timeout=30
+            timeout=30,
         )
         return result.returncode == 0, result.stdout
     except Exception as e:
         return False, str(e)
+
 
 print_header("DNS Configuration Checker for hiremebahamas.com")
 
@@ -77,7 +77,7 @@ else:
     www_ok = False
 
 # Check Vercel configuration
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("🔍 Step 2: Checking Vercel Domain Configuration...")
 print("-" * 70)
 
@@ -89,9 +89,9 @@ if success and "76.76.21.21" in vercel_output:
 else:
     print("❌ Could not verify Vercel configuration")
 
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("📊 SUMMARY")
-print("="*70)
+print("=" * 70)
 
 status = []
 if dns_ok:
@@ -108,9 +108,9 @@ for s in status:
     print(f"  {s}")
 
 if not dns_ok:
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("🛠️  WHAT YOU NEED TO DO")
-    print("="*70)
+    print("=" * 70)
     print("\nYour domain is NOT pointing to Vercel. Follow these steps:\n")
     print("1. Find where you registered hiremebahamas.com")
     print("   (GoDaddy, Namecheap, Google Domains, etc.)")
@@ -145,11 +145,11 @@ if not dns_ok:
     print("")
     print("🌐 Temporary URL (works now):")
     print("   https://frontend-8hx9eshko-cliffs-projects-a84c76c9.vercel.app")
-    
+
 else:
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("🎉 SUCCESS!")
-    print("="*70)
+    print("=" * 70)
     print("\n✅ Your domain is configured correctly!")
     print("\nYour site should be accessible at:")
     print("  • https://hiremebahamas.com")
@@ -161,6 +161,6 @@ else:
     print("\nNote: SSL certificates may take 5 more minutes to activate.")
     print("      If you see a security warning, wait a few minutes.")
 
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("Need help? Check: DOMAIN_SETUP_INSTRUCTIONS.md")
-print("="*70 + "\n")
+print("=" * 70 + "\n")

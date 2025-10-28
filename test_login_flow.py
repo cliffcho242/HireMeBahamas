@@ -29,23 +29,20 @@ def test_complete_login_flow():
 
     # Test 2: Admin Login
     print("2. Testing Admin Login...")
-    login_data = {
-        'email': 'admin@hiremebahamas.com',
-        'password': 'AdminPass123!'
-    }
+    login_data = {"email": "admin@hiremebahamas.com", "password": "AdminPass123!"}
 
     try:
         response = requests.post(
             f"{backend_url}/api/auth/login",
             json=login_data,
-            headers={'Content-Type': 'application/json'},
-            timeout=10
+            headers={"Content-Type": "application/json"},
+            timeout=10,
         )
 
         if response.status_code == 200:
             result = response.json()
-            if result.get('success'):
-                token = result.get('token')
+            if result.get("success"):
+                token = result.get("token")
                 print("   ✅ Admin login successful")
                 print(f"   🔑 Token received: {token[:30]}...")
             else:
@@ -62,11 +59,9 @@ def test_complete_login_flow():
     # Test 3: Protected Endpoint
     print("3. Testing Protected Endpoint...")
     try:
-        headers = {'Authorization': f'Bearer {token}'}
+        headers = {"Authorization": f"Bearer {token}"}
         response = requests.get(
-            f"{backend_url}/api/stories",
-            headers=headers,
-            timeout=5
+            f"{backend_url}/api/stories", headers=headers, timeout=5
         )
 
         if response.status_code in [200, 401]:
@@ -84,18 +79,15 @@ def test_complete_login_flow():
         response = requests.options(
             f"{backend_url}/api/auth/login",
             headers={
-                'Origin': 'http://localhost:3000',
-                'Access-Control-Request-Method': 'POST',
-                'Access-Control-Request-Headers': 'Content-Type,Authorization'
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "Content-Type,Authorization",
             },
-            timeout=5
+            timeout=5,
         )
 
         cors_headers = response.headers
-        required = [
-            'Access-Control-Allow-Origin',
-            'Access-Control-Allow-Methods'
-        ]
+        required = ["Access-Control-Allow-Origin", "Access-Control-Allow-Methods"]
         missing = [h for h in required if h not in cors_headers]
 
         if not missing:

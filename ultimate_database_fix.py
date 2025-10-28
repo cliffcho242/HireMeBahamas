@@ -3,10 +3,12 @@ Complete Database Fix - Handle Multiple Database Files
 Fix all database files and ensure backend uses correct one
 """
 
-import sqlite3
-import bcrypt
 import os
+import sqlite3
 from pathlib import Path
+
+import bcrypt
+
 
 def fix_all_databases():
     """Fix all database files in the workspace"""
@@ -14,10 +16,7 @@ def fix_all_databases():
     workspace = Path("C:/Users/Dell/OneDrive/Desktop/HireBahamas")
 
     # List of all possible database locations
-    db_paths = [
-        workspace / "hirebahamas.db",
-        workspace / "backend" / "hirebahamas.db"
-    ]
+    db_paths = [workspace / "hirebahamas.db", workspace / "backend" / "hirebahamas.db"]
 
     print("🔧 Fixing all database files...")
 
@@ -28,6 +27,7 @@ def fix_all_databases():
         else:
             print(f"\n📂 Creating: {db_path}")
             create_database(db_path)
+
 
 def fix_database(db_path):
     """Fix a specific database file"""
@@ -43,7 +43,7 @@ def fix_database(db_path):
     print(f"   Current columns: {column_names}")
 
     # Check if password_hash column exists
-    if 'password_hash' not in column_names:
+    if "password_hash" not in column_names:
         print("   ❌ Missing password_hash column - rebuilding table...")
         rebuild_table(cursor, conn)
         return
@@ -55,55 +55,63 @@ def fix_database(db_path):
 
     # Create admin user with proper structure
     password = "AdminPass123!"
-    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 
     # Use the columns that actually exist in the database
-    if 'first_name' in column_names and 'last_name' in column_names:
+    if "first_name" in column_names and "last_name" in column_names:
         # Database uses first_name/last_name structure
         print("   ℹ️ Using first_name/last_name structure")
-        
+
         # Check what columns are available for INSERT
         available_columns = []
-        if 'user_type' in column_names:
-            available_columns.append('user_type')
-        if 'is_active' in column_names:
-            available_columns.append('is_active')
-        
+        if "user_type" in column_names:
+            available_columns.append("user_type")
+        if "is_active" in column_names:
+            available_columns.append("is_active")
+
         # Build INSERT statement dynamically
-        insert_columns = ['email', 'password_hash', 'first_name', 'last_name'] + available_columns
-        placeholders = ['?'] * len(insert_columns)
+        insert_columns = [
+            "email",
+            "password_hash",
+            "first_name",
+            "last_name",
+        ] + available_columns
+        placeholders = ["?"] * len(insert_columns)
         values = [
             "admin@hirebahamas.com",
-            password_hash.decode('utf-8'),
+            password_hash.decode("utf-8"),
             "Platform",
-            "Administrator"
+            "Administrator",
         ]
-        
-        if 'user_type' in column_names:
+
+        if "user_type" in column_names:
             values.append("admin")
-        if 'is_active' in column_names:
+        if "is_active" in column_names:
             values.append(1)
-        
-        insert_sql = f'''
+
+        insert_sql = f"""
             INSERT INTO users ({', '.join(insert_columns)})
             VALUES ({', '.join(placeholders)})
-        '''
-        
+        """
+
         cursor.execute(insert_sql, values)
-    elif 'username' in column_names and 'full_name' in column_names:
+    elif "username" in column_names and "full_name" in column_names:
         # Database uses username/full_name structure
         print("   ℹ️ Using username/full_name structure")
-        cursor.execute('''
+        cursor.execute(
+            """
             INSERT INTO users (email, password_hash, username, full_name, bio, is_active)
             VALUES (?, ?, ?, ?, ?, ?)
-        ''', (
-            "admin@hirebahamas.com",
-            password_hash.decode('utf-8'),
-            "admin",
-            "Platform Administrator",
-            "Welcome to HireBahamas - Your AI-Powered Social Platform! 🚀",
-            1
-        ))
+        """,
+            (
+                "admin@hirebahamas.com",
+                password_hash.decode("utf-8"),
+                "admin",
+                "Platform Administrator",
+                "Welcome to HireBahamas - Your AI-Powered Social Platform! 🚀",
+                1,
+            ),
+        )
     else:
         print("   ❌ Unknown table structure - rebuilding...")
         rebuild_table(cursor, conn)
@@ -112,17 +120,22 @@ def fix_database(db_path):
     conn.commit()
 
     # Verify admin user was created
-    cursor.execute("SELECT id, email FROM users WHERE email = ?", ("admin@hirebahamas.com",))
+    cursor.execute(
+        "SELECT id, email FROM users WHERE email = ?", ("admin@hirebahamas.com",)
+    )
     admin_user = cursor.fetchone()
 
     if admin_user:
         print(f"   ✅ Admin created: ID={admin_user[0]}")
 
         # Test password verification
-        cursor.execute("SELECT password_hash FROM users WHERE email = ?", ("admin@hirebahamas.com",))
+        cursor.execute(
+            "SELECT password_hash FROM users WHERE email = ?",
+            ("admin@hirebahamas.com",),
+        )
         stored_hash = cursor.fetchone()[0]
 
-        if bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
+        if bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8")):
             print("   ✅ Password verification: OK")
         else:
             print("   ❌ Password verification: FAILED")
@@ -130,6 +143,7 @@ def fix_database(db_path):
         print("   ❌ Admin creation failed")
 
     conn.close()
+
 
 def rebuild_table(cursor, conn):
     """Rebuild the users table with correct structure"""
@@ -144,7 +158,8 @@ def rebuild_table(cursor, conn):
 
     # Drop and recreate table
     cursor.execute("DROP TABLE IF EXISTS users")
-    cursor.execute('''
+    cursor.execute(
+        """
         CREATE TABLE users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
@@ -160,28 +175,33 @@ def rebuild_table(cursor, conn):
             last_login TIMESTAMP,
             is_active BOOLEAN DEFAULT 1
         )
-    ''')
+    """
+    )
 
     print("   ✅ Table recreated with first_name/last_name structure")
 
     # Create admin user
     password = "AdminPass123!"
-    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 
-    cursor.execute('''
+    cursor.execute(
+        """
         INSERT INTO users (email, password_hash, first_name, last_name, user_type, is_active)
         VALUES (?, ?, ?, ?, ?, ?)
-    ''', (
-        "admin@hirebahamas.com",
-        password_hash.decode('utf-8'),
-        "Platform",
-        "Administrator",
-        "admin",
-        1
-    ))
+    """,
+        (
+            "admin@hirebahamas.com",
+            password_hash.decode("utf-8"),
+            "Platform",
+            "Administrator",
+            "admin",
+            1,
+        ),
+    )
 
     conn.commit()
     print("   ✅ Admin user created")
+
 
 def create_database(db_path):
     """Create a new database file"""
@@ -193,7 +213,8 @@ def create_database(db_path):
     cursor = conn.cursor()
 
     # Create users table with first_name/last_name structure
-    cursor.execute('''
+    cursor.execute(
+        """
         CREATE TABLE users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
@@ -209,34 +230,40 @@ def create_database(db_path):
             last_login TIMESTAMP,
             is_active BOOLEAN DEFAULT 1
         )
-    ''')
+    """
+    )
 
     # Create admin user
     password = "AdminPass123!"
-    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 
-    cursor.execute('''
+    cursor.execute(
+        """
         INSERT INTO users (email, password_hash, first_name, last_name, user_type, is_active)
         VALUES (?, ?, ?, ?, ?, ?)
-    ''', (
-        "admin@hirebahamas.com",
-        password_hash.decode('utf-8'),
-        "Platform",
-        "Administrator",
-        "admin",
-        1
-    ))
+    """,
+        (
+            "admin@hirebahamas.com",
+            password_hash.decode("utf-8"),
+            "Platform",
+            "Administrator",
+            "admin",
+            1,
+        ),
+    )
 
     conn.commit()
     conn.close()
 
     print(f"   ✅ Created new database with admin user")
 
+
 def test_backend_connection():
     """Test which database the backend is actually using"""
 
-    import requests
     import time
+
+    import requests
 
     print("\n🧪 Testing backend database connection...")
 
@@ -254,13 +281,12 @@ def test_backend_connection():
         return False
 
     # Test login
-    login_data = {
-        "email": "admin@hirebahamas.com",
-        "password": "AdminPass123!"
-    }
+    login_data = {"email": "admin@hirebahamas.com", "password": "AdminPass123!"}
 
     try:
-        response = requests.post("http://127.0.0.1:8008/api/auth/login", json=login_data, timeout=10)
+        response = requests.post(
+            "http://127.0.0.1:8008/api/auth/login", json=login_data, timeout=10
+        )
         if response.status_code == 200:
             print("   ✅ Login working!")
             print(f"   ✅ Response: {response.json()}")
@@ -275,6 +301,7 @@ def test_backend_connection():
     except Exception as e:
         print(f"   ❌ Login error: {str(e)[:100]}")
         return False
+
 
 def main():
     print("=" * 60)
@@ -304,6 +331,7 @@ def main():
         print("   2. Run: python ULTIMATE_BACKEND_FIXED.py")
         print("   3. Or double-click: COMPLETE_RESTART.bat")
         print("\n   Then try logging in at http://localhost:3000")
+
 
 if __name__ == "__main__":
     main()

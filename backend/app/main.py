@@ -1,7 +1,8 @@
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-import logging
 
 # Import APIs
 from .api import auth
@@ -9,6 +10,7 @@ from .api import auth
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,11 +20,12 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down HireMeBahamas API...")
 
+
 # Initialize FastAPI app
 app = FastAPI(
     title="HireMeBahamas API",
     description="Job platform API for the Bahamas",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Configure CORS
@@ -34,10 +37,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "message": "HireMeBahamas API is running"}
+
 
 # Include routers (testing one by one)
 app.include_router(auth.router, prefix="/auth", tags=["authentication"])
@@ -46,6 +51,7 @@ app.include_router(auth.router, prefix="/auth", tags=["authentication"])
 # app.include_router(reviews.router, prefix="/reviews", tags=["reviews"])
 # app.include_router(upload.router, prefix="/upload", tags=["uploads"])
 
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -53,10 +59,11 @@ async def root():
         "message": "Welcome to HireMeBahamas API",
         "version": "1.0.0",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="127.0.0.1", port=8005)

@@ -4,16 +4,17 @@ Ultimate Node.js/npm Automated Fix
 Permanently installs Node.js and adds to PATH if missing
 """
 
-import os
-import sys
-import subprocess
-import urllib.request
-import zipfile
-import tempfile
-import shutil
-import winreg
 import ctypes
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib.request
+import winreg
+import zipfile
 from pathlib import Path
+
 
 class NodeJSInstaller:
     def __init__(self):
@@ -31,7 +32,9 @@ class NodeJSInstaller:
     def run_command(self, cmd, shell=True, capture_output=True):
         """Run a command and return result"""
         try:
-            result = subprocess.run(cmd, shell=shell, capture_output=capture_output, text=True)
+            result = subprocess.run(
+                cmd, shell=shell, capture_output=capture_output, text=True
+            )
             return result.returncode == 0, result.stdout, result.stderr
         except Exception as e:
             return False, "", str(e)
@@ -71,7 +74,7 @@ class NodeJSInstaller:
 
             # Download
             with urllib.request.urlopen(url) as response:
-                with open(installer_path, 'wb') as f:
+                with open(installer_path, "wb") as f:
                     shutil.copyfileobj(response, f)
 
             print(f"Downloaded to: {installer_path}")
@@ -105,9 +108,12 @@ class NodeJSInstaller:
 
         try:
             # Open registry
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                               r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
-                               0, winreg.KEY_READ | winreg.KEY_WRITE)
+            key = winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+                0,
+                winreg.KEY_READ | winreg.KEY_WRITE,
+            )
 
             # Get current PATH
             current_path, _ = winreg.QueryValueEx(key, "PATH")
@@ -129,7 +135,9 @@ class NodeJSInstaller:
             )
 
             print("Node.js added to system PATH")
-            print("Please restart your terminal/command prompt for PATH changes to take effect")
+            print(
+                "Please restart your terminal/command prompt for PATH changes to take effect"
+            )
             return True
 
         except Exception as e:
@@ -180,7 +188,9 @@ class NodeJSInstaller:
         # Check admin rights
         if not self.is_admin():
             print("Administrator privileges required for installation")
-            print("Please run this script as Administrator (Right-click > Run as administrator)")
+            print(
+                "Please run this script as Administrator (Right-click > Run as administrator)"
+            )
             return False
 
         try:
@@ -208,6 +218,7 @@ class NodeJSInstaller:
         finally:
             self.cleanup()
 
+
 def main():
     """Main function"""
     installer = NodeJSInstaller()
@@ -218,8 +229,11 @@ def main():
         return 0
     else:
         print("\nFAILED: Could not install Node.js")
-        print("Try running as Administrator or install manually from https://nodejs.org")
+        print(
+            "Try running as Administrator or install manually from https://nodejs.org"
+        )
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

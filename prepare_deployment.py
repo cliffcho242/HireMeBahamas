@@ -4,12 +4,13 @@ Automated Deployment Preparation Script for HireMeBahamas
 Prepares all configuration files and checks for production deployment
 """
 
-import os
 import json
+import os
 import secrets
 import subprocess
 import sys
 from pathlib import Path
+
 
 class DeploymentPreparation:
     def __init__(self):
@@ -47,7 +48,7 @@ class DeploymentPreparation:
     def create_env_file(self):
         """Create .env file for production"""
         self.print_section("Creating Environment Configuration")
-        
+
         env_content = f"""# HireMeBahamas Production Environment Variables
 # Generated on {subprocess.check_output(['date'], shell=True).decode().strip()}
 
@@ -82,62 +83,60 @@ SMTP_PASSWORD=your-app-password
 SENTRY_DSN=
 GOOGLE_ANALYTICS_ID=
 """
-        
+
         env_path = self.root_dir / ".env"
-        with open(env_path, 'w') as f:
+        with open(env_path, "w") as f:
             f.write(env_content)
-        
+
         self.print_success(f"Created .env file at {env_path}")
         self.print_warning("Remember to update SMTP settings and ALLOWED_ORIGINS!")
 
     def create_railway_config(self):
         """Create Railway deployment configuration"""
         self.print_section("Creating Railway Configuration")
-        
+
         railway_json = {
             "$schema": "https://railway.app/railway.schema.json",
             "build": {
                 "builder": "NIXPACKS",
-                "buildCommand": "pip install -r requirements.txt"
+                "buildCommand": "pip install -r requirements.txt",
             },
             "deploy": {
                 "startCommand": "gunicorn -w 4 -b 0.0.0.0:$PORT final_backend:app --timeout 120",
                 "restartPolicyType": "ON_FAILURE",
-                "restartPolicyMaxRetries": 10
-            }
+                "restartPolicyMaxRetries": 10,
+            },
         }
-        
+
         railway_path = self.root_dir / "railway.json"
-        with open(railway_path, 'w') as f:
+        with open(railway_path, "w") as f:
             json.dump(railway_json, f, indent=2)
-        
+
         self.print_success(f"Created railway.json at {railway_path}")
 
     def create_vercel_config(self):
         """Create Vercel deployment configuration"""
         self.print_section("Creating Vercel Configuration")
-        
+
         vercel_json = {
             "buildCommand": "cd frontend && npm install && npm run build",
             "outputDirectory": "frontend/dist",
             "framework": "vite",
             "installCommand": "cd frontend && npm install",
             "devCommand": "cd frontend && npm run dev",
-            "env": {
-                "VITE_API_URL": "https://hiremebahamas-backend.railway.app"
-            }
+            "env": {"VITE_API_URL": "https://hiremebahamas-backend.railway.app"},
         }
-        
+
         vercel_path = self.root_dir / "vercel.json"
-        with open(vercel_path, 'w') as f:
+        with open(vercel_path, "w") as f:
             json.dump(vercel_json, f, indent=2)
-        
+
         self.print_success(f"Created vercel.json at {vercel_path}")
 
     def create_nixpacks_config(self):
         """Create Nixpacks configuration for Railway"""
         self.print_section("Creating Nixpacks Configuration")
-        
+
         nixpacks_toml = """[phases.setup]
 nixPkgs = ["python39", "gcc"]
 
@@ -150,17 +149,17 @@ cmds = ["python -c 'import final_backend; print(\"Backend OK\")'"]
 [start]
 cmd = "gunicorn -w 4 -b 0.0.0.0:$PORT final_backend:app --timeout 120"
 """
-        
+
         nixpacks_path = self.root_dir / "nixpacks.toml"
-        with open(nixpacks_path, 'w') as f:
+        with open(nixpacks_path, "w") as f:
             f.write(nixpacks_toml)
-        
+
         self.print_success(f"Created nixpacks.toml at {nixpacks_path}")
 
     def create_requirements_txt(self):
         """Create or update requirements.txt"""
         self.print_section("Creating Requirements File")
-        
+
         requirements = """Flask==2.3.3
 Flask-CORS==4.0.0
 Flask-Limiter==3.5.0
@@ -172,30 +171,30 @@ gunicorn==21.2.0
 waitress==2.1.2
 Werkzeug==2.3.7
 """
-        
+
         req_path = self.root_dir / "requirements.txt"
-        with open(req_path, 'w') as f:
+        with open(req_path, "w") as f:
             f.write(requirements)
-        
+
         self.print_success(f"Created requirements.txt at {req_path}")
 
     def create_procfile(self):
         """Create Procfile for Heroku compatibility"""
         self.print_section("Creating Procfile")
-        
+
         procfile_content = """web: gunicorn -w 4 -b 0.0.0.0:$PORT final_backend:app --timeout 120
 """
-        
+
         procfile_path = self.root_dir / "Procfile"
-        with open(procfile_path, 'w') as f:
+        with open(procfile_path, "w") as f:
             f.write(procfile_content)
-        
+
         self.print_success(f"Created Procfile at {procfile_path}")
 
     def create_gitignore(self):
         """Create or update .gitignore"""
         self.print_section("Creating .gitignore")
-        
+
         gitignore_content = """# Python
 __pycache__/
 *.py[cod]
@@ -253,39 +252,39 @@ htmlcov/
 .vercel
 .railway
 """
-        
+
         gitignore_path = self.root_dir / ".gitignore"
-        with open(gitignore_path, 'w') as f:
+        with open(gitignore_path, "w") as f:
             f.write(gitignore_content)
-        
+
         self.print_success(f"Created .gitignore at {gitignore_path}")
 
     def update_frontend_env(self):
         """Create frontend .env for production"""
         self.print_section("Creating Frontend Environment")
-        
+
         if not self.frontend_dir.exists():
             self.print_warning("Frontend directory not found, skipping frontend config")
             return
-        
+
         frontend_env = """# Frontend Production Environment
 VITE_API_URL=https://hiremebahamas-backend.railway.app
 VITE_SOCKET_URL=https://hiremebahamas-backend.railway.app
 VITE_APP_NAME=HireMeBahamas
 VITE_APP_VERSION=1.0.0
 """
-        
+
         frontend_env_path = self.frontend_dir / ".env.production"
-        with open(frontend_env_path, 'w') as f:
+        with open(frontend_env_path, "w") as f:
             f.write(frontend_env)
-        
+
         self.print_success(f"Created frontend .env.production")
         self.print_warning("Update VITE_API_URL with your actual Railway backend URL!")
 
     def create_privacy_policy(self):
         """Create privacy policy page"""
         self.print_section("Creating Legal Pages")
-        
+
         privacy_html = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -323,11 +322,11 @@ VITE_APP_VERSION=1.0.0
 </body>
 </html>
 """
-        
+
         privacy_path = self.root_dir / "privacy-policy.html"
-        with open(privacy_path, 'w') as f:
+        with open(privacy_path, "w") as f:
             f.write(privacy_html)
-        
+
         self.print_success("Created privacy-policy.html")
 
     def create_terms_of_service(self):
@@ -372,17 +371,17 @@ VITE_APP_VERSION=1.0.0
 </body>
 </html>
 """
-        
+
         terms_path = self.root_dir / "terms-of-service.html"
-        with open(terms_path, 'w') as f:
+        with open(terms_path, "w") as f:
             f.write(terms_html)
-        
+
         self.print_success("Created terms-of-service.html")
 
     def create_deployment_script(self):
         """Create automated deployment script"""
         self.print_section("Creating Deployment Scripts")
-        
+
         deploy_script = """#!/bin/bash
 # Automated Deployment Script for HireMeBahamas
 
@@ -416,11 +415,11 @@ echo "3. Update environment variables with production URLs"
 echo ""
 echo "=========================================="
 """
-        
+
         deploy_path = self.root_dir / "deploy.sh"
-        with open(deploy_path, 'w', encoding='utf-8') as f:
+        with open(deploy_path, "w", encoding="utf-8") as f:
             f.write(deploy_script)
-        
+
         self.print_success("Created deploy.sh")
 
         # Windows version
@@ -458,34 +457,38 @@ echo.
 echo ==========================================
 pause
 """
-        
+
         deploy_bat_path = self.root_dir / "DEPLOY.bat"
-        with open(deploy_bat_path, 'w', encoding='utf-8') as f:
+        with open(deploy_bat_path, "w", encoding="utf-8") as f:
             f.write(deploy_bat)
-        
+
         self.print_success("Created DEPLOY.bat")
 
     def check_dependencies(self):
         """Check if required tools are installed"""
         self.print_section("Checking Dependencies")
-        
+
         # Check Git
         try:
-            subprocess.run(['git', '--version'], capture_output=True, check=True)
+            subprocess.run(["git", "--version"], capture_output=True, check=True)
             self.print_success("Git is installed")
         except:
-            self.print_error("Git is not installed! Download from: https://git-scm.com/")
-        
+            self.print_error(
+                "Git is not installed! Download from: https://git-scm.com/"
+            )
+
         # Check Python
         try:
             version = sys.version.split()[0]
             self.print_success(f"Python {version} is installed")
         except:
             self.print_error("Python check failed")
-        
+
         # Check Node (for frontend)
         try:
-            result = subprocess.run(['node', '--version'], capture_output=True, text=True)
+            result = subprocess.run(
+                ["node", "--version"], capture_output=True, text=True
+            )
             if result.returncode == 0:
                 self.print_success(f"Node.js {result.stdout.strip()} is installed")
             else:
@@ -496,7 +499,7 @@ pause
     def create_readme(self):
         """Create deployment README"""
         self.print_section("Creating Deployment README")
-        
+
         readme = """# 🚀 HireMeBahamas - Deployment Ready!
 
 ## ✅ Configuration Files Created
@@ -639,50 +642,50 @@ Run `DEPLOY.bat` to get started, or follow the manual steps above.
 
 Good luck with your launch! 🚀🇧🇸
 """
-        
+
         readme_path = self.root_dir / "DEPLOYMENT_READY.md"
-        with open(readme_path, 'w', encoding='utf-8') as f:
+        with open(readme_path, "w", encoding="utf-8") as f:
             f.write(readme)
-        
+
         self.print_success("Created DEPLOYMENT_READY.md")
 
     def print_summary(self):
         """Print final summary"""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("  DEPLOYMENT PREPARATION COMPLETE!")
-        print("="*60 + "\n")
-        
+        print("=" * 60 + "\n")
+
         if self.success:
             print("✅ Successfully Created:")
             for item in self.success:
                 print(f"   • {item}")
-        
+
         if self.warnings:
             print("\n⚠️  Warnings:")
             for item in self.warnings:
                 print(f"   • {item}")
-        
+
         if self.errors:
             print("\n❌ Errors:")
             for item in self.errors:
                 print(f"   • {item}")
-        
-        print("\n" + "="*60)
+
+        print("\n" + "=" * 60)
         print("  NEXT STEPS:")
-        print("="*60)
+        print("=" * 60)
         print("1. Review .env file and update settings")
         print("2. Run: DEPLOY.bat")
         print("3. Deploy backend to Railway: https://railway.app")
         print("4. Deploy frontend to Vercel: https://vercel.com")
         print("5. Test your live site!")
         print("\nRead DEPLOYMENT_READY.md for detailed instructions")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
 
     def run(self):
         """Run all preparation steps"""
         print("\n🚀 HireMeBahamas Deployment Automation")
         print("=" * 60 + "\n")
-        
+
         try:
             self.check_dependencies()
             self.create_env_file()
@@ -698,11 +701,13 @@ Good luck with your launch! 🚀🇧🇸
             self.create_deployment_script()
             self.create_readme()
             self.print_summary()
-            
+
         except Exception as e:
             self.print_error(f"Unexpected error: {str(e)}")
             import traceback
+
             traceback.print_exc()
+
 
 if __name__ == "__main__":
     prep = DeploymentPreparation()

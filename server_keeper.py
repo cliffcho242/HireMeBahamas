@@ -3,15 +3,17 @@
 Server keeper for HireMeBahamas API
 """
 
-import subprocess
-import time
-import sys
 import os
+import subprocess
+import sys
+import time
 from datetime import datetime
 
+
 def log_message(message):
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {message}")
+
 
 def run_server():
     log_message("Starting HireMeBahamas Flask API Server Keeper")
@@ -22,9 +24,10 @@ def run_server():
             log_message("Starting Flask server...")
 
             # Run the Flask server
-            process = subprocess.Popen([
-                sys.executable, 'minimal_flask_server.py'
-            ], cwd=os.path.dirname(__file__))
+            process = subprocess.Popen(
+                [sys.executable, "minimal_flask_server.py"],
+                cwd=os.path.dirname(__file__),
+            )
 
             # Wait for the process to finish
             process.wait()
@@ -37,5 +40,6 @@ def run_server():
         log_message("Restarting server in 3 seconds...")
         time.sleep(3)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     run_server()

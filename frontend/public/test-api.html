@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-result {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 5px solid #ddd;
+        }
+        .success { background: #d4edda; border-color: #28a745; }
+        .error { background: #f8d7da; border-color: #dc3545; }
+        .info { background: #d1ecf1; border-color: #17a2b8; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 API Connection Test</h1>
+    <p>This page tests the connection to your backend API.</p>
+    
+    <div>
+        <button onclick="testBackendHealth()">Test Backend Health</button>
+        <button onclick="testLoginEndpoint()">Test Login Endpoint</button>
+        <button onclick="testWithBrowserFetch()">Test with Browser Fetch</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_URL = 'https://hiremebahamas.onrender.com';
+        
+        function addResult(title, content, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = `<h3>${title}</h3><pre>${content}</pre>`;
+            results.appendChild(div);
+        }
+        
+        async function testBackendHealth() {
+            document.getElementById('results').innerHTML = '';
+            addResult('Testing...', 'Checking backend health endpoint...', 'info');
+            
+            try {
+                const response = await fetch(`${API_URL}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                addResult(
+                    `✅ Backend Health (Status: ${response.status})`,
+                    JSON.stringify(data, null, 2),
+                    'success'
+                );
+            } catch (error) {
+                addResult(
+                    '❌ Backend Health Check Failed',
+                    `Error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+        
+        async function testLoginEndpoint() {
+            document.getElementById('results').innerHTML = '';
+            
+            // Test OPTIONS (CORS preflight)
+            addResult('Testing...', 'Step 1: Testing OPTIONS request (CORS preflight)...', 'info');
+            
+            try {
+                const optionsResponse = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type',
+                    }
+                });
+                
+                addResult(
+                    `✅ OPTIONS Request (Status: ${optionsResponse.status})`,
+                    `CORS preflight passed\nHeaders: ${JSON.stringify([...optionsResponse.headers], null, 2)}`,
+                    optionsResponse.status === 200 ? 'success' : 'error'
+                );
+            } catch (error) {
+                addResult(
+                    '❌ OPTIONS Request Failed',
+                    `Error: ${error.message}`,
+                    'error'
+                );
+            }
+            
+            // Test POST (actual login)
+            addResult('Testing...', 'Step 2: Testing POST request (login attempt)...', 'info');
+            
+            try {
+                const postResponse = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'test@test.com',
+                        password: 'test123'
+                    })
+                });
+                
+                const data = await postResponse.json();
+                addResult(
+                    `${postResponse.status === 401 ? '✅' : '⚠️'} POST Request (Status: ${postResponse.status})`,
+                    `Response: ${JSON.stringify(data, null, 2)}\n\n${postResponse.status === 401 ? 'This is expected - we used test credentials' : ''}`,
+                    postResponse.status === 401 ? 'success' : 'error'
+                );
+            } catch (error) {
+                addResult(
+                    '❌ POST Request Failed',
+                    `Error: ${error.message}\nThis is the 405 error you're seeing!`,
+                    'error'
+                );
+            }
+        }
+        
+        async function testWithBrowserFetch() {
+            document.getElementById('results').innerHTML = '';
+            addResult('Testing...', 'Using native browser fetch API...', 'info');
+            
+            try {
+                // Test with different configurations
+                const configs = [
+                    { name: 'Default', options: { method: 'POST', body: JSON.stringify({email:'test@test.com',password:'test'}), headers: {'Content-Type':'application/json'} } },
+                    { name: 'With Credentials', options: { method: 'POST', credentials: 'include', body: JSON.stringify({email:'test@test.com',password:'test'}), headers: {'Content-Type':'application/json'} } },
+                    { name: 'No CORS', options: { method: 'POST', mode: 'no-cors', body: JSON.stringify({email:'test@test.com',password:'test'}), headers: {'Content-Type':'application/json'} } },
+                ];
+                
+                for (const config of configs) {
+                    try {
+                        const response = await fetch(`${API_URL}/api/auth/login`, config.options);
+                        addResult(
+                            `${config.name}: Status ${response.status}`,
+                            `Response type: ${response.type}\nStatus: ${response.status}`,
+                            response.status < 500 ? 'success' : 'error'
+                        );
+                    } catch (error) {
+                        addResult(
+                            `${config.name}: Failed`,
+                            `Error: ${error.message}`,
+                            'error'
+                        );
+                    }
+                }
+            } catch (error) {
+                addResult(
+                    '❌ Test Failed',
+                    `Error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+        
+        // Auto-run health check on load
+        window.addEventListener('load', () => {
+            setTimeout(testBackendHealth, 500);
+        });
+    </script>
+</body>
+</html>

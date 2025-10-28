@@ -4,25 +4,28 @@ HireBahamas Force Health Check - Automated Backend Management
 Forces backend to start if needed and runs health checks
 """
 
+import os
+import signal
 import subprocess
 import sys
 import time
+
 import requests
-import os
-import signal
+
 
 def kill_existing_processes():
     """Kill any existing Python processes that might be running the backend"""
     try:
         # Kill Python processes
         if sys.platform == "win32":
-            subprocess.run(['taskkill', '/F', '/IM', 'python.exe'], capture_output=True)
+            subprocess.run(["taskkill", "/F", "/IM", "python.exe"], capture_output=True)
         else:
-            subprocess.run(['pkill', '-f', 'python'], capture_output=True)
+            subprocess.run(["pkill", "-f", "python"], capture_output=True)
         time.sleep(2)
         print("🧹 Killed existing Python processes")
     except:
         pass
+
 
 def start_backend():
     """Start the backend server"""
@@ -33,13 +36,15 @@ def start_backend():
 
     try:
         # Start the backend
-        backend_cmd = [sys.executable, 'ULTIMATE_BACKEND_FIXED.py']
+        backend_cmd = [sys.executable, "ULTIMATE_BACKEND_FIXED.py"]
         process = subprocess.Popen(
             backend_cmd,
             cwd=os.getcwd(),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
+            creationflags=(
+                subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
+            ),
         )
 
         print(f"📍 Backend process started (PID: {process.pid})")
@@ -48,12 +53,13 @@ def start_backend():
         print(f"❌ Failed to start backend: {e}")
         return None
 
+
 def check_backend_health(max_attempts=10):
     """Check if backend is healthy, with retries"""
     for attempt in range(max_attempts):
         try:
             print(f"🔍 Health check attempt {attempt + 1}/{max_attempts}...")
-            response = requests.get('http://127.0.0.1:8008/health', timeout=5)
+            response = requests.get("http://127.0.0.1:8008/health", timeout=5)
 
             if response.status_code == 200:
                 data = response.json()
@@ -73,18 +79,27 @@ def check_backend_health(max_attempts=10):
 
     return False
 
+
 def run_health_check_command():
     """Run the exact health check command the user requested"""
     print("\n🔍 Running automated health check:")
-    print('python -c "import requests; r=requests.get(\'http://127.0.0.1:8008/health\'); print(\'Backend:\', r.status_code)"')
+    print(
+        "python -c \"import requests; r=requests.get('http://127.0.0.1:8008/health'); print('Backend:', r.status_code)\""
+    )
     print()
 
     try:
         # Run the exact command
-        result = subprocess.run([
-            sys.executable, '-c',
-            "import requests; r=requests.get('http://127.0.0.1:8008/health'); print('Backend:', r.status_code)"
-        ], capture_output=True, text=True, timeout=10)
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import requests; r=requests.get('http://127.0.0.1:8008/health'); print('Backend:', r.status_code)",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
 
         print(result.stdout.strip())
         if result.stderr:
@@ -98,6 +113,7 @@ def run_health_check_command():
     except Exception as e:
         print(f"❌ Health check command failed: {e}")
         return False
+
 
 def main():
     print("🤖 HireBahamas Force Health Check")
@@ -152,7 +168,8 @@ def main():
         except:
             pass
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:

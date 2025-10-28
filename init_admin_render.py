@@ -2,14 +2,17 @@
 Initialize admin user on Render deployment
 Run this once after deploying to Render
 """
-import requests
+
 import json
+
+import requests
 
 BACKEND_URL = "https://hiremebahamas.onrender.com"
 
+
 def create_admin():
     """Create admin user via registration endpoint"""
-    
+
     # Admin user data with all required fields
     admin_data = {
         "email": "admin@hiremebahamas.com",
@@ -19,22 +22,22 @@ def create_admin():
         "user_type": "admin",
         "location": "Nassau, Bahamas",
         "phone": "+1-242-555-0100",
-        "bio": "HireMeBahamas Platform Administrator"
+        "bio": "HireMeBahamas Platform Administrator",
     }
-    
+
     print(f"\n🔧 Initializing admin user on Render...")
     print(f"Backend: {BACKEND_URL}")
     print(f"Email: {admin_data['email']}\n")
-    
+
     try:
         # Attempt registration
         response = requests.post(
             f"{BACKEND_URL}/api/auth/register",
             json=admin_data,
             headers={"Content-Type": "application/json"},
-            timeout=30
+            timeout=30,
         )
-        
+
         if response.status_code == 200:
             data = response.json()
             print("✅ Admin user created successfully!")
@@ -42,22 +45,19 @@ def create_admin():
             print(f"   Email: {data['user']['email']}")
             print(f"   Token: {data['access_token'][:30]}...")
             return True
-            
+
         elif response.status_code == 409:
             print("✅ Admin user already exists!")
             print("   Testing login...")
-            
+
             # Test login
             login_response = requests.post(
                 f"{BACKEND_URL}/api/auth/login",
-                json={
-                    "email": admin_data['email'],
-                    "password": admin_data['password']
-                },
+                json={"email": admin_data["email"], "password": admin_data["password"]},
                 headers={"Content-Type": "application/json"},
-                timeout=30
+                timeout=30,
             )
-            
+
             if login_response.status_code == 200:
                 login_data = login_response.json()
                 print("✅ Login successful!")
@@ -67,24 +67,25 @@ def create_admin():
                 print(f"❌ Login failed: {login_response.status_code}")
                 print(f"   Response: {login_response.text}")
                 return False
-                
+
         else:
             print(f"❌ Registration failed: {response.status_code}")
             print(f"   Response: {response.text}")
             return False
-            
+
     except Exception as e:
         print(f"❌ Error: {str(e)}")
         return False
 
+
 if __name__ == "__main__":
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("HIREMEBAHAMAS ADMIN INITIALIZATION")
-    print("="*60)
-    
+    print("=" * 60)
+
     success = create_admin()
-    
-    print("\n" + "="*60)
+
+    print("\n" + "=" * 60)
     if success:
         print("✅ INITIALIZATION COMPLETE!")
         print("\n🔐 Admin Credentials:")
@@ -96,4 +97,4 @@ if __name__ == "__main__":
         print("❌ INITIALIZATION FAILED")
         print("\n📋 Check Render logs at:")
         print("   https://dashboard.render.com/web/srv-d3qjl58dl3ps73c151mg")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")

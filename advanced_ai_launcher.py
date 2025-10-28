@@ -4,29 +4,31 @@
 100x Enhanced AI Platform with Multi-Modal Intelligence
 """
 
-import subprocess
-import time
-import threading
-import os
-import sys
-import signal
-import logging
-from pathlib import Path
-from datetime import datetime
-import requests
 import json
+import logging
+import os
+import signal
+import subprocess
+import sys
+import threading
+import time
+from datetime import datetime
+from pathlib import Path
+
 import psutil
+import requests
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - 🚀 AI Launcher - %(levelname)s - %(message)s',
+    format="%(asctime)s - 🚀 AI Launcher - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler('ai_system_launcher.log'),
-        logging.StreamHandler(sys.stdout)
-    ]
+        logging.FileHandler("ai_system_launcher.log"),
+        logging.StreamHandler(sys.stdout),
+    ],
 )
 logger = logging.getLogger(__name__)
+
 
 class AdvancedAISystemLauncher:
     """
@@ -38,31 +40,31 @@ class AdvancedAISystemLauncher:
         self.project_root = Path(__file__).parent
         self.processes = {}
         self.services = {
-            'ai_api_server': {
-                'command': [sys.executable, 'ai_api_server.py'],
-                'port': 8009,
-                'health_endpoint': 'http://127.0.0.1:8009/api/ai/health',
-                'description': '🤖 Advanced AI API Server'
+            "ai_api_server": {
+                "command": [sys.executable, "ai_api_server.py"],
+                "port": 8009,
+                "health_endpoint": "http://127.0.0.1:8009/api/ai/health",
+                "description": "🤖 Advanced AI API Server",
             },
-            'ai_orchestrator': {
-                'command': [sys.executable, 'advanced_ai_orchestrator.py'],
-                'port': None,
-                'health_endpoint': None,
-                'description': '🎯 AI Orchestrator Core'
+            "ai_orchestrator": {
+                "command": [sys.executable, "advanced_ai_orchestrator.py"],
+                "port": None,
+                "health_endpoint": None,
+                "description": "🎯 AI Orchestrator Core",
             },
-            'backend': {
-                'command': [sys.executable, 'final_backend.py'],
-                'port': 8008,
-                'health_endpoint': 'http://127.0.0.1:8008/health',
-                'description': '⚙️ HireBahamas Backend'
+            "backend": {
+                "command": [sys.executable, "final_backend.py"],
+                "port": 8008,
+                "health_endpoint": "http://127.0.0.1:8008/health",
+                "description": "⚙️ HireBahamas Backend",
             },
-            'frontend': {
-                'command': ['npm', 'run', 'dev'],
-                'cwd': self.project_root / 'frontend',
-                'port': 3000,
-                'health_endpoint': 'http://127.0.0.1:3000',
-                'description': '🎨 React Frontend'
-            }
+            "frontend": {
+                "command": ["npm", "run", "dev"],
+                "cwd": self.project_root / "frontend",
+                "port": 3000,
+                "health_endpoint": "http://127.0.0.1:3000",
+                "description": "🎨 React Frontend",
+            },
         }
 
         self.monitoring_active = True
@@ -89,8 +91,8 @@ class AdvancedAISystemLauncher:
             logger.info(f"🚀 Starting {service_config['description']}...")
 
             # Prepare command
-            cmd = service_config['command']
-            cwd = service_config.get('cwd', self.project_root)
+            cmd = service_config["command"]
+            cwd = service_config.get("cwd", self.project_root)
 
             # Start process
             process = subprocess.Popen(
@@ -100,24 +102,26 @@ class AdvancedAISystemLauncher:
                 stderr=subprocess.PIPE,
                 text=True,
                 bufsize=1,
-                universal_newlines=True
+                universal_newlines=True,
             )
 
             self.processes[service_name] = {
-                'process': process,
-                'config': service_config,
-                'start_time': datetime.now(),
-                'status': 'starting'
+                "process": process,
+                "config": service_config,
+                "start_time": datetime.now(),
+                "status": "starting",
             }
 
             # Start output monitoring thread
             threading.Thread(
                 target=self._monitor_process_output,
                 args=(service_name, process),
-                daemon=True
+                daemon=True,
             ).start()
 
-            logger.info(f"✅ {service_config['description']} started (PID: {process.pid})")
+            logger.info(
+                f"✅ {service_config['description']} started (PID: {process.pid})"
+            )
             return True
 
         except Exception as e:
@@ -132,7 +136,7 @@ class AdvancedAISystemLauncher:
 
         try:
             process_info = self.processes[service_name]
-            process = process_info['process']
+            process = process_info["process"]
 
             logger.info(f"🛑 Stopping {process_info['config']['description']}...")
 
@@ -220,12 +224,14 @@ class AdvancedAISystemLauncher:
             return False
 
         service_config = self.services[service_name]
-        health_endpoint = service_config.get('health_endpoint')
+        health_endpoint = service_config.get("health_endpoint")
 
         if not health_endpoint:
             # For services without health endpoints, check if process is running
-            return service_name in self.processes and \
-                   self.processes[service_name]['process'].poll() is None
+            return (
+                service_name in self.processes
+                and self.processes[service_name]["process"].poll() is None
+            )
 
         try:
             response = requests.get(health_endpoint, timeout=5)
@@ -254,10 +260,10 @@ class AdvancedAISystemLauncher:
 
         # Start services in dependency order
         startup_order = [
-            'ai_orchestrator',  # Core AI engine first
-            'ai_api_server',   # AI API endpoints
-            'backend',          # Flask backend
-            'frontend'          # React frontend
+            "ai_orchestrator",  # Core AI engine first
+            "ai_api_server",  # AI API endpoints
+            "backend",  # Flask backend
+            "frontend",  # React frontend
         ]
 
         success_count = 0
@@ -310,10 +316,19 @@ class AdvancedAISystemLauncher:
 
                 # System status
                 uptime = datetime.now() - self.start_time
-                status = "🟢 Excellent" if healthy_services == total_services else \
-                        "🟡 Degraded" if healthy_services > total_services // 2 else "🔴 Critical"
+                status = (
+                    "🟢 Excellent"
+                    if healthy_services == total_services
+                    else (
+                        "🟡 Degraded"
+                        if healthy_services > total_services // 2
+                        else "🔴 Critical"
+                    )
+                )
 
-                logger.info(f"📊 System Status: {status} | Services: {healthy_services}/{total_services} | Uptime: {uptime}")
+                logger.info(
+                    f"📊 System Status: {status} | Services: {healthy_services}/{total_services} | Uptime: {uptime}"
+                )
 
                 # AI-specific monitoring
                 self._monitor_ai_performance()
@@ -328,14 +343,18 @@ class AdvancedAISystemLauncher:
         """Monitor AI system performance metrics"""
         try:
             # Check AI API health
-            if self.check_service_health('ai_api_server'):
+            if self.check_service_health("ai_api_server"):
                 # Get AI analytics
                 try:
-                    response = requests.get('http://127.0.0.1:8009/api/ai/analytics', timeout=5)
+                    response = requests.get(
+                        "http://127.0.0.1:8009/api/ai/analytics", timeout=5
+                    )
                     if response.status_code == 200:
-                        analytics = response.json().get('analytics', {})
-                        logger.info(f"🤖 AI Analytics: {analytics.get('total_users_analyzed', 0)} users analyzed, "
-                                  f"{analytics.get('ai_services_status', {}).get('openai', False) and 'OpenAI' or 'No OpenAI'} available")
+                        analytics = response.json().get("analytics", {})
+                        logger.info(
+                            f"🤖 AI Analytics: {analytics.get('total_users_analyzed', 0)} users analyzed, "
+                            f"{analytics.get('ai_services_status', {}).get('openai', False) and 'OpenAI' or 'No OpenAI'} available"
+                        )
                 except:
                     pass
 
@@ -348,57 +367,61 @@ class AdvancedAISystemLauncher:
         logger.info("=" * 50)
 
         diagnostics = {
-            'services': {},
-            'ai_capabilities': {},
-            'performance': {},
-            'recommendations': []
+            "services": {},
+            "ai_capabilities": {},
+            "performance": {},
+            "recommendations": [],
         }
 
         # Check each service
         for service_name, service_config in self.services.items():
             is_healthy = self.check_service_health(service_name)
-            diagnostics['services'][service_name] = {
-                'healthy': is_healthy,
-                'description': service_config['description'],
-                'port': service_config.get('port')
+            diagnostics["services"][service_name] = {
+                "healthy": is_healthy,
+                "description": service_config["description"],
+                "port": service_config.get("port"),
             }
 
             if not is_healthy:
-                diagnostics['recommendations'].append(f"Restart {service_name} service")
+                diagnostics["recommendations"].append(f"Restart {service_name} service")
 
         # Check AI capabilities
         try:
-            response = requests.get('http://127.0.0.1:8009/api/ai/health', timeout=5)
+            response = requests.get("http://127.0.0.1:8009/api/ai/health", timeout=5)
             if response.status_code == 200:
                 ai_health = response.json()
-                diagnostics['ai_capabilities'] = {
-                    'status': ai_health.get('status'),
-                    'capabilities': ai_health.get('capabilities', []),
-                    'online': True
+                diagnostics["ai_capabilities"] = {
+                    "status": ai_health.get("status"),
+                    "capabilities": ai_health.get("capabilities", []),
+                    "online": True,
                 }
             else:
-                diagnostics['ai_capabilities'] = {'online': False}
-                diagnostics['recommendations'].append("AI API server is not responding")
+                diagnostics["ai_capabilities"] = {"online": False}
+                diagnostics["recommendations"].append("AI API server is not responding")
         except:
-            diagnostics['ai_capabilities'] = {'online': False}
-            diagnostics['recommendations'].append("Cannot connect to AI API server")
+            diagnostics["ai_capabilities"] = {"online": False}
+            diagnostics["recommendations"].append("Cannot connect to AI API server")
 
         # Performance metrics
-        diagnostics['performance'] = {
-            'uptime': str(datetime.now() - self.start_time),
-            'services_running': len(self.processes),
-            'total_services': len(self.services)
+        diagnostics["performance"] = {
+            "uptime": str(datetime.now() - self.start_time),
+            "services_running": len(self.processes),
+            "total_services": len(self.services),
         }
 
         # Print diagnostics
         logger.info("📋 System Diagnostics Results:")
-        logger.info(f"   Services: {diagnostics['performance']['services_running']}/{diagnostics['performance']['total_services']} running")
-        logger.info(f"   AI Status: {'🟢 Online' if diagnostics['ai_capabilities'].get('online') else '🔴 Offline'}")
+        logger.info(
+            f"   Services: {diagnostics['performance']['services_running']}/{diagnostics['performance']['total_services']} running"
+        )
+        logger.info(
+            f"   AI Status: {'🟢 Online' if diagnostics['ai_capabilities'].get('online') else '🔴 Offline'}"
+        )
         logger.info(f"   Uptime: {diagnostics['performance']['uptime']}")
 
-        if diagnostics['recommendations']:
+        if diagnostics["recommendations"]:
             logger.info("💡 Recommendations:")
-            for rec in diagnostics['recommendations']:
+            for rec in diagnostics["recommendations"]:
                 logger.info(f"   • {rec}")
 
         return diagnostics
@@ -419,16 +442,16 @@ class AdvancedAISystemLauncher:
             try:
                 choice = input("Choose an option (1-7): ").strip()
 
-                if choice == '1':
+                if choice == "1":
                     self.start_all_services()
-                elif choice == '2':
+                elif choice == "2":
                     self.stop_all_services()
-                elif choice == '3':
+                elif choice == "3":
                     self.run_system_diagnostics()
-                elif choice == '4':
+                elif choice == "4":
                     diagnostics = self.run_system_diagnostics()
                     print(json.dumps(diagnostics, indent=2))
-                elif choice == '5':
+                elif choice == "5":
                     # Restart failed services
                     for service_name in self.services:
                         if not self.check_service_health(service_name):
@@ -436,17 +459,17 @@ class AdvancedAISystemLauncher:
                             self.stop_service(service_name)
                             time.sleep(2)
                             self.start_service(service_name)
-                elif choice == '6':
+                elif choice == "6":
                     # Show recent logs
                     try:
-                        with open('ai_system_launcher.log', 'r') as f:
+                        with open("ai_system_launcher.log", "r") as f:
                             lines = f.readlines()[-20:]  # Last 20 lines
                             print("\n📋 Recent Logs:")
                             for line in lines:
                                 print(line.strip())
                     except FileNotFoundError:
                         print("No log file found")
-                elif choice == '7':
+                elif choice == "7":
                     logger.info("👋 Goodbye!")
                     break
                 else:
@@ -457,6 +480,7 @@ class AdvancedAISystemLauncher:
                 break
             except Exception as e:
                 logger.error(f"Menu error: {e}")
+
 
 def main():
     """Main entry point"""
@@ -470,11 +494,13 @@ def main():
     if len(sys.argv) > 1:
         command = sys.argv[1].lower()
 
-        if command == 'start':
+        if command == "start":
             success = launcher.start_all_services()
             if success:
                 # Start monitoring in background
-                monitor_thread = threading.Thread(target=launcher.monitor_system, daemon=True)
+                monitor_thread = threading.Thread(
+                    target=launcher.monitor_system, daemon=True
+                )
                 monitor_thread.start()
 
                 # Keep running
@@ -486,23 +512,26 @@ def main():
             else:
                 sys.exit(1)
 
-        elif command == 'stop':
+        elif command == "stop":
             launcher.stop_all_services()
 
-        elif command == 'status':
+        elif command == "status":
             launcher.run_system_diagnostics()
 
-        elif command == 'diagnostics':
+        elif command == "diagnostics":
             diagnostics = launcher.run_system_diagnostics()
             print(json.dumps(diagnostics, indent=2))
 
         else:
             print(f"❌ Unknown command: {command}")
-            print("Usage: python advanced_ai_launcher.py [start|stop|status|diagnostics]")
+            print(
+                "Usage: python advanced_ai_launcher.py [start|stop|status|diagnostics]"
+            )
             sys.exit(1)
     else:
         # Interactive mode
         launcher.interactive_menu()
+
 
 if __name__ == "__main__":
     main()

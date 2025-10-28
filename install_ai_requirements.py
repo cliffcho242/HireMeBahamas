@@ -4,38 +4,43 @@ Automated Requirements Installer for AI Network Authenticator
 Ensures all required packages are installed and up to date
 """
 
-import os
-import sys
-import subprocess
 import importlib.util
+import os
+import subprocess
+import sys
+
 
 def run_command(cmd, shell=True, capture_output=True):
     """Run a command and return result"""
     try:
-        result = subprocess.run(cmd, shell=shell, capture_output=capture_output, text=True)
+        result = subprocess.run(
+            cmd, shell=shell, capture_output=capture_output, text=True
+        )
         return result.returncode == 0, result.stdout, result.stderr
     except Exception as e:
         return False, "", str(e)
 
+
 def check_package_installed(package_name):
     """Check if a Python package is installed"""
     try:
-        spec = importlib.util.find_spec(package_name.replace('-', '_'))
+        spec = importlib.util.find_spec(package_name.replace("-", "_"))
         return spec is not None
     except:
         return False
+
 
 def install_requirements():
     """Install all required packages"""
     print("🔧 Installing AI Network Authenticator Requirements...")
 
     required_packages = [
-        'psutil',      # Process management
-        'requests',    # HTTP requests
-        'bcrypt',      # Password hashing
-        'flask-cors',  # CORS handling
-        'pyjwt',       # JWT tokens
-        'flask'        # Web framework
+        "psutil",  # Process management
+        "requests",  # HTTP requests
+        "bcrypt",  # Password hashing
+        "flask-cors",  # CORS handling
+        "pyjwt",  # JWT tokens
+        "flask",  # Web framework
     ]
 
     missing_packages = []
@@ -47,12 +52,16 @@ def install_requirements():
         print("✅ All required packages are already installed")
         return True
 
-    print(f"📦 Installing {len(missing_packages)} missing packages: {', '.join(missing_packages)}")
+    print(
+        f"📦 Installing {len(missing_packages)} missing packages: {', '.join(missing_packages)}"
+    )
 
     # Try to install from requirements.txt first
-    if os.path.exists('requirements.txt'):
+    if os.path.exists("requirements.txt"):
         print("Installing from requirements.txt...")
-        success, stdout, stderr = run_command([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'])
+        success, stdout, stderr = run_command(
+            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"]
+        )
         if success:
             print("✅ Requirements installed successfully")
             return True
@@ -63,7 +72,9 @@ def install_requirements():
 
     for package in missing_packages:
         print(f"Installing {package}...")
-        success, stdout, stderr = run_command([sys.executable, '-m', 'pip', 'install', package])
+        success, stdout, stderr = run_command(
+            [sys.executable, "-m", "pip", "install", package]
+        )
         if not success:
             failed_packages.append(package)
             print(f"❌ Failed to install {package}: {stderr}")
@@ -75,17 +86,18 @@ def install_requirements():
     print("✅ All packages installed successfully")
     return True
 
+
 def verify_installations():
     """Verify all critical packages are working"""
     print("🔍 Verifying package installations...")
 
     test_imports = [
-        ('psutil', 'psutil.cpu_percent()'),
-        ('requests', 'requests.get("http://httpbin.org/get", timeout=5)'),
-        ('bcrypt', 'bcrypt.hashpw(b"test", bcrypt.gensalt())'),
-        ('flask_cors', 'from flask_cors import CORS'),
-        ('jwt', 'import jwt'),
-        ('flask', 'from flask import Flask')
+        ("psutil", "psutil.cpu_percent()"),
+        ("requests", 'requests.get("http://httpbin.org/get", timeout=5)'),
+        ("bcrypt", 'bcrypt.hashpw(b"test", bcrypt.gensalt())'),
+        ("flask_cors", "from flask_cors import CORS"),
+        ("jwt", "import jwt"),
+        ("flask", "from flask import Flask"),
     ]
 
     failed_tests = []
@@ -93,11 +105,11 @@ def verify_installations():
     for module_name, test_code in test_imports:
         try:
             # Test import first
-            module = __import__(module_name.replace('-', '_'))
+            module = __import__(module_name.replace("-", "_"))
             print(f"✅ {module_name} (imported)")
 
             # Test basic functionality (skip network tests in verification)
-            if 'httpbin' not in test_code and 'requests.get' not in test_code:
+            if "httpbin" not in test_code and "requests.get" not in test_code:
                 try:
                     exec(test_code)
                     print(f"✅ {module_name} (functional)")
@@ -115,6 +127,7 @@ def verify_installations():
 
     print("✅ All packages verified successfully")
     return True
+
 
 def main():
     """Main installation function"""
@@ -134,6 +147,7 @@ def main():
     print("\n🎉 AI Network Authenticator is ready!")
     print("You can now run: python ai_network_authenticator.py")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

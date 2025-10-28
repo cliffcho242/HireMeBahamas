@@ -4,18 +4,19 @@ Automated Fix for Posts Loading Error
 HireBahamas Platform - Posts API Fix
 """
 
+import os
 import sqlite3
 import subprocess
 import sys
-import os
 from pathlib import Path
+
 
 def check_database():
     """Check database and posts"""
     print("🔍 Checking database and posts...")
 
     try:
-        conn = sqlite3.connect('hirebahamas.db')
+        conn = sqlite3.connect("hirebahamas.db")
         cursor = conn.cursor()
 
         # Check tables
@@ -23,16 +24,16 @@ def check_database():
         tables = cursor.fetchall()
         table_names = [t[0] for t in tables]
 
-        if 'posts' not in table_names:
+        if "posts" not in table_names:
             print("❌ Posts table missing!")
             return False
 
-        if 'users' not in table_names:
+        if "users" not in table_names:
             print("❌ Users table missing!")
             return False
 
         # Check posts count
-        cursor.execute('SELECT COUNT(*) FROM posts')
+        cursor.execute("SELECT COUNT(*) FROM posts")
         count = cursor.fetchone()[0]
         print(f"✅ Found {count} posts in database")
 
@@ -42,11 +43,13 @@ def check_database():
             conn.commit()
 
         # Test posts query
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT p.id, p.content, u.first_name, u.last_name
             FROM posts p JOIN users u ON p.user_id = u.id
             LIMIT 1
-        ''')
+        """
+        )
         sample = cursor.fetchone()
         if sample:
             print(f"✅ Sample post: '{sample[1][:50]}...' by {sample[2]} {sample[3]}")
@@ -58,33 +61,46 @@ def check_database():
         print(f"❌ Database error: {e}")
         return False
 
+
 def create_sample_posts(cursor):
     """Create sample posts if none exist"""
     sample_posts = [
-        (1, 'Welcome to HireBahamas! 🌴 The premier platform for connecting talent with opportunities in the beautiful Bahamas.'),
-        (1, 'Just launched our new job board. Looking for talented developers, designers, and professionals across all industries! #HireBahamas'),
-        (1, 'Beautiful day in Nassau! The perfect environment for innovation and creativity. Join our growing community! ☀️')
+        (
+            1,
+            "Welcome to HireBahamas! 🌴 The premier platform for connecting talent with opportunities in the beautiful Bahamas.",
+        ),
+        (
+            1,
+            "Just launched our new job board. Looking for talented developers, designers, and professionals across all industries! #HireBahamas",
+        ),
+        (
+            1,
+            "Beautiful day in Nassau! The perfect environment for innovation and creativity. Join our growing community! ☀️",
+        ),
     ]
 
     for user_id, content in sample_posts:
-        cursor.execute('INSERT INTO posts (user_id, content) VALUES (?, ?)', (user_id, content))
+        cursor.execute(
+            "INSERT INTO posts (user_id, content) VALUES (?, ?)", (user_id, content)
+        )
 
     print("✅ Created sample posts")
+
 
 def check_backend_code():
     """Check if backend has posts endpoints"""
     print("🔍 Checking backend code...")
 
-    backend_file = Path('final_backend.py')
+    backend_file = Path("final_backend.py")
     if not backend_file.exists():
         print("❌ final_backend.py not found!")
         return False
 
     try:
-        with open(backend_file, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(backend_file, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
-        if '@app.route(\'/api/posts\'' not in content:
+        if "@app.route('/api/posts'" not in content:
             print("❌ Posts API endpoints missing from backend!")
             return False
 
@@ -94,9 +110,9 @@ def check_backend_code():
         print(f"❌ Error reading backend file: {e}")
         # Try a simpler check - just check if the file contains the route
         try:
-            with open(backend_file, 'rb') as f:
+            with open(backend_file, "rb") as f:
                 raw_content = f.read()
-                if b'@app.route(\'/api/posts\'' in raw_content:
+                if b"@app.route('/api/posts'" in raw_content:
                     print("✅ Posts API endpoints found in backend")
                     return True
                 else:
@@ -106,16 +122,21 @@ def check_backend_code():
             print(f"❌ Error checking backend file: {e2}")
             return False
 
+
 def test_posts_logic():
     """Test the posts API logic directly"""
     print("🔍 Testing posts API logic...")
 
     try:
         # Run the test script directly
-        result = subprocess.run([sys.executable, 'test_posts.py'],
-                              capture_output=True, text=True, timeout=30)
+        result = subprocess.run(
+            [sys.executable, "test_posts.py"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
 
-        if result.returncode == 0 and 'Successfully formatted' in result.stdout:
+        if result.returncode == 0 and "Successfully formatted" in result.stdout:
             print("✅ Posts API logic works!")
             return True
         else:
@@ -127,11 +148,12 @@ def test_posts_logic():
         print(f"❌ Error testing posts logic: {e}")
         return False
 
+
 def provide_instructions():
     """Provide instructions for running the system"""
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("🎉 POSTS LOADING ERROR - AUTOMATED FIX COMPLETE!")
-    print("="*50)
+    print("=" * 50)
     print()
     print("✅ Database: Posts table exists with data")
     print("✅ Backend: Posts API endpoints implemented")
@@ -154,10 +176,11 @@ def provide_instructions():
     print("   and ensure the backend is running on port 8008")
     print()
 
+
 def main():
     """Main automated fix function"""
     print("🤖 AUTOMATED FIX: Posts Loading Error")
-    print("="*40)
+    print("=" * 40)
 
     success = True
 
@@ -180,5 +203,6 @@ def main():
         print("\n❌ Automated fix failed. Please check the errors above.")
         return 1
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     sys.exit(main())

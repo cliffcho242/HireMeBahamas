@@ -3,8 +3,10 @@
 Quick test to verify the AI-powered HireBahamas platform is working
 """
 
-import requests
 import sys
+
+import requests
+
 
 def test_backend():
     """Test backend server"""
@@ -20,15 +22,14 @@ def test_backend():
         print(f"❌ Backend server not accessible: {e}")
         return False
 
+
 def test_admin_login():
     """Test admin login"""
     try:
-        login_data = {
-            "email": "admin@hirebahamas.com",
-            "password": "AdminPass123!"
-        }
-        response = requests.post("http://127.0.0.1:8008/auth/login",
-                               json=login_data, timeout=10)
+        login_data = {"email": "admin@hirebahamas.com", "password": "AdminPass123!"}
+        response = requests.post(
+            "http://127.0.0.1:8008/auth/login", json=login_data, timeout=10
+        )
         if response.status_code == 200:
             data = response.json()
             if data.get("success"):
@@ -44,6 +45,7 @@ def test_admin_login():
         print(f"❌ Admin login error: {e}")
         return False
 
+
 def test_frontend():
     """Test frontend server"""
     try:
@@ -57,6 +59,7 @@ def test_frontend():
     except Exception as e:
         print(f"⚠️ Frontend server not accessible: {e}")
         return False
+
 
 def main():
     print("🤖 AI-Powered HireBahamas Platform Test")
@@ -82,6 +85,7 @@ def main():
     else:
         print("❌ ISSUES REMAIN: Some components need attention")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

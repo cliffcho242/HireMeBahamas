@@ -4,16 +4,18 @@ HireBahamas Backend Auto-Health-Check
 Automatically starts backend if needed and runs health checks
 """
 
+import os
 import subprocess
 import sys
 import time
+
 import requests
-import os
+
 
 def check_backend_health():
     """Check if backend is running and healthy"""
     try:
-        response = requests.get('http://127.0.0.1:8008/health', timeout=5)
+        response = requests.get("http://127.0.0.1:8008/health", timeout=5)
         if response.status_code == 200:
             data = response.json()
             print(f"Backend: {response.status_code}")
@@ -27,20 +29,21 @@ def check_backend_health():
         print(f"Backend: NOT RUNNING - {str(e)[:50]}")
         return False
 
+
 def start_backend():
     """Start the backend server"""
     print("Starting backend server...")
 
     # Kill any existing Python processes
     try:
-        subprocess.run(['taskkill', '/F', '/IM', 'python.exe'], capture_output=True)
+        subprocess.run(["taskkill", "/F", "/IM", "python.exe"], capture_output=True)
         time.sleep(2)
     except:
         pass
 
     # Start the backend
     try:
-        backend_cmd = [sys.executable, 'ULTIMATE_BACKEND_FIXED.py']
+        backend_cmd = [sys.executable, "ULTIMATE_BACKEND_FIXED.py"]
         subprocess.Popen(backend_cmd, cwd=os.getcwd())
         print("Backend server started")
         time.sleep(5)  # Wait for startup
@@ -48,6 +51,7 @@ def start_backend():
     except Exception as e:
         print(f"Failed to start backend: {e}")
         return False
+
 
 def main():
     print("🤖 HireBahamas Backend Auto-Health-Check")
@@ -72,5 +76,6 @@ def main():
     else:
         print("❌ Failed to start backend server")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

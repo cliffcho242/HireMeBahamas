@@ -3,10 +3,12 @@
 Test script to verify the On/Off toggle functionality
 """
 
-import requests
 import time
 
+import requests
+
 BASE_URL = "http://127.0.0.1:8008"
+
 
 def test_toggle_functionality():
     print("🧪 Testing HireMe On/Off Toggle Functionality")
@@ -14,10 +16,10 @@ def test_toggle_functionality():
 
     # Login to get token
     print("1. Logging in as admin...")
-    login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
-        "email": "admin@hirebahamas.com",
-        "password": "AdminPass123!"
-    })
+    login_response = requests.post(
+        f"{BASE_URL}/api/auth/login",
+        json={"email": "admin@hirebahamas.com", "password": "AdminPass123!"},
+    )
 
     if login_response.status_code != 200:
         print(f"❌ Login failed: {login_response.status_code}")
@@ -79,6 +81,7 @@ def test_toggle_functionality():
 
     print("\n🎉 Toggle functionality test completed!")
     return True
+
 
 if __name__ == "__main__":
     test_toggle_functionality()

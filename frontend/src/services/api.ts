@@ -2,27 +2,45 @@ import axios from 'axios';
 import { User } from '../types/user';
 import { Job } from '../types/job';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://127.0.0.1:9999';
+// Derive API base URL with safe production fallback
+const DEFAULT_PROD_API = 'https://hiremebahamas.onrender.com';
+const ENV_API = (import.meta as any).env?.VITE_API_URL as string | undefined;
+let API_BASE_URL = ENV_API || 'http://127.0.0.1:9999';
+
+// If no env is set and we're on the hiremebahamas.com domain, use the Render backend
+if (!ENV_API && typeof window !== 'undefined') {
+  const origin = window.location.origin;
+  if (origin.includes('hiremebahamas.com')) {
+    API_BASE_URL = DEFAULT_PROD_API;
+  }
+}
+
+// One-time log to help diagnose wrong base URLs in clients
+// eslint-disable-next-line no-console
+console.log('[API] Base URL:', API_BASE_URL);
 
 // Create axios instance with retry logic
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 seconds timeout
+  timeout: 60000, // 45 seconds timeout (increased from 30s)
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false,
+  withCredentials: false, // Must be false with wildcard CORS
 });
 
 // Retry configuration
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
-const BACKEND_WAKE_TIME = 30000; // 30 seconds for Render.com free tier
+const MAX_RETRIES = 5; // Increased from 3
+const RETRY_DELAY = 3000; // 2 seconds (increased from 1s)
+const BACKEND_WAKE_TIME = 90000; // 60 seconds for Render.com free tier (increased from 30s)
 
 // Helper to check if backend is sleeping (Render free tier)
 const isBackendSleeping = (error: any): boolean => {
   // Render.com returns 503 when service is sleeping
   if (error.response?.status === 503) return true;
+  
+  // 405 can indicate backend is down or misconfigured
+  if (error.response?.status === 405) return true;
   
   // Long timeout suggests cold start
   if (error.code === 'ECONNABORTED' && error.config?.timeout > 15000) return true;
@@ -69,15 +87,24 @@ api.interceptors.response.use(
       const retryCount = parseInt(config.headers['X-Retry-Count'] || '0');
       
       if (retryCount === 0) {
-        console.log('Backend appears to be sleeping. Waking it up...');
+        console.log('Backend appears to be sleeping or starting up...');
         console.log('This may take 30-60 seconds on first request.');
+        console.log('Status:', error.response?.status || 'No response');
         
         // Increase timeout for wake-up
         config.timeout = BACKEND_WAKE_TIME;
         config.headers['X-Retry-Count'] = 1;
         
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Wait longer before retrying
+        await new Promise(resolve => setTimeout(resolve, 10000)); // 10 seconds
+        
+        return api(config);
+      } else if (retryCount < 3) {
+        // Additional retries for backend wake-up
+        config.headers['X-Retry-Count'] = retryCount + 1;
+        console.log(`Backend still waking up... Retry ${retryCount + 1}/3`);
+        
+        await new Promise(resolve => setTimeout(resolve, 15000)); // 15 seconds between retries
         
         return api(config);
       }

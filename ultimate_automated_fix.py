@@ -23,14 +23,16 @@ Modes:
 """
 
 import os
-import sys
-import subprocess
-import time
-import signal
-import requests
 import platform
 import shutil
+import signal
+import subprocess
+import sys
+import time
 from pathlib import Path
+
+import requests
+
 
 class UltimateFixer:
     def __init__(self):
@@ -91,7 +93,7 @@ class UltimateFixer:
             "C:\\Program Files\\nodejs\\npm.cmd",
             "C:\\Program Files (x86)\\nodejs\\npm.cmd",
             "npm.cmd",
-            "npm"
+            "npm",
         ]
 
         for path in possible_paths:
@@ -116,10 +118,7 @@ class UltimateFixer:
 
             # Run npm install
             result = subprocess.run(
-                [npm_path, "install"],
-                capture_output=True,
-                text=True,
-                timeout=300
+                [npm_path, "install"], capture_output=True, text=True, timeout=300
             )
 
             if result.returncode == 0:
@@ -148,17 +147,30 @@ class UltimateFixer:
             if self.is_windows:
                 # Use a more robust approach for Windows
                 import psutil
+
                 killed_any = False
 
-                for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                for proc in psutil.process_iter(["pid", "name", "cmdline"]):
                     try:
-                        if proc.info['name'] and ('python' in proc.info['name'].lower() or 'node' in proc.info['name'].lower()):
+                        if proc.info["name"] and (
+                            "python" in proc.info["name"].lower()
+                            or "node" in proc.info["name"].lower()
+                        ):
                             # Check if it's related to our project
-                            if proc.info['cmdline'] and any(keyword in ' '.join(proc.info['cmdline']).lower()
-                                                         for keyword in ['final_backend.py', 'vite', 'react', 'hirebahamas']):
+                            if proc.info["cmdline"] and any(
+                                keyword in " ".join(proc.info["cmdline"]).lower()
+                                for keyword in [
+                                    "final_backend.py",
+                                    "vite",
+                                    "react",
+                                    "hirebahamas",
+                                ]
+                            ):
                                 proc.kill()
                                 killed_any = True
-                                self.print_info(f"Killed process: {proc.info['name']} (PID: {proc.info['pid']})")
+                                self.print_info(
+                                    f"Killed process: {proc.info['name']} (PID: {proc.info['pid']})"
+                                )
                     except (psutil.NoSuchProcess, psutil.AccessDenied):
                         continue
 
@@ -168,15 +180,27 @@ class UltimateFixer:
                 else:
                     self.print_info("No existing processes found to clean up")
             else:
-                subprocess.run(["pkill", "-f", "python"], capture_output=True, check=False)
-                subprocess.run(["pkill", "-f", "node"], capture_output=True, check=False)
+                subprocess.run(
+                    ["pkill", "-f", "python"], capture_output=True, check=False
+                )
+                subprocess.run(
+                    ["pkill", "-f", "node"], capture_output=True, check=False
+                )
                 self.print_success("Existing processes cleaned up")
         except ImportError:
             # psutil not available, use basic approach
             self.print_info("Using basic process cleanup (psutil not available)")
             try:
-                subprocess.run(["taskkill", "/f", "/im", "python.exe"], capture_output=True, check=False)
-                subprocess.run(["taskkill", "/f", "/im", "node.exe"], capture_output=True, check=False)
+                subprocess.run(
+                    ["taskkill", "/f", "/im", "python.exe"],
+                    capture_output=True,
+                    check=False,
+                )
+                subprocess.run(
+                    ["taskkill", "/f", "/im", "node.exe"],
+                    capture_output=True,
+                    check=False,
+                )
                 self.print_success("Basic process cleanup completed")
             except Exception as e:
                 self.print_info(f"Basic cleanup completed: {e}")
@@ -194,7 +218,7 @@ class UltimateFixer:
                 [sys.executable, "final_backend.py"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
             # Wait a bit for server to start
@@ -231,7 +255,7 @@ class UltimateFixer:
                 [npm_path, "run", "dev"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
             # Wait a bit for server to start
@@ -241,7 +265,9 @@ class UltimateFixer:
             if process.poll() is None:
                 self.processes.append(("frontend", process))
                 self.print_success("Frontend server started successfully")
-                self.print_info("Frontend should be available at: http://localhost:3000")
+                self.print_info(
+                    "Frontend should be available at: http://localhost:3000"
+                )
                 return True
             else:
                 stdout, stderr = process.communicate()
@@ -293,6 +319,7 @@ class UltimateFixer:
         self.print_info("Opening browser...")
 
         import webbrowser
+
         try:
             webbrowser.open("http://localhost:3000")
             self.print_success("Browser opened to http://localhost:3000")
@@ -429,6 +456,7 @@ class UltimateFixer:
 
         return self.run_full_setup()
 
+
 def main():
     fixer = UltimateFixer()
 
@@ -464,7 +492,7 @@ def main():
                 "2": "BACKEND",
                 "3": "FRONTEND",
                 "4": "FIX",
-                "5": "CLEAN"
+                "5": "CLEAN",
             }
 
             if choice in mode_map:
@@ -505,6 +533,7 @@ def main():
         fixer.cleanup()
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

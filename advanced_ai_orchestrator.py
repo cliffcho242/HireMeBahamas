@@ -10,58 +10,61 @@ import logging
 import os
 import threading
 import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Union
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, asdict
-import numpy as np
-import pandas as pd
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+import anthropic
+import cv2
+import elasticsearch
+import face_recognition
+import faiss
+import google.generativeai as genai
+import mlflow
+import nltk
+import numpy as np
+import openai
+import pandas as pd
+import pytesseract
+import redis
+import spacy
 
 # Advanced AI Libraries
 import torch
 import torch.nn as nn
-from transformers import (
-    AutoTokenizer, AutoModelForSequenceClassification,
-    AutoModelForQuestionAnswering, pipeline,
-    GPT2LMHeadModel, GPT2Tokenizer
-)
-import openai
-import anthropic
-import google.generativeai as genai
-from sentence_transformers import SentenceTransformer
-import spacy
-import nltk
-from nltk.sentiment import SentimentIntensityAnalyzer
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor
-from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans, DBSCAN
-import faiss
-import cv2
-import face_recognition
-from deepface import DeepFace
-import pytesseract
-from PIL import Image
-import redis
-import elasticsearch
-from elasticsearch import Elasticsearch
-import mlflow
 import wandb
+from deepface import DeepFace
+from elasticsearch import Elasticsearch
+from nltk.sentiment import SentimentIntensityAnalyzer
+from PIL import Image
+from sentence_transformers import SentenceTransformer
+from sklearn.cluster import DBSCAN, KMeans
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+from transformers import (
+    AutoModelForQuestionAnswering,
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    GPT2LMHeadModel,
+    GPT2Tokenizer,
+    pipeline,
+)
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('advanced_ai_system.log'),
-        logging.StreamHandler()
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("advanced_ai_system.log"), logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class AIConfig:
     """Advanced AI System Configuration"""
+
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     google_api_key: Optional[str] = None
@@ -75,9 +78,11 @@ class AIConfig:
     batch_size: int = 32
     embedding_dim: int = 768
 
+
 @dataclass
 class UserProfile:
     """Enhanced User Profile with AI Insights"""
+
     user_id: int
     skills: List[str]
     experience: Dict[str, Any]
@@ -89,9 +94,11 @@ class UserProfile:
     network_strength: float
     engagement_score: float
 
+
 @dataclass
 class JobAnalysis:
     """AI-Powered Job Analysis"""
+
     job_id: int
     title: str
     description: str
@@ -102,6 +109,7 @@ class JobAnalysis:
     market_demand: float
     salary_prediction: Dict[str, float]
     candidate_fit_scores: Dict[int, float]
+
 
 class AdvancedAIOrchestrator:
     """
@@ -137,20 +145,20 @@ class AdvancedAIOrchestrator:
             self.sentiment_analyzer = SentimentIntensityAnalyzer()
 
             # Sentence Transformers for embeddings
-            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
             # Job Matching Model
             self.job_matcher = pipeline(
                 "text-classification",
                 model="microsoft/DialoGPT-medium",
-                device=self.device
+                device=self.device,
             )
 
             # Resume Analyzer
             self.resume_analyzer = pipeline(
                 "question-answering",
                 model="distilbert-base-uncased-distilled-squad",
-                device=self.device
+                device=self.device,
             )
 
             # Personality Analysis
@@ -187,7 +195,9 @@ class AdvancedAIOrchestrator:
 
             # Anthropic Claude
             if self.config.anthropic_api_key:
-                self.claude_client = anthropic.Anthropic(api_key=self.config.anthropic_api_key)
+                self.claude_client = anthropic.Anthropic(
+                    api_key=self.config.anthropic_api_key
+                )
                 self.claude_available = True
             else:
                 self.claude_available = False
@@ -195,7 +205,7 @@ class AdvancedAIOrchestrator:
             # Google Gemini
             if self.config.google_api_key:
                 genai.configure(api_key=self.config.google_api_key)
-                self.gemini_model = genai.GenerativeModel('gemini-pro')
+                self.gemini_model = genai.GenerativeModel("gemini-pro")
                 self.gemini_available = True
             else:
                 self.gemini_available = False
@@ -221,22 +231,13 @@ class AdvancedAIOrchestrator:
     def _start_background_tasks(self):
         """Start background AI processing tasks"""
         # Model retraining thread
-        threading.Thread(
-            target=self._continuous_model_training,
-            daemon=True
-        ).start()
+        threading.Thread(target=self._continuous_model_training, daemon=True).start()
 
         # Real-time analytics thread
-        threading.Thread(
-            target=self._real_time_analytics,
-            daemon=True
-        ).start()
+        threading.Thread(target=self._real_time_analytics, daemon=True).start()
 
         # Predictive maintenance thread
-        threading.Thread(
-            target=self._predictive_maintenance,
-            daemon=True
-        ).start()
+        threading.Thread(target=self._predictive_maintenance, daemon=True).start()
 
     def _continuous_model_training(self):
         """Continuous model training and improvement"""
@@ -275,7 +276,7 @@ class AdvancedAIOrchestrator:
         """Comprehensive AI-powered user profile analysis"""
         try:
             # Extract and process user information
-            skills = self._extract_skills(user_data.get('description', ''))
+            skills = self._extract_skills(user_data.get("description", ""))
             experience = self._analyze_experience(user_data)
             personality = await self._analyze_personality(user_data)
 
@@ -290,20 +291,20 @@ class AdvancedAIOrchestrator:
             behavior_patterns = self._analyze_behavior_patterns(user_data)
 
             profile = UserProfile(
-                user_id=user_data['id'],
+                user_id=user_data["id"],
                 skills=skills,
                 experience=experience,
-                preferences=user_data.get('preferences', {}),
+                preferences=user_data.get("preferences", {}),
                 behavior_patterns=behavior_patterns,
                 embeddings=embeddings,
                 personality_traits=personality,
                 career_goals=self._predict_career_goals(skills, experience),
                 network_strength=self._calculate_network_strength(user_data),
-                engagement_score=engagement_score
+                engagement_score=engagement_score,
             )
 
             # Cache the profile
-            self.user_cache[user_data['id']] = profile
+            self.user_cache[user_data["id"]] = profile
 
             return profile
 
@@ -311,35 +312,51 @@ class AdvancedAIOrchestrator:
             logger.error(f"User profile analysis error: {e}")
             raise
 
-    async def intelligent_job_matching(self, user_profile: UserProfile,
-                                     job_listings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def intelligent_job_matching(
+        self, user_profile: UserProfile, job_listings: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Advanced AI-powered job matching with multiple algorithms"""
         try:
             matches = []
 
             for job in job_listings:
                 # Multi-modal matching
-                skill_match = self._calculate_skill_match(user_profile.skills, job.get('skills', []))
-                experience_match = self._calculate_experience_match(user_profile.experience, job)
-                personality_fit = self._calculate_personality_fit(user_profile.personality_traits, job)
-                embedding_similarity = self._calculate_embedding_similarity(user_profile.embeddings, job)
+                skill_match = self._calculate_skill_match(
+                    user_profile.skills, job.get("skills", [])
+                )
+                experience_match = self._calculate_experience_match(
+                    user_profile.experience, job
+                )
+                personality_fit = self._calculate_personality_fit(
+                    user_profile.personality_traits, job
+                )
+                embedding_similarity = self._calculate_embedding_similarity(
+                    user_profile.embeddings, job
+                )
 
                 # AI-powered final score
                 final_score = await self._calculate_ai_match_score(
-                    user_profile, job, skill_match, experience_match, personality_fit, embedding_similarity
+                    user_profile,
+                    job,
+                    skill_match,
+                    experience_match,
+                    personality_fit,
+                    embedding_similarity,
                 )
 
-                matches.append({
-                    'job': job,
-                    'match_score': final_score,
-                    'skill_match': skill_match,
-                    'experience_match': experience_match,
-                    'personality_fit': personality_fit,
-                    'embedding_similarity': embedding_similarity
-                })
+                matches.append(
+                    {
+                        "job": job,
+                        "match_score": final_score,
+                        "skill_match": skill_match,
+                        "experience_match": experience_match,
+                        "personality_fit": personality_fit,
+                        "embedding_similarity": embedding_similarity,
+                    }
+                )
 
             # Sort by AI match score
-            matches.sort(key=lambda x: x['match_score'], reverse=True)
+            matches.sort(key=lambda x: x["match_score"], reverse=True)
 
             return matches[:20]  # Top 20 matches
 
@@ -347,7 +364,9 @@ class AdvancedAIOrchestrator:
             logger.error(f"Job matching error: {e}")
             return []
 
-    async def generate_smart_content(self, content_type: str, context: Dict[str, Any]) -> str:
+    async def generate_smart_content(
+        self, content_type: str, context: Dict[str, Any]
+    ) -> str:
         """AI-powered content generation"""
         try:
             if content_type == "job_description":
@@ -382,19 +401,21 @@ class AdvancedAIOrchestrator:
             extracted_experience = self._extract_experience_from_text(text_content)
 
             return {
-                'text_content': text_content,
-                'face_analysis': face_analysis,
-                'document_structure': document_structure,
-                'extracted_skills': extracted_skills,
-                'extracted_experience': extracted_experience,
-                'confidence_score': self._calculate_resume_confidence(text_content)
+                "text_content": text_content,
+                "face_analysis": face_analysis,
+                "document_structure": document_structure,
+                "extracted_skills": extracted_skills,
+                "extracted_experience": extracted_experience,
+                "confidence_score": self._calculate_resume_confidence(text_content),
             }
 
         except Exception as e:
             logger.error(f"Resume analysis error: {e}")
             return {}
 
-    async def predict_career_trajectory(self, user_profile: UserProfile) -> Dict[str, Any]:
+    async def predict_career_trajectory(
+        self, user_profile: UserProfile
+    ) -> Dict[str, Any]:
         """AI-powered career trajectory prediction"""
         try:
             # Historical career data analysis
@@ -413,19 +434,21 @@ class AdvancedAIOrchestrator:
             transitions = await self._recommend_career_transitions(user_profile)
 
             return {
-                'career_history': career_history,
-                'market_trends': market_trends,
-                'skill_gaps': skill_gaps,
-                'salary_predictions': salary_predictions,
-                'recommended_transitions': transitions,
-                'confidence_score': 0.85
+                "career_history": career_history,
+                "market_trends": market_trends,
+                "skill_gaps": skill_gaps,
+                "salary_predictions": salary_predictions,
+                "recommended_transitions": transitions,
+                "confidence_score": 0.85,
             }
 
         except Exception as e:
             logger.error(f"Career prediction error: {e}")
             return {}
 
-    async def real_time_recommendations(self, user_id: int, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def real_time_recommendations(
+        self, user_id: int, context: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Real-time AI-powered recommendations"""
         try:
             user_profile = self.user_cache.get(user_id)
@@ -465,9 +488,22 @@ class AdvancedAIOrchestrator:
 
         # Common skill keywords
         skill_keywords = [
-            'python', 'javascript', 'java', 'c++', 'react', 'node.js',
-            'machine learning', 'data science', 'sql', 'aws', 'docker',
-            'kubernetes', 'git', 'agile', 'scrum', 'leadership'
+            "python",
+            "javascript",
+            "java",
+            "c++",
+            "react",
+            "node.js",
+            "machine learning",
+            "data science",
+            "sql",
+            "aws",
+            "docker",
+            "kubernetes",
+            "git",
+            "agile",
+            "scrum",
+            "leadership",
         ]
 
         for token in doc:
@@ -480,9 +516,9 @@ class AdvancedAIOrchestrator:
         """Analyze user experience"""
         # Implementation for experience analysis
         return {
-            'years_experience': user_data.get('years_experience', 0),
-            'industries': user_data.get('industries', []),
-            'roles': user_data.get('roles', [])
+            "years_experience": user_data.get("years_experience", 0),
+            "industries": user_data.get("industries", []),
+            "roles": user_data.get("roles", []),
         }
 
     async def _analyze_personality(self, user_data: Dict[str, Any]) -> Dict[str, float]:
@@ -491,20 +527,31 @@ class AdvancedAIOrchestrator:
         personality_scores = {}
 
         try:
-            text_content = user_data.get('description', '') + ' ' + user_data.get('bio', '')
+            text_content = (
+                user_data.get("description", "") + " " + user_data.get("bio", "")
+            )
 
             if self.openai_available:
-                personality_scores.update(await self._openai_personality_analysis(text_content))
+                personality_scores.update(
+                    await self._openai_personality_analysis(text_content)
+                )
             elif self.claude_available:
-                personality_scores.update(await self._claude_personality_analysis(text_content))
+                personality_scores.update(
+                    await self._claude_personality_analysis(text_content)
+                )
             else:
                 # Fallback to basic analysis
                 personality_scores = self._basic_personality_analysis(text_content)
 
         except Exception as e:
             logger.error(f"Personality analysis error: {e}")
-            personality_scores = {'openness': 0.5, 'conscientiousness': 0.5,
-                                'extraversion': 0.5, 'agreeableness': 0.5, 'neuroticism': 0.5}
+            personality_scores = {
+                "openness": 0.5,
+                "conscientiousness": 0.5,
+                "extraversion": 0.5,
+                "agreeableness": 0.5,
+                "neuroticism": 0.5,
+            }
 
         return personality_scores
 
@@ -513,14 +560,14 @@ class AdvancedAIOrchestrator:
         try:
             response = await openai.ChatCompletion.acreate(
                 model="gpt-4",
-                messages=[{
-                    "role": "system",
-                    "content": "Analyze the personality traits in this text and return scores (0-1) for: openness, conscientiousness, extraversion, agreeableness, neuroticism. Return only JSON."
-                }, {
-                    "role": "user",
-                    "content": text[:1000]
-                }],
-                temperature=0.3
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Analyze the personality traits in this text and return scores (0-1) for: openness, conscientiousness, extraversion, agreeableness, neuroticism. Return only JSON.",
+                    },
+                    {"role": "user", "content": text[:1000]},
+                ],
+                temperature=0.3,
             )
 
             result = json.loads(response.choices[0].message.content)
@@ -537,10 +584,7 @@ class AdvancedAIOrchestrator:
                 model="claude-3-sonnet-20240229",
                 max_tokens=200,
                 system="Analyze personality traits and return JSON with scores (0-1) for: openness, conscientiousness, extraversion, agreeableness, neuroticism.",
-                messages=[{
-                    "role": "user",
-                    "content": text[:1000]
-                }]
+                messages=[{"role": "user", "content": text[:1000]}],
             )
 
             result = json.loads(response.content[0].text)
@@ -553,20 +597,25 @@ class AdvancedAIOrchestrator:
     def _basic_personality_analysis(self, text: str) -> Dict[str, float]:
         """Basic personality analysis fallback"""
         # Simple keyword-based analysis
-        scores = {'openness': 0.5, 'conscientiousness': 0.5,
-                 'extraversion': 0.5, 'agreeableness': 0.5, 'neuroticism': 0.5}
+        scores = {
+            "openness": 0.5,
+            "conscientiousness": 0.5,
+            "extraversion": 0.5,
+            "agreeableness": 0.5,
+            "neuroticism": 0.5,
+        }
 
         text_lower = text.lower()
 
         # Adjust scores based on keywords
-        if any(word in text_lower for word in ['creative', 'artistic', 'curious']):
-            scores['openness'] += 0.2
-        if any(word in text_lower for word in ['organized', 'responsible', 'reliable']):
-            scores['conscientiousness'] += 0.2
-        if any(word in text_lower for word in ['social', 'outgoing', 'energetic']):
-            scores['extraversion'] += 0.2
-        if any(word in text_lower for word in ['helpful', 'kind', 'cooperative']):
-            scores['agreeableness'] += 0.2
+        if any(word in text_lower for word in ["creative", "artistic", "curious"]):
+            scores["openness"] += 0.2
+        if any(word in text_lower for word in ["organized", "responsible", "reliable"]):
+            scores["conscientiousness"] += 0.2
+        if any(word in text_lower for word in ["social", "outgoing", "energetic"]):
+            scores["extraversion"] += 0.2
+        if any(word in text_lower for word in ["helpful", "kind", "cooperative"]):
+            scores["agreeableness"] += 0.2
 
         # Normalize scores
         for trait in scores:
@@ -582,19 +631,23 @@ class AdvancedAIOrchestrator:
     def _analyze_behavior_patterns(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze user behavior patterns"""
         # Implementation for behavior analysis
-        return {'activity_level': 'high', 'consistency': 0.8}
+        return {"activity_level": "high", "consistency": 0.8}
 
-    def _predict_career_goals(self, skills: List[str], experience: Dict[str, Any]) -> List[str]:
+    def _predict_career_goals(
+        self, skills: List[str], experience: Dict[str, Any]
+    ) -> List[str]:
         """Predict career goals based on skills and experience"""
         # Implementation for career goal prediction
-        return ['Senior Developer', 'Tech Lead', 'Product Manager']
+        return ["Senior Developer", "Tech Lead", "Product Manager"]
 
     def _calculate_network_strength(self, user_data: Dict[str, Any]) -> float:
         """Calculate network strength score"""
         # Implementation for network strength calculation
         return 0.6
 
-    def _calculate_skill_match(self, user_skills: List[str], job_skills: List[str]) -> float:
+    def _calculate_skill_match(
+        self, user_skills: List[str], job_skills: List[str]
+    ) -> float:
         """Calculate skill match score"""
         if not job_skills:
             return 0.0
@@ -602,17 +655,23 @@ class AdvancedAIOrchestrator:
         matches = set(user_skills) & set(job_skills)
         return len(matches) / len(job_skills)
 
-    def _calculate_experience_match(self, user_experience: Dict[str, Any], job: Dict[str, Any]) -> float:
+    def _calculate_experience_match(
+        self, user_experience: Dict[str, Any], job: Dict[str, Any]
+    ) -> float:
         """Calculate experience match score"""
         # Implementation for experience matching
         return 0.7
 
-    def _calculate_personality_fit(self, personality: Dict[str, float], job: Dict[str, Any]) -> float:
+    def _calculate_personality_fit(
+        self, personality: Dict[str, float], job: Dict[str, Any]
+    ) -> float:
         """Calculate personality fit score"""
         # Implementation for personality fit
         return 0.8
 
-    def _calculate_embedding_similarity(self, user_embedding: np.ndarray, job: Dict[str, Any]) -> float:
+    def _calculate_embedding_similarity(
+        self, user_embedding: np.ndarray, job: Dict[str, Any]
+    ) -> float:
         """Calculate embedding similarity"""
         job_text = f"{job.get('title', '')} {job.get('description', '')}"
         job_embedding = self.embedding_model.encode([job_text])[0]
@@ -623,9 +682,15 @@ class AdvancedAIOrchestrator:
         )
         return float(similarity)
 
-    async def _calculate_ai_match_score(self, user_profile: UserProfile, job: Dict[str, Any],
-                                      skill_match: float, experience_match: float,
-                                      personality_fit: float, embedding_similarity: float) -> float:
+    async def _calculate_ai_match_score(
+        self,
+        user_profile: UserProfile,
+        job: Dict[str, Any],
+        skill_match: float,
+        experience_match: float,
+        personality_fit: float,
+        embedding_similarity: float,
+    ) -> float:
         """Calculate final AI-powered match score"""
         try:
             # Use AI to combine multiple factors
@@ -643,26 +708,33 @@ class AdvancedAIOrchestrator:
             if self.openai_available:
                 response = await openai.ChatCompletion.acreate(
                     model="gpt-4",
-                    messages=[{
-                        "role": "system",
-                        "content": "You are an expert HR AI. Analyze job-user matching factors and provide a final score (0-1) as a JSON with key 'score'."
-                    }, {
-                        "role": "user",
-                        "content": context
-                    }],
-                    temperature=0.2
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert HR AI. Analyze job-user matching factors and provide a final score (0-1) as a JSON with key 'score'.",
+                        },
+                        {"role": "user", "content": context},
+                    ],
+                    temperature=0.2,
                 )
 
                 result = json.loads(response.choices[0].message.content)
-                return float(result.get('score', 0.5))
+                return float(result.get("score", 0.5))
 
             else:
                 # Weighted average fallback
-                weights = [0.3, 0.25, 0.2, 0.25]  # skill, experience, personality, embedding
-                return (weights[0] * skill_match +
-                       weights[1] * experience_match +
-                       weights[2] * personality_fit +
-                       weights[3] * embedding_similarity)
+                weights = [
+                    0.3,
+                    0.25,
+                    0.2,
+                    0.25,
+                ]  # skill, experience, personality, embedding
+                return (
+                    weights[0] * skill_match
+                    + weights[1] * experience_match
+                    + weights[2] * personality_fit
+                    + weights[3] * embedding_similarity
+                )
 
         except Exception as e:
             logger.error(f"AI match score calculation error: {e}")
@@ -674,14 +746,17 @@ class AdvancedAIOrchestrator:
             if self.openai_available:
                 response = await openai.ChatCompletion.acreate(
                     model="gpt-4",
-                    messages=[{
-                        "role": "system",
-                        "content": "You are an expert HR professional. Create a compelling job description."
-                    }, {
-                        "role": "user",
-                        "content": f"Create a job description for: {context}"
-                    }],
-                    temperature=0.7
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert HR professional. Create a compelling job description.",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Create a job description for: {context}",
+                        },
+                    ],
+                    temperature=0.7,
                 )
                 return response.choices[0].message.content
 
@@ -697,14 +772,17 @@ class AdvancedAIOrchestrator:
             if self.openai_available:
                 response = await openai.ChatCompletion.acreate(
                     model="gpt-4",
-                    messages=[{
-                        "role": "system",
-                        "content": "You are an expert career counselor. Create a personalized cover letter."
-                    }, {
-                        "role": "user",
-                        "content": f"Generate a cover letter for: {context}"
-                    }],
-                    temperature=0.7
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert career counselor. Create a personalized cover letter.",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Generate a cover letter for: {context}",
+                        },
+                    ],
+                    temperature=0.7,
                 )
                 return response.choices[0].message.content
 
@@ -720,14 +798,17 @@ class AdvancedAIOrchestrator:
             if self.openai_available:
                 response = await openai.ChatCompletion.acreate(
                     model="gpt-4",
-                    messages=[{
-                        "role": "system",
-                        "content": "You are an expert interviewer. Generate relevant interview questions."
-                    }, {
-                        "role": "user",
-                        "content": f"Generate interview questions for: {context}"
-                    }],
-                    temperature=0.6
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert interviewer. Generate relevant interview questions.",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Generate interview questions for: {context}",
+                        },
+                    ],
+                    temperature=0.6,
                 )
                 return response.choices[0].message.content
 
@@ -743,14 +824,17 @@ class AdvancedAIOrchestrator:
             if self.openai_available:
                 response = await openai.ChatCompletion.acreate(
                     model="gpt-4",
-                    messages=[{
-                        "role": "system",
-                        "content": "You are an expert career counselor. Provide personalized career advice."
-                    }, {
-                        "role": "user",
-                        "content": f"Provide career advice for: {context}"
-                    }],
-                    temperature=0.7
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert career counselor. Provide personalized career advice.",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Provide career advice for: {context}",
+                        },
+                    ],
+                    temperature=0.7,
                 )
                 return response.choices[0].message.content
 
@@ -760,20 +844,25 @@ class AdvancedAIOrchestrator:
             logger.error(f"Career advice generation error: {e}")
             return "Error generating career advice"
 
-    async def _generate_generic_content(self, content_type: str, context: Dict[str, Any]) -> str:
+    async def _generate_generic_content(
+        self, content_type: str, context: Dict[str, Any]
+    ) -> str:
         """Generate generic AI content"""
         try:
             if self.openai_available:
                 response = await openai.ChatCompletion.acreate(
                     model="gpt-4",
-                    messages=[{
-                        "role": "system",
-                        "content": f"You are an expert content creator. Generate {content_type} content."
-                    }, {
-                        "role": "user",
-                        "content": f"Generate {content_type} for: {context}"
-                    }],
-                    temperature=0.7
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": f"You are an expert content creator. Generate {content_type} content.",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Generate {content_type} for: {context}",
+                        },
+                    ],
+                    temperature=0.7,
                 )
                 return response.choices[0].message.content
 
@@ -808,15 +897,17 @@ class AdvancedAIOrchestrator:
             face_encodings = face_recognition.face_encodings(image, face_locations)
 
             analysis = {
-                'face_count': len(face_locations),
-                'face_locations': face_locations,
-                'has_professional_photo': len(face_locations) == 1
+                "face_count": len(face_locations),
+                "face_locations": face_locations,
+                "has_professional_photo": len(face_locations) == 1,
             }
 
             if face_encodings:
                 # Basic face analysis using DeepFace
                 try:
-                    result = DeepFace.analyze(image_path, actions=['age', 'gender', 'emotion'])
+                    result = DeepFace.analyze(
+                        image_path, actions=["age", "gender", "emotion"]
+                    )
                     analysis.update(result[0] if isinstance(result, list) else result)
                 except:
                     pass
@@ -825,7 +916,7 @@ class AdvancedAIOrchestrator:
 
         except Exception as e:
             logger.error(f"Face analysis error: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     def _analyze_document_structure(self, image_path: str) -> Dict[str, Any]:
         """Analyze document structure"""
@@ -838,12 +929,14 @@ class AdvancedAIOrchestrator:
             edges = cv2.Canny(gray, 50, 150)
 
             # Find contours
-            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contours, _ = cv2.findContours(
+                edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
 
             return {
-                'contour_count': len(contours),
-                'document_type': 'resume' if len(contours) > 10 else 'unknown',
-                'structure_score': min(1.0, len(contours) / 20)
+                "contour_count": len(contours),
+                "document_type": "resume" if len(contours) > 10 else "unknown",
+                "structure_score": min(1.0, len(contours) / 20),
             }
 
         except Exception as e:
@@ -857,7 +950,7 @@ class AdvancedAIOrchestrator:
     def _extract_experience_from_text(self, text: str) -> Dict[str, Any]:
         """Extract experience from OCR text"""
         # Basic experience extraction
-        return {'extracted_experience': 'Analysis not implemented yet'}
+        return {"extracted_experience": "Analysis not implemented yet"}
 
     def _calculate_resume_confidence(self, text: str) -> float:
         """Calculate confidence score for resume analysis"""
@@ -866,7 +959,9 @@ class AdvancedAIOrchestrator:
 
         # Basic confidence calculation
         word_count = len(text.split())
-        has_contact_info = any(keyword in text.lower() for keyword in ['email', '@', 'phone', 'linkedin'])
+        has_contact_info = any(
+            keyword in text.lower() for keyword in ["email", "@", "phone", "linkedin"]
+        )
         has_skills = len(self._extract_skills(text)) > 0
 
         confidence = 0.3  # Base confidence
@@ -881,39 +976,57 @@ class AdvancedAIOrchestrator:
 
     def _analyze_career_history(self, user_profile: UserProfile) -> Dict[str, Any]:
         """Analyze career history"""
-        return {'career_progression': 'Analysis not implemented yet'}
+        return {"career_progression": "Analysis not implemented yet"}
 
     async def _analyze_market_trends(self, skills: List[str]) -> Dict[str, Any]:
         """Analyze market trends for skills"""
-        return {'market_demand': 'high', 'trend': 'increasing'}
+        return {"market_demand": "high", "trend": "increasing"}
 
     def _identify_skill_gaps(self, user_profile: UserProfile) -> List[str]:
         """Identify skill gaps"""
-        return ['Advanced Machine Learning', 'Cloud Architecture']
+        return ["Advanced Machine Learning", "Cloud Architecture"]
 
     def _predict_salary_trajectory(self, user_profile: UserProfile) -> Dict[str, float]:
         """Predict salary trajectory"""
-        return {'current': 75000, 'year_1': 85000, 'year_3': 100000, 'year_5': 120000}
+        return {"current": 75000, "year_1": 85000, "year_3": 100000, "year_5": 120000}
 
-    async def _recommend_career_transitions(self, user_profile: UserProfile) -> List[str]:
+    async def _recommend_career_transitions(
+        self, user_profile: UserProfile
+    ) -> List[str]:
         """Recommend career transitions"""
-        return ['Senior Software Engineer', 'Technical Lead', 'Engineering Manager']
+        return ["Senior Software Engineer", "Technical Lead", "Engineering Manager"]
 
-    async def _generate_job_recommendations(self, user_profile: UserProfile, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _generate_job_recommendations(
+        self, user_profile: UserProfile, context: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Generate job recommendations"""
-        return [{'type': 'job', 'title': 'Senior Python Developer', 'score': 0.9}]
+        return [{"type": "job", "title": "Senior Python Developer", "score": 0.9}]
 
-    def _generate_skill_recommendations(self, user_profile: UserProfile) -> List[Dict[str, Any]]:
+    def _generate_skill_recommendations(
+        self, user_profile: UserProfile
+    ) -> List[Dict[str, Any]]:
         """Generate skill development recommendations"""
-        return [{'type': 'skill', 'skill': 'Machine Learning', 'priority': 'high'}]
+        return [{"type": "skill", "skill": "Machine Learning", "priority": "high"}]
 
-    async def _generate_network_recommendations(self, user_profile: UserProfile) -> List[Dict[str, Any]]:
+    async def _generate_network_recommendations(
+        self, user_profile: UserProfile
+    ) -> List[Dict[str, Any]]:
         """Generate networking recommendations"""
-        return [{'type': 'network', 'action': 'Connect with 5 tech leads', 'benefit': 'high'}]
+        return [
+            {
+                "type": "network",
+                "action": "Connect with 5 tech leads",
+                "benefit": "high",
+            }
+        ]
 
-    def _generate_content_recommendations(self, user_profile: UserProfile, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _generate_content_recommendations(
+        self, user_profile: UserProfile, context: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Generate content recommendations"""
-        return [{'type': 'content', 'title': 'Advanced Python Tutorial', 'relevance': 0.8}]
+        return [
+            {"type": "content", "title": "Advanced Python Tutorial", "relevance": 0.8}
+        ]
 
     def _check_tesseract(self) -> bool:
         """Check if Tesseract OCR is available"""
@@ -948,8 +1061,10 @@ class AdvancedAIOrchestrator:
         except Exception as e:
             logger.error(f"Predictive maintenance error: {e}")
 
+
 # Global AI Orchestrator Instance
 ai_orchestrator = None
+
 
 def initialize_ai_system(config: Optional[AIConfig] = None) -> AdvancedAIOrchestrator:
     """Initialize the global AI system"""
@@ -960,20 +1075,24 @@ def initialize_ai_system(config: Optional[AIConfig] = None) -> AdvancedAIOrchest
             config = AIConfig()
 
         # Load configuration from environment
-        config.openai_api_key = os.getenv('OPENAI_API_KEY')
-        config.anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
-        config.google_api_key = os.getenv('GOOGLE_API_KEY')
-        config.wandb_api_key = os.getenv('WANDB_API_KEY')
+        config.openai_api_key = os.getenv("OPENAI_API_KEY")
+        config.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+        config.google_api_key = os.getenv("GOOGLE_API_KEY")
+        config.wandb_api_key = os.getenv("WANDB_API_KEY")
 
         ai_orchestrator = AdvancedAIOrchestrator(config)
 
     return ai_orchestrator
 
+
 def get_ai_orchestrator() -> AdvancedAIOrchestrator:
     """Get the global AI orchestrator instance"""
     if ai_orchestrator is None:
-        raise RuntimeError("AI system not initialized. Call initialize_ai_system() first.")
+        raise RuntimeError(
+            "AI system not initialized. Call initialize_ai_system() first."
+        )
     return ai_orchestrator
+
 
 if __name__ == "__main__":
     # Initialize the AI system

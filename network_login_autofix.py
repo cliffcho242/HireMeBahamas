@@ -4,14 +4,16 @@
 Automatically detects and fixes network connectivity and login issues
 """
 
+import json
 import os
+import subprocess
 import sys
 import time
-import json
-import requests
-import subprocess
-import psutil
 from pathlib import Path
+
+import psutil
+import requests
+
 
 class NetworkLoginFixer:
     def __init__(self):
@@ -30,7 +32,7 @@ class NetworkLoginFixer:
             "WARNING": "⚠️",
             "INFO": "ℹ️",
             "FIX": "🔧",
-            "TEST": "🧪"
+            "TEST": "🧪",
         }
         icon = status_icons.get(status, "ℹ️")
         print(f"[{timestamp}] {icon} {message}")
@@ -42,26 +44,35 @@ class NetworkLoginFixer:
         killed_count = 0
 
         # Kill Python processes
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
             try:
-                if 'python' in proc.info['name'].lower():
-                    cmdline = ' '.join(proc.info['cmdline'])
-                    if any(keyword in cmdline for keyword in ['final_backend.py', 'backend', 'flask']):
+                if "python" in proc.info["name"].lower():
+                    cmdline = " ".join(proc.info["cmdline"])
+                    if any(
+                        keyword in cmdline
+                        for keyword in ["final_backend.py", "backend", "flask"]
+                    ):
                         proc.kill()
                         killed_count += 1
-                        self.log(f"Killed Python process (PID: {proc.info['pid']})", "FIX")
+                        self.log(
+                            f"Killed Python process (PID: {proc.info['pid']})", "FIX"
+                        )
             except:
                 pass
 
         # Kill Node.js processes
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
             try:
-                if 'node' in proc.info['name'].lower():
-                    cmdline = ' '.join(proc.info['cmdline'])
-                    if any(keyword in cmdline for keyword in ['vite', 'react', 'frontend']):
+                if "node" in proc.info["name"].lower():
+                    cmdline = " ".join(proc.info["cmdline"])
+                    if any(
+                        keyword in cmdline for keyword in ["vite", "react", "frontend"]
+                    ):
                         proc.kill()
                         killed_count += 1
-                        self.log(f"Killed Node.js process (PID: {proc.info['pid']})", "FIX")
+                        self.log(
+                            f"Killed Node.js process (PID: {proc.info['pid']})", "FIX"
+                        )
             except:
                 pass
 
@@ -95,10 +106,10 @@ class NetworkLoginFixer:
 
             # Start backend
             backend_process = subprocess.Popen(
-                [sys.executable, 'final_backend.py'],
+                [sys.executable, "final_backend.py"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                cwd=self.project_root
+                cwd=self.project_root,
             )
 
             self.log("Backend process started", "SUCCESS")
@@ -110,7 +121,9 @@ class NetworkLoginFixer:
                     self.log("Backend is now responding", "SUCCESS")
                     return True
                 time.sleep(1)
-                self.log(f"Waiting for backend... ({attempt + 1}/{max_attempts})", "INFO")
+                self.log(
+                    f"Waiting for backend... ({attempt + 1}/{max_attempts})", "INFO"
+                )
 
             self.log("Backend failed to start properly", "ERROR")
             return False
@@ -123,30 +136,31 @@ class NetworkLoginFixer:
         """Test the login endpoint with admin credentials"""
         self.log("Testing login endpoint...", "TEST")
 
-        login_data = {
-            'email': 'admin@hiremebahamas.com',
-            'password': 'AdminPass123!'
-        }
+        login_data = {"email": "admin@hiremebahamas.com", "password": "AdminPass123!"}
 
         try:
             response = requests.post(
                 f"{self.backend_url}/api/auth/login",
                 json=login_data,
-                headers={'Content-Type': 'application/json'},
-                timeout=10
+                headers={"Content-Type": "application/json"},
+                timeout=10,
             )
 
             if response.status_code == 200:
                 result = response.json()
-                if result.get('success'):
+                if result.get("success"):
                     self.log("Login endpoint test passed", "SUCCESS")
-                    self.log(f"Token received: {result.get('token')[:20]}...", "SUCCESS")
+                    self.log(
+                        f"Token received: {result.get('token')[:20]}...", "SUCCESS"
+                    )
                     return True
                 else:
                     self.log(f"Login failed: {result.get('message')}", "ERROR")
                     return False
             else:
-                self.log(f"Login endpoint returned status {response.status_code}", "ERROR")
+                self.log(
+                    f"Login endpoint returned status {response.status_code}", "ERROR"
+                )
                 self.log(f"Response: {response.text}", "ERROR")
                 return False
 
@@ -166,18 +180,18 @@ class NetworkLoginFixer:
             response = requests.options(
                 f"{self.backend_url}/api/auth/login",
                 headers={
-                    'Origin': self.frontend_url,
-                    'Access-Control-Request-Method': 'POST',
-                    'Access-Control-Request-Headers': 'Content-Type,Authorization'
+                    "Origin": self.frontend_url,
+                    "Access-Control-Request-Method": "POST",
+                    "Access-Control-Request-Headers": "Content-Type,Authorization",
                 },
-                timeout=5
+                timeout=5,
             )
 
             cors_headers = response.headers
             required_headers = [
-                'Access-Control-Allow-Origin',
-                'Access-Control-Allow-Methods',
-                'Access-Control-Allow-Headers'
+                "Access-Control-Allow-Origin",
+                "Access-Control-Allow-Methods",
+                "Access-Control-Allow-Headers",
             ]
 
             missing_headers = []
@@ -205,12 +219,12 @@ class NetworkLoginFixer:
             self.log("Frontend .env file not found", "ERROR")
             return False
 
-        with open(env_file, 'r') as f:
+        with open(env_file, "r") as f:
             env_content = f.read()
 
         required_vars = {
-            'VITE_API_URL': f'http://127.0.0.1:{self.backend_port}',
-            'VITE_SOCKET_URL': f'http://127.0.0.1:{self.backend_port}'
+            "VITE_API_URL": f"http://127.0.0.1:{self.backend_port}",
+            "VITE_SOCKET_URL": f"http://127.0.0.1:{self.backend_port}",
         }
 
         missing_vars = []
@@ -223,7 +237,7 @@ class NetworkLoginFixer:
         if missing_vars:
             self.log(f"Missing environment variables: {missing_vars}", "ERROR")
             # Auto-fix environment variables
-            with open(env_file, 'w') as f:
+            with open(env_file, "w") as f:
                 f.write(f"VITE_API_URL={required_vars['VITE_API_URL']}\n")
                 f.write(f"VITE_SOCKET_URL={required_vars['VITE_SOCKET_URL']}\n")
                 f.write("VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_name\n")
@@ -312,10 +326,12 @@ class NetworkLoginFixer:
             self.log("❌ Some issues remain. Please check the logs above.", "ERROR")
             return False
 
+
 def main():
     fixer = NetworkLoginFixer()
     success = fixer.comprehensive_fix()
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()

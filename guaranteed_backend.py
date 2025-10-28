@@ -4,40 +4,41 @@ GUARANTEED WORKING BACKEND - Uses Python's built-in HTTP server
 """
 
 import http.server
-import socketserver
 import json
+import socket
+import socketserver
 import threading
 import time
-import socket
+
 
 class GuaranteedHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/health':
+        if self.path == "/health":
             self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            self.send_header("Content-type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.end_headers()
             response = {
                 "status": "healthy",
                 "message": "GUARANTEED WORKING BACKEND",
                 "timestamp": time.time(),
-                "server": "Python Built-in HTTP Server"
+                "server": "Python Built-in HTTP Server",
             }
             self.wfile.write(json.dumps(response).encode())
         else:
             self.send_response(404)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header("Content-type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             response = {"error": "Not found", "available_endpoints": ["/health"]}
             self.wfile.write(json.dumps(response).encode())
 
     def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
     def log_message(self, format, *args):
@@ -47,15 +48,17 @@ class GuaranteedHandler(http.server.BaseHTTPRequestHandler):
         else:
             super().log_message(format, *args)
 
+
 def test_port_available(port):
     """Test if port is available"""
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(('127.0.0.1', port))
+            s.bind(("127.0.0.1", port))
             s.close()
         return True
     except:
         return False
+
 
 def run_server():
     port = 8008
@@ -71,7 +74,9 @@ def run_server():
             print(f"🚀 Starting GUARANTEED backend on http://127.0.0.1:{port}")
             print(f"📍 Health endpoint: http://127.0.0.1:{port}/health")
 
-            with socketserver.TCPServer(("127.0.0.1", port), GuaranteedHandler) as httpd:
+            with socketserver.TCPServer(
+                ("127.0.0.1", port), GuaranteedHandler
+            ) as httpd:
                 print("✅ Server started successfully!")
                 httpd.serve_forever()
 
@@ -83,6 +88,7 @@ def run_server():
             else:
                 print("💀 All attempts failed!")
                 return
+
 
 if __name__ == "__main__":
     print("=" * 60)

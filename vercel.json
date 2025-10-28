@@ -5,6 +5,12 @@
   "installCommand": "cd frontend && npm install",
   "devCommand": "cd frontend && npm run dev",
   "env": {
-    "VITE_API_URL": "https://hiremebahamas-backend.railway.app"
-  }
+    "VITE_API_URL": "https://hiremebahamas.onrender.com"
+  },
+  "rewrites": [
+    {
+      "source": "/((?!api/.*).*)",
+      "destination": "/index.html"
+    }
+  ]
 }

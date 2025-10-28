@@ -18,6 +18,7 @@ const Register: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register: registerUser, isLoading, isAuthenticated } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   // Redirect authenticated users to home
@@ -37,6 +38,8 @@ const Register: React.FC = () => {
   const password = watch('password');
 
   const onSubmit = async (data: RegisterForm) => {
+    if (submitting) return;
+    setSubmitting(true);
     try {
       await registerUser({
         first_name: data.firstName,
@@ -49,7 +52,10 @@ const Register: React.FC = () => {
       toast.success('Account created successfully!');
       navigate('/');
     } catch (error: any) {
-      toast.error(error.message || 'Registration failed');
+      const message = error?.response?.data?.message || error?.message || 'Registration failed';
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -216,10 +222,10 @@ const Register: React.FC = () => {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || submitting}
               className="w-full bg-blue-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+              {isLoading || submitting ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
 

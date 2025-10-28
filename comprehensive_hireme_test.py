@@ -4,11 +4,13 @@ COMPREHENSIVE HIREME FUNCTIONALITY TEST
 Tests the complete HireMe workflow
 """
 
-import requests
 import json
 import time
 
+import requests
+
 BASE_URL = "http://127.0.0.1:8008"
+
 
 def test_health():
     """Test health endpoint"""
@@ -25,6 +27,7 @@ def test_health():
         print(f"❌ Health endpoint error: {e}")
         return False
 
+
 def test_register_user():
     """Test user registration"""
     print("\nTesting user registration...")
@@ -32,34 +35,38 @@ def test_register_user():
         "email": "testuser@example.com",
         "password": "TestPass123!",
         "first_name": "Test",
-        "last_name": "User"
+        "last_name": "User",
     }
     try:
-        response = requests.post(f"{BASE_URL}/api/auth/register",
-                               json=user_data,
-                               headers={"Content-Type": "application/json"})
+        response = requests.post(
+            f"{BASE_URL}/api/auth/register",
+            json=user_data,
+            headers={"Content-Type": "application/json"},
+        )
         if response.status_code == 201:
             data = response.json()
             print("✅ User registration successful")
             return data.get("token")
         else:
-            print(f"❌ User registration failed: {response.status_code} - {response.text}")
+            print(
+                f"❌ User registration failed: {response.status_code} - {response.text}"
+            )
             return None
     except Exception as e:
         print(f"❌ User registration error: {e}")
         return None
 
+
 def test_login():
     """Test user login"""
     print("\nTesting user login...")
-    login_data = {
-        "email": "testuser@example.com",
-        "password": "TestPass123!"
-    }
+    login_data = {"email": "testuser@example.com", "password": "TestPass123!"}
     try:
-        response = requests.post(f"{BASE_URL}/api/auth/login",
-                               json=login_data,
-                               headers={"Content-Type": "application/json"})
+        response = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            json=login_data,
+            headers={"Content-Type": "application/json"},
+        )
         if response.status_code == 200:
             data = response.json()
             print("✅ User login successful")
@@ -71,24 +78,30 @@ def test_login():
         print(f"❌ User login error: {e}")
         return None, None
 
+
 def test_toggle_availability(token):
     """Test toggling availability"""
     print("\nTesting availability toggle...")
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        response = requests.post(f"{BASE_URL}/api/hireme/toggle",
-                               headers=headers,
-                               json={})
+        response = requests.post(
+            f"{BASE_URL}/api/hireme/toggle", headers=headers, json={}
+        )
         if response.status_code == 200:
             data = response.json()
-            print(f"✅ Availability toggle successful: {data.get('is_available_for_hire')}")
+            print(
+                f"✅ Availability toggle successful: {data.get('is_available_for_hire')}"
+            )
             return True
         else:
-            print(f"❌ Availability toggle failed: {response.status_code} - {response.text}")
+            print(
+                f"❌ Availability toggle failed: {response.status_code} - {response.text}"
+            )
             return False
     except Exception as e:
         print(f"❌ Availability toggle error: {e}")
         return False
+
 
 def test_get_available_users():
     """Test getting available users"""
@@ -102,14 +115,19 @@ def test_get_available_users():
             if users:
                 print("Available users:")
                 for user in users:
-                    print(f"  - {user.get('first_name')} {user.get('last_name')} ({user.get('email')})")
+                    print(
+                        f"  - {user.get('first_name')} {user.get('last_name')} ({user.get('email')})"
+                    )
             return True
         else:
-            print(f"❌ Get available users failed: {response.status_code} - {response.text}")
+            print(
+                f"❌ Get available users failed: {response.status_code} - {response.text}"
+            )
             return False
     except Exception as e:
         print(f"❌ Get available users error: {e}")
         return False
+
 
 def main():
     print("=" * 60)
@@ -152,6 +170,7 @@ def main():
     print("  - Toggle their availability for hire")
     print("  - View available talent in the HireMe tab")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     main()

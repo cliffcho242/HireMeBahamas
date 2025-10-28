@@ -7,15 +7,16 @@ import requests
 
 BASE_URL = "http://127.0.0.1:8008"
 
+
 def test_toggle():
     print("🔄 Testing Job Search Availability On/Off Toggle")
     print("=" * 50)
 
     # Login
-    login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
-        "email": "admin@hirebahamas.com",
-        "password": "AdminPass123!"
-    })
+    login_response = requests.post(
+        f"{BASE_URL}/api/auth/login",
+        json={"email": "admin@hirebahamas.com", "password": "AdminPass123!"},
+    )
 
     if login_response.status_code != 200:
         print("❌ Login failed")
@@ -46,6 +47,7 @@ def test_toggle():
             print("⚠️ Could not check available users")
     else:
         print(f"❌ Toggle failed: {toggle_response.status_code}")
+
 
 if __name__ == "__main__":
     test_toggle()
