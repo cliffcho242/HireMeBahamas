@@ -1,0 +1,16 @@
+# Nixpacks Ignore File
+# Ignore frontend and admin directories - only build Python backend
+
+admin_panel/
+frontend/
+node_modules/
+*.log
+.git/
+.vscode/
+__pycache__/
+*.pyc
+.env
+.env.local
+test_*
+*_test.py
+*.md

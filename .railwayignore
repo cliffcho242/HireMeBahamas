@@ -1,0 +1,14 @@
+# Railway Ignore File
+# Only deploy Python backend files
+
+admin_panel/
+frontend/
+node_modules/
+.git/
+.vscode/
+__pycache__/
+*.pyc
+*.log
+.env.local
+test_*
+*_test.py
