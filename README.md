@@ -1,6 +1,17 @@
 # HireMeBahamas - Facebook-Style Professional Social Network 🇧🇸
 
+![Deploy Status](https://github.com/cliffcho242/HireMeBahamas/actions/workflows/ci.yml/badge.svg)
+
 A modern, Facebook-inspired social platform designed specifically for professionals in the Bahamas to connect, share career opportunities, and build meaningful professional relationships.
+
+## 🚀 Auto-Deploy Enabled
+
+This repository is configured with **automated deployments** via GitHub Actions:
+- 🌐 **Frontend**: Auto-deploys to Vercel on every push to `main`
+- ⚡ **Backend**: Auto-deploys to Railway/Render on every push to `main`
+- ✅ **CI/CD**: Automatic testing and linting on pull requests
+
+👉 **[View Auto-Deploy Setup Guide](./AUTO_DEPLOY_SETUP.md)** for configuration instructions.
 
 ## 🌟 Features
 
@@ -182,7 +193,32 @@ The platform is fully responsive with:
 
 ## 🚀 Deployment
 
-### Development
+### Automated Deployment (Recommended) ⚡
+
+The repository includes GitHub Actions workflows for automatic deployment:
+
+**Prerequisites:**
+1. Set up accounts: Vercel (frontend) and Railway/Render (backend)
+2. Configure GitHub Secrets (see [AUTO_DEPLOY_SETUP.md](./AUTO_DEPLOY_SETUP.md))
+
+**Deploy with a single push:**
+```bash
+git add .
+git commit -m "Your changes"
+git push origin main
+```
+
+GitHub Actions will automatically:
+- ✅ Run tests and linting
+- ✅ Build and deploy frontend to Vercel
+- ✅ Deploy backend to Railway/Render
+
+📚 **Complete Guide**: [AUTO_DEPLOY_SETUP.md](./AUTO_DEPLOY_SETUP.md)  
+⚡ **Quick Reference**: [AUTO_DEPLOY_QUICK_REF.md](./AUTO_DEPLOY_QUICK_REF.md)
+
+### Manual Deployment
+
+#### Development
 ```bash
 # Backend
 python app.py
@@ -191,7 +227,7 @@ python app.py
 cd frontend && npm run dev
 ```
 
-### Production
+#### Production
 ```bash
 # Build frontend
 cd frontend && npm run build

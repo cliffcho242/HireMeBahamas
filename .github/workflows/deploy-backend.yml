@@ -1,6 +1,6 @@
 name: Deploy Backend to Railway
 
-on:
+'on':
   push:
     branches:
       - main
