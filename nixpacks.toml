@@ -1,7 +1,8 @@
+# Force Python provider only - prevents Node.js detection
+providers = ["python"]
+
 [variables]
 NIXPACKS_NO_MUSL = "1"
-
-providers = ["python"]
 
 [phases.setup]
 nixPkgs = ["python39", "gcc"]
