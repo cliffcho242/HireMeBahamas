@@ -1,7 +1,6 @@
 [variables]
 NIXPACKS_NO_MUSL = "1"
 
-# Explicitly use Python provider only
 providers = ["python"]
 
 [phases.setup]
