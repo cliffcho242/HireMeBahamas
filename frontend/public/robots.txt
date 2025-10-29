@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://www.hiremebahamas.com/sitemap.xml
+
+# Disallow admin and API endpoints
+Disallow: /api/
+Disallow: /admin/
+
+# Crawl delay
+Crawl-delay: 1
