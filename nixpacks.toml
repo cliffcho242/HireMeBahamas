@@ -9,5 +9,5 @@ PYTHON_VERSION = "3.12"
 aptPkgs = ["build-essential", "libffi-dev"]
 
 [start]
-# Updated 2025-10-28: Force Railway proxy to pick up new deployment
-cmd = "gunicorn -w 4 -b 0.0.0.0:$PORT final_backend:app --timeout 120 --log-level=info"
+# Updated 2025-10-29: Explicitly use port 8080 and reload workers
+cmd = "gunicorn -w 4 -b 0.0.0.0:8080 final_backend:app --timeout 120 --log-level=debug --reload"
