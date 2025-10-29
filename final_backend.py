@@ -2557,6 +2557,8 @@ def get_job(job_id):
         print(f"Error getting job: {str(e)}")
         return jsonify({"success": False, "message": "Failed to get job"}), 500
 
+# WSGI application entry point for gunicorn
+application = app
 
 if __name__ == "__main__":
     print("Starting HireMeBahamas backend server...")
