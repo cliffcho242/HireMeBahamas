@@ -11,6 +11,8 @@ name: CI - Lint and Test
 jobs:
   lint-frontend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,6 +38,8 @@ jobs:
 
   test-backend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
