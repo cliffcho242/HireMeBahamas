@@ -288,8 +288,41 @@ def init_database():
         print("✅ Database already exists")
 
 
+def migrate_user_columns():
+    """Add missing user profile columns if they don't exist"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check existing columns
+        cursor.execute('PRAGMA table_info(users)')
+        existing_columns = {col[1] for col in cursor.fetchall()}
+        
+        columns_to_add = {
+            'username': 'TEXT',
+            'occupation': 'TEXT',
+            'company_name': 'TEXT'
+        }
+        
+        for column_name, column_type in columns_to_add.items():
+            if column_name not in existing_columns:
+                print(f"🔧 Adding missing column: {column_name}")
+                cursor.execute(f'ALTER TABLE users ADD COLUMN {column_name} {column_type}')
+                conn.commit()
+                print(f"✅ Added {column_name} column")
+        
+        conn.close()
+        print("✅ User table migration completed")
+    except Exception as e:
+        print(f"⚠️ Migration warning: {str(e)}")
+        # Don't fail startup if migration has issues
+        pass
+
+
 # Initialize database on startup
 init_database()
+# Run migrations
+migrate_user_columns()
 
 
 @app.route("/health")
@@ -2556,6 +2589,7 @@ def get_job(job_id):
     except Exception as e:
         print(f"Error getting job: {str(e)}")
         return jsonify({"success": False, "message": "Failed to get job"}), 500
+
 
 # WSGI application entry point for gunicorn
 application = app
