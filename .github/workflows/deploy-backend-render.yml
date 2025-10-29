@@ -1,0 +1,42 @@
+name: Deploy Backend to Render
+
+'on':
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'requirements.txt'
+      - 'final_backend.py'
+      - 'render.yaml'
+      - '.github/workflows/deploy-backend-render.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deployment
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            echo "Triggering Render deployment..."
+            curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+            echo "Deployment triggered successfully!"
+          else
+            echo "⚠️ RENDER_DEPLOY_HOOK secret not set"
+            echo "Please add your Render Deploy Hook URL as a secret"
+            echo "Get it from: Render Dashboard → Your Service →" \
+                 "Settings → Deploy Hook"
+            exit 1
+          fi
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to complete..."
+          sleep 30
+          echo "Check deployment status at: https://dashboard.render.com"
