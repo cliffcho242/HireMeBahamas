@@ -1,3 +1,14 @@
+[project]
+name = "hiremebahamas-backend"
+version = "1.0.0"
+description = "HireMeBahamas Flask Backend API"
+requires-python = ">=3.11,<3.13"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [tool.black]
 line-length = 88
 target-version = ['py38', 'py39', 'py310', 'py311']

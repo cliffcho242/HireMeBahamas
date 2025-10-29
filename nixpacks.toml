@@ -3,6 +3,7 @@ providers = ["python"]
 
 [variables]
 NIXPACKS_NO_MUSL = "1"
+PYTHON_VERSION = "3.12"
 
 [phases.setup]
 aptPkgs = ["build-essential", "libffi-dev"]
