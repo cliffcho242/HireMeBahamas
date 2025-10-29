@@ -1,1 +1,1 @@
-web: gunicorn -w 4 -b 0.0.0.0:$PORT test_app:app --timeout 120
+web: gunicorn final_backend:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120 --log-level info
