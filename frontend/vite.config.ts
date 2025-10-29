@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -24,15 +24,15 @@ export default defineConfig({
             src: '/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any'
+            purpose: 'any',
           },
           {
             src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any'
-          }
-        ]
+            purpose: 'any',
+          },
+        ],
       },
       workbox: {
         runtimeCaching: [
@@ -43,9 +43,9 @@ export default defineConfig({
               cacheName: 'google-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365
-              }
-            }
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+            },
           },
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
@@ -54,21 +54,21 @@ export default defineConfig({
               cacheName: 'image-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 30
-              }
-            }
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+            },
           },
           {
             urlPattern: /\/api\/.*/,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
-              networkTimeoutSeconds: 10
-            }
-          }
-        ]
-      }
-    })
+              networkTimeoutSeconds: 10,
+            },
+          },
+        ],
+      },
+    }),
   ],
   server: {
     host: true,
@@ -85,6 +85,7 @@ export default defineConfig({
     target: 'es2015',
     minify: 'terser',
     cssCodeSplit: true,
+    chunkSizeWarningLimit: 1000, // Increase chunk size warning limit to 1000 kB (default is 500 kB)
     rollupOptions: {
       output: {
         manualChunks: {
@@ -97,4 +98,4 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
   },
-})
+});
