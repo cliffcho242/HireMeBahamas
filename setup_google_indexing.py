@@ -7,7 +7,8 @@ print("=" * 70)
 print("🔍 GOOGLE SEARCH CONSOLE SETUP FOR HIREMEBAHAMAS.COM")
 print("=" * 70)
 
-print("""
+print(
+    """
 Your site IS LIVE and WORKING at www.hiremebahamas.com!
 Google's AI Overview is showing outdated information.
 
@@ -169,7 +170,8 @@ The AI Overview issue will resolve itself once Google re-indexes your
 domain, which happens automatically within 2-4 weeks.
 
 ═══════════════════════════════════════════════════════════════════════
-""")
+"""
+)
 
 print("\n✅ SEO files created successfully!")
 print("\nNext step: Run this command to commit changes:")
