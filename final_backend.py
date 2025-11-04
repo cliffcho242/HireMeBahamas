@@ -20,6 +20,7 @@ from flask_limiter.util import get_remote_address
 # Load environment variables from .env file
 load_dotenv()
 
+# Force Railway redeploy to activate DATABASE_URL - 2025-11-04
 print("Initializing Flask app with PostgreSQL support...")
 app = Flask(__name__)
 
