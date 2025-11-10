@@ -25,8 +25,23 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
-      localStorage.removeItem('admin_token');
-      window.location.href = '/login';
+        localStorage.removeItem('admin_token');
+        // Dispatch an event so the admin app can handle logout without a hard reload.
+        try {
+          window.dispatchEvent(new CustomEvent('auth:logout', { detail: { admin: true, url: error.config?.url } }));
+        } catch (e) {
+          // Fallback: attempt SPA-friendly navigation, then hard redirect as last resort
+          try {
+            window.history.pushState({}, '', '/login');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          } catch (navErr) {
+            try {
+              window.location.href = '/login';
+            } catch (err) {
+              // ignore
+            }
+          }
+        }
     }
     return Promise.reject(error);
   }

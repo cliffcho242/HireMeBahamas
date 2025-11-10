@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test:auth-logout": "node ./tests/auth-logout-node-test.cjs",
+  "test:playwright": "npx playwright test ./playwright-tests --project=chromium",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix"
   },
@@ -49,6 +51,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.4",
     "globals": "^16.4.0",
+    "playwright": "^1.40.0",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.6",
     "typescript": "^5.9.3",
@@ -57,5 +60,7 @@
     "vite-plugin-pwa": "^1.1.0",
     "workbox-webpack-plugin": "^7.3.0",
     "workbox-window": "^7.3.0"
+    ,
+    "@playwright/test": "^1.40.0"
   }
 }

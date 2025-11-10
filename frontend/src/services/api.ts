@@ -134,16 +134,37 @@ api.interceptors.response.use(
     
     // Handle auth errors
     if (error.response?.status === 401) {
-      // Only auto-logout for auth endpoints or profile endpoints
+      // We no longer force a hard redirect here because that causes the
+      // SPA to fully reload and wipe transient UI state (eg: in-progress
+      // edits). Instead, remove the token and dispatch a custom event
+      // so the AuthContext can handle logout in a single place.
       const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/profile');
-      
-      if (isAuthEndpoint) {
-        console.log('Authentication failed - logging out');
+
+      console.log('Authentication failed (401) for', config.url, '- dispatching auth:logout');
+      try {
         localStorage.removeItem('token');
-        window.location.href = '/login';
-      } else {
-        // For other endpoints, just log the error but don't force logout
-        console.warn('Unauthorized access to:', config.url);
+      } catch (e) {
+        // ignore
+      }
+
+      try {
+        const detail = { url: config.url, isAuthEndpoint };
+        window.dispatchEvent(new CustomEvent('auth:logout', { detail }));
+      } catch (e) {
+        // Fallback: if event dispatch fails, attempt SPA-friendly navigation
+        console.warn('Could not dispatch auth:logout event, attempting SPA-friendly navigation to /login');
+        try {
+          window.history.pushState({}, '', '/login');
+          window.dispatchEvent(new PopStateEvent('popstate'));
+          console.log('Navigated to /login via history.pushState');
+        } catch (navErr) {
+          console.warn('history navigation failed, falling back to hard redirect', navErr);
+          try {
+            window.location.href = '/login';
+          } catch (err) {
+            // ignore
+          }
+        }
       }
     }
     
