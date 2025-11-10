@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 
 test('auth-logout preserves marker and clears token on 401', async ({ page, baseURL }) => {
   const DEV_URL = process.env.DEV_URL || baseURL || 'http://localhost:3000';
+  // Auto-grant common permissions so browser permission popups are automatically allowed
+  // (prevents blocking prompts during CI/test runs)
+  await page.context().grantPermissions(['notifications', 'geolocation'], { origin: DEV_URL });
 
   // Mock any API requests to return 401 Unauthorized
   await page.route('**/api/**', async (route) => {
