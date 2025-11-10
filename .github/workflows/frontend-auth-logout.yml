@@ -79,10 +79,10 @@ jobs:
             libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libpangocairo-1.0-0 \
             libgtk-3-0 libnotify4 libgdk-pixbuf2.0-0 libxkbcommon0
 
-      - name: Install Playwright browsers and OS deps
+      - name: Install Playwright browsers
         working-directory: frontend
         run: |
-          npx playwright install-deps
+          # We've already installed the common OS packages above. Install browsers only.
           npx playwright install
 
       - name: Build frontend
