@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 test('auth-logout preserves marker and clears token on 401', async ({ page, baseURL }) => {
   const DEV_URL = process.env.DEV_URL || baseURL || 'http://localhost:3000';
