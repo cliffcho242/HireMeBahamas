@@ -22,7 +22,8 @@ test('auth-logout preserves marker and clears token on 401', async ({ page, base
   });
 
   // Trigger a page flow that will call the API (home)
-  await page.goto(DEV_URL + '/', { waitUntil: 'networkidle' });
+  // Use domcontentloaded instead of networkidle to avoid waiting on long-lived connections
+  await page.goto(DEV_URL + '/', { waitUntil: 'domcontentloaded' });
 
   // Give app some time to process the 401 and run client-side logic
   await page.waitForTimeout(3000);
