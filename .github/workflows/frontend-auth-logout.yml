@@ -122,6 +122,25 @@ jobs:
             frontend/test-results
           retention-days: 7
 
+      - name: Sync Playwright artifacts to S3 (optional)
+        if: ${{ secrets.AWS_ACCESS_KEY_ID && secrets.AWS_SECRET_ACCESS_KEY && secrets.PLAYWRIGHT_S3_BUCKET }}
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload artifacts to S3 (optional)
+        if: ${{ secrets.AWS_ACCESS_KEY_ID && secrets.AWS_SECRET_ACCESS_KEY && secrets.PLAYWRIGHT_S3_BUCKET }}
+        run: |
+          set -euo pipefail
+          echo "Uploading Playwright artifacts to S3 bucket: $PLAYWRIGHT_S3_BUCKET"
+          aws s3 sync frontend/playwright-report s3://$PLAYWRIGHT_S3_BUCKET/playwright-report/${{ github.run_id }}/ --acl private
+          aws s3 sync frontend/test-results s3://$PLAYWRIGHT_S3_BUCKET/test-results/${{ github.run_id }}/ --acl private
+          aws s3 sync frontend/playwright-tests s3://$PLAYWRIGHT_S3_BUCKET/playwright-tests/${{ github.run_id }}/ --acl private
+        env:
+          PLAYWRIGHT_S3_BUCKET: ${{ secrets.PLAYWRIGHT_S3_BUCKET }}
+
       - name: Upload Playwright artifacts (report / test-results / traces)
         if: failure()
         uses: actions/upload-artifact@v4
