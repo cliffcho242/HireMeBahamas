@@ -34,7 +34,11 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Run CI sanity Node test
+      - name: Run Node.js sanity check
+        working-directory: frontend
+        run: npm run test:node-sanity
+
+      - name: Run CI sanity test
         working-directory: frontend
         run: node ./tests/ci-sanity-test.cjs
 
