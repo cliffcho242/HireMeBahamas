@@ -20,9 +20,9 @@ Expected output on success:
 TEST PASS: token cleared and auth:logout dispatched
 ```
 
-2) (Optional) Browser-level test using Playwright
+2) (Optional) Browser-level test using Playwright Test
 
-If you want to verify the full browser behavior (marker preservation / no hard reload), use the Playwright script in `frontend/playwright-tests/auth-logout.cjs`.
+If you want to verify the full browser behavior (marker preservation / no hard reload), use the Playwright Test spec in `frontend/playwright-tests/auth-logout.spec.js` and run it with the Playwright Test runner.
 
 Notes:
 - Playwright requires OS-level browser dependencies on Linux. Use `npx playwright install-deps` (requires sudo) if running on a fresh machine.
@@ -30,10 +30,11 @@ Notes:
 
 ```bash
 cd frontend
-npm i -D playwright
+npm ci
 npx playwright install-deps   # may require sudo
 npx playwright install        # download browsers
-NODE_PATH=./node_modules DEV_URL=http://localhost:3000 node ./playwright-tests/auth-logout.cjs
+npx http-server ./dist -p 3000 &
+npm run test:playwright
 ```
 
 3) What the tests check

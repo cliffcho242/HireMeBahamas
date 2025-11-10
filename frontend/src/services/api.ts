@@ -151,12 +151,19 @@ api.interceptors.response.use(
         const detail = { url: config.url, isAuthEndpoint };
         window.dispatchEvent(new CustomEvent('auth:logout', { detail }));
       } catch (e) {
-        // Fallback: if dispatching events is not available, fallback to a soft navigation
-        console.warn('Could not dispatch auth:logout event, falling back to /login redirect');
+        // Fallback: if event dispatch fails, attempt SPA-friendly navigation
+        console.warn('Could not dispatch auth:logout event, attempting SPA-friendly navigation to /login');
         try {
-          window.location.href = '/login';
-        } catch (err) {
-          // ignore
+          window.history.pushState({}, '', '/login');
+          window.dispatchEvent(new PopStateEvent('popstate'));
+          console.log('Navigated to /login via history.pushState');
+        } catch (navErr) {
+          console.warn('history navigation failed, falling back to hard redirect', navErr);
+          try {
+            window.location.href = '/login';
+          } catch (err) {
+            // ignore
+          }
         }
       }
     }

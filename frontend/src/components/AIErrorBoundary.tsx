@@ -107,8 +107,7 @@ class AIErrorBoundaryClass extends Component<Props, State> {
 
     this.setState({ recoveryAttempted: true });
 
-    try {    # run against a deployed URL
-    NODE_PATH=./node_modules DEV_URL=https://my-app.example.com node ./playwright-tests/auth-logout.cjs
+    try {
       switch (analysis.suggestedAction) {
         case 'retry':
           // Wait and retry - the component will remount
@@ -148,8 +147,9 @@ class AIErrorBoundaryClass extends Component<Props, State> {
             window.dispatchEvent(new PopStateEvent('popstate'));
             console.log('🤖 AI Recovery: Navigated to home via history.pushState');
           } catch (navErr) {
-            console.warn('🤖 AI Recovery: history navigation failed, falling back to full redirect', navErr);
-            window.location.href = '/';
+            // If history navigation fails, log and do not force a full page reload.
+            // Forcing a reload here would wipe in-progress user state.
+            console.warn('🤖 AI Recovery: history navigation failed; not performing full redirect', navErr);
           }
           break;
 
@@ -211,12 +211,35 @@ class AIErrorBoundaryClass extends Component<Props, State> {
               We're working to resolve this issue. Please try refreshing the page.
             </p>
 
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-            >
-              🔄 Refresh Page
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  // Attempt a soft recovery by clearing the error boundary state.
+                  // This avoids a full page reload which would clear in-progress work.
+                  try {
+                    (this as any).setState({
+                      hasError: false,
+                      error: null,
+                      errorId: null,
+                      recoveryAttempted: false
+                    });
+                    console.log('🤖 AI Recovery: Performed soft recovery (cleared error boundary)');
+                  } catch (e) {
+                    console.warn('🤖 AI Recovery: soft recovery failed', e);
+                  }
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              >
+                🔄 Try to recover
+              </button>
+
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-6 rounded-lg transition-colors text-sm"
+              >
+                ⚠️ Full refresh (discard changes)
+              </button>
+            </div>
 
             <div className="mt-6 p-4 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-500 mb-2">Error ID:</p>

@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test:auth-logout": "node ./tests/auth-logout-node-test.cjs",
+  "test:playwright": "npx playwright test ./playwright-tests --project=chromium",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix"
   },
