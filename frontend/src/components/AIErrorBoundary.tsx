@@ -107,7 +107,8 @@ class AIErrorBoundaryClass extends Component<Props, State> {
 
     this.setState({ recoveryAttempted: true });
 
-    try {
+    try {    # run against a deployed URL
+    NODE_PATH=./node_modules DEV_URL=https://my-app.example.com node ./playwright-tests/auth-logout.cjs
       switch (analysis.suggestedAction) {
         case 'retry':
           // Wait and retry - the component will remount
@@ -122,16 +123,34 @@ class AIErrorBoundaryClass extends Component<Props, State> {
           break;
 
         case 'relogin':
-          // Clear auth tokens and redirect to login
+          // Clear auth tokens but do NOT force a full page reload or hard redirect.
+          // Forcing a reload causes the entire SPA state to reset which makes
+          // user edits and in-progress work disappear. Instead we clear the
+          // token and clear the error boundary so the app can gracefully
+          // surface the signed-out state (AuthContext will re-run initialization).
           localStorage.removeItem('token');
-          window.location.href = '/auth';
-          console.log('🤖 AI Recovery: Cleared auth and redirecting to login');
+          this.setState({
+            hasError: false,
+            error: null,
+            errorId: null,
+            recoveryAttempted: false
+          });
+          console.log('🤖 AI Recovery: Cleared auth token; recovery completed without full reload');
           break;
 
         case 'navigate_home':
-          // Navigate to home/dashboard
-          window.location.href = '/';
-          console.log('🤖 AI Recovery: Navigating to home');
+          // Navigate to home/dashboard without forcing a full page reload.
+          // Use the History API so the SPA router can handle the navigation
+          // and preserve in-memory state where possible.
+          try {
+            window.history.pushState({}, '', '/');
+            // Notify listeners (react-router listens to popstate events)
+            window.dispatchEvent(new PopStateEvent('popstate'));
+            console.log('🤖 AI Recovery: Navigated to home via history.pushState');
+          } catch (navErr) {
+            console.warn('🤖 AI Recovery: history navigation failed, falling back to full redirect', navErr);
+            window.location.href = '/';
+          }
           break;
 
         case 'cleanup':
@@ -154,9 +173,17 @@ class AIErrorBoundaryClass extends Component<Props, State> {
           break;
 
         default:
-          // Force reload as last resort
-          console.log('🤖 AI Recovery: Force reloading page');
-          window.location.reload();
+          // As a last resort, avoid forcing a full page reload which wipes
+          // the SPA state and can be disruptive. Instead clear the error
+          // boundary and allow components to re-render. If the problem
+          // persists the user can manually refresh.
+          console.log('🤖 AI Recovery: Clearing error boundary instead of full reload');
+          this.setState({
+            hasError: false,
+            error: null,
+            errorId: null,
+            recoveryAttempted: false
+          });
       }
     } catch (recoveryError) {
       console.error('🤖 AI Recovery: Recovery failed:', recoveryError);
