@@ -126,8 +126,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
 
     if (message) {
-      // Use warn for automatic logouts so it stands out from manual sign-outs
-      toast.warn(message);
+      // Use a neutral toast with a warning icon for automatic logouts so it
+      // stands out from manual sign-outs. react-hot-toast doesn't expose
+      // toast.warn in the typings, so use a generic toast with an icon.
+      toast(message, { icon: '⚠️' });
     }
   };
 

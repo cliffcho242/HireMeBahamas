@@ -257,7 +257,7 @@ const FacebookLikeDashboard = () => {
                   <p className="text-xs text-cyan-600 capitalize">🌺 {user?.user_type}</p>
                 </div>
                 <button
-                  onClick={logout}
+                  onClick={() => logout()}
                   className="p-2 hover:bg-cyan-50 rounded-xl transition-all"
                 >
                   <Settings className="h-5 w-5 text-cyan-600" />
