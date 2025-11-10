@@ -16,9 +16,9 @@ test('auth-logout preserves marker and clears token on 401', async ({ page, base
   await page.goto(DEV_URL, { waitUntil: 'domcontentloaded' });
 
   await page.evaluate(() => {
+    // persist marker in localStorage so it survives navigation
     localStorage.setItem('token', 'FAKE_TOKEN_FOR_TEST');
-    window.__TEST_MARKER = (window.__TEST_MARKER || 0) + 1;
-    window.__TEST_MARKER_VALUE = 'marker_before';
+    localStorage.setItem('__TEST_MARKER_VALUE', 'marker_before');
   });
 
   // Trigger a page flow that will call the API (home)
@@ -28,7 +28,7 @@ test('auth-logout preserves marker and clears token on 401', async ({ page, base
   // Give app some time to process the 401 and run client-side logic
   await page.waitForTimeout(3000);
 
-  const marker = await page.evaluate(() => window.__TEST_MARKER_VALUE || null);
+  const marker = await page.evaluate(() => localStorage.getItem('__TEST_MARKER_VALUE'));
   const token = await page.evaluate(() => localStorage.getItem('token'));
 
   expect(marker).toBe('marker_before');
