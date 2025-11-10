@@ -87,17 +87,17 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
+        run: npm run build
+
+      - name: Ensure Node 20 for build & print version
+        working-directory: frontend
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Check node version (diagnostic)
+      - name: Check node version
         working-directory: frontend
         run: node -v
-
-      - name: Build frontend
-        working-directory: frontend
-        run: npm run build
 
       - name: Serve built site on port 3000
         working-directory: frontend
