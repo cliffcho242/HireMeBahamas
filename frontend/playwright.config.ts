@@ -11,6 +11,10 @@ export default defineConfig({
     viewport: { width: 1280, height: 720 },
     actionTimeout: 0,
     ignoreHTTPSErrors: true,
+    // Collect artifacts to help debugging flakes/failures in CI
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
+    video: 'retain-on-failure',
   },
   projects: [
     {

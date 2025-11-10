@@ -112,9 +112,13 @@ jobs:
           DEV_URL: http://localhost:3000
         run: npm run test:playwright
 
-      - name: Upload Playwright logs
+      - name: Upload Playwright artifacts (report / test-results / traces)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-logs
-          path: frontend/playwright-tests
+          name: playwright-artifacts
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+            frontend/playwright-tests
+          retention-days: 7
