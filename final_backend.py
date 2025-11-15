@@ -322,7 +322,8 @@ def init_database():
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (participant_1_id) REFERENCES users (id) ON DELETE CASCADE,
                         FOREIGN KEY (participant_2_id) REFERENCES users (id) ON DELETE CASCADE,
-                        UNIQUE(participant_1_id, participant_2_id)
+                        UNIQUE(participant_1_id, participant_2_id),
+                        CHECK (participant_1_id < participant_2_id)
                     )
                 """
                 )
