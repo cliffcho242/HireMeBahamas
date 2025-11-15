@@ -4,8 +4,6 @@ Comprehensive test for message functionality with multiple users
 """
 
 import json
-import sys
-
 from final_backend import app
 
 print("Testing complete message flow with user isolation...")
