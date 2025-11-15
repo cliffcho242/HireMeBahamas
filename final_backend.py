@@ -456,11 +456,15 @@ def init_database():
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         participant_1_id INTEGER NOT NULL,
                         participant_2_id INTEGER NOT NULL,
+                        user_id_1 INTEGER NOT NULL,
+                        user_id_2 INTEGER NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (participant_1_id) REFERENCES users (id) ON DELETE CASCADE,
                         FOREIGN KEY (participant_2_id) REFERENCES users (id) ON DELETE CASCADE,
-                        UNIQUE(participant_1_id, participant_2_id)
+                        FOREIGN KEY (user_id_1) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (user_id_2) REFERENCES users (id) ON DELETE CASCADE,
+                        UNIQUE(user_id_1, user_id_2)
                     )
                 """
                 )
