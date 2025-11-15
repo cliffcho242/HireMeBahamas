@@ -65,9 +65,8 @@ const Messages: React.FC = () => {
         // Validate that the message belongs to a conversation the user is part of
         if (selectedConversation && message.conversation_id === selectedConversation.id) {
           // Additional check: ensure the message is from/to the current user
-          if (message.sender_id === user.id || 
-              (selectedConversation.participant_1_id === user.id || 
-               selectedConversation.participant_2_id === user.id)) {
+          if (selectedConversation.participant_1_id === user.id || 
+              selectedConversation.participant_2_id === user.id) {
             setSelectedConversation(prev => prev ? {
               ...prev,
               messages: [...prev.messages, message]
