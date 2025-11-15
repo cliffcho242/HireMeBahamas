@@ -813,6 +813,164 @@ def login():
         )
 
 
+@app.route("/api/auth/refresh", methods=["POST", "OPTIONS"])
+@limiter.limit("10 per minute")
+def refresh_token():
+    """Refresh authentication token"""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        # Get current token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "No token provided"}), 401
+
+        token = auth_header.split(" ")[1]
+
+        # Decode token to get user info
+        try:
+            payload = jwt.decode(
+                token, app.config["SECRET_KEY"], algorithms=["HS256"]
+            )
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token has expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        user_id = payload.get("user_id")
+        email = payload.get("email")
+
+        if not user_id or not email:
+            return jsonify({"success": False, "message": "Invalid token payload"}), 401
+
+        # Verify user still exists
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if USE_POSTGRESQL:
+            cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        else:
+            cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not user:
+            return jsonify({"success": False, "message": "User not found"}), 404
+
+        # Create new JWT token with extended expiration
+        new_token_payload = {
+            "user_id": user["id"],
+            "email": user["email"],
+            "exp": datetime.now(timezone.utc) + timedelta(days=7),
+        }
+
+        new_token = jwt.encode(
+            new_token_payload, app.config["SECRET_KEY"], algorithm="HS256"
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Token refreshed successfully",
+                    "access_token": new_token,
+                    "token_type": "bearer",
+                    "user": {
+                        "id": user["id"],
+                        "email": user["email"],
+                        "first_name": user["first_name"] or "",
+                        "last_name": user["last_name"] or "",
+                        "user_type": user["user_type"] or "user",
+                        "location": user["location"] or "",
+                        "phone": user["phone"] or "",
+                        "bio": user["bio"] or "",
+                        "avatar_url": user["avatar_url"] or "",
+                        "is_available_for_hire": bool(user["is_available_for_hire"]),
+                    },
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        print(f"Token refresh error: {str(e)}")
+        return (
+            jsonify({"success": False, "message": f"Token refresh failed: {str(e)}"}),
+            500,
+        )
+
+
+@app.route("/api/auth/verify", methods=["GET", "OPTIONS"])
+@limiter.limit("30 per minute")
+def verify_session():
+    """Verify if current session/token is valid"""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "valid": False, "message": "No token provided"}), 401
+
+        token = auth_header.split(" ")[1]
+
+        # Decode and verify token
+        try:
+            payload = jwt.decode(
+                token, app.config["SECRET_KEY"], algorithms=["HS256"]
+            )
+            
+            # Calculate time until expiration
+            exp_timestamp = payload.get("exp")
+            if exp_timestamp:
+                time_remaining = exp_timestamp - datetime.now(timezone.utc).timestamp()
+                expires_in_hours = time_remaining / 3600
+            else:
+                expires_in_hours = 0
+
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "valid": True,
+                        "user_id": payload.get("user_id"),
+                        "email": payload.get("email"),
+                        "expires_in_hours": round(expires_in_hours, 2),
+                    }
+                ),
+                200,
+            )
+        except jwt.ExpiredSignatureError:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "valid": False,
+                        "message": "Token has expired",
+                    }
+                ),
+                401,
+            )
+        except jwt.InvalidTokenError:
+            return (
+                jsonify(
+                    {"success": False, "valid": False, "message": "Invalid token"}
+                ),
+                401,
+            )
+
+    except Exception as e:
+        print(f"Session verify error: {str(e)}")
+        return (
+            jsonify({"success": False, "valid": False, "message": f"Verification failed: {str(e)}"}),
+            500,
+        )
+
+
 # ==========================================
 # APPLICATION ENTRY POINT
 # ==========================================

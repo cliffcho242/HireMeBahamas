@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
@@ -10,20 +10,20 @@ import {
   FaceSmileIcon,
   TrashIcon,
   PencilIcon,
+  WifiIcon,
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { postsAPI } from '../services/api';
 import { Post } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { postCache } from '../services/postCache';
 
 const PostFeed: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const navigate = useNavigate();
-  // const [newPostContent, setNewPostContent] = useState('');
-  // const [isPosting, setIsPosting] = useState(false);
-  // const [postType, setPostType] = useState<'post' | 'job'>('post');
   const [showComments, setShowComments] = useState<{ [key: number]: boolean }>({});
   const [commentText, setCommentText] = useState<{ [key: number]: string }>({});
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
@@ -32,26 +32,139 @@ const PostFeed: React.FC = () => {
   const [loadingComments, setLoadingComments] = useState<{ [key: number]: boolean }>({});
   const [showEmojiPicker, setShowEmojiPicker] = useState<{ [key: number]: boolean }>({});
   const { user } = useAuth();
+  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast.success('Connection restored');
+      syncPendingActions();
+      fetchPosts();
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast.error('You are offline. Changes will be synced when connection is restored.');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Sync pending actions when online
+  const syncPendingActions = useCallback(async () => {
+    if (!isOnline || !postCache.isCacheAvailable()) return;
+
+    try {
+      const pendingActions = await postCache.getPendingActions();
+      
+      for (const action of pendingActions) {
+        try {
+          switch (action.type) {
+            case 'create':
+              await postsAPI.createPost(action.data);
+              break;
+            case 'update':
+              if (action.postId) {
+                await postsAPI.updatePost(action.postId, action.data);
+              }
+              break;
+            case 'delete':
+              if (action.postId) {
+                await postsAPI.deletePost(action.postId);
+              }
+              break;
+            case 'like':
+              if (action.postId) {
+                await postsAPI.likePost(action.postId);
+              }
+              break;
+            case 'comment':
+              if (action.postId) {
+                await postsAPI.createComment(action.postId, action.data.content);
+              }
+              break;
+          }
+          
+          // Remove successful action
+          await postCache.removePendingAction(action.id);
+        } catch (error) {
+          // Update retry count
+          if (action.retryCount < 3) {
+            await postCache.updatePendingActionRetry(action.id);
+          } else {
+            // Remove after 3 retries
+            await postCache.removePendingAction(action.id);
+            console.error('Failed to sync action after 3 retries:', action);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to sync pending actions:', error);
+    }
+  }, [isOnline]);
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+    
+    // Setup periodic sync (every 30 seconds)
+    if (isOnline) {
+      syncIntervalRef.current = setInterval(() => {
+        fetchPosts();
+        syncPendingActions();
+      }, 30000);
+    }
 
-  const fetchPosts = async () => {
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+      }
+    };
+  }, [isOnline]);
+
+  const fetchPosts = async (useCache = true) => {
     try {
-      const postsData = await postsAPI.getPosts();
-      // Ensure postsData is an array
-      if (Array.isArray(postsData)) {
-        setPosts(postsData);
-      } else {
-        console.warn('Posts data is not an array:', postsData);
-        setPosts([]);
-        toast.error('Received invalid posts data from server');
+      // Load from cache first for instant display
+      if (useCache && postCache.isCacheAvailable()) {
+        const cachedPosts = await postCache.getCachedPosts();
+        if (cachedPosts.length > 0) {
+          setPosts(cachedPosts);
+          setIsLoading(false);
+        }
+      }
+
+      // Then fetch fresh data from server if online
+      if (isOnline) {
+        const postsData = await postsAPI.getPosts();
+        
+        if (Array.isArray(postsData)) {
+          setPosts(postsData);
+          
+          // Cache the fresh data
+          if (postCache.isCacheAvailable()) {
+            await postCache.cachePosts(postsData);
+          }
+        } else {
+          console.warn('Posts data is not an array:', postsData);
+          if (!useCache) {
+            setPosts([]);
+            toast.error('Received invalid posts data from server');
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to fetch posts:', error);
-      setPosts([]); // Set empty array on error
-      toast.error('Failed to load posts. Please check your connection.');
+      
+      // Only show error if we don't have cached posts
+      if (posts.length === 0) {
+        toast.error('Failed to load posts. Showing cached content if available.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -85,22 +198,73 @@ const PostFeed: React.FC = () => {
       return;
     }
 
+    // Optimistic update
+    const originalPosts = [...posts];
+    const postToUpdate = posts.find(p => p.id === postId);
+    if (!postToUpdate) return;
+
+    const optimisticUpdate = {
+      ...postToUpdate,
+      is_liked: !postToUpdate.is_liked,
+      likes_count: postToUpdate.is_liked 
+        ? postToUpdate.likes_count - 1 
+        : postToUpdate.likes_count + 1
+    };
+
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId ? optimisticUpdate : post
+      )
+    );
+
+    // Update cache immediately
+    if (postCache.isCacheAvailable()) {
+      await postCache.updateCachedPost(postId, optimisticUpdate);
+    }
+
     try {
-      const response = await postsAPI.likePost(postId);
-      // Update local state with response from server
-      setPosts(prevPosts =>
-        prevPosts.map(post =>
-          post.id === postId
-            ? {
-              ...post,
-              likes_count: response.likes_count,
-              is_liked: response.liked
-            }
-            : post
-        )
-      );
+      if (isOnline) {
+        const response = await postsAPI.likePost(postId);
+        // Update with server response
+        setPosts(prevPosts =>
+          prevPosts.map(post =>
+            post.id === postId
+              ? {
+                ...post,
+                likes_count: response.likes_count,
+                is_liked: response.liked
+              }
+              : post
+          )
+        );
+
+        // Update cache with server data
+        if (postCache.isCacheAvailable()) {
+          await postCache.updateCachedPost(postId, {
+            likes_count: response.likes_count,
+            is_liked: response.liked
+          });
+        }
+      } else {
+        // Queue for later if offline
+        await postCache.addPendingAction({
+          type: 'like',
+          postId,
+          data: {},
+          timestamp: Date.now(),
+          retryCount: 0,
+        });
+        toast.success('Like saved. Will sync when online.');
+      }
     } catch (error) {
+      // Rollback on error
       console.error('Failed to like post:', error);
+      setPosts(originalPosts);
+      
+      if (postCache.isCacheAvailable()) {
+        await postCache.updateCachedPost(postId, postToUpdate);
+      }
+      
       toast.error('Failed to like post');
     }
   };
@@ -221,12 +385,42 @@ const PostFeed: React.FC = () => {
       return;
     }
 
+    // Optimistic update
+    const originalPosts = [...posts];
+    setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
+
+    // Update cache immediately
+    if (postCache.isCacheAvailable()) {
+      await postCache.deleteCachedPost(postId);
+    }
+
     try {
-      await postsAPI.deletePost(postId);
-      setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
-      toast.success('Post deleted successfully!');
+      if (isOnline) {
+        await postsAPI.deletePost(postId);
+        toast.success('Post deleted successfully!');
+      } else {
+        // Queue for later if offline
+        await postCache.addPendingAction({
+          type: 'delete',
+          postId,
+          data: {},
+          timestamp: Date.now(),
+          retryCount: 0,
+        });
+        toast.success('Delete saved. Will sync when online.');
+      }
     } catch (error) {
+      // Rollback on error
       console.error('Failed to delete post:', error);
+      setPosts(originalPosts);
+      
+      if (postCache.isCacheAvailable()) {
+        const deletedPost = originalPosts.find(p => p.id === postId);
+        if (deletedPost) {
+          await postCache.updateCachedPost(postId, deletedPost);
+        }
+      }
+      
       toast.error('Failed to delete post. Please try again.');
     }
   };
@@ -247,18 +441,60 @@ const PostFeed: React.FC = () => {
       return;
     }
 
+    // Optimistic update
+    const originalPosts = [...posts];
+    setPosts(prevPosts =>
+      prevPosts.map(p =>
+        p.id === postId ? { ...p, content: editContent.trim() } : p
+      )
+    );
+
+    // Update cache immediately
+    if (postCache.isCacheAvailable()) {
+      await postCache.updateCachedPost(postId, { content: editContent.trim() });
+    }
+
     try {
-      const response = await postsAPI.updatePost(postId, { content: editContent.trim() });
-      setPosts(prevPosts =>
-        prevPosts.map(p =>
-          p.id === postId ? { ...p, content: response.post.content } : p
-        )
-      );
-      setEditingPostId(null);
-      setEditContent('');
-      toast.success('Post updated successfully!');
+      if (isOnline) {
+        const response = await postsAPI.updatePost(postId, { content: editContent.trim() });
+        setPosts(prevPosts =>
+          prevPosts.map(p =>
+            p.id === postId ? { ...p, content: response.post.content } : p
+          )
+        );
+        
+        if (postCache.isCacheAvailable()) {
+          await postCache.updateCachedPost(postId, { content: response.post.content });
+        }
+        
+        setEditingPostId(null);
+        setEditContent('');
+        toast.success('Post updated successfully!');
+      } else {
+        // Queue for later if offline
+        await postCache.addPendingAction({
+          type: 'update',
+          postId,
+          data: { content: editContent.trim() },
+          timestamp: Date.now(),
+          retryCount: 0,
+        });
+        setEditingPostId(null);
+        setEditContent('');
+        toast.success('Update saved. Will sync when online.');
+      }
     } catch (error) {
+      // Rollback on error
       console.error('Failed to update post:', error);
+      setPosts(originalPosts);
+      
+      if (postCache.isCacheAvailable()) {
+        const originalPost = originalPosts.find(p => p.id === postId);
+        if (originalPost) {
+          await postCache.updateCachedPost(postId, originalPost);
+        }
+      }
+      
       toast.error('Failed to update post. Please try again.');
     }
   };
@@ -294,6 +530,17 @@ const PostFeed: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* Connection Status Indicator */}
+      {!isOnline && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center space-x-2">
+          <WifiIcon className="w-5 h-5 text-yellow-600" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-yellow-800">You're offline</p>
+            <p className="text-xs text-yellow-600">Changes will be synced when connection is restored</p>
+          </div>
+        </div>
+      )}
+      
       {/* Posts Feed */}
       {posts.map((post, index) => (
         <motion.div

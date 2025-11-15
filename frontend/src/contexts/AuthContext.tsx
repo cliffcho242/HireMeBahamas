@@ -1,17 +1,21 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { User } from '../types/user';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import { sessionManager } from '../services/sessionManager';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  rememberMe: boolean;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  refreshToken: () => Promise<void>;
+  setRememberMe: (remember: boolean) => void;
 }
 
 interface RegisterData {
@@ -40,28 +44,146 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [rememberMe, setRememberMeState] = useState(false);
 
+  // Initialize auth from session manager
   useEffect(() => {
     const initializeAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const userData = await authAPI.getProfile();
-          setUser(userData);
-        } catch (error) {
-          localStorage.removeItem('token');
-          console.error('Auth initialization failed:', error);
+      try {
+        // Try to restore session from session manager
+        const savedSession = sessionManager.loadSession();
+        
+        if (savedSession) {
+          // Session exists, restore it
+          setToken(savedSession.token);
+          setUser(savedSession.user);
+          setRememberMeState(savedSession.rememberMe);
+          
+          // Check if token needs refresh
+          const expiresAt = sessionManager.getTokenExpiration(savedSession.token);
+          if (expiresAt && sessionManager.shouldRefreshToken(expiresAt)) {
+            try {
+              await refreshTokenInternal();
+            } catch (error) {
+              console.error('Token refresh failed during initialization:', error);
+            }
+          }
+        } else {
+          // Fallback to old method if session doesn't exist
+          const storedToken = localStorage.getItem('token');
+          if (storedToken) {
+            try {
+              const userData = await authAPI.getProfile();
+              setUser(userData);
+              setToken(storedToken);
+              
+              // Migrate to new session management
+              const expiresAt = sessionManager.getTokenExpiration(storedToken);
+              sessionManager.saveSession({
+                token: storedToken,
+                user: userData,
+                lastActivity: Date.now(),
+                expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
+                rememberMe: false,
+              });
+            } catch (error) {
+              console.error('Auth initialization failed:', error);
+              localStorage.removeItem('token');
+              sessionManager.clearSession();
+            }
+          }
         }
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     initializeAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  // Setup session expiration handlers
+  useEffect(() => {
+    sessionManager.onExpired(() => {
+      setToken(null);
+      setUser(null);
+      toast.error('Your session has expired. Please log in again.');
+      
+      // Redirect to login if not already there
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    });
+  }, []);
+
+  // Token refresh function
+  const refreshTokenInternal = async () => {
+    const currentToken = localStorage.getItem('token');
+    if (!currentToken) {
+      throw new Error('No token to refresh');
+    }
+
+    try {
+      // Get fresh user data which will include a new token if backend supports it
+      const userData = await authAPI.getProfile();
+      
+      // Update session with fresh data
+      const expiresAt = sessionManager.getTokenExpiration(currentToken);
+      sessionManager.saveSession({
+        token: currentToken,
+        user: userData,
+        lastActivity: Date.now(),
+        expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
+        rememberMe,
+      });
+      
+      setUser(userData);
+      console.log('Token refreshed successfully');
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      throw error;
+    }
+  };
+
+  const refreshToken = useCallback(async () => {
+    try {
+      await refreshTokenInternal();
+    } catch (error) {
+      console.error('Manual token refresh failed:', error);
+      throw error;
+    }
+  }, [rememberMe]);
+
+  // Setup automatic token refresh
+  useEffect(() => {
+    if (!token) return;
+
+    const expiresAt = sessionManager.getTokenExpiration(token);
+    if (!expiresAt) return;
+
+    const checkAndRefresh = async () => {
+      if (sessionManager.shouldRefreshToken(expiresAt)) {
+        try {
+          await refreshTokenInternal();
+        } catch (error) {
+          console.error('Auto token refresh failed:', error);
+        }
+      }
+    };
+
+    // Check every 10 minutes
+    const interval = setInterval(checkAndRefresh, 10 * 60 * 1000);
+    
+    // Also check immediately
+    checkAndRefresh();
+
+    return () => clearInterval(interval);
+  }, [token, rememberMe]);
+
+  const login = async (email: string, password: string, remember: boolean = false) => {
     try {
       console.log('AuthContext: Starting login for:', email);
       const response = await authAPI.login({ email, password });
@@ -77,9 +199,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         throw new Error('No user data received');
       }
       
+      // Save to localStorage for backward compatibility
       localStorage.setItem('token', response.access_token);
       setToken(response.access_token);
       setUser(response.user);
+      setRememberMeState(remember);
+      
+      // Save session with encryption
+      const expiresAt = sessionManager.getTokenExpiration(response.access_token);
+      sessionManager.saveSession({
+        token: response.access_token,
+        user: response.user,
+        lastActivity: Date.now(),
+        expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
+        rememberMe: remember,
+      });
+      
       console.log('AuthContext: Login successful, user set:', response.user);
       toast.success('Login successful!');
     } catch (error: any) {
@@ -96,9 +231,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (!response?.access_token || !response?.user) {
         throw new Error(response?.message || 'Registration failed');
       }
+      
       localStorage.setItem('token', response.access_token);
       setToken(response.access_token);
       setUser(response.user);
+      
+      // Save session
+      const expiresAt = sessionManager.getTokenExpiration(response.access_token);
+      sessionManager.saveSession({
+        token: response.access_token,
+        user: response.user,
+        lastActivity: Date.now(),
+        expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
+        rememberMe: false,
+      });
+      
       toast.success('Registration successful!');
     } catch (error: any) {
       const message = error?.response?.data?.message || error?.message || 'Registration failed';
@@ -111,6 +258,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    sessionManager.clearSession();
     toast.success('Logged out successfully');
   };
 
@@ -118,10 +266,31 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const updatedUser = await authAPI.updateProfile(data);
       setUser(updatedUser);
+      
+      // Update session with new user data
+      const savedSession = sessionManager.loadSession();
+      if (savedSession) {
+        sessionManager.saveSession({
+          ...savedSession,
+          user: updatedUser,
+        });
+      }
+      
       toast.success('Profile updated successfully!');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Profile update failed');
       throw error;
+    }
+  };
+
+  const setRememberMe = (remember: boolean) => {
+    setRememberMeState(remember);
+    const savedSession = sessionManager.loadSession();
+    if (savedSession) {
+      sessionManager.saveSession({
+        ...savedSession,
+        rememberMe: remember,
+      });
     }
   };
 
@@ -130,10 +299,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     token,
     isLoading,
     isAuthenticated: !!user,
+    rememberMe,
     login,
     register,
     logout,
     updateProfile,
+    refreshToken,
+    setRememberMe,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
