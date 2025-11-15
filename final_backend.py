@@ -1284,30 +1284,55 @@ def create_conversation():
         if existing:
             conversation_id = existing["id"]
         else:
-            # Create new conversation
+            # Atomically create new conversation, or get existing one if already present
             now = datetime.now(timezone.utc)
             if USE_POSTGRESQL:
                 cursor.execute(
                     """
                     INSERT INTO conversations (participant_1_id, participant_2_id, created_at, updated_at)
                     VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (participant_1_id, participant_2_id) DO NOTHING
                     RETURNING id
                 """,
                     (user_id, other_user_id, now, now),
                 )
-                conversation_id = cursor.fetchone()["id"]
+                result = cursor.fetchone()
+                if result and result.get("id"):
+                    conversation_id = result["id"]
+                else:
+                    # Insert did not happen due to conflict, fetch existing id
+                    cursor.execute(
+                        """
+                        SELECT id FROM conversations
+                        WHERE (participant_1_id = %s AND participant_2_id = %s)
+                           OR (participant_1_id = %s AND participant_2_id = %s)
+                        """,
+                        (user_id, other_user_id, other_user_id, user_id),
+                    )
+                    conversation_id = cursor.fetchone()["id"]
             else:
                 cursor.execute(
                     """
-                    INSERT INTO conversations (participant_1_id, participant_2_id, created_at, updated_at)
+                    INSERT OR IGNORE INTO conversations (participant_1_id, participant_2_id, created_at, updated_at)
                     VALUES (?, ?, ?, ?)
                 """,
                     (user_id, other_user_id, now, now),
                 )
-                conversation_id = cursor.lastrowid
+                if cursor.lastrowid:
+                    conversation_id = cursor.lastrowid
+                else:
+                    # Insert was ignored due to conflict, fetch existing id
+                    cursor.execute(
+                        """
+                        SELECT id FROM conversations
+                        WHERE (participant_1_id = ? AND participant_2_id = ?)
+                           OR (participant_1_id = ? AND participant_2_id = ?)
+                    """,
+                        (user_id, other_user_id, other_user_id, user_id),
+                    )
+                    conversation_id = cursor.fetchone()["id"]
 
             conn.commit()
-
         # Fetch the conversation with participant details
         if USE_POSTGRESQL:
             cursor.execute(
