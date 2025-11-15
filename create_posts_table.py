@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Create posts table and add sample data"""
+"""
+Create posts table in the database.
+
+⚠️  NOTE: This script no longer adds sample data by default.
+To add sample data for development, use: python add_sample_posts.py --dev
+"""
 
 import sqlite3
 
@@ -46,38 +51,20 @@ def create_posts_table():
     print(f"Tables: {table_names}")
 
     if "posts" in table_names:
-        print("Posts table created successfully!")
-
-        # Add sample posts
-        sample_posts = [
-            (
-                1,
-                "Welcome to HireBahamas! 🌴 The premier platform for connecting talent with opportunities in the beautiful Bahamas.",
-            ),
-            (
-                1,
-                "Just launched our new job board. Looking for talented developers, designers, and professionals across all industries! #HireBahamas",
-            ),
-            (
-                1,
-                "Beautiful day in Nassau! The perfect environment for innovation and creativity. Join our growing community! ☀️",
-            ),
-        ]
-
-        for user_id, content in sample_posts:
-            cursor.execute(
-                "INSERT INTO posts (user_id, content) VALUES (?, ?)", (user_id, content)
-            )
-
-        conn.commit()
-        print("Added sample posts!")
-
+        print("✅ Posts table created successfully!")
+        
         # Check count
         cursor.execute("SELECT COUNT(*) FROM posts")
         count = cursor.fetchone()[0]
-        print(f"Total posts: {count}")
+        print(f"ℹ️  Total posts in database: {count}")
+        
+        if count == 0:
+            print()
+            print("⚠️  No posts in database yet.")
+            print("   To add sample data for development, run:")
+            print("   python add_sample_posts.py --dev")
     else:
-        print("Posts table creation failed")
+        print("❌ Posts table creation failed")
 
     conn.close()
 
