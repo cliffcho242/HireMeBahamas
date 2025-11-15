@@ -1,316 +1,191 @@
-#!/usr/bin/env python3
-"""
-Stable Login Backend - Focused on login functionality without AI monitoring
-"""
 import os
 import sqlite3
 from datetime import datetime, timedelta
-from pathlib import Path
-
-import bcrypt
-import jwt
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+import bcrypt
+import jwt
 
-# Simple, stable backend for login testing
+# --- Configuration ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "hirebahamas.db")
+# IMPORTANT: Use a more secure, environment-variable-based secret in production
+SECRET_KEY = "your-very-secret-and-secure-key" 
+
+# --- Flask App Initialization ---
 app = Flask(__name__)
+app.config["SECRET_KEY"] = SECRET_KEY
 CORS(
     app,
-    origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-        "http://localhost:3002",
-        "http://127.0.0.1:3002",
-        "http://localhost:3003",
-        "http://127.0.0.1:3003",
-    ],
+    resources={r"/api/*": {"origins": "*"}},  # Be more restrictive in production
+    supports_credentials=True,
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
-app.config["SECRET_KEY"] = "hirebahamas-secret-key-2024"
-
-# Database setup
-DB_PATH = Path(__file__).parent / "backend" / "hirebahamas.db"
-
-
+# --- Database Initialization ---
 def init_database():
-    """Initialize database with admin user"""
+    """Initializes the database and creates tables if they don't exist."""
     print("Initializing database...")
-
-    # Ensure directory exists
-    DB_PATH.parent.mkdir(exist_ok=True)
-
     conn = sqlite3.connect(str(DB_PATH))
     cursor = conn.cursor()
 
-    # Create users table
+    # Create users table with all necessary fields
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
+            email TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
-            username TEXT,
-            full_name TEXT,
-            is_active BOOLEAN DEFAULT TRUE,
+            first_name TEXT,
+            last_name TEXT,
+            user_type TEXT,
+            is_active BOOLEAN DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """
+        """
     )
+    print("Users table checked/created.")
 
-    # Create admin user
-    admin_email = "admin@hirebahamas.com"
-    cursor.execute("SELECT id FROM users WHERE email = ?", (admin_email,))
-    existing_admin = cursor.fetchone()
-
-    if not existing_admin:
+    # Check for admin user and create if not present
+    cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@hiremebahamas.com",))
+    if not cursor.fetchone():
         print("Creating admin user...")
-        password_hash = bcrypt.hashpw("admin123".encode("utf-8"), bcrypt.gensalt())
-
+        password = "AdminPass123!"
+        hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
         cursor.execute(
             """
-            INSERT INTO users (email, password_hash, username, full_name, is_active)
-            VALUES (?, ?, ?, ?, ?)
-        """,
+            INSERT INTO users (email, password_hash, first_name, last_name, user_type, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
             (
-                admin_email,
-                password_hash.decode("utf-8"),
+                "admin@hiremebahamas.com",
+                hashed_password.decode("utf-8"),
+                "Admin",
+                "User",
                 "admin",
-                "Platform Administrator",
                 True,
             ),
         )
-        print("Admin user created successfully")
+        print("Admin user created successfully.")
     else:
-        print("Admin user already exists")
+        print("Admin user already exists.")
 
     conn.commit()
     conn.close()
-    print("Database initialization complete")
+    print("Database initialization complete.")
 
-
+# --- API Endpoints ---
 @app.route("/health", methods=["GET"])
 def health_check():
-    """Health check endpoint"""
-    return (
-        jsonify(
-            {
-                "status": "healthy",
-                "timestamp": datetime.now().isoformat(),
-                "service": "HireBahamas Login API",
-            }
-        ),
-        200,
-    )
-
+    """Health check endpoint."""
+    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()}), 200
 
 @app.route("/api/auth/login", methods=["POST"])
 def login():
-    """Login endpoint"""
+    """Login endpoint."""
     try:
         data = request.get_json()
-
         if not data or not data.get("email") or not data.get("password"):
-            return jsonify({"error": "Email and password are required"}), 400
+            return jsonify({"message": "Email and password are required"}), 400
 
         email = data["email"].lower().strip()
         password = data["password"]
 
-        print(f"Login attempt for: {email}")
-
-        # Get user from database
         conn = sqlite3.connect(str(DB_PATH))
+        conn.row_factory = sqlite3.Row 
         cursor = conn.cursor()
-
-        cursor.execute(
-            """
-            SELECT id, email, password_hash, username, full_name, is_active
-            FROM users WHERE email = ?
-        """,
-            (email,),
-        )
-
-        user = cursor.fetchone()
+        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+        user_data = cursor.fetchone()
         conn.close()
 
-        if not user:
-            print(f"User not found: {email}")
-            return jsonify({"error": "Invalid credentials"}), 401
+        if not user_data:
+            return jsonify({"message": "Invalid credentials"}), 401
+        
+        user_dict = dict(user_data)
 
-        user_id, user_email, password_hash, username, full_name, is_active = user
+        if not user_dict.get("is_active"):
+            return jsonify({"message": "Account is not active"}), 401
 
-        if not is_active:
-            print(f"User account inactive: {email}")
-            return jsonify({"error": "Account inactive"}), 401
+        if not bcrypt.checkpw(password.encode("utf-8"), user_dict["password_hash"].encode("utf-8")):
+            return jsonify({"message": "Invalid credentials"}), 401
 
-        # Verify password
-        try:
-            password_valid = bcrypt.checkpw(
-                password.encode("utf-8"), password_hash.encode("utf-8")
-            )
-        except Exception as e:
-            print(f"Password verification error: {e}")
-            return jsonify({"error": "Authentication error"}), 500
+        token_payload = {
+            "user_id": user_dict["id"],
+            "email": user_dict["email"],
+            "exp": datetime.utcnow() + timedelta(days=30),
+        }
+        token = jwt.encode(token_payload, app.config["SECRET_KEY"], algorithm="HS256")
 
-        if not password_valid:
-            print(f"Invalid password for: {email}")
-            return jsonify({"error": "Invalid credentials"}), 401
-
-        # Generate JWT token
-        try:
-            token_payload = {
-                "user_id": user_id,
-                "email": user_email,
-                "exp": datetime.utcnow() + timedelta(days=30),
-            }
-
-            token = jwt.encode(
-                token_payload, app.config["SECRET_KEY"], algorithm="HS256"
-            )
-
-            print(f"Login successful for: {email}")
-
-            return (
-                jsonify(
-                    {
-                        "token": token,
-                        "user": {
-                            "id": user_id,
-                            "email": user_email,
-                            "username": username,
-                            "full_name": full_name,
-                        },
-                        "message": "Login successful",
-                    }
-                ),
-                200,
-            )
-
-        except Exception as e:
-            print(f"Token generation error: {e}")
-            return jsonify({"error": "Authentication error"}), 500
-
+        return jsonify({
+            "access_token": token,  # Fixed: Changed 'token' to 'access_token'
+            "user": {
+                "id": user_dict["id"],
+                "email": user_dict["email"],
+                "first_name": user_dict["first_name"],
+                "last_name": user_dict["last_name"],
+                "user_type": user_dict["user_type"],
+            },
+            "message": "Login successful",
+        }), 200
+        
     except Exception as e:
-        print(f"Login error: {e}")
-        return jsonify({"error": "Internal server error"}), 500
+        print(f"[Login Error] {e}")
+        return jsonify({"message": "Internal server error"}), 500
 
-
-@app.route("/api/auth/verify", methods=["POST"])
-def verify_token():
-    """Verify JWT token"""
+@app.route("/api/auth/register", methods=["POST"])
+def register():
+    """User registration endpoint."""
     try:
         data = request.get_json()
-        token = data.get("token")
+        required = ["email", "password", "first_name", "last_name", "user_type"]
+        if not data or not all(field in data for field in required):
+            return jsonify({"message": "Missing required fields"}), 400
 
-        if not token:
-            return jsonify({"error": "Token required"}), 400
-
-        payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-
-        return (
-            jsonify(
-                {
-                    "valid": True,
-                    "user_id": payload["user_id"],
-                    "email": payload["email"],
-                }
-            ),
-            200,
-        )
-
-    except jwt.ExpiredSignatureError:
-        return jsonify({"error": "Token expired"}), 401
-    except jwt.InvalidTokenError:
-        return jsonify({"error": "Invalid token"}), 401
-    except Exception as e:
-        print(f"Token verification error: {e}")
-        return jsonify({"error": "Token verification failed"}), 500
-
-
-@app.route("/api/posts", methods=["GET"])
-def get_posts():
-    """Get posts endpoint - placeholder"""
-    return jsonify([]), 200
-
-
-@app.route("/api/posts", methods=["POST"])
-def create_post():
-    """Create post endpoint - placeholder"""
-    return jsonify({"message": "Post created successfully"}), 201
-
-
-@app.route("/api/auth/profile", methods=["GET"])
-def get_profile():
-    """Get user profile"""
-    try:
-        # Extract token from Authorization header
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Authorization token required"}), 401
-
-        token = auth_header.split(" ")[1]
-        payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-
-        # Get user from database
+        email = data["email"].lower().strip()
+        
         conn = sqlite3.connect(str(DB_PATH))
         cursor = conn.cursor()
+        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({"message": "An account with this email already exists"}), 409
 
+        hashed_password = bcrypt.hashpw(data["password"].encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        
         cursor.execute(
-            """
-            SELECT id, email, username, full_name, is_active
-            FROM users WHERE id = ?
-        """,
-            (payload["user_id"],),
+            "INSERT INTO users (email, password_hash, first_name, last_name, user_type) VALUES (?, ?, ?, ?, ?)",
+            (email, hashed_password, data["first_name"], data["last_name"], data["user_type"]),
         )
-
-        user = cursor.fetchone()
+        user_id = cursor.lastrowid
+        conn.commit()
         conn.close()
 
-        if not user:
-            return jsonify({"error": "User not found"}), 404
+        token_payload = {
+            "user_id": user_id,
+            "email": email,
+            "exp": datetime.utcnow() + timedelta(days=30),
+        }
+        token = jwt.encode(token_payload, app.config["SECRET_KEY"], algorithm="HS256")
 
-        user_id, email, username, full_name, is_active = user
+        return jsonify({
+            "access_token": token, # Send token for auto-login
+            "user": {
+                "id": user_id,
+                "email": email,
+                "first_name": data["first_name"],
+                "last_name": data["last_name"],
+                "user_type": data["user_type"],
+            },
+            "message": "Registration successful",
+        }), 201
 
-        return (
-            jsonify(
-                {
-                    "id": user_id,
-                    "email": email,
-                    "username": username,
-                    "full_name": full_name,
-                    "is_active": is_active,
-                }
-            ),
-            200,
-        )
-
-    except jwt.ExpiredSignatureError:
-        return jsonify({"error": "Token expired"}), 401
-    except jwt.InvalidTokenError:
-        return jsonify({"error": "Invalid token"}), 401
     except Exception as e:
-        print(f"Profile error: {e}")
-        return jsonify({"error": "Profile fetch failed"}), 500
+        print(f"[Registration Error] {e}")
+        return jsonify({"message": "Could not process your request"}), 500
 
-
+# --- Main Execution ---
 if __name__ == "__main__":
-    print("Starting stable login backend...")
-    print("Initializing database...")
-
-    try:
-        init_database()
-        print("Database ready")
-
-        print("Starting Flask server...")
-        print("Server: http://127.0.0.1:8008")
-        print("Health: http://127.0.0.1:8008/health")
-        print("Login: http://127.0.0.1:8008/api/auth/login")
-        print("Admin credentials: admin@hirebahamas.com / admin123")
-        print("-" * 50)
-
-        app.run(host="127.0.0.1", port=8008, debug=True, threaded=True)
-
-    except Exception as e:
-        print(f"Startup error: {e}")
-        exit(1)
+    init_database()
+    print("Starting Flask server on http://0.0.0.0:8008")
+    app.run(host="0.0.0.0", port=8008, debug=True)
