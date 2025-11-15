@@ -171,6 +171,16 @@ export const authAPI = {
     return response.data;
   },
 
+  refreshToken: async () => {
+    const response = await api.post('/api/auth/refresh');
+    return response.data;
+  },
+
+  verifySession: async () => {
+    const response = await api.get('/api/auth/verify');
+    return response.data;
+  },
+
   getProfile: async (): Promise<User> => {
     const response = await api.get('/api/auth/profile');
     return response.data;
