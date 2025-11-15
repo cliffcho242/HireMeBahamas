@@ -37,40 +37,10 @@ const Messages: React.FC = () => {
   const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
   const [newMessage, setNewMessage] = useState('');
 
-  const conversations: Conversation[] = [
-    {
-      id: 1,
-      user: { name: 'John Doe', avatar: 'JD', isOnline: true },
-      lastMessage: 'Hey, are you available for a quick call?',
-      time: '2m',
-      unreadCount: 2,
-      messages: [
-        { id: 1, sender: { name: 'John Doe', avatar: 'JD' }, content: 'Hi there!', time: '10:30 AM', isFromMe: false },
-        { id: 2, sender: { name: 'You', avatar: 'YO' }, content: 'Hello! How are you?', time: '10:32 AM', isFromMe: true },
-        { id: 3, sender: { name: 'John Doe', avatar: 'JD' }, content: 'I\'m doing great! Hey, are you available for a quick call?', time: '10:35 AM', isFromMe: false },
-      ]
-    },
-    {
-      id: 2,
-      user: { name: 'Sarah Wilson', avatar: 'SW', isOnline: false },
-      lastMessage: 'Thanks for the update!',
-      time: '1h',
-      unreadCount: 0,
-      messages: [
-        { id: 1, sender: { name: 'Sarah Wilson', avatar: 'SW' }, content: 'Thanks for the update!', time: '9:15 AM', isFromMe: false },
-      ]
-    },
-    {
-      id: 3,
-      user: { name: 'Mike Johnson', avatar: 'MJ', isOnline: true },
-      lastMessage: 'Let me check my schedule',
-      time: '3h',
-      unreadCount: 1,
-      messages: [
-        { id: 1, sender: { name: 'Mike Johnson', avatar: 'MJ' }, content: 'Let me check my schedule', time: '7:45 AM', isFromMe: false },
-      ]
-    }
-  ];
+  // NOTE: Real conversations should be fetched from the API at /api/messages/conversations
+  // This widget component has been cleaned of test data. 
+  // Use the /messages page for full messaging functionality.
+  const conversations: Conversation[] = [];
 
   const selectedConv = conversations.find(c => c.id === selectedConversation);
 

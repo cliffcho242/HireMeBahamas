@@ -62,20 +62,28 @@ const Messages: React.FC = () => {
   useEffect(() => {
     if (socket && user) {
       socket.on('new_message', (message: Message) => {
+        // Validate that the message belongs to a conversation the user is part of
         if (selectedConversation && message.conversation_id === selectedConversation.id) {
-          setSelectedConversation(prev => prev ? {
-            ...prev,
-            messages: [...prev.messages, message]
-          } : null);
+          // Additional check: ensure the message is from/to the current user
+          if (message.sender_id === user.id || 
+              (selectedConversation.participant_1_id === user.id || 
+               selectedConversation.participant_2_id === user.id)) {
+            setSelectedConversation(prev => prev ? {
+              ...prev,
+              messages: [...prev.messages, message]
+            } : null);
+          }
         }
 
-        // Update the conversation list
+        // Update the conversation list - only if user is participant
         setConversations(prev =>
-          prev.map(conv =>
-            conv.id === message.conversation_id
-              ? { ...conv, messages: [...conv.messages, message] }
-              : conv
-          )
+          prev.map(conv => {
+            if (conv.id === message.conversation_id && 
+                (conv.participant_1_id === user.id || conv.participant_2_id === user.id)) {
+              return { ...conv, messages: [...conv.messages, message] };
+            }
+            return conv;
+          })
         );
       });
 
@@ -88,12 +96,18 @@ const Messages: React.FC = () => {
   const fetchConversations = async () => {
     try {
       const response = await api.get('/messages/conversations');
-      setConversations(response.data);
-      if (response.data.length > 0) {
-        setSelectedConversation(response.data[0]);
+      // Client-side validation: ensure all conversations involve the current user
+      const validConversations = response.data.filter((conv: Conversation) => 
+        user && (conv.participant_1_id === user.id || conv.participant_2_id === user.id)
+      );
+      setConversations(validConversations);
+      if (validConversations.length > 0) {
+        setSelectedConversation(validConversations[0]);
       }
     } catch (error) {
       console.error('Error fetching conversations:', error);
+      // Show empty state on error
+      setConversations([]);
     } finally {
       setLoading(false);
     }
@@ -102,6 +116,13 @@ const Messages: React.FC = () => {
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedConversation || !user) return;
+
+    // Client-side validation: ensure user is a participant
+    if (selectedConversation.participant_1_id !== user.id && 
+        selectedConversation.participant_2_id !== user.id) {
+      alert('You are not authorized to send messages in this conversation.');
+      return;
+    }
 
     setSending(true);
     try {

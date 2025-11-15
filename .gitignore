@@ -54,3 +54,5 @@ htmlcov/
 *.key
 .vercel
 .railway
+*.db
+create_test_users.py

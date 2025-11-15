@@ -312,6 +312,38 @@ def init_database():
                 """
                 )
 
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        id SERIAL PRIMARY KEY,
+                        participant_1_id INTEGER NOT NULL,
+                        participant_2_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (participant_1_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (participant_2_id) REFERENCES users (id) ON DELETE CASCADE,
+                        UNIQUE(participant_1_id, participant_2_id)
+                    )
+                """
+                )
+
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS messages (
+                        id SERIAL PRIMARY KEY,
+                        conversation_id INTEGER NOT NULL,
+                        sender_id INTEGER NOT NULL,
+                        receiver_id INTEGER NOT NULL,
+                        content TEXT NOT NULL,
+                        is_read BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
+                        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+
             else:
                 # SQLite syntax (original)
                 cursor.execute(
@@ -417,6 +449,38 @@ def init_database():
                 """
                 )
 
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        participant_1_id INTEGER NOT NULL,
+                        participant_2_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (participant_1_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (participant_2_id) REFERENCES users (id) ON DELETE CASCADE,
+                        UNIQUE(participant_1_id, participant_2_id)
+                    )
+                """
+                )
+
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS messages (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        conversation_id INTEGER NOT NULL,
+                        sender_id INTEGER NOT NULL,
+                        receiver_id INTEGER NOT NULL,
+                        content TEXT NOT NULL,
+                        is_read BOOLEAN DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
+                        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+
             conn.commit()
             print("✅ Database tables created successfully!")
 
@@ -482,6 +546,35 @@ def migrate_user_columns(cursor, conn):
 
 # Initialize database on startup
 init_database()
+
+
+# ==========================================
+# AUTHENTICATION HELPER FUNCTIONS
+# ==========================================
+
+
+def get_current_user():
+    """Get current user from JWT token"""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+
+    token = auth_header.split(" ")[1]
+    try:
+        payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+
+def require_auth():
+    """Decorator to require authentication"""
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "message": "Authentication required"}), 401
+    return None
 
 
 # ==========================================
@@ -809,6 +902,472 @@ def login():
         print(f"Login error: {str(e)}")
         return (
             jsonify({"success": False, "message": f"Login failed: {str(e)}"}),
+            500,
+        )
+
+
+# ==========================================
+# MESSAGES ENDPOINTS
+# ==========================================
+
+
+@app.route("/api/messages/conversations", methods=["GET", "OPTIONS"])
+def get_conversations():
+    """Get all conversations for the current user"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    # Check authentication
+    auth_error = require_auth()
+    if auth_error:
+        return auth_error
+
+    try:
+        current_user = get_current_user()
+        user_id = current_user["user_id"]
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get all conversations where user is a participant
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT c.*, 
+                       u1.id as p1_id, u1.first_name as p1_first, u1.last_name as p1_last,
+                       u2.id as p2_id, u2.first_name as p2_first, u2.last_name as p2_last
+                FROM conversations c
+                JOIN users u1 ON c.participant_1_id = u1.id
+                JOIN users u2 ON c.participant_2_id = u2.id
+                WHERE c.participant_1_id = %s OR c.participant_2_id = %s
+                ORDER BY c.updated_at DESC
+            """,
+                (user_id, user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT c.*, 
+                       u1.id as p1_id, u1.first_name as p1_first, u1.last_name as p1_last,
+                       u2.id as p2_id, u2.first_name as p2_first, u2.last_name as p2_last
+                FROM conversations c
+                JOIN users u1 ON c.participant_1_id = u1.id
+                JOIN users u2 ON c.participant_2_id = u2.id
+                WHERE c.participant_1_id = ? OR c.participant_2_id = ?
+                ORDER BY c.updated_at DESC
+            """,
+                (user_id, user_id),
+            )
+
+        conversations = cursor.fetchall()
+
+        result = []
+        for conv in conversations:
+            # Get messages for this conversation
+            if USE_POSTGRESQL:
+                cursor.execute(
+                    """
+                    SELECT m.*, 
+                           u.id as sender_id, u.first_name as sender_first, u.last_name as sender_last
+                    FROM messages m
+                    JOIN users u ON m.sender_id = u.id
+                    WHERE m.conversation_id = %s
+                    ORDER BY m.created_at ASC
+                """,
+                    (conv["id"],),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT m.*, 
+                           u.id as sender_id, u.first_name as sender_first, u.last_name as sender_last
+                    FROM messages m
+                    JOIN users u ON m.sender_id = u.id
+                    WHERE m.conversation_id = ?
+                    ORDER BY m.created_at ASC
+                """,
+                    (conv["id"],),
+                )
+
+            messages = cursor.fetchall()
+            messages_list = [
+                {
+                    "id": msg["id"],
+                    "content": msg["content"],
+                    "sender_id": msg["sender_id"],
+                    "conversation_id": msg["conversation_id"],
+                    "created_at": msg["created_at"],
+                    "sender": {
+                        "first_name": msg["sender_first"],
+                        "last_name": msg["sender_last"],
+                    },
+                }
+                for msg in messages
+            ]
+
+            result.append(
+                {
+                    "id": conv["id"],
+                    "participant_1_id": conv["p1_id"],
+                    "participant_2_id": conv["p2_id"],
+                    "created_at": conv["created_at"],
+                    "updated_at": conv["updated_at"],
+                    "participant_1": {
+                        "first_name": conv["p1_first"],
+                        "last_name": conv["p1_last"],
+                    },
+                    "participant_2": {
+                        "first_name": conv["p2_first"],
+                        "last_name": conv["p2_last"],
+                    },
+                    "messages": messages_list,
+                }
+            )
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print(f"Error fetching conversations: {str(e)}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": f"Error fetching conversations: {str(e)}",
+                }
+            ),
+            500,
+        )
+
+
+@app.route("/api/messages/", methods=["POST", "OPTIONS"])
+def send_message():
+    """Send a message in a conversation"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    # Check authentication
+    auth_error = require_auth()
+    if auth_error:
+        return auth_error
+
+    try:
+        current_user = get_current_user()
+        user_id = current_user["user_id"]
+
+        data = request.get_json()
+        conversation_id = data.get("conversation_id")
+        content = data.get("content", "").strip()
+
+        if not conversation_id or not content:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "conversation_id and content are required",
+                    }
+                ),
+                400,
+            )
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Verify user is participant in this conversation
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT participant_1_id, participant_2_id 
+                FROM conversations 
+                WHERE id = %s
+            """,
+                (conversation_id,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT participant_1_id, participant_2_id 
+                FROM conversations 
+                WHERE id = ?
+            """,
+                (conversation_id,),
+            )
+
+        conversation = cursor.fetchone()
+
+        if not conversation:
+            cursor.close()
+            conn.close()
+            return (
+                jsonify({"success": False, "message": "Conversation not found"}),
+                404,
+            )
+
+        # Check if current user is a participant
+        if (
+            conversation["participant_1_id"] != user_id
+            and conversation["participant_2_id"] != user_id
+        ):
+            cursor.close()
+            conn.close()
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "You are not a participant in this conversation",
+                    }
+                ),
+                403,
+            )
+
+        # Determine receiver
+        receiver_id = (
+            conversation["participant_2_id"]
+            if conversation["participant_1_id"] == user_id
+            else conversation["participant_1_id"]
+        )
+
+        # Insert message
+        now = datetime.now(timezone.utc)
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                INSERT INTO messages (conversation_id, sender_id, receiver_id, content, created_at)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
+            """,
+                (conversation_id, user_id, receiver_id, content, now),
+            )
+            message_id = cursor.fetchone()["id"]
+
+            # Update conversation updated_at
+            cursor.execute(
+                """
+                UPDATE conversations 
+                SET updated_at = %s 
+                WHERE id = %s
+            """,
+                (now, conversation_id),
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT INTO messages (conversation_id, sender_id, receiver_id, content, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            """,
+                (conversation_id, user_id, receiver_id, content, now),
+            )
+            message_id = cursor.lastrowid
+
+            # Update conversation updated_at
+            cursor.execute(
+                """
+                UPDATE conversations 
+                SET updated_at = ? 
+                WHERE id = ?
+            """,
+                (now, conversation_id),
+            )
+
+        conn.commit()
+
+        # Fetch the created message with sender info
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT m.*, u.first_name, u.last_name
+                FROM messages m
+                JOIN users u ON m.sender_id = u.id
+                WHERE m.id = %s
+            """,
+                (message_id,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT m.*, u.first_name, u.last_name
+                FROM messages m
+                JOIN users u ON m.sender_id = u.id
+                WHERE m.id = ?
+            """,
+                (message_id,),
+            )
+
+        message = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        return (
+            jsonify(
+                {
+                    "id": message["id"],
+                    "content": message["content"],
+                    "sender_id": message["sender_id"],
+                    "conversation_id": message["conversation_id"],
+                    "created_at": message["created_at"],
+                    "sender": {
+                        "first_name": message["first_name"],
+                        "last_name": message["last_name"],
+                    },
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        print(f"Error sending message: {str(e)}")
+        return (
+            jsonify({"success": False, "message": f"Error sending message: {str(e)}"}),
+            500,
+        )
+
+
+@app.route("/api/messages/conversations", methods=["POST", "OPTIONS"])
+def create_conversation():
+    """Create or get existing conversation with another user"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    # Check authentication
+    auth_error = require_auth()
+    if auth_error:
+        return auth_error
+
+    try:
+        current_user = get_current_user()
+        user_id = current_user["user_id"]
+
+        data = request.get_json()
+        other_user_id = data.get("participant_id")
+
+        if not other_user_id:
+            return (
+                jsonify({"success": False, "message": "participant_id is required"}),
+                400,
+            )
+
+        if other_user_id == user_id:
+            return (
+                jsonify(
+                    {"success": False, "message": "Cannot create conversation with self"}
+                ),
+                400,
+            )
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if conversation already exists (in either direction)
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT id FROM conversations
+                WHERE (participant_1_id = %s AND participant_2_id = %s)
+                   OR (participant_1_id = %s AND participant_2_id = %s)
+            """,
+                (user_id, other_user_id, other_user_id, user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id FROM conversations
+                WHERE (participant_1_id = ? AND participant_2_id = ?)
+                   OR (participant_1_id = ? AND participant_2_id = ?)
+            """,
+                (user_id, other_user_id, other_user_id, user_id),
+            )
+
+        existing = cursor.fetchone()
+
+        if existing:
+            conversation_id = existing["id"]
+        else:
+            # Create new conversation
+            now = datetime.now(timezone.utc)
+            if USE_POSTGRESQL:
+                cursor.execute(
+                    """
+                    INSERT INTO conversations (participant_1_id, participant_2_id, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id
+                """,
+                    (user_id, other_user_id, now, now),
+                )
+                conversation_id = cursor.fetchone()["id"]
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO conversations (participant_1_id, participant_2_id, created_at, updated_at)
+                    VALUES (?, ?, ?, ?)
+                """,
+                    (user_id, other_user_id, now, now),
+                )
+                conversation_id = cursor.lastrowid
+
+            conn.commit()
+
+        # Fetch the conversation with participant details
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT c.*, 
+                       u1.id as p1_id, u1.first_name as p1_first, u1.last_name as p1_last,
+                       u2.id as p2_id, u2.first_name as p2_first, u2.last_name as p2_last
+                FROM conversations c
+                JOIN users u1 ON c.participant_1_id = u1.id
+                JOIN users u2 ON c.participant_2_id = u2.id
+                WHERE c.id = %s
+            """,
+                (conversation_id,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT c.*, 
+                       u1.id as p1_id, u1.first_name as p1_first, u1.last_name as p1_last,
+                       u2.id as p2_id, u2.first_name as p2_first, u2.last_name as p2_last
+                FROM conversations c
+                JOIN users u1 ON c.participant_1_id = u1.id
+                JOIN users u2 ON c.participant_2_id = u2.id
+                WHERE c.id = ?
+            """,
+                (conversation_id,),
+            )
+
+        conv = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        return (
+            jsonify(
+                {
+                    "id": conv["id"],
+                    "participant_1_id": conv["p1_id"],
+                    "participant_2_id": conv["p2_id"],
+                    "created_at": conv["created_at"],
+                    "updated_at": conv["updated_at"],
+                    "participant_1": {
+                        "first_name": conv["p1_first"],
+                        "last_name": conv["p1_last"],
+                    },
+                    "participant_2": {
+                        "first_name": conv["p2_first"],
+                        "last_name": conv["p2_last"],
+                    },
+                    "messages": [],
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        print(f"Error creating conversation: {str(e)}")
+        return (
+            jsonify(
+                {"success": False, "message": f"Error creating conversation: {str(e)}"}
+            ),
             500,
         )
 
