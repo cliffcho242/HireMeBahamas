@@ -9,6 +9,7 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
+from production_utils import is_production
 
 
 def check_database():
@@ -38,9 +39,9 @@ def check_database():
         print(f"✅ Found {count} posts in database")
 
         if count == 0:
-            print("⚠️ No posts found, creating sample posts...")
-            create_sample_posts(cursor)
-            conn.commit()
+            print("⚠️  No posts found in database")
+            print("   To add sample data for development, run:")
+            print("   python add_sample_posts.py --dev")
 
         # Test posts query
         cursor.execute(
@@ -63,28 +64,15 @@ def check_database():
 
 
 def create_sample_posts(cursor):
-    """Create sample posts if none exist"""
-    sample_posts = [
-        (
-            1,
-            "Welcome to HireBahamas! 🌴 The premier platform for connecting talent with opportunities in the beautiful Bahamas.",
-        ),
-        (
-            1,
-            "Just launched our new job board. Looking for talented developers, designers, and professionals across all industries! #HireBahamas",
-        ),
-        (
-            1,
-            "Beautiful day in Nassau! The perfect environment for innovation and creativity. Join our growing community! ☀️",
-        ),
-    ]
-
-    for user_id, content in sample_posts:
-        cursor.execute(
-            "INSERT INTO posts (user_id, content) VALUES (?, ?)", (user_id, content)
-        )
-
-    print("✅ Created sample posts")
+    """
+    DEPRECATED: This function is no longer used to prevent fake data in production.
+    
+    To add sample data for development, use:
+        python add_sample_posts.py --dev
+    """
+    print("⚠️  This function is deprecated and does nothing.")
+    print("   To add sample data, run: python add_sample_posts.py --dev")
+    pass
 
 
 def check_backend_code():

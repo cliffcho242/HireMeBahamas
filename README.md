@@ -39,9 +39,27 @@ cd frontend && npm install
 ```
 
 2. **Database Setup**
-```bash
-python seed_data.py
-```
+
+   **For Development (with sample data):**
+   ```bash
+   python seed_data.py --dev
+   ```
+
+   **For Production (no sample data):**
+   ```bash
+   # Just create tables, no sample data
+   python create_posts_table.py
+   
+   # Set production environment
+   export PRODUCTION=true
+   ```
+   
+   **To clean existing sample data:**
+   ```bash
+   python remove_fake_posts.py
+   ```
+   
+   See [CLEAN_DATABASE.md](CLEAN_DATABASE.md) for detailed cleanup instructions.
 
 3. **Launch Application**
 ```powershell
