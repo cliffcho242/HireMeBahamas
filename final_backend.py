@@ -1266,6 +1266,15 @@ def create_conversation():
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # Verify the other user exists
+        if USE_POSTGRESQL:
+            cursor.execute("SELECT id FROM users WHERE id = %s", (other_user_id,))
+        else:
+            cursor.execute("SELECT id FROM users WHERE id = ?", (other_user_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "User not found"}), 404
         # Check if conversation already exists (in either direction)
         if USE_POSTGRESQL:
             cursor.execute(
