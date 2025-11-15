@@ -127,21 +127,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
 
     try {
-      // Get fresh user data which will include a new token if backend supports it
-      const userData = await authAPI.getProfile();
+      // Call refresh token endpoint
+      const response = await authAPI.refreshToken();
       
-      // Update session with fresh data
-      const expiresAt = sessionManager.getTokenExpiration(currentToken);
-      sessionManager.saveSession({
-        token: currentToken,
-        user: userData,
-        lastActivity: Date.now(),
-        expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
-        rememberMe,
-      });
-      
-      setUser(userData);
-      console.log('Token refreshed successfully');
+      if (response.access_token) {
+        // Update with new token
+        localStorage.setItem('token', response.access_token);
+        setToken(response.access_token);
+        setUser(response.user);
+        
+        // Update session with new token and data
+        const expiresAt = sessionManager.getTokenExpiration(response.access_token);
+        sessionManager.saveSession({
+          token: response.access_token,
+          user: response.user,
+          lastActivity: Date.now(),
+          expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
+          rememberMe,
+        });
+        
+        console.log('Token refreshed successfully');
+      } else {
+        throw new Error('No token in refresh response');
+      }
     } catch (error) {
       console.error('Token refresh failed:', error);
       throw error;
