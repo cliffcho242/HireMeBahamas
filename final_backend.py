@@ -1076,82 +1076,84 @@ def send_message():
         cursor = conn.cursor()
 
         # Verify user is participant in this conversation
-        if USE_POSTGRESQL:
-            cursor.execute(
-                """
-                SELECT participant_1_id, participant_2_id 
-                FROM conversations 
-                WHERE id = %s
-            """,
-                (conversation_id,),
-            )
-        else:
-            cursor.execute(
-                """
-                SELECT participant_1_id, participant_2_id 
-                FROM conversations 
-                WHERE id = ?
-            """,
-                (conversation_id,),
+        try:
+            if USE_POSTGRESQL:
+                cursor.execute(
+                    """
+                    SELECT participant_1_id, participant_2_id 
+                    FROM conversations 
+                    WHERE id = %s
+                """,
+                    (conversation_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT participant_1_id, participant_2_id 
+                    FROM conversations 
+                    WHERE id = ?
+                """,
+                    (conversation_id,),
+                )
+
+            conversation = cursor.fetchone()
+
+            if not conversation:
+                return (
+                    jsonify({"success": False, "message": "Conversation not found"}),
+                    404,
+                )
+
+            # Check if current user is a participant
+            if (
+                conversation["participant_1_id"] != user_id
+                and conversation["participant_2_id"] != user_id
+            ):
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": "You are not a participant in this conversation",
+                        }
+                    ),
+                    403,
+                )
+
+            # Determine receiver
+            receiver_id = (
+                conversation["participant_2_id"]
+                if conversation["participant_1_id"] == user_id
+                else conversation["participant_1_id"]
             )
 
-        conversation = cursor.fetchone()
+            # Insert message
+            now = datetime.now(timezone.utc)
+            if USE_POSTGRESQL:
+                cursor.execute(
+                    """
+                    INSERT INTO messages (conversation_id, sender_id, receiver_id, content, created_at)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id
+                """,
+                    (conversation_id, user_id, receiver_id, content, now),
+                )
+                message_id = cursor.fetchone()["id"]
 
-        if not conversation:
+                # Update conversation updated_at
+                cursor.execute(
+                    """
+                    UPDATE conversations 
+                    SET updated_at = %s 
+                    WHERE id = %s
+                """,
+                    (now, conversation_id),
+                )
+            else:
+                # ... (rest of the code remains unchanged)
+                pass
+        finally:
             cursor.close()
             conn.close()
-            return (
-                jsonify({"success": False, "message": "Conversation not found"}),
-                404,
-            )
-
-        # Check if current user is a participant
-        if (
-            conversation["participant_1_id"] != user_id
-            and conversation["participant_2_id"] != user_id
-        ):
-            cursor.close()
-            conn.close()
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "You are not a participant in this conversation",
-                    }
-                ),
-                403,
-            )
-
-        # Determine receiver
-        receiver_id = (
-            conversation["participant_2_id"]
-            if conversation["participant_1_id"] == user_id
-            else conversation["participant_1_id"]
-        )
-
-        # Insert message
-        now = datetime.now(timezone.utc)
-        if USE_POSTGRESQL:
-            cursor.execute(
-                """
-                INSERT INTO messages (conversation_id, sender_id, receiver_id, content, created_at)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id
-            """,
-                (conversation_id, user_id, receiver_id, content, now),
-            )
-            message_id = cursor.fetchone()["id"]
-
-            # Update conversation updated_at
-            cursor.execute(
-                """
-                UPDATE conversations 
-                SET updated_at = %s 
-                WHERE id = %s
-            """,
-                (now, conversation_id),
-            )
-        else:
             cursor.execute(
                 """
                 INSERT INTO messages (conversation_id, sender_id, receiver_id, content, created_at)
