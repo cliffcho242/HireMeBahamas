@@ -95,13 +95,20 @@ const Messages: React.FC = () => {
   const fetchConversations = async () => {
     try {
       const response = await api.get('/messages/conversations');
-      // Client-side validation: ensure all conversations involve the current user
-      const validConversations = response.data.filter((conv: Conversation) => 
-        user && (conv.participant_1_id === user.id || conv.participant_2_id === user.id)
-      );
-      setConversations(validConversations);
-      if (validConversations.length > 0) {
-        setSelectedConversation(validConversations[0]);
+      // Assert that all conversations involve the current user; log error if not
+      if (user) {
+        response.data.forEach((conv: Conversation) => {
+          if (conv.participant_1_id !== user.id && conv.participant_2_id !== user.id) {
+            console.error(
+              `Backend returned conversation ${conv.id} not involving current user ${user.id}:`,
+              conv
+            );
+          }
+        });
+      }
+      setConversations(response.data);
+      if (response.data.length > 0) {
+        setSelectedConversation(response.data[0]);
       }
     } catch (error) {
       console.error('Error fetching conversations:', error);
