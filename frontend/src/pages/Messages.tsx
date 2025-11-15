@@ -116,12 +116,7 @@ const Messages: React.FC = () => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedConversation || !user) return;
 
-    // Client-side validation: ensure user is a participant
-    if (selectedConversation.participant_1_id !== user.id && 
-        selectedConversation.participant_2_id !== user.id) {
-      alert('You are not authorized to send messages in this conversation.');
-      return;
-    }
+    // Backend will validate user authorization to send messages
 
     setSending(true);
     try {
