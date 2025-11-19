@@ -1,0 +1,40 @@
+# Vercel ignore file - exclude backend files from frontend deployment
+
+# Backend Python files
+
+_.py
+requirements.txt
+pyproject.toml
+nixpacks.toml
+railway.json
+Procfile
+_.db
+\*.sqlite3
+
+# Backend directories
+
+backend/
+**pycache**/
+
+# Development files
+
+\*.log
+.env
+.venv/
+venv/
+
+# Admin panel (if separate deployment)
+
+admin_panel/
+
+# Documentation and scripts not needed in production
+
+_.md
+_.ps1
+_.sh
+_.bat
+
+# Git files
+
+.git/
+.gitignore

@@ -1,3 +1,12 @@
+# Python project configuration for HireMeBahamas Backend
+# Dependencies are managed in requirements.txt
+
+[project]
+name = "hiremebahamas-backend"
+version = "1.0.0"
+requires-python = ">=3.12"
+description = "HireMeBahamas Flask Backend API"
+
 [tool.black]
 line-length = 88
 target-version = ['py38', 'py39', 'py310', 'py311']
