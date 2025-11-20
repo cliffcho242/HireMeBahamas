@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HireMeBahamas - Dependency Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .status-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-card h3 {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .status-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .status-card .label {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .status-healthy {
+            color: #10b981;
+        }
+
+        .status-warning {
+            color: #f59e0b;
+        }
+
+        .status-error {
+            color: #ef4444;
+        }
+
+        .dependencies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .dependency-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .dependency-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dependency-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .dependency-item:last-child {
+            border-bottom: none;
+        }
+
+        .dependency-name {
+            font-weight: 500;
+        }
+
+        .dependency-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.active {
+            background-color: #10b981;
+        }
+
+        .status-indicator.inactive {
+            background-color: #ef4444;
+        }
+
+        .status-indicator.warning {
+            background-color: #f59e0b;
+        }
+
+        .version {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .actions {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .actions h2 {
+            margin-bottom: 15px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .error {
+            background: #ef4444;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .last-updated {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            opacity: 0.8;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading-pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 HireMeBahamas</h1>
+            <p>Dependency Health Dashboard</p>
+        </div>
+
+        <div id="loading" class="loading loading-pulse">
+            Loading dependency status...
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="content" style="display: none;">
+            <div class="status-overview">
+                <div class="status-card">
+                    <h3>Overall Status</h3>
+                    <div class="value" id="overall-status">-</div>
+                    <div class="label">System Health</div>
+                </div>
+                <div class="status-card">
+                    <h3>Active Dependencies</h3>
+                    <div class="value status-healthy" id="active-count">-</div>
+                    <div class="label">Dependencies Running</div>
+                </div>
+                <div class="status-card">
+                    <h3>Missing Dependencies</h3>
+                    <div class="value status-error" id="missing-count">-</div>
+                    <div class="label">Need Installation</div>
+                </div>
+                <div class="status-card">
+                    <h3>Last Check</h3>
+                    <div class="value" id="last-check" style="font-size: 1rem;">-</div>
+                    <div class="label">Timestamp</div>
+                </div>
+            </div>
+
+            <div class="dependencies-grid">
+                <div class="dependency-card">
+                    <h2>🐍 Backend Dependencies</h2>
+                    <div id="backend-deps"></div>
+                </div>
+                <div class="dependency-card">
+                    <h2>⚛️ Frontend Dependencies</h2>
+                    <div id="frontend-deps"></div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <h2>🛠️ Quick Actions</h2>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="refreshStatus()">🔄 Refresh Status</button>
+                    <button class="btn btn-success" onclick="runActivation()">✅ Activate All</button>
+                    <button class="btn btn-warning" onclick="runRecovery()">🔧 Auto-Recover</button>
+                    <button class="btn btn-primary" onclick="viewReport()">📊 View Report</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="last-updated" id="last-updated"></div>
+    </div>
+
+    <script>
+        let currentData = null;
+
+        async function fetchDependencyStatus() {
+            try {
+                const response = await fetch('/api/health/dependencies');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching dependency status:', error);
+                throw error;
+            }
+        }
+
+        function renderDependencies(data) {
+            currentData = data;
+
+            // Hide loading, show content
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+
+            // Update overall status
+            const overallStatus = document.getElementById('overall-status');
+            overallStatus.textContent = data.status.toUpperCase();
+            overallStatus.className = `value status-${data.status === 'healthy' ? 'healthy' : 'error'}`;
+
+            // Count active and missing
+            const backend = data.dependencies?.backend || {};
+            let activeCount = 0;
+            let totalCount = 0;
+
+            for (const [key, dep] of Object.entries(backend)) {
+                totalCount++;
+                if (dep.active) activeCount++;
+            }
+
+            document.getElementById('active-count').textContent = activeCount;
+            document.getElementById('missing-count').textContent = data.missing_dependencies?.length || 0;
+            
+            // Format timestamp
+            const timestamp = new Date(data.timestamp);
+            document.getElementById('last-check').textContent = timestamp.toLocaleTimeString();
+
+            // Render backend dependencies
+            const backendHtml = Object.entries(backend)
+                .map(([name, dep]) => {
+                    const statusClass = dep.active ? 'active' : 'inactive';
+                    const version = dep.version || dep.note || 'N/A';
+                    return `
+                        <div class="dependency-item">
+                            <div class="dependency-name">${name}</div>
+                            <div class="dependency-status">
+                                <span class="version">${version}</span>
+                                <div class="status-indicator ${statusClass}"></div>
+                            </div>
+                        </div>
+                    `;
+                })
+                .join('');
+            document.getElementById('backend-deps').innerHTML = backendHtml;
+
+            // Render frontend dependencies
+            const frontend = data.dependencies?.frontend || {};
+            const frontendHtml = Object.entries(frontend)
+                .map(([name, dep]) => {
+                    const statusClass = dep.active ? 'active' : 'inactive';
+                    const version = dep.version || 'N/A';
+                    return `
+                        <div class="dependency-item">
+                            <div class="dependency-name">${name}</div>
+                            <div class="dependency-status">
+                                <span class="version">${version}</span>
+                                <div class="status-indicator ${statusClass}"></div>
+                            </div>
+                        </div>
+                    `;
+                })
+                .join('');
+            document.getElementById('frontend-deps').innerHTML = frontendHtml || '<div class="dependency-item">No frontend data available</div>';
+
+            // Update last updated time
+            document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleString()}`;
+        }
+
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'none';
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = `❌ Error: ${message}`;
+            errorDiv.style.display = 'block';
+        }
+
+        async function refreshStatus() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('content').style.display = 'none';
+            
+            try {
+                const data = await fetchDependencyStatus();
+                renderDependencies(data);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function runActivation() {
+            alert('To activate all dependencies, run:\npython scripts/activate_all_dependencies.py');
+        }
+
+        function runRecovery() {
+            alert('To run auto-recovery, run:\npython scripts/auto_recover.py');
+        }
+
+        function viewReport() {
+            if (currentData) {
+                const reportWindow = window.open('', '_blank');
+                reportWindow.document.write('<pre>' + JSON.stringify(currentData, null, 2) + '</pre>');
+            } else {
+                alert('No data available. Please refresh first.');
+            }
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(refreshStatus, 30000);
+
+        // Initial load
+        refreshStatus();
+    </script>
+</body>
+</html>

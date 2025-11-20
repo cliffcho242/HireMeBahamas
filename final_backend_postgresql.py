@@ -20,6 +20,33 @@ from flask_limiter.util import get_remote_address
 # Load environment variables from .env file
 load_dotenv()
 
+# ==========================================
+# STARTUP INITIALIZATION
+# ==========================================
+print("=" * 60)
+print("🚀 HireMeBahamas Backend Initialization")
+print("=" * 60)
+
+# Quick dependency check on startup
+try:
+    critical_deps = ["flask", "flask_cors", "flask_limiter", "jwt", "bcrypt"]
+    missing_deps = []
+    
+    for dep in critical_deps:
+        try:
+            __import__(dep)
+        except ImportError:
+            missing_deps.append(dep)
+    
+    if missing_deps:
+        print(f"❌ Missing critical dependencies: {', '.join(missing_deps)}")
+        print("💡 Run: python scripts/activate_all_dependencies.py")
+        raise ImportError(f"Critical dependencies missing: {missing_deps}")
+    
+    print("✅ All critical dependencies loaded")
+except Exception as e:
+    print(f"⚠️  Startup check warning: {str(e)}")
+
 print("Initializing Flask app with PostgreSQL support...")
 app = Flask(__name__)
 
@@ -83,6 +110,14 @@ def allowed_file(filename):
 @cache.cached(timeout=3600)
 def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
+
+# Serve admin dashboard
+@app.route("/admin/dependencies")
+def admin_dependencies():
+    """Serve the dependency dashboard HTML"""
+    admin_panel_path = os.path.join(os.path.dirname(__file__), "admin_panel")
+    return send_from_directory(admin_panel_path, "dependencies.html")
 
 
 # ==========================================
@@ -519,6 +554,96 @@ def health_check():
         ),
         200,
     )
+
+
+@app.route("/api/health/dependencies", methods=["GET"])
+def dependencies_health():
+    """Comprehensive dependency health check endpoint"""
+    import importlib
+    from datetime import datetime
+    
+    def check_package(package_name, import_name=None):
+        """Check if a package is installed"""
+        if import_name is None:
+            import_name = package_name.lower().replace("-", "_")
+        try:
+            module = importlib.import_module(import_name)
+            version = getattr(module, "__version__", "unknown")
+            return {"active": True, "version": version}
+        except ImportError:
+            return {"active": False, "version": "not installed"}
+    
+    def check_redis():
+        """Check Redis status"""
+        try:
+            import redis
+            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+            try:
+                r = redis.from_url(redis_url, socket_connect_timeout=2)
+                start = datetime.utcnow()
+                r.ping()
+                latency = (datetime.utcnow() - start).total_seconds() * 1000
+                return {
+                    "active": True,
+                    "connected": True,
+                    "latency_ms": round(latency, 2)
+                }
+            except Exception:
+                return {"active": False, "connected": False}
+        except ImportError:
+            return {"active": False, "connected": False, "note": "redis-py not installed"}
+    
+    def check_database():
+        """Check database status"""
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
+            conn.close()
+            return {
+                "active": True,
+                "connected": True,
+                "type": "postgresql" if USE_POSTGRESQL else "sqlite"
+            }
+        except Exception as e:
+            return {
+                "active": False,
+                "connected": False,
+                "error": str(e)
+            }
+    
+    # Check backend dependencies
+    backend_deps = {
+        "flask": check_package("Flask", "flask"),
+        "redis": check_redis(),
+        "database": check_database(),
+        "flask_cors": check_package("Flask-CORS", "flask_cors"),
+        "flask_limiter": check_package("Flask-Limiter", "flask_limiter"),
+        "flask_caching": check_package("Flask-Caching", "flask_caching"),
+        "jwt": check_package("PyJWT", "jwt"),
+        "bcrypt": check_package("bcrypt", "bcrypt"),
+    }
+    
+    # Determine status
+    missing = []
+    for name, info in backend_deps.items():
+        if isinstance(info, dict) and not info.get("active", False):
+            if info.get("version") == "not installed":
+                missing.append(name)
+    
+    critical_active = backend_deps["flask"]["active"] and backend_deps["database"]["active"]
+    status = "healthy" if critical_active else "unhealthy"
+    
+    return jsonify({
+        "status": status,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "dependencies": {
+            "backend": backend_deps
+        },
+        "missing_dependencies": missing,
+        "inactive_services": []
+    })
 
 
 # ==========================================
