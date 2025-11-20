@@ -6,8 +6,8 @@ NIXPACKS_NO_MUSL = "1"
 PYTHON_VERSION = "3.12"
 
 [phases.setup]
-aptPkgs = ["build-essential", "libffi-dev"]
+aptPkgs = ["build-essential", "libffi-dev", "libpq-dev", "postgresql-client"]
 
 [start]
-# Migration runs automatically in final_backend.py
-cmd = "gunicorn final_backend:application --bind 0.0.0.0:8080 --workers 4 --timeout 120 --access-logfile - --error-logfile -"
+# Use production-ready backend with PostgreSQL support
+cmd = "gunicorn final_backend_postgresql:application --bind 0.0.0.0:${PORT:-8080} --workers 4 --timeout 120 --log-level info --access-logfile - --error-logfile -"

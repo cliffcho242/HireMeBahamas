@@ -479,8 +479,13 @@ def migrate_user_columns(cursor, conn):
         print(f"⚠️ Migration warning: {e}")
 
 
-# Initialize database on startup
-init_database()
+# Initialize database on startup (wrapped in try-except to not block app startup)
+try:
+    init_database()
+except Exception as e:
+    print(f"⚠️ Database initialization deferred due to error: {e}")
+    print("Database will be initialized on first request if needed.")
+
 
 
 # ==========================================
