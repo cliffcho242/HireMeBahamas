@@ -24,12 +24,46 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 ## 🚀 Quick Start
 
+### 🎯 Automated Installation (Recommended)
+
+**One-command installation for all dependencies:**
+
+#### Linux/macOS
+```bash
+./scripts/install_all_dependencies.sh
+```
+
+#### Windows
+```cmd
+scripts\install_all_dependencies.bat
+```
+
+#### Docker
+```bash
+./scripts/docker_install_all.sh
+```
+
+These scripts will automatically:
+- ✅ Install all system dependencies (Python, Node.js, PostgreSQL, Redis)
+- ✅ Install all Python packages from requirements.txt
+- ✅ Install all Node.js packages from package.json
+- ✅ Configure services (PostgreSQL, Redis)
+- ✅ Create environment files
+- ✅ Verify installation
+
+📖 **For detailed installation instructions, see [INSTALLATION_COMPLETE.md](INSTALLATION_COMPLETE.md)**
+
+---
+
+### Manual Installation
+
 ### Prerequisites
 - Node.js 18+
 - Python 3.8+
-- SQLite3
+- SQLite3 or PostgreSQL
+- Redis (optional, for caching)
 
-### Installation
+### Installation Steps
 
 1. **Clone and Setup**
 ```bash
