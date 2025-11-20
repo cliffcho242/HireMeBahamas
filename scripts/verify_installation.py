@@ -380,7 +380,7 @@ def generate_report(results: Dict[str, bool]) -> None:
         print(f"\n{Colors.BOLD}Your HireMeBahamas installation is ready!{Colors.NC}")
     else:
         print(f"\n{Colors.YELLOW}{Colors.BOLD}⚠ Some checks failed{Colors.NC}")
-        print(f"\n{Colors.BOLD}Please review the failed checks above and:${Colors.NC}")
+        print(f"\n{Colors.BOLD}Please review the failed checks above and:{Colors.NC}")
         print(f"  1. Re-run the installation script")
         print(f"  2. Check the installation log")
         print(f"  3. Manually install missing dependencies")
