@@ -54,3 +54,7 @@ htmlcov/
 *.key
 .vercel
 .railway
+
+# Dependency reports
+dependency_check_report.json
+frontend_dependency_report.json
