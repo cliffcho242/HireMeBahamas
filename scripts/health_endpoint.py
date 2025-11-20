@@ -6,7 +6,7 @@ Provides comprehensive dependency health status via /api/health/dependencies
 
 import importlib
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 
@@ -31,9 +31,9 @@ def check_redis_status() -> Dict[str, Any]:
         
         try:
             r = redis.from_url(redis_url, socket_connect_timeout=2)
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             r.ping()
-            latency = (datetime.utcnow() - start_time).total_seconds() * 1000
+            latency = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             
             return {
                 "active": True,
@@ -212,7 +212,7 @@ def get_health_status() -> Dict[str, Any]:
     
     return {
         "status": status,
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         "dependencies": {
             "backend": backend_deps,
             "frontend": frontend_deps
@@ -231,7 +231,7 @@ def create_health_endpoint(app):
         return {
             "status": "healthy",
             "message": "HireMeBahamas API is running",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z"
         }
     
     @app.route("/api/health/dependencies", methods=["GET"])

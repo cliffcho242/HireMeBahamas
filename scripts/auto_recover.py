@@ -7,7 +7,7 @@ Monitors dependency health and auto-recovers from failures.
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -20,7 +20,7 @@ class AutoRecovery:
 
     def log_action(self, action, success=True):
         """Log recovery action"""
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         status = "✅ SUCCESS" if success else "❌ FAILED"
         message = f"[{timestamp}] {status}: {action}"
         print(message)
@@ -152,7 +152,7 @@ class AutoRecovery:
         """Run full recovery check"""
         print("=" * 60)
         print("🔧 Auto-Recovery System")
-        print(f"⏰ {datetime.utcnow().isoformat()}")
+        print(f"⏰ {datetime.now(timezone.utc).isoformat()}")
         print("=" * 60)
         
         # Check all systems

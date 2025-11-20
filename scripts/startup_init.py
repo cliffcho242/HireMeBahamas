@@ -6,7 +6,7 @@ Runs on application startup to verify dependencies and initialize services.
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -153,7 +153,7 @@ def startup_check():
     """Main startup check function"""
     print("=" * 60)
     print("🚀 HireMeBahamas Startup Initialization")
-    print(f"⏰ {datetime.utcnow().isoformat()}")
+    print(f"⏰ {datetime.now(timezone.utc).isoformat()}")
     print("=" * 60)
     
     # Check critical dependencies
