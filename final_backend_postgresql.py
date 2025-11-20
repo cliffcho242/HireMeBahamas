@@ -97,6 +97,10 @@ print(
     f"🗄️ Database Mode: {'PostgreSQL (Production)' if USE_POSTGRESQL else 'SQLite (Development)'}"
 )
 
+# Track database initialization status
+_db_initialized = False
+_db_init_lock = threading.Lock()
+
 if USE_POSTGRESQL:
     print(f"✅ PostgreSQL URL detected: {DATABASE_URL[:30]}...")
 
@@ -179,6 +183,8 @@ def execute_query(query, params=None, fetch=False, fetchone=False, commit=False)
 
 def init_database():
     """Initialize database with all required tables"""
+    global _db_initialized
+    
     print("🚀 Initializing database...")
 
     conn = get_db_connection()
@@ -433,10 +439,17 @@ def init_database():
 
     except Exception as e:
         print(f"❌ Database initialization error: {e}")
-        conn.rollback()
-        cursor.close()
-        conn.close()
+        try:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        except:
+            pass  # Connection might already be closed
         raise
+    finally:
+        # Mark database as initialized successfully
+        global _db_initialized
+        _db_initialized = True
 
 
 def migrate_user_columns(cursor, conn):
@@ -482,6 +495,29 @@ def migrate_user_columns(cursor, conn):
         print(f"⚠️ Migration warning: {e}")
 
 
+def ensure_database_initialized():
+    """
+    Ensure database is initialized. 
+    If initialization failed on startup, retry it here.
+    This is thread-safe and will only initialize once.
+    """
+    global _db_initialized
+    
+    if not _db_initialized:
+        with _db_init_lock:
+            # Double-check inside the lock
+            if not _db_initialized:
+                try:
+                    print("🔧 Retrying database initialization...")
+                    init_database()
+                    print("✅ Database initialization successful on retry")
+                except Exception as e:
+                    print(f"⚠️ Database initialization retry failed: {e}")
+                    # Don't raise - let the endpoint handle it
+    
+    return _db_initialized
+
+
 # Initialize database on startup with error handling
 try:
     print("🔧 Attempting database initialization...")
@@ -518,12 +554,19 @@ def api_health_check():
     """
     Detailed health check endpoint with database status
     This can be used for monitoring but won't block Railway healthcheck
+    Attempts to retry database initialization if it failed on startup
     """
     response = {
         "status": "healthy",
         "message": "HireMeBahamas API is running",
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "db_initialized": _db_initialized,
     }
+    
+    # Try to ensure database is initialized
+    if not _db_initialized:
+        ensure_database_initialized()
+        response["db_initialized"] = _db_initialized
     
     # Try to check database connection
     try:
@@ -536,7 +579,9 @@ def api_health_check():
         response["db_type"] = "PostgreSQL" if USE_POSTGRESQL else "SQLite"
     except Exception as e:
         response["database"] = "error"
-        response["error"] = str(e)[:100]  # Limit error message length
+        # Keep meaningful error information (up to 500 chars)
+        error_msg = str(e)
+        response["error"] = error_msg if len(error_msg) <= 500 else error_msg[:497] + "..."
     
     return jsonify(response), 200
 
