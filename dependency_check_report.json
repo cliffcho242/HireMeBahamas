@@ -1,0 +1,112 @@
+{
+  "timestamp": "2025-11-20T04:29:30.571869",
+  "status": "unhealthy",
+  "python_dependencies": {
+    "Flask": {
+      "active": true,
+      "version": "2.3.3"
+    },
+    "Flask-CORS": {
+      "active": true,
+      "version": "4.0.0"
+    },
+    "Flask-Limiter": {
+      "active": true,
+      "version": "3.5.0"
+    },
+    "Flask-Caching": {
+      "active": true,
+      "version": "2.1.0"
+    },
+    "PyJWT": {
+      "active": true,
+      "version": "2.8.0"
+    },
+    "bcrypt": {
+      "active": true,
+      "version": "4.1.2"
+    },
+    "python-dotenv": {
+      "active": true,
+      "version": "unknown"
+    },
+    "gunicorn": {
+      "active": true,
+      "version": "21.2.0"
+    },
+    "waitress": {
+      "active": true,
+      "version": "unknown"
+    },
+    "Werkzeug": {
+      "active": true,
+      "version": "2.3.7"
+    },
+    "requests": {
+      "active": true,
+      "version": "2.31.0"
+    },
+    "psycopg2-binary": {
+      "active": true,
+      "version": "2.9.9 (dt dec pq3 ext lo64)"
+    }
+  },
+  "flask_extensions": {
+    "Flask-CORS": {
+      "active": true,
+      "loaded": true
+    },
+    "Flask-Limiter": {
+      "active": true,
+      "loaded": true
+    },
+    "Flask-Cache": {
+      "active": true,
+      "loaded": true
+    }
+  },
+  "services": {
+    "redis": {
+      "active": false,
+      "connected": false,
+      "note": "redis-py not installed (optional)"
+    },
+    "sentry": {
+      "active": false,
+      "installed": false,
+      "note": "sentry-sdk not installed (optional)"
+    },
+    "socketio": {
+      "active": false,
+      "installed": false,
+      "note": "flask-socketio not installed (optional)"
+    },
+    "celery": {
+      "active": false,
+      "installed": false,
+      "note": "celery not installed (optional)"
+    }
+  },
+  "database": {
+    "active": true,
+    "connected": true,
+    "type": "sqlite",
+    "file": "hireme.db"
+  },
+  "frontend": {
+    "dependencies": {
+      "active": false,
+      "installed": false
+    }
+  },
+  "missing_dependencies": [
+    "Frontend node_modules"
+  ],
+  "inactive_services": [],
+  "warnings": [
+    "redis-py not installed",
+    "sentry-sdk not installed",
+    "Flask-SocketIO not installed",
+    "Celery not installed"
+  ]
+}
