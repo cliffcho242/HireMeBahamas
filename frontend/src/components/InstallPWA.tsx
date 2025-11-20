@@ -18,12 +18,15 @@ const InstallPWA: React.FC = () => {
     const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone ||
       document.referrer.includes('android-app://');
-    
-    setIsStandalone(isStandaloneMode);
 
     // Check if iOS
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    setIsIOS(ios);
+    
+    // Set state in a microtask to avoid synchronous setState in effect
+    Promise.resolve().then(() => {
+      setIsStandalone(isStandaloneMode);
+      setIsIOS(ios);
+    });
 
     // Check if user has dismissed install banner before
     const installDismissed = localStorage.getItem('installBannerDismissed');

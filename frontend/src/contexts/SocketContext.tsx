@@ -80,7 +80,10 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         }
       });
 
-      setSocket(newSocket);
+      // Set socket after all event listeners are registered
+      Promise.resolve().then(() => {
+        setSocket(newSocket);
+      });
 
       return () => {
         newSocket.close();

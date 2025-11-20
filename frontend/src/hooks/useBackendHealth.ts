@@ -17,7 +17,6 @@ export const useBackendHealth = () => {
   });
 
   useEffect(() => {
-    let checkInterval: NodeJS.Timeout;
     let isChecking = false;
 
     const checkHealth = async () => {
@@ -66,7 +65,7 @@ export const useBackendHealth = () => {
     checkHealth();
 
     // Check every 5 minutes
-    checkInterval = setInterval(checkHealth, 5 * 60 * 1000);
+    const checkInterval = setInterval(checkHealth, 5 * 60 * 1000);
 
     return () => {
       if (checkInterval) clearInterval(checkInterval);

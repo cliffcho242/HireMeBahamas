@@ -59,7 +59,7 @@ export const AIMonitoringProvider: React.FC<AIMonitoringProviderProps> = ({
   // AI-powered health check with intelligent analysis
   const performHealthCheck = useCallback(async () => {
     const startTime = Date.now();
-    let newHealth = { ...health };
+    const newHealth = { ...health };
 
     try {
       // Check frontend (self-check)
