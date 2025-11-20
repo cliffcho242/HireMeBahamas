@@ -45,7 +45,10 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          pip install flake8
       
       - name: Install Node dependencies
         run: |
@@ -53,7 +56,6 @@ jobs:
       
       - name: Lint Python code
         run: |
-          pip install flake8
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=node_modules,frontend/node_modules,venv,.venv,*.pyc,__pycache__
       
       - name: Check Python syntax
@@ -62,8 +64,11 @@ jobs:
           if ls backend/*.py 1> /dev/null 2>&1; then
             python -m py_compile backend/*.py
           fi
-          # Check root Python files that compile successfully (some may have syntax errors from legacy code)
-          find . -maxdepth 1 -name "*.py" -type f -exec python -m py_compile {} + 2>&1 | grep -v "fix_405_complete.py" || true
+          # Check root Python files (skip files with known syntax errors)
+          # Some legacy files may have syntax errors - this is expected
+          find . -maxdepth 1 -name "*.py" -type f | while read -r file; do
+            python -m py_compile "$file" 2>&1 || echo "Warning: $file has syntax errors (legacy file)"
+          done | grep -v "fix_405_complete.py" || true
       
       - name: Build frontend
         run: |

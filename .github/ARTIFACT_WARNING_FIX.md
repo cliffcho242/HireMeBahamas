@@ -92,7 +92,7 @@ The script:
 
 ### Why This Can't Be "Fixed" in the Repository
 
-1. **Infrastructure Level**: The warning comes from Copilot Workspace's dynamic workflow, not from repository code
+1. **Infrastructure level**: The warning comes from Copilot Workspace's dynamic workflow, not from repository code
 2. **Timing**: The wrapper script creates files after execution completes
 3. **External System**: The `/home/runner/work/_temp/` directory is managed by GitHub Actions, not the repository
 4. **Expected Behavior**: The warning is informational and doesn't indicate a problem
