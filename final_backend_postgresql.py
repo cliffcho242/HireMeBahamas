@@ -101,6 +101,9 @@ print(
 _db_initialized = False
 _db_init_lock = threading.Lock()
 
+# Error message length limit for health checks
+MAX_ERROR_MESSAGE_LENGTH = 500
+
 if USE_POSTGRESQL:
     print(f"✅ PostgreSQL URL detected: {DATABASE_URL[:30]}...")
 
@@ -436,6 +439,11 @@ def init_database():
 
         cursor.close()
         conn.close()
+        
+        # Mark database as successfully initialized
+        global _db_initialized
+        _db_initialized = True
+        print("✅ Database initialization completed successfully")
 
     except Exception as e:
         print(f"❌ Database initialization error: {e}")
@@ -443,13 +451,9 @@ def init_database():
             conn.rollback()
             cursor.close()
             conn.close()
-        except:
+        except Exception:
             pass  # Connection might already be closed
         raise
-    finally:
-        # Mark database as initialized successfully
-        global _db_initialized
-        _db_initialized = True
 
 
 def migrate_user_columns(cursor, conn):
@@ -579,9 +583,13 @@ def api_health_check():
         response["db_type"] = "PostgreSQL" if USE_POSTGRESQL else "SQLite"
     except Exception as e:
         response["database"] = "error"
-        # Keep meaningful error information (up to 500 chars)
+        # Keep meaningful error information up to MAX_ERROR_MESSAGE_LENGTH
         error_msg = str(e)
-        response["error"] = error_msg if len(error_msg) <= 500 else error_msg[:497] + "..."
+        if len(error_msg) <= MAX_ERROR_MESSAGE_LENGTH:
+            response["error"] = error_msg
+        else:
+            # Truncate with ellipsis
+            response["error"] = error_msg[:(MAX_ERROR_MESSAGE_LENGTH - 3)] + "..."
     
     return jsonify(response), 200
 
