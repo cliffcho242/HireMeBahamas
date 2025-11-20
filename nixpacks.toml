@@ -10,4 +10,4 @@ aptPkgs = ["build-essential", "libffi-dev", "libpq-dev", "postgresql-client"]
 
 [start]
 # Use production-ready backend with PostgreSQL support
-cmd = "gunicorn final_backend_postgresql:application --bind 0.0.0.0:${PORT:-8080} --workers 4 --timeout 120 --log-level info --access-logfile - --error-logfile -"
+cmd = "gunicorn final_backend_postgresql:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --log-level info --access-logfile - --error-logfile -"
