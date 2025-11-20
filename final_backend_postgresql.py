@@ -441,7 +441,6 @@ def init_database():
         conn.close()
         
         # Mark database as successfully initialized
-        global _db_initialized
         _db_initialized = True
         print("✅ Database initialization completed successfully")
 
