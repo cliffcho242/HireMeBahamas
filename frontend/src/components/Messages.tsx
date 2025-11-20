@@ -37,40 +37,8 @@ const Messages: React.FC = () => {
   const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
   const [newMessage, setNewMessage] = useState('');
 
-  const conversations: Conversation[] = [
-    {
-      id: 1,
-      user: { name: 'John Doe', avatar: 'JD', isOnline: true },
-      lastMessage: 'Hey, are you available for a quick call?',
-      time: '2m',
-      unreadCount: 2,
-      messages: [
-        { id: 1, sender: { name: 'John Doe', avatar: 'JD' }, content: 'Hi there!', time: '10:30 AM', isFromMe: false },
-        { id: 2, sender: { name: 'You', avatar: 'YO' }, content: 'Hello! How are you?', time: '10:32 AM', isFromMe: true },
-        { id: 3, sender: { name: 'John Doe', avatar: 'JD' }, content: 'I\'m doing great! Hey, are you available for a quick call?', time: '10:35 AM', isFromMe: false },
-      ]
-    },
-    {
-      id: 2,
-      user: { name: 'Sarah Wilson', avatar: 'SW', isOnline: false },
-      lastMessage: 'Thanks for the update!',
-      time: '1h',
-      unreadCount: 0,
-      messages: [
-        { id: 1, sender: { name: 'Sarah Wilson', avatar: 'SW' }, content: 'Thanks for the update!', time: '9:15 AM', isFromMe: false },
-      ]
-    },
-    {
-      id: 3,
-      user: { name: 'Mike Johnson', avatar: 'MJ', isOnline: true },
-      lastMessage: 'Let me check my schedule',
-      time: '3h',
-      unreadCount: 1,
-      messages: [
-        { id: 1, sender: { name: 'Mike Johnson', avatar: 'MJ' }, content: 'Let me check my schedule', time: '7:45 AM', isFromMe: false },
-      ]
-    }
-  ];
+  // Real conversations will be fetched from API
+  const conversations: Conversation[] = [];
 
   const selectedConv = conversations.find(c => c.id === selectedConversation);
 
@@ -144,7 +112,14 @@ const Messages: React.FC = () => {
             {/* Conversations List or Chat */}
             {!selectedConversation ? (
               <div className="max-h-96 overflow-y-auto">
-                {conversations.map((conversation) => (
+                {conversations.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                    <ChatBubbleLeftRightIcon className="w-12 h-12 text-gray-300 mb-3" />
+                    <p className="text-gray-500 text-sm">No messages yet</p>
+                    <p className="text-gray-400 text-xs mt-1">Start a conversation to see messages here</p>
+                  </div>
+                ) : (
+                  conversations.map((conversation) => (
                   <div
                     key={conversation.id}
                     className="flex items-center space-x-3 p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
@@ -183,6 +158,7 @@ const Messages: React.FC = () => {
                     )}
                   </div>
                 ))}
+                )}
               </div>
             ) : (
               <div className="flex flex-col h-96">

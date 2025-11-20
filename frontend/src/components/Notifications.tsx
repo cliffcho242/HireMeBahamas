@@ -22,43 +22,8 @@ interface NotificationItem {
 
 const Notifications: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: 1,
-      type: 'like',
-      user: { name: 'John Doe', avatar: 'JD' },
-      content: 'liked your post',
-      time: '2m',
-      read: false,
-      postId: 1
-    },
-    {
-      id: 2,
-      type: 'comment',
-      user: { name: 'Sarah Wilson', avatar: 'SW' },
-      content: 'commented on your post: "Great work!"',
-      time: '5m',
-      read: false,
-      postId: 2
-    },
-    {
-      id: 3,
-      type: 'friend_request',
-      user: { name: 'Mike Johnson', avatar: 'MJ' },
-      content: 'sent you a friend request',
-      time: '1h',
-      read: true
-    },
-    {
-      id: 4,
-      type: 'mention',
-      user: { name: 'Emma Davis', avatar: 'ED' },
-      content: 'mentioned you in a post',
-      time: '2h',
-      read: true,
-      postId: 3
-    }
-  ]);
+  // Real notifications will be fetched from API
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
