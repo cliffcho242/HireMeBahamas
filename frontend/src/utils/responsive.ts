@@ -28,7 +28,7 @@ export const isTouchDevice = () => {
   return (
     'ontouchstart' in window ||
     navigator.maxTouchPoints > 0 ||
-    // @ts-ignore
+    // @ts-expect-error - msMaxTouchPoints is only available in older IE/Edge
     navigator.msMaxTouchPoints > 0
   );
 };
@@ -77,7 +77,7 @@ export const prefersDarkMode = () => {
 
 // Network detection
 export const getConnectionType = () => {
-  // @ts-ignore
+  // @ts-expect-error - connection/mozConnection/webkitConnection are experimental APIs
   const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   return connection?.effectiveType || 'unknown';
 };

@@ -57,14 +57,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
   const [isAIOnline, setIsAIOnline] = useState(false);
   const [aiCapabilities, setAICapabilities] = useState<string[]>([]);
 
-  // Initialize AI system health check
-  useEffect(() => {
-    checkAISystemHealth();
-    const interval = setInterval(checkAISystemHealth, 30000); // Check every 30 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  const checkAISystemHealth = async () => {
+  const checkAISystemHealth = useCallback(async () => {
     try {
       const response = await axios.get(`${apiBaseUrl}/health`);
       setAISystemHealth(response.data);
@@ -75,7 +68,14 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
       setIsAIOnline(false);
       setAICapabilities([]);
     }
-  };
+  }, [apiBaseUrl]);
+
+  // Initialize AI system health check
+  useEffect(() => {
+    checkAISystemHealth();
+    const interval = setInterval(checkAISystemHealth, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [checkAISystemHealth]);
 
   // User Profile Analysis
   const analyzeUserProfile = useCallback(async (userData: any) => {

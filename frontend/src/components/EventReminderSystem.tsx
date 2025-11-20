@@ -139,9 +139,6 @@ const EventReminderSystem: React.FC<EventReminderSystemProps> = ({ events = [] }
   }, [events, dismissedReminders]);
 
   useEffect(() => {
-    // Check immediately
-    checkUpcomingEvents();
-
     // Check every minute
     const interval = setInterval(checkUpcomingEvents, 60000);
 

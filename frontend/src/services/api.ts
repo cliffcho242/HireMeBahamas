@@ -15,10 +15,6 @@ if (!ENV_API && typeof window !== 'undefined') {
   }
 }
 
-// One-time log to help diagnose wrong base URLs in clients
-// eslint-disable-next-line no-console
-console.log('[API] Base URL:', API_BASE_URL);
-
 // Create axios instance with retry logic
 const api = axios.create({
   baseURL: API_BASE_URL,
