@@ -2,12 +2,14 @@
 """
 Gunicorn configuration for HireMeBahamas backend
 """
+import os
 
-bind = "127.0.0.1:5000"
-workers = 2
+# Bind to 0.0.0.0 to accept external connections, use PORT env variable
+bind = f"0.0.0.0:{os.environ.get('PORT', '8080')}"
+workers = 4
 worker_class = "sync"
 worker_connections = 1000
-timeout = 30
+timeout = 120
 keepalive = 2
 max_requests = 1000
 max_requests_jitter = 50
@@ -21,8 +23,8 @@ errorlog = "-"
 proc_name = "hiremebahamas_backend"
 
 # Server mechanics
-preload_app = True
-pidfile = "gunicorn.pid"
+preload_app = False  # Disabled to allow better error handling on startup
+pidfile = None  # Don't create pidfile in Railway
 user = None
 group = None
 tmp_upload_dir = None

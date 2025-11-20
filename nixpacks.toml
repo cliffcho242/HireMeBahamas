@@ -9,5 +9,5 @@ PYTHON_VERSION = "3.12"
 aptPkgs = ["build-essential", "libffi-dev", "redis-tools"]
 
 [start]
-# Migration runs automatically in final_backend.py
-cmd = "gunicorn final_backend:application --bind 0.0.0.0:8080 --workers 4 --timeout 120 --access-logfile - --error-logfile -"
+# Migration runs automatically in final_backend_postgresql.py
+cmd = "gunicorn final_backend_postgresql:application --bind 0.0.0.0:${PORT:-8080} --workers 4 --timeout 120 --access-logfile - --error-logfile -"
