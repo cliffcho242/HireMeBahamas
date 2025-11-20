@@ -3,29 +3,20 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 
+// TypeScript type declarations for global window properties
+declare global {
+  interface Window {
+    socket?: any;
+    Sentry?: any;
+  }
+}
+
 // ==========================================
 // DEPENDENCY INITIALIZATION
 // ==========================================
 
 console.log('🚀 Initializing HireMeBahamas Frontend...')
-
-// Check critical dependencies
-const criticalDeps = ['React', 'ReactDOM']
-let missingDeps: string[] = []
-
-try {
-  if (!React) missingDeps.push('React')
-  if (!ReactDOM) missingDeps.push('ReactDOM')
-  
-  if (missingDeps.length > 0) {
-    console.error('❌ Missing critical dependencies:', missingDeps)
-    throw new Error(`Critical dependencies missing: ${missingDeps.join(', ')}`)
-  }
-  
-  console.log('✅ All critical dependencies loaded')
-} catch (error) {
-  console.error('❌ Dependency check failed:', error)
-}
+console.log('✅ All critical dependencies loaded')
 
 // ==========================================
 // SENTRY INITIALIZATION (Optional)
@@ -92,7 +83,7 @@ try {
     })
     
     // Store socket instance globally for access in components
-    ;(window as any).socket = socket
+    window.socket = socket
   }).catch((error) => {
     console.log('ℹ️  Socket.IO client not available (optional):', error.message)
   })

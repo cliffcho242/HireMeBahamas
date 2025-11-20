@@ -8,11 +8,10 @@ Returns exit code 0 if all dependencies are active, exit code 1 if any issues.
 import importlib
 import json
 import os
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Tuple
 
 
 class DependencyChecker:

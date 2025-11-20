@@ -332,7 +332,7 @@
             let activeCount = 0;
             let totalCount = 0;
 
-            for (const [key, dep] of Object.entries(backend)) {
+            for (const dep of Object.values(backend)) {
                 totalCount++;
                 if (dep.active) activeCount++;
             }

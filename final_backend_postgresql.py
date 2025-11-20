@@ -580,9 +580,9 @@ def dependencies_health():
             redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
             try:
                 r = redis.from_url(redis_url, socket_connect_timeout=2)
-                start = datetime.utcnow()
+                start = datetime.now(timezone.utc)
                 r.ping()
-                latency = (datetime.utcnow() - start).total_seconds() * 1000
+                latency = (datetime.now(timezone.utc) - start).total_seconds() * 1000
                 return {
                     "active": True,
                     "connected": True,
@@ -637,7 +637,7 @@ def dependencies_health():
     
     return jsonify({
         "status": status,
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "dependencies": {
             "backend": backend_deps
         },

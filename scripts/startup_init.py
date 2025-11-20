@@ -7,7 +7,6 @@ Runs on application startup to verify dependencies and initialize services.
 import os
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 
 def check_critical_dependencies():
@@ -116,6 +115,7 @@ def initialize_sentry():
                 sentry_sdk.capture_message("Application startup", level="info")
                 print("  ✅ Startup notification sent to Sentry")
             except Exception:
+                # Ignore errors sending test event; Sentry integration is optional
                 pass
         else:
             print("  ⚠️  Sentry DSN not configured (optional)")
@@ -146,6 +146,7 @@ def log_active_dependencies():
             version = getattr(module, "__version__", "unknown")
             print(f"  • {package_name}: {version}")
         except ImportError:
+            # Dependency not installed; skip logging its version
             pass
 
 

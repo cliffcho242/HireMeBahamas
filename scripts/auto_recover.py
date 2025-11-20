@@ -6,9 +6,7 @@ Monitors dependency health and auto-recovers from failures.
 
 import os
 import sys
-import time
 from datetime import datetime, timezone
-from pathlib import Path
 
 
 class AutoRecovery:
@@ -156,12 +154,12 @@ class AutoRecovery:
         print("=" * 60)
         
         # Check all systems
-        redis_healthy = self.check_redis_health()
-        db_healthy = self.check_database_health()
-        deps_healthy = self.check_dependencies_health()
+        self.check_redis_health()
+        self.check_database_health()
+        self.check_dependencies_health()
         
         # Attempt recovery actions
-        if not redis_healthy:
+        if not self.check_redis_health():
             self.clear_cache_on_failure()
         
         # Check for critical failures

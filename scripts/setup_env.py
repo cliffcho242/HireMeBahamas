@@ -4,7 +4,6 @@ Environment Configuration Generator for HireMeBahamas
 Auto-generates .env file with safe defaults and secure configurations.
 """
 
-import os
 import secrets
 from pathlib import Path
 
@@ -18,7 +17,6 @@ def setup_env_file():
     """Create or update .env file with configuration"""
     root_dir = Path(__file__).parent.parent
     env_file = root_dir / ".env"
-    env_example = root_dir / ".env.example"
     
     print("🔧 Setting up environment configuration...")
     print(f"📁 Root directory: {root_dir}")
