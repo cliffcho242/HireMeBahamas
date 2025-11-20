@@ -45,19 +45,16 @@ const Download: React.FC = () => {
       isChrome, isEdge, isFirefox,
       userAgent 
     });
+    
+    setIsIOS(iOS);
+    setIsAndroid(android);
+    setIsDesktop(desktop || isWindows || isMac || isLinux);
 
     // Check if already installed
     const standalone = window.matchMedia('(display-mode: standalone)').matches ||
       (navigator as any).standalone ||
       document.referrer.includes('android-app://');
-    
-    // Set state in a microtask to avoid synchronous setState in effect
-    Promise.resolve().then(() => {
-      setIsIOS(iOS);
-      setIsAndroid(android);
-      setIsDesktop(desktop || isWindows || isMac || isLinux);
-      setIsInstalled(standalone);
-    });
+    setIsInstalled(standalone);
 
     // Listen for beforeinstallprompt event (Android/Desktop)
     const handleBeforeInstallPrompt = (e: Event) => {

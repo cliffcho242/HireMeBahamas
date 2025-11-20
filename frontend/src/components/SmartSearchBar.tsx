@@ -41,11 +41,7 @@ const SmartSearchBar: React.FC<SmartSearchBarProps> = ({
     const stored = localStorage.getItem('recentSearches');
     if (stored) {
       try {
-        const parsed = JSON.parse(stored);
-        // Set state in a microtask to avoid synchronous setState in effect
-        Promise.resolve().then(() => {
-          setRecentSearches(parsed);
-        });
+        setRecentSearches(JSON.parse(stored));
       } catch (e) {
         console.error('Error loading recent searches:', e);
       }
@@ -56,20 +52,16 @@ const SmartSearchBar: React.FC<SmartSearchBarProps> = ({
   useEffect(() => {
     if (searchQuery.length >= 2) {
       const newSuggestions = generateSearchSuggestions(searchQuery, 8);
-      const categories = detectCategories(searchQuery);
+      setSuggestions(newSuggestions);
       
-      // Set state in a microtask to avoid synchronous setState in effect
-      Promise.resolve().then(() => {
-        setSuggestions(newSuggestions);
-        setDetectedCategories(categories.slice(0, 3));
-        setShowSuggestions(true);
-      });
+      const categories = detectCategories(searchQuery);
+      setDetectedCategories(categories.slice(0, 3));
+      
+      setShowSuggestions(true);
     } else {
-      Promise.resolve().then(() => {
-        setSuggestions([]);
-        setDetectedCategories([]);
-        setShowSuggestions(searchQuery.length === 0 && isFocused);
-      });
+      setSuggestions([]);
+      setDetectedCategories([]);
+      setShowSuggestions(searchQuery.length === 0 && isFocused);
     }
   }, [searchQuery, isFocused]);
 

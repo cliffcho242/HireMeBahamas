@@ -325,35 +325,21 @@ const SocialFeed = () => {
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     if (token) {
+      setIsLoggedIn(true);
       const userData = localStorage.getItem('user_data');
-      const parsedUserData = userData ? JSON.parse(userData) : null;
-      
-      // Set state in a microtask to avoid synchronous setState in effect
-      Promise.resolve().then(() => {
-        setIsLoggedIn(true);
-        if (parsedUserData) {
-          setCurrentUser(parsedUserData);
-        }
-        setLoading(false);
-      });
-    } else {
-      Promise.resolve().then(() => {
-        setLoading(false);
-      });
+      if (userData) {
+        setCurrentUser(JSON.parse(userData));
+      }
     }
+    setLoading(false);
   }, []);
 
-  // Load posts and analytics when component mounts or login state changes
   useEffect(() => {
+    loadPosts();
     if (isLoggedIn) {
-      loadPosts();
       loadAnalytics();
-    } else {
-      loadPosts();
     }
-    // loadPosts and loadAnalytics are stable useCallback functions
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn]);
+  }, [loadPosts, loadAnalytics, isLoggedIn]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
