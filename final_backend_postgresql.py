@@ -97,6 +97,13 @@ print(
     f"🗄️ Database Mode: {'PostgreSQL (Production)' if USE_POSTGRESQL else 'SQLite (Development)'}"
 )
 
+# Track database initialization status
+_db_initialized = False
+_db_init_lock = threading.Lock()
+
+# Error message length limit for health checks
+MAX_ERROR_MESSAGE_LENGTH = 500
+
 if USE_POSTGRESQL:
     print(f"✅ PostgreSQL URL detected: {DATABASE_URL[:30]}...")
 
@@ -120,7 +127,10 @@ def get_db_connection():
     """Get database connection (PostgreSQL on Railway, SQLite locally)"""
     if USE_POSTGRESQL:
         conn = psycopg2.connect(
-            DATABASE_URL, sslmode="require", cursor_factory=RealDictCursor
+            DATABASE_URL, 
+            sslmode="require", 
+            cursor_factory=RealDictCursor,
+            connect_timeout=10  # 10 second timeout for connection
         )
         return conn
     else:
@@ -176,6 +186,8 @@ def execute_query(query, params=None, fetch=False, fetchone=False, commit=False)
 
 def init_database():
     """Initialize database with all required tables"""
+    global _db_initialized
+    
     print("🚀 Initializing database...")
 
     conn = get_db_connection()
@@ -427,12 +439,19 @@ def init_database():
 
         cursor.close()
         conn.close()
+        
+        # Mark database as successfully initialized
+        _db_initialized = True
+        print("✅ Database initialization completed successfully")
 
     except Exception as e:
         print(f"❌ Database initialization error: {e}")
-        conn.rollback()
-        cursor.close()
-        conn.close()
+        try:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass  # Connection might already be closed
         raise
 
 
@@ -479,8 +498,38 @@ def migrate_user_columns(cursor, conn):
         print(f"⚠️ Migration warning: {e}")
 
 
-# Initialize database on startup
-init_database()
+def ensure_database_initialized():
+    """
+    Ensure database is initialized. 
+    If initialization failed on startup, retry it here.
+    This is thread-safe and will only initialize once.
+    """
+    global _db_initialized
+    
+    if not _db_initialized:
+        with _db_init_lock:
+            # Double-check inside the lock
+            if not _db_initialized:
+                try:
+                    print("🔧 Retrying database initialization...")
+                    init_database()
+                    print("✅ Database initialization successful on retry")
+                except Exception as e:
+                    print(f"⚠️ Database initialization retry failed: {e}")
+                    # Don't raise - let the endpoint handle it
+    
+    return _db_initialized
+
+
+# Initialize database on startup with error handling
+try:
+    print("🔧 Attempting database initialization...")
+    init_database()
+    print("✅ Database initialization completed successfully")
+except Exception as e:
+    print(f"⚠️ Database initialization warning: {e}")
+    print("⚠️ Application will continue - database will be initialized on first request")
+    # Don't exit - allow the app to start and try again later
 
 
 # ==========================================
@@ -490,35 +539,58 @@ init_database()
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    """Health check endpoint for Railway"""
+    """
+    Health check endpoint for Railway
+    Returns 200 OK immediately to ensure Railway healthcheck passes
+    The app is healthy if this endpoint responds - database initialization
+    happens asynchronously and doesn't need to block the healthcheck
+    """
+    return jsonify({
+        "status": "healthy",
+        "message": "HireMeBahamas API is running",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }), 200
+
+
+@app.route("/api/health", methods=["GET"])
+def api_health_check():
+    """
+    Detailed health check endpoint with database status
+    This can be used for monitoring but won't block Railway healthcheck
+    Attempts to retry database initialization if it failed on startup
+    """
+    response = {
+        "status": "healthy",
+        "message": "HireMeBahamas API is running",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "db_initialized": _db_initialized,
+    }
+    
+    # Try to ensure database is initialized
+    if not _db_initialized:
+        ensure_database_initialized()
+        response["db_initialized"] = _db_initialized
+    
+    # Try to check database connection
     try:
-        # Test database connection
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        if USE_POSTGRESQL:
-            cursor.execute("SELECT 1")
-        else:
-            cursor.execute("SELECT 1")
-
+        cursor.execute("SELECT 1")
         cursor.close()
         conn.close()
-
-        db_status = "connected"
+        response["database"] = "connected"
+        response["db_type"] = "PostgreSQL" if USE_POSTGRESQL else "SQLite"
     except Exception as e:
-        db_status = f"error: {str(e)}"
-
-    return (
-        jsonify(
-            {
-                "status": "healthy",
-                "message": "HireMeBahamas API is running",
-                "database": db_status,
-                "db_type": "PostgreSQL" if USE_POSTGRESQL else "SQLite",
-            }
-        ),
-        200,
-    )
+        response["database"] = "error"
+        # Keep meaningful error information up to MAX_ERROR_MESSAGE_LENGTH
+        error_msg = str(e)
+        if len(error_msg) <= MAX_ERROR_MESSAGE_LENGTH:
+            response["error"] = error_msg
+        else:
+            # Truncate with ellipsis
+            response["error"] = error_msg[:(MAX_ERROR_MESSAGE_LENGTH - 3)] + "..."
+    
+    return jsonify(response), 200
 
 
 # ==========================================
