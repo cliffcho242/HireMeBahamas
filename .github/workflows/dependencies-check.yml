@@ -10,10 +10,19 @@ on:
     - cron: '0 0 * * *'
   workflow_dispatch:
 
+# Set default permissions to read-only
+permissions:
+  contents: read
+
 jobs:
   check-python-dependencies:
     name: Check Python Dependencies
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write  # For commenting on PRs
     
     steps:
       - name: Checkout code
@@ -95,6 +104,10 @@ jobs:
     name: Check Frontend Dependencies
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: read
+      actions: read
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -135,6 +148,10 @@ jobs:
   test-integrations:
     name: Test Service Integrations
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      actions: read
     
     services:
       redis:
@@ -208,6 +225,10 @@ jobs:
     name: Security Vulnerability Check
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: read
+      actions: read
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -233,6 +254,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [check-python-dependencies, check-frontend-dependencies, test-integrations]
     if: always()
+    
+    permissions:
+      contents: read
     
     steps:
       - name: Check job statuses
