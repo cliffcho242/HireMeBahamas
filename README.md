@@ -326,6 +326,20 @@ VITE_API_URL=http://localhost:8000
 VITE_SOCKET_URL=http://localhost:8000
 ```
 
+## CI/CD
+
+This repository includes GitHub Actions workflows for continuous integration:
+
+- **CI Pipeline** (`.github/workflows/ci.yml`): Runs on every push and pull request
+  - Lints Python and JavaScript code
+  - Runs tests
+  - Builds the frontend
+  - Uploads build artifacts
+
+### GitHub Copilot Workspace
+
+If you're using GitHub Copilot Workspace, see [.github/COPILOT_WORKSPACE_INFO.md](.github/COPILOT_WORKSPACE_INFO.md) for information about runtime logs and monitoring.
+
 ## Contributing
 
 1. Fork the repository
