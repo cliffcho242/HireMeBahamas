@@ -328,13 +328,18 @@ VITE_SOCKET_URL=http://localhost:8000
 
 ## CI/CD
 
-This repository includes GitHub Actions workflows for continuous integration:
+This repository includes GitHub Actions workflows for continuous integration and deployment:
 
 - **CI Pipeline** (`.github/workflows/ci.yml`): Runs on every push and pull request
   - Lints Python and JavaScript code
   - Checks Python syntax
   - Builds the frontend
   - Uploads build artifacts
+
+- **Deployment** (`.github/workflows/deploy.yml`): Automatically deploys to Render on merge to main
+  - Triggers Render deployment via webhook
+  - Manual deployment trigger available
+  - See [.github/RENDER_DEPLOYMENT.md](.github/RENDER_DEPLOYMENT.md) for setup instructions
 
 ### GitHub Copilot Workspace
 
