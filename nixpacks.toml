@@ -8,6 +8,10 @@ PYTHON_VERSION = "3.12"
 [phases.setup]
 aptPkgs = ["build-essential", "libffi-dev", "redis-tools"]
 
+# Secrets should be configured via platform environment variables, NOT in Dockerfile
+# Do not use ARG or ENV for: SECRET_KEY, JWT_SECRET_KEY, API keys, passwords, etc.
+# Platform services (Railway, Render, etc.) inject secrets at runtime
+
 [start]
 # Migration runs automatically in final_backend_postgresql.py
 cmd = "gunicorn final_backend_postgresql:application --bind 0.0.0.0:${PORT:-8080} --workers 4 --timeout 120 --access-logfile - --error-logfile -"

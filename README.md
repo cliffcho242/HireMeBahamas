@@ -348,14 +348,23 @@ uvicorn app.main:app --reload
 
 ## Environment Variables
 
+⚠️ **Security Notice**: Never commit secrets to git. See [DOCKER_SECURITY.md](DOCKER_SECURITY.md) for best practices.
+
 ### Backend (.env)
-```
+```bash
+# Copy .env.example to .env and update with your values
+cp .env.example .env
+
+# Required variables:
+SECRET_KEY=your_secret_key  # Generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+JWT_SECRET_KEY=your_jwt_secret_key
 DATABASE_URL=postgresql://user:password@localhost/hiremebahamas
-SECRET_KEY=your_secret_key
+REDIS_URL=redis://localhost:6379
+
+# Optional integrations:
 CLOUDINARY_NAME=your_cloudinary_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
-REDIS_URL=redis://localhost:6379
 ```
 
 ### Frontend (.env)
@@ -363,6 +372,14 @@ REDIS_URL=redis://localhost:6379
 VITE_API_URL=http://localhost:8000
 VITE_SOCKET_URL=http://localhost:8000
 ```
+
+### Docker Security
+
+This project follows [Docker security best practices](DOCKER_SECURITY.md):
+- Secrets are loaded from `.env` files (local) or platform environment (production)
+- No secrets in Dockerfiles (no ARG/ENV for sensitive data)
+- `.dockerignore` prevents sensitive files from being copied into images
+- See [DOCKER_SECURITY.md](DOCKER_SECURITY.md) for detailed information
 
 ## Contributing
 
