@@ -2,6 +2,9 @@
 """
 End-to-end test for authentication flow.
 Tests sign in and sign out functionality to ensure all dependencies are working.
+
+⚠️  WARNING: This is a TEST SCRIPT for local development/testing only!
+Do not use in production. Test secrets and database paths are for testing purposes.
 """
 
 import json
@@ -114,10 +117,11 @@ def main():
     """Run all authentication tests."""
     print("=" * 70)
     print("Authentication Flow End-to-End Test")
+    print("⚠️  TEST SCRIPT - For local development/testing only!")
     print("=" * 70)
     
-    # Configuration
-    BASE_URL = "http://127.0.0.1:8080"
+    # Configuration - can be overridden via environment variables
+    BASE_URL = os.getenv("TEST_API_URL", "http://127.0.0.1:8080")
     TEST_EMAIL = "test@hiremebahamas.com"
     TEST_PASSWORD = "testpass123"
     

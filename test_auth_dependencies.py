@@ -2,6 +2,9 @@
 """
 Test script to verify all authentication dependencies are installed and working.
 This ensures users can always sign in and sign out successfully.
+
+⚠️  WARNING: This is a TEST SCRIPT for local development/testing only!
+Test secrets are for testing purposes and should not be used in production.
 """
 
 import sys
@@ -77,13 +80,16 @@ def main():
         import jwt
         from datetime import datetime, timedelta, timezone
         
+        # Use a test-only secret key (clearly marked)
+        TEST_SECRET_KEY = "test-only-secret-key-do-not-use-in-production"
+        
         payload = {
             "user_id": 1,
             "email": "test@example.com",
             "exp": datetime.now(timezone.utc) + timedelta(days=7)
         }
-        token = jwt.encode(payload, "secret-key", algorithm="HS256")
-        decoded = jwt.decode(token, "secret-key", algorithms=["HS256"])
+        token = jwt.encode(payload, TEST_SECRET_KEY, algorithm="HS256")
+        decoded = jwt.decode(token, TEST_SECRET_KEY, algorithms=["HS256"])
         
         if decoded["user_id"] == 1 and decoded["email"] == "test@example.com":
             auth_tests.append(True)
