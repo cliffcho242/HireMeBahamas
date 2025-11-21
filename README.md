@@ -72,7 +72,37 @@ pip install -r requirements.txt
 cd frontend && npm install
 ```
 
-2. **Database Setup**
+2. **Verify Installation**
+   
+   To ensure all authentication dependencies are installed correctly:
+   ```bash
+   # Test authentication dependencies
+   python test_auth_dependencies.py
+   
+   # Test complete authentication flow (requires backend running)
+   python test_authentication_flow.py
+   ```
+   
+   You should see:
+   - ✓ All dependencies are installed and working!
+   - ✓ Users can sign in and sign out successfully.
+
+2. **Verify Installation**
+   
+   To ensure all authentication dependencies are installed correctly:
+   ```bash
+   # Test authentication dependencies
+   python test_auth_dependencies.py
+   
+   # Test complete authentication flow (requires backend running)
+   python test_authentication_flow.py
+   ```
+   
+   You should see:
+   - ✓ All dependencies are installed and working!
+   - ✓ Users can sign in and sign out successfully.
+
+3. **Database Setup**
 
    **For Development (with sample data):**
    ```bash
@@ -95,7 +125,7 @@ cd frontend && npm install
    
    See [CLEAN_DATABASE.md](CLEAN_DATABASE.md) for detailed cleanup instructions.
 
-3. **Launch Application**
+4. **Launch Application**
 ```powershell
 # Windows PowerShell
 powershell -ExecutionPolicy Bypass -File .\launch_app.ps1 -Force
@@ -231,6 +261,29 @@ The platform is fully responsive with:
 - Moderate user activities
 - Access analytics
 - System configuration
+
+## 🧪 Testing
+
+### Authentication Testing
+
+Verify that all dependencies are installed correctly for sign in/sign out functionality:
+
+```bash
+# Test authentication dependencies (backend libraries)
+python test_auth_dependencies.py
+
+# Test complete authentication flow (end-to-end)
+# Note: Backend must be running on http://127.0.0.1:8080
+python test_authentication_flow.py
+```
+
+**What these tests verify:**
+- ✓ Flask and Flask-CORS are installed
+- ✓ PyJWT (JSON Web Tokens) is working
+- ✓ bcrypt password hashing is functional
+- ✓ Login endpoint accepts credentials and returns tokens
+- ✓ JWT tokens are properly generated and can be validated
+- ✓ Users can successfully sign in and sign out
 
 ## 🚀 Deployment
 
