@@ -7,10 +7,11 @@ This ensures users can always sign in and sign out successfully.
 import sys
 from typing import List, Tuple
 
-def test_dependency(name: str, import_statement: str) -> Tuple[bool, str]:
+def test_dependency(name: str, module_name: str) -> Tuple[bool, str]:
     """Test if a dependency can be imported."""
     try:
-        exec(import_statement)
+        import importlib
+        importlib.import_module(module_name)
         return True, f"✓ {name} is installed and working"
     except ImportError as e:
         return False, f"✗ {name} is missing: {e}"
@@ -27,23 +28,23 @@ def main():
     
     # Core backend dependencies for authentication
     backend_deps = [
-        ("Flask", "import flask"),
-        ("Flask-CORS", "import flask_cors"),
-        ("PyJWT", "import jwt"),
-        ("bcrypt", "import bcrypt"),
-        ("Flask-Limiter", "import flask_limiter"),
-        ("SQLAlchemy", "import sqlalchemy"),
-        ("psycopg2 (PostgreSQL)", "import psycopg2"),
-        ("python-dotenv", "import dotenv"),
-        ("Werkzeug", "import werkzeug"),
+        ("Flask", "flask"),
+        ("Flask-CORS", "flask_cors"),
+        ("PyJWT", "jwt"),
+        ("bcrypt", "bcrypt"),
+        ("Flask-Limiter", "flask_limiter"),
+        ("SQLAlchemy", "sqlalchemy"),
+        ("psycopg2 (PostgreSQL)", "psycopg2"),
+        ("python-dotenv", "dotenv"),
+        ("Werkzeug", "werkzeug"),
     ]
     
     print("Backend Dependencies:")
     print("-" * 70)
     
     backend_results = []
-    for name, import_stmt in backend_deps:
-        success, message = test_dependency(name, import_stmt)
+    for name, module_name in backend_deps:
+        success, message = test_dependency(name, module_name)
         backend_results.append(success)
         print(message)
     

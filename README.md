@@ -87,21 +87,6 @@ cd frontend && npm install
    - ✓ All dependencies are installed and working!
    - ✓ Users can sign in and sign out successfully.
 
-2. **Verify Installation**
-   
-   To ensure all authentication dependencies are installed correctly:
-   ```bash
-   # Test authentication dependencies
-   python test_auth_dependencies.py
-   
-   # Test complete authentication flow (requires backend running)
-   python test_authentication_flow.py
-   ```
-   
-   You should see:
-   - ✓ All dependencies are installed and working!
-   - ✓ Users can sign in and sign out successfully.
-
 3. **Database Setup**
 
    **For Development (with sample data):**

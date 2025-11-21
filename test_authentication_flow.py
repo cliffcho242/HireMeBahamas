@@ -5,6 +5,7 @@ Tests sign in and sign out functionality to ensure all dependencies are working.
 """
 
 import json
+import os
 import sqlite3
 import sys
 from datetime import datetime
@@ -14,9 +15,12 @@ import jwt
 import requests
 
 
-def create_test_user(email: str, password: str):
+def create_test_user(email: str, password: str, db_path: str = None):
     """Create a test user in the database."""
-    conn = sqlite3.connect("hiremebahamas.db")
+    if db_path is None:
+        db_path = os.getenv("DATABASE_PATH", "hiremebahamas.db")
+    
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     # Hash password with bcrypt
@@ -73,9 +77,13 @@ def test_login(base_url: str, email: str, password: str):
         return False, None
 
 
-def test_token_validation(token: str, secret_key: str = "your-secret-key-here-change-in-production"):
+def test_token_validation(token: str, secret_key: str = None):
     """Test that the JWT token can be decoded and validated."""
     print("\nTesting token validation...")
+    
+    # Get secret key from environment or use default for testing
+    if secret_key is None:
+        secret_key = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
     
     try:
         decoded = jwt.decode(token, secret_key, algorithms=["HS256"])
