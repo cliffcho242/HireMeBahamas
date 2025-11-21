@@ -332,7 +332,7 @@ This repository includes GitHub Actions workflows for continuous integration:
 
 - **CI Pipeline** (`.github/workflows/ci.yml`): Runs on every push and pull request
   - Lints Python and JavaScript code
-  - Runs tests
+  - Checks Python syntax
   - Builds the frontend
   - Uploads build artifacts
 

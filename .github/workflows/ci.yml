@@ -22,7 +22,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
       
       - name: Cache Python dependencies
         uses: actions/cache@v4
@@ -50,11 +50,17 @@ jobs:
           fi
           pip install flake8
       
+      - name: Verify package-lock.json
+        run: |
+          cd frontend && npm ci --dry-run
+      
       - name: Install Node dependencies
         run: |
           cd frontend && npm ci
       
       - name: Lint Python code
+        # Non-blocking to handle legacy code with quality issues
+        # Only checks for critical errors: E9, F63, F7, F82
         run: |
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=node_modules,frontend/node_modules,venv,.venv,*.pyc,__pycache__
         continue-on-error: true
@@ -67,16 +73,16 @@ jobs:
           fi
           # Check root Python files (skip files with known syntax errors)
           # Some legacy files may have syntax errors - this is expected
-          find . -maxdepth 1 -name "*.py" -type f | while read -r file; do
+          find . -maxdepth 1 -name "*.py" -type f ! -name "fix_405_complete.py" | while read -r file; do
             python -m py_compile "$file" 2>&1 || echo "Warning: $file has syntax errors (legacy file)"
-          done | grep -v "fix_405_complete.py" || true
+          done || true
       
       - name: Build frontend
         run: |
           cd frontend && npm run build
       
       - name: Upload build artifacts
-        if: success()
+        if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
