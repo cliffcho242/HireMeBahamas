@@ -8,7 +8,7 @@ import json
 import os
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 import bcrypt
 import jwt
@@ -37,7 +37,7 @@ def create_test_user(email: str, password: str, db_path: str = None):
         "User",
         "job_seeker",
         "Nassau, Bahamas",
-        datetime.now().isoformat(),
+        datetime.now(timezone.utc).isoformat(),
         1
     ))
     

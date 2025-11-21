@@ -75,12 +75,12 @@ def main():
     # Test JWT token creation
     try:
         import jwt
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         payload = {
             "user_id": 1,
             "email": "test@example.com",
-            "exp": datetime.utcnow() + timedelta(days=7)
+            "exp": datetime.now(timezone.utc) + timedelta(days=7)
         }
         token = jwt.encode(payload, "secret-key", algorithm="HS256")
         decoded = jwt.decode(token, "secret-key", algorithms=["HS256"])
