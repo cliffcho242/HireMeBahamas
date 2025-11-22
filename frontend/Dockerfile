@@ -1,17 +1,10 @@
 # Production Dockerfile for frontend
-FROM node:18-alpine AS builder
+# Use pre-built base image with all system dependencies for builder stage
+# This image has all apk packages pre-installed, significantly speeding up builds
+# Base image: docker/base-images/Dockerfile.base-frontend
+FROM ghcr.io/cliffcho242/hiremebahamas-base-frontend:latest AS builder
 
-WORKDIR /app
-
-# Install build dependencies for Node.js native modules (if needed)
-# Alpine uses apk instead of apt-get
-RUN apk add --no-cache \
-    # Build tools
-    python3 \
-    make \
-    g++ \
-    # Git (for npm packages from git repos)
-    git
+# Working directory is already set to /app in base image
 
 # Copy package files
 COPY package*.json ./

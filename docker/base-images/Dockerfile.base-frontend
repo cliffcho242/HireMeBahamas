@@ -1,0 +1,30 @@
+# Base image for HireMeBahamas Frontend
+# This image contains all apk system dependencies pre-installed
+# to speed up deployments and prevent build timeouts
+
+FROM node:18-alpine
+
+LABEL maintainer="HireMeBahamas"
+LABEL description="Base image for HireMeBahamas frontend with all system dependencies"
+LABEL version="1.0"
+
+# Install all system dependencies required for the frontend
+# These packages are needed for:
+# - Building Node.js native modules (python3, make, g++)
+# - Git dependencies (git)
+# - HTTP operations (curl)
+# - SSL/TLS support (ca-certificates)
+
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git \
+    curl \
+    ca-certificates
+
+# Set working directory for applications that will use this base
+WORKDIR /app
+
+# Default command (can be overridden)
+CMD ["/bin/sh"]
