@@ -4,6 +4,28 @@
 
 A modern, Facebook-inspired social platform designed specifically for professionals in the Bahamas to connect, share career opportunities, and build meaningful professional relationships.
 
+## ✅ Recent Updates: Data Persistence & Session Management
+
+**What's Fixed:**
+- ✅ User sessions now persist across page reloads
+- ✅ Posts and user data are permanently saved
+- ✅ Token refresh system prevents unexpected logouts
+- ✅ Fixed SECRET_KEY configuration for consistent authentication
+- ✅ All authentication endpoints working correctly
+
+📚 **[Read the Data Persistence Guide](./DATA_PERSISTENCE_GUIDE.md)** for technical details.
+
+**Quick Setup (New Users):**
+```bash
+# Run the simple setup script
+./simple_setup.sh
+
+# Or manually:
+cp .env.example .env  # Then edit with your settings
+pip install -r requirements.txt
+cd frontend && npm install
+```
+
 ## 🚀 Auto-Deploy Enabled
 
 This repository is configured with **automated deployments** via GitHub Actions:
@@ -259,6 +281,23 @@ The platform is fully responsive with:
 - System configuration
 
 ## 🧪 Testing
+
+### Data Persistence Testing
+
+**New: Comprehensive data persistence test suite**
+
+```bash
+# Test data persistence and session management
+python test_data_persistence.py
+```
+
+This test suite verifies:
+- ✓ Health check endpoints working
+- ✓ User registration and login
+- ✓ Token refresh functionality
+- ✓ Session verification
+- ✓ Profile fetching
+- ✓ Database persistence across restarts
 
 ### Authentication Testing
 
