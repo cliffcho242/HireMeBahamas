@@ -102,21 +102,9 @@ Created `.dockerignore` files for both backend and frontend to exclude:
 
 ### 4. Docker Compose Configuration
 
-```yaml
-backend:
-  build:
-    context: ./backend
-    dockerfile: Dockerfile
-    cache_from:
-      - type=registry,ref=ghcr.io/cliffcho242/hiremebahamas-backend:cache
-    cache_to:
-      - type=inline
-```
+The `docker-compose.yml` has been updated to work seamlessly with BuildKit. No additional cache configuration is needed for basic usage. BuildKit caching works automatically when you use `docker compose build` or the provided optimization script.
 
-**Benefits:**
-- Enables inline cache storage
-- Allows cache reuse across different environments
-- Supports remote cache repositories (optional)
+**Note:** Advanced cache configuration with remote registries (cache_from/cache_to) is optional and not required for the performance improvements described in this document. If you need distributed cache sharing across teams, you can add cache configuration to your docker-compose.yml as an optional enhancement.
 
 ## How to Use
 
@@ -130,6 +118,9 @@ export COMPOSE_DOCKER_CLI_BUILD=1
 
 #### Build with Optimization Script
 ```bash
+# Make the script executable (first time only)
+chmod +x scripts/docker-build-optimized.sh
+
 # Build all images
 ./scripts/docker-build-optimized.sh
 
@@ -263,7 +254,6 @@ docker buildx build \
 View cache usage:
 ```bash
 docker system df -v
-docker buildx du
 ```
 
 ### Cache Cleanup

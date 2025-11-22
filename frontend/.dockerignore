@@ -49,8 +49,8 @@ Dockerfile*
 docker-compose*.yml
 .dockerignore
 
-# Documentation
-*.md
+# Documentation (development-specific only)
+CONTRIBUTING.md
 docs/
 
 # Cache directories

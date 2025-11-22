@@ -69,7 +69,15 @@ if [ "$1" == "compose" ]; then
     echo -e "${YELLOW}Building with docker-compose...${NC}"
     start_time=$(date +%s)
     
-    docker-compose build
+    # Use modern docker compose or fall back to docker-compose
+    if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+        docker compose build
+    elif command -v docker-compose &> /dev/null; then
+        docker-compose build
+    else
+        echo -e "${RED}Error: Neither 'docker compose' nor 'docker-compose' found${NC}"
+        exit 1
+    fi
     
     end_time=$(date +%s)
     duration=$((end_time - start_time))
@@ -83,9 +91,3 @@ fi
 echo -e "${BLUE}========================================${NC}"
 echo -e "${GREEN}Build completed!${NC}"
 echo -e "${BLUE}========================================${NC}"
-echo ""
-echo -e "Usage:"
-echo -e "  ${YELLOW}./scripts/docker-build-optimized.sh${NC}           # Build all images"
-echo -e "  ${YELLOW}./scripts/docker-build-optimized.sh backend${NC}   # Build backend only"
-echo -e "  ${YELLOW}./scripts/docker-build-optimized.sh frontend${NC}  # Build frontend only"
-echo -e "  ${YELLOW}./scripts/docker-build-optimized.sh compose${NC}   # Build with docker-compose"

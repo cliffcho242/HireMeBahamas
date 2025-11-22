@@ -44,8 +44,8 @@ COPY requirements.txt .
 
 # Install Python dependencies using BuildKit cache for pip
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip && \
-    pip install -r requirements.txt
+    pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
