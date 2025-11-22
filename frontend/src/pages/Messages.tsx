@@ -46,13 +46,18 @@ const Messages: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [creatingConversation, setCreatingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasProcessedQueryParam = useRef(false);
+  const conversationsRef = useRef<Conversation[]>([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Keep conversations ref in sync
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   useEffect(() => {
     if (user) {
@@ -90,6 +95,13 @@ const Messages: React.FC = () => {
     }
   }, [socket, user, selectedConversation]);
 
+  // Reset query parameter processing flag on unmount
+  useEffect(() => {
+    return () => {
+      hasProcessedQueryParam.current = false;
+    };
+  }, []);
+
   // Handle query parameter for opening chat with specific user
   useEffect(() => {
     const handleUserQueryParam = async () => {
@@ -115,10 +127,11 @@ const Messages: React.FC = () => {
             return;
           }
 
-          setCreatingConversation(true);
-          
           // Check if conversation already exists with this specific user
-          const existingConversation = conversations.find(conv => {
+          const existingConversation = conversationsRef.current.find(conv => {
+            const isParticipant = conv.participant_1_id === user.id || conv.participant_2_id === user.id;
+            if (!isParticipant) return false;
+            
             const otherParticipantId = conv.participant_1_id === user.id 
               ? conv.participant_2_id 
               : conv.participant_1_id;
@@ -130,8 +143,8 @@ const Messages: React.FC = () => {
             setSelectedConversation(existingConversation);
             toast.success('Chat opened');
           } else {
-            // Create new conversation (API expects string and handles UUID conversion on backend)
-            const newConversation = await messagesAPI.createConversation(userIdParam);
+            // Create new conversation (API expects string)
+            const newConversation = await messagesAPI.createConversation(targetUserId.toString());
             
             // Add to conversations list and select it
             setConversations(prev => [newConversation, ...prev]);
@@ -141,19 +154,21 @@ const Messages: React.FC = () => {
           
           // Clear the query parameter
           setSearchParams({});
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error creating conversation:', error);
-          toast.error(error.response?.data?.detail || 'Failed to open chat. Please try again.');
+          const errorMessage =
+            error && typeof error === 'object' && 'response' in error && (error as any).response?.data?.detail
+              ? (error as any).response.data.detail
+              : 'Failed to open chat. Please try again.';
+          toast.error(errorMessage);
           // Clear the query parameter even on error to prevent infinite retries
           setSearchParams({});
-        } finally {
-          setCreatingConversation(false);
         }
       }
     };
 
     handleUserQueryParam();
-  }, [searchParams, user, conversations, loading, setSearchParams]);
+  }, [searchParams, user, loading, setSearchParams]);
 
   const fetchConversations = async () => {
     try {
