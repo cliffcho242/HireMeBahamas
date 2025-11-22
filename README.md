@@ -35,6 +35,20 @@ This repository is configured with **automated deployments** via GitHub Actions:
 
 👉 **[View Auto-Deploy Setup Guide](./AUTO_DEPLOY_SETUP.md)** for configuration instructions.
 
+### ⚡ Deployment Speed Improvements
+
+**New**: Docker deployments now use **pre-built base images** for significantly faster builds:
+- 🚀 **5-10x faster deployments** (no apt-get/apk install during builds)
+- ✅ **No more build timeouts** on Railway/Render
+- 🔄 **Consistent environment** across all deployments
+- 📦 **Base images automatically updated** via GitHub Actions
+
+Base images include all system dependencies pre-installed:
+- Backend: `ghcr.io/cliffcho242/hiremebahamas-base-backend:latest`
+- Frontend: `ghcr.io/cliffcho242/hiremebahamas-base-frontend:latest`
+
+📖 **[Read Docker Base Images Documentation](./DOCKER_BASE_IMAGES.md)** for technical details.
+
 ## 🌟 Features
 
 ### Core Social Features (Facebook-Style)

@@ -1,0 +1,5 @@
+# Ignore everything except the Dockerfiles
+*
+!Dockerfile.base-backend
+!Dockerfile.base-frontend
+!README.md
