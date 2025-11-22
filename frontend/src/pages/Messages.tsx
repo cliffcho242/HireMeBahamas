@@ -130,7 +130,7 @@ const Messages: React.FC = () => {
             setSelectedConversation(existingConversation);
             toast.success('Chat opened');
           } else {
-            // Create new conversation (API expects string)
+            // Create new conversation (API expects string and handles UUID conversion on backend)
             const newConversation = await messagesAPI.createConversation(userIdParam);
             
             // Add to conversations list and select it
