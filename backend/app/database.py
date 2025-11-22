@@ -12,6 +12,14 @@ if "postgresql" in DATABASE_URL and "localhost" not in DATABASE_URL:
     if "sslmode" not in DATABASE_URL:
         DATABASE_URL = f"{DATABASE_URL}?sslmode=prefer"
 
+# For SQLite with aiosqlite, add WAL mode and foreign keys support
+if DATABASE_URL.startswith("sqlite"):
+    # Ensure WAL mode is enabled for SQLite
+    if "?" not in DATABASE_URL:
+        DATABASE_URL = f"{DATABASE_URL}?journal_mode=WAL&foreign_keys=ON"
+    else:
+        DATABASE_URL = f"{DATABASE_URL}&journal_mode=WAL&foreign_keys=ON"
+
 # Create async engine
 engine_kwargs = {
     "echo": config("DB_ECHO", default=False, cast=bool),

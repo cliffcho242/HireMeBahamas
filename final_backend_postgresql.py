@@ -96,9 +96,25 @@ def uploaded_file(filename):
 DATABASE_URL = os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None
 
+# Check if this is a production environment
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+IS_PRODUCTION = ENVIRONMENT in ["production", "prod"]
+
+# Warn if production environment is using SQLite
+if IS_PRODUCTION and not USE_POSTGRESQL:
+    print("⚠️" * 50)
+    print("⚠️  WARNING: Production environment detected but DATABASE_URL is not set!")
+    print("⚠️  SQLite should NOT be used in production. Please set DATABASE_URL.")
+    print("⚠️  Data persistence is NOT guaranteed with SQLite in containerized environments.")
+    print("⚠️" * 50)
+
 print(
     f"🗄️ Database Mode: {'PostgreSQL (Production)' if USE_POSTGRESQL else 'SQLite (Development)'}"
 )
+if IS_PRODUCTION:
+    print(f"🌍 Environment: PRODUCTION")
+else:
+    print(f"💻 Environment: Development")
 
 # Track database initialization status
 _db_initialized = False
@@ -172,10 +188,14 @@ def get_db_connection():
         )
         return conn
     else:
-        conn = sqlite3.connect(str(DB_PATH), timeout=30)
+        conn = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)
         conn.row_factory = sqlite3.Row
+        # Enable WAL mode for better concurrent access and crash recovery
         conn.execute("PRAGMA journal_mode=WAL")
+        # Set synchronous to NORMAL for better performance while maintaining safety
         conn.execute("PRAGMA synchronous=NORMAL")
+        # Enable foreign key constraints
+        conn.execute("PRAGMA foreign_keys=ON")
         return conn
 
 
