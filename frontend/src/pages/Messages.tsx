@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
-import api from '../services/api';
+import api, { messagesAPI } from '../services/api';
 import { PaperAirplaneIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 interface Message {
   id: number;
@@ -37,12 +39,15 @@ interface Conversation {
 const Messages: React.FC = () => {
   const { user } = useAuth();
   const { socket } = useSocket();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [creatingConversation, setCreatingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -85,11 +90,60 @@ const Messages: React.FC = () => {
     }
   }, [socket, user, selectedConversation]);
 
+  // Handle query parameter for opening chat with specific user
+  useEffect(() => {
+    const handleUserQueryParam = async () => {
+      const userIdParam = searchParams.get('user');
+      
+      if (userIdParam && user && conversations.length > 0 && !creatingConversation) {
+        try {
+          setCreatingConversation(true);
+          
+          // Check if conversation already exists
+          const existingConversation = conversations.find(conv => 
+            conv.participant_1_id === parseInt(userIdParam) || 
+            conv.participant_2_id === parseInt(userIdParam)
+          );
+
+          if (existingConversation) {
+            // Conversation exists, just select it
+            setSelectedConversation(existingConversation);
+            toast.success('Chat opened');
+          } else {
+            // Create new conversation
+            const newConversation = await messagesAPI.createConversation(userIdParam);
+            
+            // Add to conversations list and select it
+            setConversations(prev => [newConversation, ...prev]);
+            setSelectedConversation(newConversation);
+            toast.success('Chat opened');
+          }
+          
+          // Clear the query parameter
+          setSearchParams({});
+        } catch (error: any) {
+          console.error('Error creating conversation:', error);
+          toast.error(error.response?.data?.detail || 'Failed to open chat. Please try again.');
+        } finally {
+          setCreatingConversation(false);
+        }
+      }
+    };
+
+    // Only run after conversations are loaded
+    if (!loading && user) {
+      handleUserQueryParam();
+    }
+  }, [searchParams, user, conversations, loading, creatingConversation, setSearchParams]);
+
   const fetchConversations = async () => {
     try {
       const response = await api.get('/messages/conversations');
       setConversations(response.data);
-      if (response.data.length > 0) {
+      
+      // Only auto-select first conversation if there's no user query parameter
+      const userIdParam = searchParams.get('user');
+      if (response.data.length > 0 && !userIdParam) {
         setSelectedConversation(response.data[0]);
       }
     } catch (error) {
