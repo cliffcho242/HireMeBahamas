@@ -3,17 +3,17 @@ version: '3.8'
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:15
+    image: postgres:16
     environment:
       POSTGRES_DB: hiremebahamas
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: hiremebahamas_user
+      POSTGRES_PASSWORD: hiremebahamas_password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U hiremebahamas_user -d hiremebahamas"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,26 +23,47 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Backend API
-  backend:
+  # Flask Backend API (Production-like)
+  backend-flask:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgresql://hiremebahamas_user:hiremebahamas_password@postgres:5432/hiremebahamas
+      SECRET_KEY: dev-secret-key-change-in-production
+      JWT_SECRET_KEY: dev-jwt-secret-key-change-in-production
+      TOKEN_EXPIRATION_DAYS: 7
+      ENVIRONMENT: production  # Use production mode to test production code paths
+      PORT: 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --timeout 120 --reload --access-logfile - --error-logfile -
+
+  # FastAPI Backend (Alternative backend in backend/ directory)
+  backend-fastapi:
     build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    env_file:
-      - .env
     environment:
-      # Non-sensitive configuration only
-      DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/hiremebahamas
+      DATABASE_URL: postgresql://hiremebahamas_user:hiremebahamas_password@postgres:5432/hiremebahamas
       REDIS_URL: redis://redis:6379
       ENVIRONMENT: development
+      SECRET_KEY: dev-secret-key-change-in-production
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,8 +71,10 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-      - uploads_data:/app/uploads
+      - backend_uploads:/app/uploads
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    profiles:
+      - fastapi  # Only start if explicitly requested
 
   # Frontend (for development)
   frontend:
@@ -61,23 +84,20 @@ services:
     ports:
       - "3000:3000"
     environment:
-      VITE_API_URL: http://localhost:8000
-      VITE_SOCKET_URL: http://localhost:8000
+      # Use Flask backend by default
+      VITE_API_URL: http://localhost:8080
+      VITE_SOCKET_URL: http://localhost:8080
     volumes:
       - ./frontend:/app
       - /app/node_modules
     command: npm run dev
+    profiles:
+      - frontend  # Only start if explicitly requested
 
 volumes:
   postgres_data:
     driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ./postgres-data
-  uploads_data:
+  redis_data:
     driver: local
-    driver_opts:
-      o: bind
-      type: none
-      device: ./uploads-data
+  backend_uploads:
+    driver: local

@@ -93,9 +93,41 @@ def uploaded_file(filename):
 DATABASE_URL = os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None
 
+# Check if this is a production environment
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+IS_PRODUCTION = ENVIRONMENT in ["production", "prod"]
+
+# For production, PostgreSQL is REQUIRED
+if IS_PRODUCTION and not USE_POSTGRESQL:
+    print("❌" * 50)
+    print("❌  ERROR: Production environment REQUIRES PostgreSQL!")
+    print("❌  DATABASE_URL environment variable is not set.")
+    print("❌")
+    print("❌  SQLite is NOT suitable for production use because:")
+    print("❌  - No data persistence in containerized environments (Railway, Docker)")
+    print("❌  - Users and data will be lost on every deployment/restart")
+    print("❌  - No concurrent access support at scale")
+    print("❌")
+    print("❌  Please set DATABASE_URL to a PostgreSQL connection string:")
+    print("❌  DATABASE_URL=postgresql://username:password@hostname:5432/database")
+    print("❌" * 50)
+    # In production, we should fail fast
+    raise ValueError(
+        "DATABASE_URL must be set in production. "
+        "PostgreSQL is required for data persistence."
+    )
+
 print(
-    f"🗄️ Database Mode: {'PostgreSQL (Production)' if USE_POSTGRESQL else 'SQLite (Development)'}"
+    f"🗄️ Database Mode: {'PostgreSQL (Production)' if USE_POSTGRESQL else 'SQLite (Development Only)'}"
 )
+if IS_PRODUCTION:
+    print(f"🌍 Environment: PRODUCTION")
+else:
+    print(f"💻 Environment: Development")
+
+if not USE_POSTGRESQL:
+    print("⚠️  Note: Using SQLite for local development only.")
+    print("⚠️  Set DATABASE_URL to use PostgreSQL.")
 
 if USE_POSTGRESQL:
     print(f"✅ PostgreSQL URL detected: {DATABASE_URL[:30]}...")
@@ -124,10 +156,23 @@ def get_db_connection():
         )
         return conn
     else:
-        conn = sqlite3.connect(str(DB_PATH), timeout=30)
+        conn = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
+        
+        # Enable WAL mode for better concurrent access and crash recovery
+        result = conn.execute("PRAGMA journal_mode=WAL").fetchone()
+        if result[0].lower() != 'wal':
+            print(f"⚠️  Warning: Failed to enable WAL mode, got: {result[0]}")
+        
+        # Set synchronous to NORMAL for better performance while maintaining safety
         conn.execute("PRAGMA synchronous=NORMAL")
+        
+        # Enable foreign key constraints
+        conn.execute("PRAGMA foreign_keys=ON")
+        result = conn.execute("PRAGMA foreign_keys").fetchone()
+        if not result or not result[0]:
+            print(f"⚠️  Warning: Failed to enable foreign keys, got: {result[0] if result else 'None'}")
+        
         return conn
 
 
