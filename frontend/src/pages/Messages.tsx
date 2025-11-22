@@ -48,6 +48,7 @@ const Messages: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [creatingConversation, setCreatingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasProcessedQueryParam = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -94,7 +95,10 @@ const Messages: React.FC = () => {
     const handleUserQueryParam = async () => {
       const userIdParam = searchParams.get('user');
       
-      if (userIdParam && user && conversations.length >= 0 && !creatingConversation) {
+      // Only process once per page load
+      if (userIdParam && user && !loading && !hasProcessedQueryParam.current) {
+        hasProcessedQueryParam.current = true;
+        
         try {
           // Validate that userIdParam is a valid number
           const targetUserId = parseInt(userIdParam, 10);
@@ -126,7 +130,7 @@ const Messages: React.FC = () => {
             setSelectedConversation(existingConversation);
             toast.success('Chat opened');
           } else {
-            // Create new conversation
+            // Create new conversation (API expects string)
             const newConversation = await messagesAPI.createConversation(userIdParam);
             
             // Add to conversations list and select it
@@ -140,17 +144,16 @@ const Messages: React.FC = () => {
         } catch (error: any) {
           console.error('Error creating conversation:', error);
           toast.error(error.response?.data?.detail || 'Failed to open chat. Please try again.');
+          // Clear the query parameter even on error to prevent infinite retries
+          setSearchParams({});
         } finally {
           setCreatingConversation(false);
         }
       }
     };
 
-    // Only run after conversations are loaded
-    if (!loading && user) {
-      handleUserQueryParam();
-    }
-  }, [searchParams, user, conversations, loading, creatingConversation, setSearchParams]);
+    handleUserQueryParam();
+  }, [searchParams, user, conversations, loading, setSearchParams]);
 
   const fetchConversations = async () => {
     try {
