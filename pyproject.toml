@@ -1,11 +1,17 @@
 # Python project configuration for HireMeBahamas Backend
 # Dependencies are managed in requirements.txt
 
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "hiremebahamas-backend"
 version = "1.0.0"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 description = "HireMeBahamas Flask Backend API"
+dependencies = []
+readme = "README.md"
 
 [tool.black]
 line-length = 88

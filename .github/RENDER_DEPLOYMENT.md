@@ -57,6 +57,30 @@ You can also trigger a deployment manually:
 - Deploy Hook expired - regenerate it in Render settings
 - Render service is in a failed state - check Render dashboard
 
+### Build Fails with "exec(code, locals())" or Setuptools Error
+
+**Root Cause**: Missing or improper build system configuration in `pyproject.toml`
+
+**Solution**: This has been fixed in the latest commit. The repository now includes:
+- Proper `[build-system]` section in `pyproject.toml`
+- Compatible `setup.py` file for backward compatibility
+- `render.yaml` configuration for Render-specific settings
+
+**If you still encounter this error**:
+1. Ensure your Render service uses Python 3.11 or higher
+2. Check that `pyproject.toml` includes the `[build-system]` section
+3. Verify `requirements.txt` doesn't have conflicting dependencies
+4. Try a manual redeploy from Render dashboard
+
+### Python Version Mismatch
+
+**Symptom**: Build fails with "requires-python" errors
+
+**Solution**: 
+- The project requires Python 3.11+
+- Update your `render.yaml` or Render dashboard to use Python 3.11.6
+- Ensure `PYTHON_VERSION` environment variable is set to `3.11.6`
+
 ### How to Disable Auto-Deployment
 
 If you want to deploy manually only:
