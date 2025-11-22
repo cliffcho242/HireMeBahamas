@@ -110,6 +110,9 @@ MAX_ERROR_MESSAGE_LENGTH = 500
 if USE_POSTGRESQL:
     print(f"✅ PostgreSQL URL detected: {DATABASE_URL[:30]}...")
 
+    # Expected DATABASE_URL format message
+    DATABASE_URL_FORMAT = "postgresql://username:password@hostname:5432/database"
+
     # Parse DATABASE_URL with defensive error handling
     parsed = urlparse(DATABASE_URL)
 
@@ -120,16 +123,14 @@ if USE_POSTGRESQL:
         port = 5432
         print(f"⚠️  Invalid port '{parsed.port}' in DATABASE_URL, using default 5432")
 
-    # Safely parse database name
+    # Safely parse database name (remove leading '/' from path)
     try:
         database = parsed.path[1:] if parsed.path and len(parsed.path) > 1 else None
         if not database:
             raise ValueError("Database name is missing from DATABASE_URL")
     except (ValueError, IndexError) as e:
         print(f"❌ Error parsing DATABASE_URL: {e}")
-        print(
-            f"DATABASE_URL format should be: postgresql://username:password@hostname:5432/database"
-        )
+        print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
         raise
 
     DB_CONFIG = {
@@ -148,9 +149,7 @@ if USE_POSTGRESQL:
         print(
             f"❌ Missing required DATABASE_URL components: {', '.join(missing_fields)}"
         )
-        print(
-            f"DATABASE_URL format should be: postgresql://username:password@hostname:5432/database"
-        )
+        print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
         raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
     print(
