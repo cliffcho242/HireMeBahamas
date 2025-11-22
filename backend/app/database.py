@@ -1,6 +1,7 @@
 import os
 
 from decouple import config
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -12,22 +13,21 @@ if "postgresql" in DATABASE_URL and "localhost" not in DATABASE_URL:
     if "sslmode" not in DATABASE_URL:
         DATABASE_URL = f"{DATABASE_URL}?sslmode=prefer"
 
-# For SQLite with aiosqlite, add WAL mode and foreign keys support
-if "sqlite" in DATABASE_URL:
-    # Ensure WAL mode is enabled for SQLite
-    if "?" not in DATABASE_URL:
-        DATABASE_URL = f"{DATABASE_URL}?journal_mode=WAL&foreign_keys=ON"
-    else:
-        DATABASE_URL = f"{DATABASE_URL}&journal_mode=WAL&foreign_keys=ON"
-
 # Create async engine
 engine_kwargs = {
     "echo": config("DB_ECHO", default=False, cast=bool),
     "future": True,
 }
 
-# Add connection pool settings only for non-SQLite databases
-if "sqlite" not in DATABASE_URL:
+# Configure database-specific settings
+if "sqlite" in DATABASE_URL:
+    # For SQLite, use connect_args to enable WAL mode
+    # Note: aiosqlite handles these through connection initialization
+    engine_kwargs["connect_args"] = {
+        "check_same_thread": False,
+    }
+else:
+    # Add connection pool settings only for non-SQLite databases
     engine_kwargs.update(
         {
             "pool_size": 10,
@@ -36,6 +36,17 @@ if "sqlite" not in DATABASE_URL:
     )
 
 engine = create_async_engine(DATABASE_URL, **engine_kwargs)
+
+
+# Enable WAL mode for SQLite connections
+if "sqlite" in DATABASE_URL:
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        """Set SQLite pragmas on connection"""
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 # Create session factory
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

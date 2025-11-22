@@ -142,12 +142,19 @@ def get_db_connection():
     else:
         conn = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)
         conn.row_factory = sqlite3.Row
+        
         # Enable WAL mode for better concurrent access and crash recovery
-        conn.execute("PRAGMA journal_mode=WAL")
+        result = conn.execute("PRAGMA journal_mode=WAL").fetchone()
+        if result[0].lower() != 'wal':
+            print(f"⚠️  Warning: Failed to enable WAL mode, got: {result[0]}")
+        
         # Set synchronous to NORMAL for better performance while maintaining safety
         conn.execute("PRAGMA synchronous=NORMAL")
+        
         # Enable foreign key constraints
-        conn.execute("PRAGMA foreign_keys=ON")
+        result = conn.execute("PRAGMA foreign_keys=ON").fetchone()
+        # Note: PRAGMA foreign_keys=ON returns the new state (1 for ON)
+        
         return conn
 
 
