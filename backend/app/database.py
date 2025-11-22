@@ -13,7 +13,7 @@ if "postgresql" in DATABASE_URL and "localhost" not in DATABASE_URL:
         DATABASE_URL = f"{DATABASE_URL}?sslmode=prefer"
 
 # For SQLite with aiosqlite, add WAL mode and foreign keys support
-if DATABASE_URL.startswith("sqlite"):
+if "sqlite" in DATABASE_URL:
     # Ensure WAL mode is enabled for SQLite
     if "?" not in DATABASE_URL:
         DATABASE_URL = f"{DATABASE_URL}?journal_mode=WAL&foreign_keys=ON"
@@ -27,7 +27,7 @@ engine_kwargs = {
 }
 
 # Add connection pool settings only for non-SQLite databases
-if not DATABASE_URL.startswith("sqlite"):
+if "sqlite" not in DATABASE_URL:
     engine_kwargs.update(
         {
             "pool_size": 10,
