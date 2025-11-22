@@ -43,7 +43,7 @@ services:
       SECRET_KEY: dev-secret-key-change-in-production
       JWT_SECRET_KEY: dev-jwt-secret-key-change-in-production
       TOKEN_EXPIRATION_DAYS: 7
-      ENVIRONMENT: development
+      ENVIRONMENT: production  # Use production mode to test production code paths
       PORT: 8080
     depends_on:
       postgres:

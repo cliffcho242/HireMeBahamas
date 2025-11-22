@@ -170,8 +170,8 @@ def get_db_connection():
         # Enable foreign key constraints
         conn.execute("PRAGMA foreign_keys=ON")
         result = conn.execute("PRAGMA foreign_keys").fetchone()
-        if result[0] != 1:
-            print(f"⚠️  Warning: Failed to enable foreign keys, got: {result[0]}")
+        if not result or not result[0]:
+            print(f"⚠️  Warning: Failed to enable foreign keys, got: {result[0] if result else 'None'}")
         
         return conn
 

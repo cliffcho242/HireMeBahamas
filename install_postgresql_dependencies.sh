@@ -38,7 +38,8 @@ apt-get install -y \
     python3-dev \
     gcc \
     g++ \
-    make
+    make \
+    pkg-config
 
 echo ""
 echo "📦 Installing additional system libraries..."
