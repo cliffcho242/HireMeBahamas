@@ -90,15 +90,39 @@ These scripts will automatically:
 
 ### Manual Installation
 
+📦 **For complete system dependency installation instructions, see:**
+- **[INSTALL.md](INSTALL.md)** - Comprehensive production installation guide
+- **[DEPENDENCIES_QUICK_REF.md](DEPENDENCIES_QUICK_REF.md)** - Quick reference for apt-get commands
+
 ### Prerequisites
 - Node.js 18+
-- Python 3.8+
-- SQLite3 or PostgreSQL
-- Redis (optional, for caching)
+- Python 3.11+
+- PostgreSQL 13+ (recommended for production) or SQLite3 (development)
+- Redis 6+ (required for caching, sessions, and Celery)
+- Nginx (for production deployment)
+- System build tools (see INSTALL.md for details)
 
 ### Installation Steps
 
-1. **Clone and Setup**
+1. **Install System Dependencies (Ubuntu/Debian)**
+```bash
+# One-command installation of all system packages
+sudo apt-get update -y && \
+sudo apt-get install -y \
+    build-essential gcc g++ make pkg-config \
+    python3 python3-pip python3-dev python3-venv \
+    postgresql postgresql-client libpq-dev \
+    redis-server redis-tools \
+    libssl-dev libffi-dev libjpeg-dev libpng-dev \
+    libevent-dev libxml2-dev libxslt1-dev \
+    nginx curl wget git
+
+# Install Node.js 18.x LTS
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+2. **Clone and Setup**
 ```bash
 cd HireMeBahamas
 pip install -r requirements.txt
