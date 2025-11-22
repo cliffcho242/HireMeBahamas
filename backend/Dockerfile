@@ -4,8 +4,10 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for production deployment
-RUN apt-get update && apt-get install -y \
+# Install system dependencies for production deployment using BuildKit cache
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     # Build tools (required for compiling Python packages)
     build-essential \
     gcc \
@@ -35,14 +37,15 @@ RUN apt-get update && apt-get install -y \
     curl \
     wget \
     git \
-    # Clean up apt cache to reduce image size
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies using BuildKit cache for pip
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt
 
 # Copy application code
 COPY . .

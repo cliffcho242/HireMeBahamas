@@ -34,6 +34,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      # Enable BuildKit features
+      cache_from:
+        - type=registry,ref=ghcr.io/cliffcho242/hiremebahamas-backend:cache
+      cache_to:
+        - type=inline
     ports:
       - "8000:8000"
     env_file:
@@ -58,6 +63,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
+      # Enable BuildKit features
+      cache_from:
+        - type=registry,ref=ghcr.io/cliffcho242/hiremebahamas-frontend:cache
+      cache_to:
+        - type=inline
     ports:
       - "3000:3000"
     environment:
