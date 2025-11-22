@@ -17,6 +17,7 @@ RUN apk add --no-cache \
 COPY package*.json ./
 
 # Install dependencies using BuildKit cache for npm
+# Note: --legacy-peer-deps is required due to peer dependency conflicts in the project
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --legacy-peer-deps
 

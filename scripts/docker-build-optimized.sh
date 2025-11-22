@@ -89,4 +89,3 @@ echo -e "  ${YELLOW}./scripts/docker-build-optimized.sh${NC}           # Build a
 echo -e "  ${YELLOW}./scripts/docker-build-optimized.sh backend${NC}   # Build backend only"
 echo -e "  ${YELLOW}./scripts/docker-build-optimized.sh frontend${NC}  # Build frontend only"
 echo -e "  ${YELLOW}./scripts/docker-build-optimized.sh compose${NC}   # Build with docker-compose"
-echo ""
