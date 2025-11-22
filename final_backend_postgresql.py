@@ -30,6 +30,9 @@ app.config["SECRET_KEY"] = os.getenv(
 app.config["JSON_SORT_KEYS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB max file size
 
+# JWT token expiration configuration (in days)
+TOKEN_EXPIRATION_DAYS = int(os.getenv("TOKEN_EXPIRATION_DAYS", "7"))
+
 # Rate limiting configuration
 limiter = Limiter(
     app=app,
@@ -736,7 +739,7 @@ def register():
         token_payload = {
             "user_id": user["id"],
             "email": user["email"],
-            "exp": datetime.now(timezone.utc) + timedelta(days=7),
+            "exp": datetime.now(timezone.utc) + timedelta(days=TOKEN_EXPIRATION_DAYS),
         }
 
         token = jwt.encode(token_payload, app.config["SECRET_KEY"], algorithm="HS256")
@@ -847,7 +850,7 @@ def login():
         token_payload = {
             "user_id": user["id"],
             "email": user["email"],
-            "exp": datetime.now(timezone.utc) + timedelta(days=7),
+            "exp": datetime.now(timezone.utc) + timedelta(days=TOKEN_EXPIRATION_DAYS),
         }
 
         token = jwt.encode(token_payload, app.config["SECRET_KEY"], algorithm="HS256")
@@ -939,7 +942,7 @@ def refresh_token():
         new_token_payload = {
             "user_id": user["id"],
             "email": user["email"],
-            "exp": datetime.now(timezone.utc) + timedelta(days=7),
+            "exp": datetime.now(timezone.utc) + timedelta(days=TOKEN_EXPIRATION_DAYS),
         }
 
         new_token = jwt.encode(

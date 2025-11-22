@@ -5,6 +5,7 @@ Tests all the fixes implemented for the app reset issue
 """
 
 import json
+import os
 import requests
 import time
 import sys
@@ -222,8 +223,6 @@ def test_profile_fetch(token):
 def test_database_persistence():
     """Test 7: Database file existence and persistence"""
     print_test("Database Persistence")
-    
-    import os
     
     db_file = "hiremebahamas.db"
     

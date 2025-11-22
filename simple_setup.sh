@@ -71,10 +71,13 @@ fi
 echo ""
 echo "🗄️  Initializing database..."
 python3 -c "
-from final_backend_postgresql import init_database
 try:
+    from final_backend_postgresql import init_database
     init_database()
     print('✅ Database initialized successfully')
+except ImportError as e:
+    print('⚠️  Could not import init_database function')
+    print('   Database will be initialized on first run')
 except Exception as e:
     print(f'⚠️  Database initialization: {e}')
     print('   Database will be initialized on first run')
