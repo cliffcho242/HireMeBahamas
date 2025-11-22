@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import api, { messagesAPI } from '../services/api';
 import { PaperAirplaneIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 interface Message {
@@ -39,7 +39,6 @@ interface Conversation {
 const Messages: React.FC = () => {
   const { user } = useAuth();
   const { socket } = useSocket();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -95,15 +94,32 @@ const Messages: React.FC = () => {
     const handleUserQueryParam = async () => {
       const userIdParam = searchParams.get('user');
       
-      if (userIdParam && user && conversations.length > 0 && !creatingConversation) {
+      if (userIdParam && user && conversations.length >= 0 && !creatingConversation) {
         try {
+          // Validate that userIdParam is a valid number
+          const targetUserId = parseInt(userIdParam, 10);
+          if (isNaN(targetUserId)) {
+            toast.error('Invalid user ID');
+            setSearchParams({});
+            return;
+          }
+
+          // Don't allow messaging yourself
+          if (targetUserId === user.id) {
+            toast.error("You can't message yourself");
+            setSearchParams({});
+            return;
+          }
+
           setCreatingConversation(true);
           
-          // Check if conversation already exists
-          const existingConversation = conversations.find(conv => 
-            conv.participant_1_id === parseInt(userIdParam) || 
-            conv.participant_2_id === parseInt(userIdParam)
-          );
+          // Check if conversation already exists with this specific user
+          const existingConversation = conversations.find(conv => {
+            const otherParticipantId = conv.participant_1_id === user.id 
+              ? conv.participant_2_id 
+              : conv.participant_1_id;
+            return otherParticipantId === targetUserId;
+          });
 
           if (existingConversation) {
             // Conversation exists, just select it
