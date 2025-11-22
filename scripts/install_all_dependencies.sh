@@ -226,56 +226,135 @@ install_system_deps() {
     print_header "Installing System Dependencies"
     
     local deps_debian=(
+        # Build tools (required for compiling Python packages)
         "build-essential"
+        "gcc"
+        "g++"
+        "make"
+        "pkg-config"
+        # Python and development tools
         "python3"
         "python3-pip"
         "python3-dev"
         "python3-venv"
+        "python3-setuptools"
+        "python3-wheel"
+        # PostgreSQL (for psycopg2)
         "postgresql"
         "postgresql-contrib"
         "postgresql-client"
         "libpq-dev"
+        # Redis (for caching and Celery)
         "redis-server"
         "redis-tools"
+        # Node.js and npm
         "nodejs"
         "npm"
-        "libffi-dev"
+        # SSL/TLS libraries (for cryptography)
         "libssl-dev"
-        "pkg-config"
+        "libffi-dev"
+        "ca-certificates"
+        # Image processing libraries (for Pillow)
+        "libjpeg-dev"
+        "libpng-dev"
+        "libtiff-dev"
+        "libwebp-dev"
+        "libopenjp2-7-dev"
+        "zlib1g-dev"
+        # Event library (for gevent)
+        "libevent-dev"
+        # XML processing libraries
+        "libxml2-dev"
+        "libxslt1-dev"
+        # Nginx (production web server)
+        "nginx"
+        # Utilities
         "curl"
         "wget"
         "git"
+        "htop"
+        "vim"
+        "unzip"
     )
     
     local deps_rhel=(
+        # Build tools (required for compiling Python packages)
         "gcc"
         "gcc-c++"
         "make"
+        "pkgconfig"
+        # Python and development tools
         "python3"
         "python3-pip"
         "python3-devel"
+        "python3-setuptools"
+        "python3-wheel"
+        # PostgreSQL (for psycopg2)
         "postgresql"
         "postgresql-server"
         "postgresql-devel"
+        # Redis (for caching and Celery)
         "redis"
+        # Node.js and npm
         "nodejs"
         "npm"
-        "libffi-devel"
+        # SSL/TLS libraries (for cryptography)
         "openssl-devel"
-        "pkgconfig"
+        "libffi-devel"
+        "ca-certificates"
+        # Image processing libraries (for Pillow)
+        "libjpeg-devel"
+        "libpng-devel"
+        "libtiff-devel"
+        "libwebp-devel"
+        "zlib-devel"
+        # Event library (for gevent)
+        "libevent-devel"
+        # XML processing libraries
+        "libxml2-devel"
+        "libxslt-devel"
+        # Nginx (production web server)
+        "nginx"
+        # Utilities
         "curl"
         "wget"
         "git"
+        "htop"
+        "vim"
     )
     
     local deps_macos=(
+        # Python
         "python@3.12"
+        # PostgreSQL
         "postgresql@15"
+        # Redis
         "redis"
+        # Node.js
         "node"
+        # SSL/TLS libraries
         "openssl"
         "libffi"
+        # Build tools
         "pkg-config"
+        # Image processing libraries
+        "jpeg"
+        "libpng"
+        "libtiff"
+        "webp"
+        # Event library
+        "libevent"
+        # XML processing
+        "libxml2"
+        "libxslt"
+        # Nginx
+        "nginx"
+        # Utilities
+        "curl"
+        "wget"
+        "git"
+        "htop"
+        "vim"
     )
     
     if [[ "$DRY_RUN" == true ]]; then
