@@ -6,36 +6,66 @@ NIXPACKS_NO_MUSL = "1"
 PYTHON_VERSION = "3.12"
 
 [phases.setup]
-# Comprehensive system packages for production deployment
+# Comprehensive system packages for production deployment with PostgreSQL
 aptPkgs = [
     # Build tools (required for compiling Python packages)
     "build-essential",
     "gcc",
     "g++",
     "make",
-    # PostgreSQL client and development libraries (for psycopg2)
+    "pkg-config",
+    
+    # PostgreSQL client and development libraries (REQUIRED for psycopg2 and PostgreSQL connectivity)
     "postgresql-client",
+    "postgresql-client-common",
     "libpq-dev",
-    # SSL/TLS libraries (for cryptography package)
+    "libpq5",
+    
+    # Python development headers (required for building Python C extensions)
+    "python3-dev",
+    
+    # SSL/TLS libraries (required for cryptography package and secure PostgreSQL connections)
     "libssl-dev",
     "libffi-dev",
+    "ca-certificates",
+    
     # Image processing libraries (for Pillow if used)
     "libjpeg-dev",
     "libpng-dev",
     "libtiff-dev",
     "libwebp-dev",
     "zlib1g-dev",
-    # Event notification library (for gevent)
+    "libfreetype6-dev",
+    "liblcms2-dev",
+    
+    # Event notification library (for gevent and async operations)
     "libevent-dev",
+    
     # XML processing libraries (for various packages)
     "libxml2-dev",
     "libxslt1-dev",
-    # Redis tools (for connectivity testing)
+    
+    # SQLite libraries (for aiosqlite in development/testing)
+    "libsqlite3-dev",
+    
+    # Additional libraries for Python packages
+    "libreadline-dev",
+    "libbz2-dev",
+    "libncurses5-dev",
+    "libncursesw5-dev",
+    "tk-dev",
+    "xz-utils",
+    "llvm",
+    
+    # Redis tools (for connectivity testing if Redis is used)
     "redis-tools",
-    # Utilities
+    
+    # Utilities for debugging and monitoring
     "curl",
     "wget",
-    "git"
+    "git",
+    "vim",
+    "net-tools"
 ]
 
 # Secrets should be configured via platform environment variables, NOT in Dockerfile
@@ -44,4 +74,5 @@ aptPkgs = [
 
 [start]
 # Migration runs automatically in final_backend_postgresql.py
+# PostgreSQL connection is configured via DATABASE_URL environment variable
 cmd = "gunicorn final_backend_postgresql:application --bind 0.0.0.0:${PORT:-8080} --workers 4 --timeout 120 --access-logfile - --error-logfile -"

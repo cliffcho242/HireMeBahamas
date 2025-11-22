@@ -100,21 +100,37 @@ USE_POSTGRESQL = DATABASE_URL is not None
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 IS_PRODUCTION = ENVIRONMENT in ["production", "prod"]
 
-# Warn if production environment is using SQLite
+# For production, PostgreSQL is REQUIRED
 if IS_PRODUCTION and not USE_POSTGRESQL:
-    print("⚠️" * 50)
-    print("⚠️  WARNING: Production environment detected but DATABASE_URL is not set!")
-    print("⚠️  SQLite should NOT be used in production. Please set DATABASE_URL.")
-    print("⚠️  Data persistence is NOT guaranteed with SQLite in containerized environments.")
-    print("⚠️" * 50)
+    print("❌" * 50)
+    print("❌  ERROR: Production environment REQUIRES PostgreSQL!")
+    print("❌  DATABASE_URL environment variable is not set.")
+    print("❌")
+    print("❌  SQLite is NOT suitable for production use because:")
+    print("❌  - No data persistence in containerized environments (Railway, Docker)")
+    print("❌  - Users and data will be lost on every deployment/restart")
+    print("❌  - No concurrent access support at scale")
+    print("❌")
+    print("❌  Please set DATABASE_URL to a PostgreSQL connection string:")
+    print("❌  DATABASE_URL=postgresql://username:password@hostname:5432/database")
+    print("❌" * 50)
+    # In production, we should fail fast
+    raise ValueError(
+        "DATABASE_URL must be set in production. "
+        "PostgreSQL is required for data persistence."
+    )
 
 print(
-    f"🗄️ Database Mode: {'PostgreSQL (Production)' if USE_POSTGRESQL else 'SQLite (Development)'}"
+    f"🗄️ Database Mode: {'PostgreSQL (Production)' if USE_POSTGRESQL else 'SQLite (Development Only)'}"
 )
 if IS_PRODUCTION:
     print(f"🌍 Environment: PRODUCTION")
 else:
     print(f"💻 Environment: Development")
+
+if not USE_POSTGRESQL:
+    print("⚠️  Note: Using SQLite for local development only.")
+    print("⚠️  Set DATABASE_URL to use PostgreSQL.")
 
 # Track database initialization status
 _db_initialized = False
