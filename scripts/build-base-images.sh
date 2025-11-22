@@ -26,11 +26,16 @@ fi
 
 # Check if user is logged into GitHub Container Registry
 echo -e "${YELLOW}Checking Docker login status...${NC}"
-if ! docker login ghcr.io --help &> /dev/null; then
-    echo -e "${RED}Error: Unable to access GitHub Container Registry${NC}"
-    echo "Please log in first:"
+if ! docker system info 2>&1 | grep -q "Username"; then
+    echo -e "${RED}Warning: You may not be logged into Docker${NC}"
+    echo "To log in to GitHub Container Registry:"
     echo "  docker login ghcr.io -u YOUR_GITHUB_USERNAME"
-    exit 1
+    echo ""
+    read -p "Continue anyway? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
 fi
 
 # Configuration
