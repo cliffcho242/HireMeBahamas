@@ -32,7 +32,8 @@ jobs:
             echo "Please add your Render Deploy Hook URL as a secret"
             echo "Get it from: Render Dashboard → Your Service →" \
                  "Settings → Deploy Hook"
-            exit 1
+            echo "Skipping deployment..."
+            exit 0
           fi
 
       - name: Wait for deployment
