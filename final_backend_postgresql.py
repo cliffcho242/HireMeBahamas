@@ -884,6 +884,250 @@ def login():
         )
 
 
+@app.route("/api/auth/refresh", methods=["POST", "OPTIONS"])
+def refresh_token():
+    """Refresh authentication token"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "No token provided"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        # Decode token to get user info
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload.get("user_id")
+        except jwt.ExpiredSignatureError:
+            return (
+                jsonify({"success": False, "message": "Token has expired"}),
+                401,
+            )
+        except jwt.InvalidTokenError:
+            return (
+                jsonify({"success": False, "message": "Invalid token"}),
+                401,
+            )
+
+        # Get user from database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if USE_POSTGRESQL:
+            cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        else:
+            cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not user:
+            return (
+                jsonify({"success": False, "message": "User not found"}),
+                404,
+            )
+
+        # Create new JWT token with extended expiration
+        new_token_payload = {
+            "user_id": user["id"],
+            "email": user["email"],
+            "exp": datetime.now(timezone.utc) + timedelta(days=7),
+        }
+
+        new_token = jwt.encode(
+            new_token_payload, app.config["SECRET_KEY"], algorithm="HS256"
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Token refreshed successfully",
+                    "access_token": new_token,
+                    "token_type": "bearer",
+                    "user": {
+                        "id": user["id"],
+                        "email": user["email"],
+                        "first_name": user["first_name"] or "",
+                        "last_name": user["last_name"] or "",
+                        "user_type": user["user_type"] or "user",
+                        "location": user["location"] or "",
+                        "phone": user["phone"] or "",
+                        "bio": user["bio"] or "",
+                        "avatar_url": user["avatar_url"] or "",
+                        "is_available_for_hire": bool(user["is_available_for_hire"]),
+                    },
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        print(f"Token refresh error: {str(e)}")
+        return (
+            jsonify({"success": False, "message": f"Token refresh failed: {str(e)}"}),
+            500,
+        )
+
+
+@app.route("/api/auth/verify", methods=["GET", "OPTIONS"])
+def verify_session():
+    """Verify if the current session is valid"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "No token provided"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        # Decode token to verify validity
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload.get("user_id")
+
+            # Check if user exists
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            if USE_POSTGRESQL:
+                cursor.execute("SELECT id, email FROM users WHERE id = %s", (user_id,))
+            else:
+                cursor.execute("SELECT id, email FROM users WHERE id = ?", (user_id,))
+
+            user = cursor.fetchone()
+            cursor.close()
+            conn.close()
+
+            if not user:
+                return (
+                    jsonify({"success": False, "message": "User not found"}),
+                    404,
+                )
+
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "valid": True,
+                        "message": "Session is valid",
+                        "user_id": user["id"],
+                        "email": user["email"],
+                    }
+                ),
+                200,
+            )
+
+        except jwt.ExpiredSignatureError:
+            return (
+                jsonify({"success": False, "valid": False, "message": "Token has expired"}),
+                401,
+            )
+        except jwt.InvalidTokenError:
+            return (
+                jsonify({"success": False, "valid": False, "message": "Invalid token"}),
+                401,
+            )
+
+    except Exception as e:
+        print(f"Session verification error: {str(e)}")
+        return (
+            jsonify({"success": False, "message": f"Verification failed: {str(e)}"}),
+            500,
+        )
+
+
+@app.route("/api/auth/profile", methods=["GET", "OPTIONS"])
+def get_profile():
+    """Get user profile"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "No token provided"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        # Decode token
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload.get("user_id")
+        except jwt.ExpiredSignatureError:
+            return (
+                jsonify({"success": False, "message": "Token has expired"}),
+                401,
+            )
+        except jwt.InvalidTokenError:
+            return (
+                jsonify({"success": False, "message": "Invalid token"}),
+                401,
+            )
+
+        # Get user from database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if USE_POSTGRESQL:
+            cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        else:
+            cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not user:
+            return (
+                jsonify({"success": False, "message": "User not found"}),
+                404,
+            )
+
+        return (
+            jsonify(
+                {
+                    "id": user["id"],
+                    "email": user["email"],
+                    "first_name": user["first_name"] or "",
+                    "last_name": user["last_name"] or "",
+                    "user_type": user["user_type"] or "user",
+                    "location": user["location"] or "",
+                    "phone": user["phone"] or "",
+                    "bio": user["bio"] or "",
+                    "avatar_url": user["avatar_url"] or "",
+                    "is_available_for_hire": bool(user["is_available_for_hire"]),
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        print(f"Profile fetch error: {str(e)}")
+        return (
+            jsonify({"success": False, "message": f"Profile fetch failed: {str(e)}"}),
+            500,
+        )
+
+
 # ==========================================
 # APPLICATION ENTRY POINT
 # ==========================================
