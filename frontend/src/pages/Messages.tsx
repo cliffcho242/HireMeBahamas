@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
-import api from '../services/api';
+import api, { messagesAPI } from '../services/api';
 import { PaperAirplaneIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline';
+import { useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 interface Message {
   id: number;
@@ -37,6 +39,7 @@ interface Conversation {
 const Messages: React.FC = () => {
   const { user } = useAuth();
   const { socket } = useSocket();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -44,10 +47,17 @@ const Messages: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasProcessedQueryParam = useRef(false);
+  const conversationsRef = useRef<Conversation[]>([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Keep conversations ref in sync
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   useEffect(() => {
     if (user) {
@@ -85,11 +95,89 @@ const Messages: React.FC = () => {
     }
   }, [socket, user, selectedConversation]);
 
+  // Reset query parameter processing flag on unmount
+  useEffect(() => {
+    return () => {
+      hasProcessedQueryParam.current = false;
+    };
+  }, []);
+
+  // Handle query parameter for opening chat with specific user
+  useEffect(() => {
+    const handleUserQueryParam = async () => {
+      const userIdParam = searchParams.get('user');
+      
+      // Only process once per page load
+      if (userIdParam && user && !loading && !hasProcessedQueryParam.current) {
+        hasProcessedQueryParam.current = true;
+        
+        try {
+          // Validate that userIdParam is a valid number
+          const targetUserId = parseInt(userIdParam, 10);
+          if (isNaN(targetUserId)) {
+            toast.error('Invalid user ID');
+            setSearchParams({});
+            return;
+          }
+
+          // Don't allow messaging yourself
+          if (targetUserId === user.id) {
+            toast.error("You can't message yourself");
+            setSearchParams({});
+            return;
+          }
+
+          // Check if conversation already exists with this specific user
+          const existingConversation = conversationsRef.current.find(conv => {
+            const isParticipant = conv.participant_1_id === user.id || conv.participant_2_id === user.id;
+            if (!isParticipant) return false;
+            
+            const otherParticipantId = conv.participant_1_id === user.id 
+              ? conv.participant_2_id 
+              : conv.participant_1_id;
+            return otherParticipantId === targetUserId;
+          });
+
+          if (existingConversation) {
+            // Conversation exists, just select it
+            setSelectedConversation(existingConversation);
+            toast.success('Chat opened');
+          } else {
+            // Create new conversation (API expects string)
+            const newConversation = await messagesAPI.createConversation(targetUserId.toString());
+            
+            // Add to conversations list and select it
+            setConversations(prev => [newConversation, ...prev]);
+            setSelectedConversation(newConversation);
+            toast.success('Chat opened');
+          }
+          
+          // Clear the query parameter
+          setSearchParams({});
+        } catch (error) {
+          console.error('Error creating conversation:', error);
+          const errorMessage =
+            error && typeof error === 'object' && 'response' in error && (error as any).response?.data?.detail
+              ? (error as any).response.data.detail
+              : 'Failed to open chat. Please try again.';
+          toast.error(errorMessage);
+          // Clear the query parameter even on error to prevent infinite retries
+          setSearchParams({});
+        }
+      }
+    };
+
+    handleUserQueryParam();
+  }, [searchParams, user, loading, setSearchParams]);
+
   const fetchConversations = async () => {
     try {
       const response = await api.get('/messages/conversations');
       setConversations(response.data);
-      if (response.data.length > 0) {
+      
+      // Only auto-select first conversation if there's no user query parameter
+      const userIdParam = searchParams.get('user');
+      if (response.data.length > 0 && !userIdParam) {
         setSelectedConversation(response.data[0]);
       }
     } catch (error) {
