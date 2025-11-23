@@ -165,7 +165,22 @@ npm install
 echo "Frontend dependencies installed successfully!"
 
 echo ""
-echo "Step 6: Installing Root Dependencies"
+echo "Step 6: Installing Admin Panel Dependencies"
+echo "---------------------------------------------"
+
+# Navigate to admin-panel directory
+cd ../admin-panel || { echo "Admin panel directory not found, skipping..."; cd ..; }
+
+if [ -f "package.json" ]; then
+    # Install Node.js packages
+    echo "Installing admin-panel npm packages..."
+    npm install
+    echo "Admin panel dependencies installed successfully!"
+    cd ..
+fi
+
+echo ""
+echo "Step 7: Installing Root Dependencies"
 echo "-------------------------------------"
 
 # Navigate to root directory

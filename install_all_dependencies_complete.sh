@@ -141,6 +141,17 @@ else
     echo "⚠️  Frontend directory not found or package.json missing"
 fi
 
+# Install admin-panel dependencies
+if [ -d "admin-panel" ] && [ -f "admin-panel/package.json" ]; then
+    echo "Installing admin-panel npm packages..."
+    cd admin-panel
+    npm install
+    echo "✅ Admin-panel packages installed"
+    cd ..
+else
+    echo "⚠️  Admin-panel directory not found or package.json missing"
+fi
+
 echo ""
 echo "================================================================"
 echo "Step 5: Database Configuration Check"
