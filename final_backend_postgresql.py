@@ -31,7 +31,9 @@ app.config["JSON_SORT_KEYS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB max file size
 
 # JWT token expiration configuration (in days)
-TOKEN_EXPIRATION_DAYS = int(os.getenv("TOKEN_EXPIRATION_DAYS", "7"))
+# Set to 365 days (1 year) to prevent frequent re-login
+# Users stay logged in for a full year unless they manually log out
+TOKEN_EXPIRATION_DAYS = int(os.getenv("TOKEN_EXPIRATION_DAYS", "365"))
 
 # Rate limiting configuration
 limiter = Limiter(
@@ -1214,6 +1216,499 @@ def get_profile():
         print(f"Profile fetch error: {str(e)}")
         return (
             jsonify({"success": False, "message": f"Profile fetch failed: {str(e)}"}),
+            500,
+        )
+
+
+# ==========================================
+# POSTS ENDPOINTS
+# ==========================================
+
+
+@app.route("/api/posts", methods=["GET", "OPTIONS"])
+def get_posts():
+    """
+    Get posts with user information
+    
+    Posts are PERMANENTLY stored - never automatically deleted.
+    Supports pagination for handling millions of posts efficiently.
+    
+    Query Parameters:
+    - page: Page number (default: 1)
+    - per_page: Posts per page (default: 20, max: 100)
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        
+        # Validate pagination
+        if page < 1:
+            page = 1
+        if per_page < 1:
+            per_page = 20
+        if per_page > 100:
+            per_page = 100  # Max 100 posts per page
+        
+        offset = (page - 1) * per_page
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get total count
+        cursor.execute("SELECT COUNT(*) as total FROM posts")
+        total_posts = cursor.fetchone()["total"]
+
+        # Get paginated posts with user information
+        if USE_POSTGRESQL:
+            # PostgreSQL requires all non-aggregate columns in GROUP BY
+            cursor.execute(
+                """
+                SELECT 
+                    p.id, p.content, p.image_url, p.created_at,
+                    u.id as user_id, u.email, u.first_name, u.last_name, u.avatar_url,
+                    COUNT(DISTINCT l.id) as likes_count
+                FROM posts p
+                JOIN users u ON p.user_id = u.id
+                LEFT JOIN likes l ON p.id = l.post_id
+                GROUP BY p.id, p.content, p.image_url, p.created_at, 
+                         u.id, u.email, u.first_name, u.last_name, u.avatar_url
+                ORDER BY p.created_at DESC
+                LIMIT %s OFFSET %s
+            """,
+                (per_page, offset)
+            )
+        else:
+            # SQLite allows grouping by primary key only (functionally dependent columns)
+            cursor.execute(
+                """
+                SELECT 
+                    p.id, p.content, p.image_url, p.created_at,
+                    u.id as user_id, u.email, u.first_name, u.last_name, u.avatar_url,
+                    COUNT(DISTINCT l.id) as likes_count
+                FROM posts p
+                JOIN users u ON p.user_id = u.id
+                LEFT JOIN likes l ON p.id = l.post_id
+                GROUP BY p.id
+                ORDER BY p.created_at DESC
+                LIMIT ? OFFSET ?
+            """,
+                (per_page, offset)
+            )
+
+        posts_data = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        # Format posts for response
+        posts = []
+        for post in posts_data:
+            posts.append(
+                {
+                    "id": post["id"],
+                    "content": post["content"],
+                    "image_url": post["image_url"],
+                    "created_at": post["created_at"],
+                    "likes_count": post["likes_count"],
+                    "user": {
+                        "id": post["user_id"],
+                        "email": post["email"],
+                        "first_name": post["first_name"] or "",
+                        "last_name": post["last_name"] or "",
+                        "avatar_url": post["avatar_url"] or "",
+                    },
+                }
+            )
+        
+        # Calculate pagination info
+        total_pages = (total_posts + per_page - 1) // per_page  # Ceiling division
+
+        return jsonify({
+            "success": True, 
+            "posts": posts,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total_posts": total_posts,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"Get posts error: {str(e)}")
+        return (
+            jsonify({"success": False, "message": f"Failed to fetch posts: {str(e)}"}),
+            500,
+        )
+
+
+@app.route("/api/posts", methods=["POST"])
+def create_post():
+    """Create a new post"""
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "No token provided"}),
+                401,
+            )
+
+        parts = auth_header.split(" ")
+        if len(parts) != 2:
+            return (
+                jsonify({"success": False, "message": "Invalid authorization header format"}),
+                401,
+            )
+        
+        token = parts[1]
+
+        # Decode token to get user_id
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload.get("user_id")
+        except jwt.ExpiredSignatureError:
+            return (
+                jsonify({"success": False, "message": "Token has expired"}),
+                401,
+            )
+        except jwt.InvalidTokenError:
+            return (
+                jsonify({"success": False, "message": "Invalid token"}),
+                401,
+            )
+
+        # Get post data
+        data = request.get_json()
+        content = data.get("content", "").strip()
+        image_url = data.get("image_url", "")
+
+        if not content:
+            return (
+                jsonify({"success": False, "message": "Post content is required"}),
+                400,
+            )
+
+        # Create post in database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verify user exists before creating post
+        if USE_POSTGRESQL:
+            cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+        else:
+            cursor.execute("SELECT id FROM users WHERE id = ?", (user_id,))
+        
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return (
+                jsonify({"success": False, "message": "User not found. Please log in again."}),
+                401,
+            )
+
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                INSERT INTO posts (user_id, content, image_url, created_at)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id, created_at
+            """,
+                (user_id, content, image_url, datetime.now(timezone.utc)),
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT INTO posts (user_id, content, image_url, created_at)
+                VALUES (?, ?, ?, ?)
+            """,
+                (user_id, content, image_url, datetime.now(timezone.utc)),
+            )
+
+        if USE_POSTGRESQL:
+            result = cursor.fetchone()
+            post_id = result["id"]
+            created_at = result["created_at"]
+        else:
+            post_id = cursor.lastrowid
+            created_at = datetime.now(timezone.utc)
+
+        # Get user information for response
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "SELECT id, email, first_name, last_name, avatar_url FROM users WHERE id = %s",
+                (user_id,),
+            )
+        else:
+            cursor.execute(
+                "SELECT id, email, first_name, last_name, avatar_url FROM users WHERE id = ?",
+                (user_id,),
+            )
+
+        user = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Post created successfully",
+                    "post": {
+                        "id": post_id,
+                        "content": content,
+                        "image_url": image_url,
+                        "created_at": created_at,
+                        "likes_count": 0,
+                        "user": {
+                            "id": user["id"],
+                            "email": user["email"],
+                            "first_name": user["first_name"] or "",
+                            "last_name": user["last_name"] or "",
+                            "avatar_url": user["avatar_url"] or "",
+                        },
+                    },
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        print(f"Create post error: {str(e)}")
+        return (
+            jsonify({"success": False, "message": f"Failed to create post: {str(e)}"}),
+            500,
+        )
+
+
+@app.route("/api/posts/<int:post_id>/like", methods=["POST", "OPTIONS"])
+def like_post(post_id):
+    """Like or unlike a post"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "No token provided"}),
+                401,
+            )
+
+        parts = auth_header.split(" ")
+        if len(parts) != 2:
+            return (
+                jsonify({"success": False, "message": "Invalid authorization header format"}),
+                401,
+            )
+        
+        token = parts[1]
+
+        # Decode token to get user_id
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload.get("user_id")
+        except jwt.ExpiredSignatureError:
+            return (
+                jsonify({"success": False, "message": "Token has expired"}),
+                401,
+            )
+        except jwt.InvalidTokenError:
+            return (
+                jsonify({"success": False, "message": "Invalid token"}),
+                401,
+            )
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if user already liked the post
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "SELECT id FROM likes WHERE post_id = %s AND user_id = %s",
+                (post_id, user_id),
+            )
+        else:
+            cursor.execute(
+                "SELECT id FROM likes WHERE post_id = ? AND user_id = ?",
+                (post_id, user_id),
+            )
+
+        existing_like = cursor.fetchone()
+
+        if existing_like:
+            # Unlike - remove the like
+            if USE_POSTGRESQL:
+                cursor.execute(
+                    "DELETE FROM likes WHERE post_id = %s AND user_id = %s",
+                    (post_id, user_id),
+                )
+            else:
+                cursor.execute(
+                    "DELETE FROM likes WHERE post_id = ? AND user_id = ?",
+                    (post_id, user_id),
+                )
+            message = "Post unliked"
+            liked = False
+        else:
+            # Like - add a new like
+            if USE_POSTGRESQL:
+                cursor.execute(
+                    "INSERT INTO likes (post_id, user_id, created_at) VALUES (%s, %s, %s)",
+                    (post_id, user_id, datetime.now(timezone.utc)),
+                )
+            else:
+                cursor.execute(
+                    "INSERT INTO likes (post_id, user_id, created_at) VALUES (?, ?, ?)",
+                    (post_id, user_id, datetime.now(timezone.utc)),
+                )
+            message = "Post liked"
+            liked = True
+
+        # Get updated likes count
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM likes WHERE post_id = %s", (post_id,)
+            )
+        else:
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM likes WHERE post_id = ?", (post_id,)
+            )
+
+        likes_count = cursor.fetchone()["count"]
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": message,
+                    "liked": liked,
+                    "likes_count": likes_count,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        print(f"Like post error: {str(e)}")
+        return (
+            jsonify({"success": False, "message": f"Failed to like post: {str(e)}"}),
+            500,
+        )
+
+
+@app.route("/api/posts/<int:post_id>", methods=["DELETE", "OPTIONS"])
+def delete_post(post_id):
+    """
+    Delete a post - MANUAL DELETION ONLY
+    
+    Posts are permanently stored and should NEVER be automatically deleted.
+    This endpoint only allows:
+    1. User to manually delete their own posts
+    2. No automatic deletion based on age, pagination, or number of posts
+    
+    Even with millions of posts, they remain in database.
+    Use pagination on GET /api/posts to handle large datasets.
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "No token provided"}),
+                401,
+            )
+
+        parts = auth_header.split(" ")
+        if len(parts) != 2:
+            return (
+                jsonify({"success": False, "message": "Invalid authorization header format"}),
+                401,
+            )
+        
+        token = parts[1]
+
+        # Decode token to get user_id
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload.get("user_id")
+        except jwt.ExpiredSignatureError:
+            return (
+                jsonify({"success": False, "message": "Token has expired"}),
+                401,
+            )
+        except jwt.InvalidTokenError:
+            return (
+                jsonify({"success": False, "message": "Invalid token"}),
+                401,
+            )
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if post exists and belongs to user
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "SELECT user_id FROM posts WHERE id = %s", (post_id,)
+            )
+        else:
+            cursor.execute(
+                "SELECT user_id FROM posts WHERE id = ?", (post_id,)
+            )
+
+        post = cursor.fetchone()
+
+        if not post:
+            cursor.close()
+            conn.close()
+            return (
+                jsonify({"success": False, "message": "Post not found"}),
+                404,
+            )
+
+        if post["user_id"] != user_id:
+            cursor.close()
+            conn.close()
+            return (
+                jsonify(
+                    {"success": False, "message": "You can only delete your own posts"}
+                ),
+                403,
+            )
+
+        # Delete the post (likes and comments will be cascade deleted)
+        if USE_POSTGRESQL:
+            cursor.execute("DELETE FROM posts WHERE id = %s", (post_id,))
+        else:
+            cursor.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return (
+            jsonify({"success": True, "message": "Post deleted successfully"}),
+            200,
+        )
+
+    except Exception as e:
+        print(f"Delete post error: {str(e)}")
+        return (
+            jsonify({"success": False, "message": f"Failed to delete post: {str(e)}"}),
             500,
         )
 
