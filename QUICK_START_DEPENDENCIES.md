@@ -6,6 +6,12 @@ All system and application dependencies have been installed and verified.
 
 ## Quick Commands
 
+### Check Dependency Status (APT packages)
+```bash
+chmod +x check_apt_status.sh
+./check_apt_status.sh
+```
+
 ### Install All Dependencies
 ```bash
 chmod +x install_dependencies.sh

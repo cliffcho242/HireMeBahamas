@@ -181,7 +181,21 @@ chmod +x install_dependencies.sh
 ./install_dependencies.sh
 ```
 
-### 2. `test_app_operational.py`
+### 2. `check_apt_status.sh`
+APT package status checker that:
+- Checks installation status of all required apt packages
+- Shows version information for installed packages
+- Displays service status (PostgreSQL, Redis)
+- Shows installation progress with visual progress bar
+- Provides list of missing packages with install commands
+
+**Usage:**
+```bash
+chmod +x check_apt_status.sh
+./check_apt_status.sh
+```
+
+### 3. `test_app_operational.py`
 Comprehensive test suite that verifies:
 - System command availability
 - Python package installation

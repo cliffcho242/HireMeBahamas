@@ -82,18 +82,24 @@ The application is:
 
 ## How to Use
 
-### 1. Install All Dependencies
+### 1. Check Current Dependency Status
+```bash
+chmod +x check_apt_status.sh
+./check_apt_status.sh
+```
+
+### 2. Install All Dependencies
 ```bash
 chmod +x install_dependencies.sh
 ./install_dependencies.sh
 ```
 
-### 2. Verify Installation
+### 3. Verify Installation
 ```bash
 python test_app_operational.py
 ```
 
-### 3. Run the Application
+### 4. Run the Application
 ```bash
 # Terminal 1 - Backend
 python final_backend_postgresql.py
@@ -101,6 +107,11 @@ python final_backend_postgresql.py
 # Terminal 2 - Frontend
 cd frontend && npm run dev
 ```
+
+### 5. Access
+- Frontend: http://localhost:3000
+- Backend: http://127.0.0.1:8080
+- Health Check: http://127.0.0.1:8080/health
 
 ### 4. Access
 - Frontend: http://localhost:3000
