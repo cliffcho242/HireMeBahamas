@@ -33,9 +33,25 @@ When running tests or builds that may generate logs, ensure runtime directories 
 ```
 
 ### Error Handling
-- Always use `|| echo "..."` for non-critical commands to prevent workflow failures
-- Make artifact uploads conditional using `if: always()` or check file existence first
+- For truly optional commands, use `|| true` instead of `|| echo "..."` to avoid masking failures
+- Use conditional execution with `if` statements for better control flow
+- For artifact uploads, make them conditional: `if: always()` or check file existence first
 - Never fail CI/CD pipelines for missing optional artifacts
+- Consider using `continue-on-error: true` for non-critical jobs
+
+Example of safe optional command:
+```yaml
+- name: Optional cleanup
+  run: rm -rf /tmp/cache || true
+  
+- name: Conditional artifact upload
+  uses: actions/upload-artifact@v3
+  if: always()
+  with:
+    name: logs
+    path: /tmp/logs
+    if-no-files-found: ignore
+```
 
 ### Testing
 - Backend tests: `python -m pytest backend/test_app.py`
