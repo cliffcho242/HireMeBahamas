@@ -101,7 +101,7 @@ async def get_job(job_id: UUID, db: AsyncSession = Depends(get_db)):
         select(Job)
         .options(
             selectinload(Job.employer),
-            selectinload(Job.applications).selectinload(JobApplication.freelancer),
+            selectinload(Job.applications).selectinload(JobApplication.applicant),
         )
         .where(Job.id == job_id)
     )
@@ -215,7 +215,7 @@ async def apply_to_job(
         select(JobApplication).where(
             and_(
                 JobApplication.job_id == job_id,
-                JobApplication.freelancer_id == current_user.id,
+                JobApplication.applicant_id == current_user.id,
             )
         )
     )
@@ -228,7 +228,7 @@ async def apply_to_job(
 
     # Create application
     db_application = JobApplication(
-        **application.dict(), job_id=job_id, freelancer_id=current_user.id
+        **application.dict(), job_id=job_id, applicant_id=current_user.id
     )
     db.add(db_application)
     await db.commit()
@@ -238,7 +238,7 @@ async def apply_to_job(
     result = await db.execute(
         select(JobApplication)
         .options(
-            selectinload(JobApplication.job), selectinload(JobApplication.freelancer)
+            selectinload(JobApplication.job), selectinload(JobApplication.applicant)
         )
         .where(JobApplication.id == db_application.id)
     )
@@ -273,7 +273,7 @@ async def get_job_applications(
     result = await db.execute(
         select(JobApplication)
         .options(
-            selectinload(JobApplication.freelancer), selectinload(JobApplication.job)
+            selectinload(JobApplication.applicant), selectinload(JobApplication.job)
         )
         .where(JobApplication.job_id == job_id)
         .order_by(desc(JobApplication.created_at))
@@ -308,9 +308,9 @@ async def get_my_applications(
         select(JobApplication)
         .options(
             selectinload(JobApplication.job).selectinload(Job.employer),
-            selectinload(JobApplication.freelancer),
+            selectinload(JobApplication.applicant),
         )
-        .where(JobApplication.freelancer_id == current_user.id)
+        .where(JobApplication.applicant_id == current_user.id)
         .order_by(desc(JobApplication.created_at))
     )
     applications = result.scalars().all()

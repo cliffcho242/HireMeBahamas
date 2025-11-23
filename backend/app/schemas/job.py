@@ -67,7 +67,7 @@ class EmployerInfo(BaseModel):
         from_attributes = True
 
 
-class FreelancerInfo(BaseModel):
+class ApplicantInfo(BaseModel):
     id: str
     first_name: str
     last_name: str
@@ -93,8 +93,8 @@ class JobApplicationCreate(BaseModel):
 class JobApplicationResponse(BaseModel):
     id: str
     job_id: str
-    freelancer_id: str
-    freelancer: FreelancerInfo
+    applicant_id: str
+    applicant: ApplicantInfo
     cover_letter: str
     proposed_budget: float
     status: ApplicationStatus
