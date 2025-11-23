@@ -53,9 +53,14 @@ if [ -z "$SONAR_TOKEN" ]; then
                 read -p "Do you want to update it? (y/n) " -n 1 -r
                 echo ""
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    # Update existing token
-                    sed -i.bak "s|SONAR_TOKEN=.*|SONAR_TOKEN=$token|" .env
-                    rm -f .env.bak
+                    # Update existing token (cross-platform compatible)
+                    if sed --version >/dev/null 2>&1; then
+                        # GNU sed (Linux)
+                        sed -i "s|SONAR_TOKEN=.*|SONAR_TOKEN=$token|" .env
+                    else
+                        # BSD sed (macOS)
+                        sed -i '' "s|SONAR_TOKEN=.*|SONAR_TOKEN=$token|" .env
+                    fi
                     echo "✅ Updated SONAR_TOKEN in .env"
                 fi
             else
