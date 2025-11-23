@@ -25,8 +25,11 @@ aptPkgs = [
     "pkg-config",
     
     # PostgreSQL client and development libraries (REQUIRED for psycopg2 and PostgreSQL connectivity)
+    "postgresql",
     "postgresql-client",
     "postgresql-client-common",
+    "postgresql-common",
+    "postgresql-contrib",
     "libpq-dev",
     "libpq5",
     
@@ -55,7 +58,9 @@ aptPkgs = [
     "libxslt1-dev",
     
     # SQLite libraries (for aiosqlite in development/testing)
+    "sqlite3",
     "libsqlite3-dev",
+    "libsqlite3-0",
     
     # Additional libraries for Python packages
     "libreadline-dev",
