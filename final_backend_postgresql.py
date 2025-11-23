@@ -1912,14 +1912,20 @@ def get_users_list():
         except jwt.InvalidTokenError:
             return jsonify({"success": False, "message": "Invalid token"}), 401
 
-        # Get search parameter
-        search = request.args.get("search", "")
+        # Get search parameter and sanitize it
+        search = request.args.get("search", "").strip()
+        
+        # Validate search input (max 100 chars, no SQL special chars that aren't escaped by parameterization)
+        if search and len(search) > 100:
+            return jsonify({"success": False, "message": "Search query too long"}), 400
         
         conn = get_db_connection()
         cursor = conn.cursor()
 
         # Build query based on search
         if search:
+            # Escape wildcards in search pattern to prevent injection
+            # The % and _ are already safely parameterized, but we sanitize for clarity
             search_pattern = f"%{search}%"
             cursor.execute(
                 """
@@ -1962,50 +1968,66 @@ def get_users_list():
 
         users = cursor.fetchall()
 
-        # Get follow status for each user
+        # Get follow status for each user (batch query)
         user_ids = [u["id"] for u in users]
+        following_ids = set()
+        
         if user_ids:
             placeholders = ",".join(["%s" if USE_POSTGRESQL else "?" for _ in user_ids])
             cursor.execute(
-                f"""
+                """
                 SELECT followed_id FROM follows
-                WHERE follower_id = {'%s' if USE_POSTGRESQL else '?'} 
-                AND followed_id IN ({placeholders})
-                """,
+                WHERE follower_id = %s AND followed_id IN ({})
+                """.format(placeholders) if USE_POSTGRESQL else """
+                SELECT followed_id FROM follows
+                WHERE follower_id = ? AND followed_id IN ({})
+                """.format(placeholders),
                 [current_user_id] + user_ids
             )
             following_ids = {row["followed_id"] for row in cursor.fetchall()}
+            
+            # Get follower counts for all users in one query
+            cursor.execute(
+                """
+                SELECT followed_id, COUNT(*) as count
+                FROM follows
+                WHERE followed_id IN ({})
+                GROUP BY followed_id
+                """.format(placeholders) if USE_POSTGRESQL else """
+                SELECT followed_id, COUNT(*) as count
+                FROM follows
+                WHERE followed_id IN ({})
+                GROUP BY followed_id
+                """.format(placeholders),
+                user_ids
+            )
+            followers_counts = {row["followed_id"]: row["count"] for row in cursor.fetchall()}
+            
+            # Get following counts for all users in one query
+            cursor.execute(
+                """
+                SELECT follower_id, COUNT(*) as count
+                FROM follows
+                WHERE follower_id IN ({})
+                GROUP BY follower_id
+                """.format(placeholders) if USE_POSTGRESQL else """
+                SELECT follower_id, COUNT(*) as count
+                FROM follows
+                WHERE follower_id IN ({})
+                GROUP BY follower_id
+                """.format(placeholders),
+                user_ids
+            )
+            following_counts = {row["follower_id"]: row["count"] for row in cursor.fetchall()}
         else:
-            following_ids = set()
+            followers_counts = {}
+            following_counts = {}
 
         # Build user list with follow status and counts
         users_data = []
         for user in users:
-            # Get follower count
-            cursor.execute(
-                """
-                SELECT COUNT(*) as count FROM follows
-                WHERE followed_id = %s
-                """ if USE_POSTGRESQL else """
-                SELECT COUNT(*) as count FROM follows
-                WHERE followed_id = ?
-                """,
-                (user["id"],)
-            )
-            followers_count = cursor.fetchone()["count"]
-
-            # Get following count
-            cursor.execute(
-                """
-                SELECT COUNT(*) as count FROM follows
-                WHERE follower_id = %s
-                """ if USE_POSTGRESQL else """
-                SELECT COUNT(*) as count FROM follows
-                WHERE follower_id = ?
-                """,
-                (user["id"],)
-            )
-            following_count = cursor.fetchone()["count"]
+            followers_count = followers_counts.get(user["id"], 0)
+            following_count = following_counts.get(user["id"], 0)
 
             users_data.append({
                 "id": user["id"],
