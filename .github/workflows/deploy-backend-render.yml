@@ -22,20 +22,24 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Trigger Render Deployment
+        id: deploy
         run: |
           if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
             echo "Triggering Render deployment..."
             curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
             echo "Deployment triggered successfully!"
+            echo "deployed=true" >> $GITHUB_OUTPUT
           else
             echo "⚠️ RENDER_DEPLOY_HOOK secret not set"
             echo "Please add your Render Deploy Hook URL as a secret"
             echo "Get it from: Render Dashboard → Your Service →" \
                  "Settings → Deploy Hook"
-            exit 1
+            echo "Skipping deployment..."
+            echo "deployed=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Wait for deployment
+        if: steps.deploy.outputs.deployed == 'true'
         run: |
           echo "Waiting for deployment to complete..."
           sleep 30

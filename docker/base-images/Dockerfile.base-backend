@@ -1,0 +1,59 @@
+# Base image for HireMeBahamas Backend
+# This image contains all apt-get system dependencies pre-installed
+# to speed up deployments and prevent build timeouts
+
+FROM python:3.11-slim
+
+LABEL maintainer="HireMeBahamas"
+LABEL description="Base image for HireMeBahamas backend with all system dependencies"
+LABEL version="1.0"
+
+# Install all system dependencies required for the backend
+# These packages are needed for:
+# - Building Python packages (build-essential, gcc, g++, make)
+# - PostgreSQL connectivity (postgresql-client, libpq-dev)
+# - Cryptography packages (libssl-dev, libffi-dev)
+# - Image processing (libjpeg-dev, libpng-dev, libtiff-dev, libwebp-dev, etc.)
+# - Event handling (libevent-dev)
+# - XML processing (libxml2-dev, libxslt1-dev)
+# - Redis connectivity (redis-tools)
+# - General utilities (curl, wget, git)
+
+RUN apt-get update && apt-get install -y \
+    # Build tools (required for compiling Python packages)
+    build-essential \
+    gcc \
+    g++ \
+    make \
+    # PostgreSQL client and development libraries (for psycopg2)
+    postgresql-client \
+    libpq-dev \
+    # SSL/TLS libraries (for cryptography package)
+    libssl-dev \
+    libffi-dev \
+    # Image processing libraries (for Pillow)
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libwebp-dev \
+    libopenjp2-7-dev \
+    zlib1g-dev \
+    # Event notification library (for gevent)
+    libevent-dev \
+    # XML processing libraries (for various packages)
+    libxml2-dev \
+    libxslt1-dev \
+    # Redis tools (for Redis connectivity testing)
+    redis-tools \
+    # Utilities
+    curl \
+    wget \
+    git \
+    # Clean up apt cache to reduce image size
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory for applications that will use this base
+WORKDIR /app
+
+# Default command (can be overridden)
+CMD ["/bin/bash"]

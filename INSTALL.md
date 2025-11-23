@@ -3,11 +3,42 @@
 This guide provides comprehensive instructions for installing all system dependencies required to run HireMeBahamas in full production mode.
 
 ## Table of Contents
+- [Docker Deployment (Recommended)](#docker-deployment-recommended)
 - [System Requirements](#system-requirements)
 - [Ubuntu/Debian Installation](#ubuntudebian-installation)
 - [CentOS/RHEL Installation](#centosrhel-installation)
 - [Docker Installation](#docker-installation)
 - [Verification](#verification)
+
+---
+
+## Docker Deployment (Recommended)
+
+🚀 **For production deployments, we strongly recommend using Docker with our pre-built base images.**
+
+### Why Docker with Base Images?
+
+- ✅ **5-10x Faster Deployments**: System dependencies are pre-installed
+- ✅ **No Build Timeouts**: Eliminates issues with long apt-get/apk operations
+- ✅ **Consistent Environment**: Same setup across all deployments
+- ✅ **Easy Updates**: Pull latest base images instead of rebuilding dependencies
+
+### Quick Docker Setup
+
+```bash
+# 1. Pull and run using Docker Compose
+docker-compose up -d
+
+# 2. Or build application images (uses pre-built base images)
+docker build -t hiremebahamas-backend ./backend
+docker build -t hiremebahamas-frontend ./frontend
+```
+
+The Dockerfiles automatically use optimized base images from GitHub Container Registry:
+- Backend: `ghcr.io/cliffcho242/hiremebahamas-base-backend:latest`
+- Frontend: `ghcr.io/cliffcho242/hiremebahamas-base-frontend:latest`
+
+📖 **For detailed information about Docker base images, see [DOCKER_BASE_IMAGES.md](./DOCKER_BASE_IMAGES.md)**
 
 ---
 

@@ -96,9 +96,41 @@ def uploaded_file(filename):
 DATABASE_URL = os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None
 
+# Check if this is a production environment
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+IS_PRODUCTION = ENVIRONMENT in ["production", "prod"]
+
+# For production, PostgreSQL is REQUIRED
+if IS_PRODUCTION and not USE_POSTGRESQL:
+    print("❌" * 50)
+    print("❌  ERROR: Production environment REQUIRES PostgreSQL!")
+    print("❌  DATABASE_URL environment variable is not set.")
+    print("❌")
+    print("❌  SQLite is NOT suitable for production use because:")
+    print("❌  - No data persistence in containerized environments (Railway, Docker)")
+    print("❌  - Users and data will be lost on every deployment/restart")
+    print("❌  - No concurrent access support at scale")
+    print("❌")
+    print("❌  Please set DATABASE_URL to a PostgreSQL connection string:")
+    print("❌  DATABASE_URL=postgresql://username:password@hostname:5432/database")
+    print("❌" * 50)
+    # In production, we should fail fast
+    raise ValueError(
+        "DATABASE_URL must be set in production. "
+        "PostgreSQL is required for data persistence."
+    )
+
 print(
-    f"🗄️ Database Mode: {'PostgreSQL (Production)' if USE_POSTGRESQL else 'SQLite (Development)'}"
+    f"🗄️ Database Mode: {'PostgreSQL (Production)' if USE_POSTGRESQL else 'SQLite (Development Only)'}"
 )
+if IS_PRODUCTION:
+    print(f"🌍 Environment: PRODUCTION")
+else:
+    print(f"💻 Environment: Development")
+
+if not USE_POSTGRESQL:
+    print("⚠️  Note: Using SQLite for local development only.")
+    print("⚠️  Set DATABASE_URL to use PostgreSQL.")
 
 # Track database initialization status
 _db_initialized = False
@@ -110,16 +142,51 @@ MAX_ERROR_MESSAGE_LENGTH = 500
 if USE_POSTGRESQL:
     print(f"✅ PostgreSQL URL detected: {DATABASE_URL[:30]}...")
 
-    # Parse DATABASE_URL
+    # Expected DATABASE_URL format message
+    DATABASE_URL_FORMAT = "postgresql://username:password@hostname:5432/database"
+
+    # Parse DATABASE_URL with defensive error handling
     parsed = urlparse(DATABASE_URL)
+
+    # Safely parse port with error handling
+    try:
+        port = int(parsed.port) if parsed.port else 5432
+    except (ValueError, TypeError):
+        port = 5432
+        print(f"⚠️  Invalid port '{parsed.port}' in DATABASE_URL, using default 5432")
+
+    # Safely parse database name (remove leading '/' from path)
+    try:
+        database = parsed.path[1:] if parsed.path and len(parsed.path) > 1 else None
+        if not database:
+            raise ValueError("Database name is missing from DATABASE_URL")
+    except (ValueError, IndexError) as e:
+        print(f"❌ Error parsing DATABASE_URL: {e}")
+        print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
+        raise
+
     DB_CONFIG = {
         "host": parsed.hostname,
-        "port": parsed.port or 5432,
-        "database": parsed.path[1:],  # Remove leading '/'
+        "port": port,
+        "database": database,
         "user": parsed.username,
         "password": parsed.password,
         "sslmode": "require",
     }
+
+    # Validate all required fields are present
+    required_fields = ["host", "database", "user", "password"]
+    missing_fields = [field for field in required_fields if not DB_CONFIG.get(field)]
+    if missing_fields:
+        print(
+            f"❌ Missing required DATABASE_URL components: {', '.join(missing_fields)}"
+        )
+        print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
+        raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+
+    print(
+        f"✅ Database config parsed: {DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+    )
 else:
     # SQLite for local development
     DB_PATH = Path(__file__).parent / "hiremebahamas.db"
@@ -130,17 +197,30 @@ def get_db_connection():
     """Get database connection (PostgreSQL on Railway, SQLite locally)"""
     if USE_POSTGRESQL:
         conn = psycopg2.connect(
-            DATABASE_URL, 
-            sslmode="require", 
+            DATABASE_URL,
+            sslmode="require",
             cursor_factory=RealDictCursor,
-            connect_timeout=10  # 10 second timeout for connection
+            connect_timeout=10,  # 10 second timeout for connection
         )
         return conn
     else:
-        conn = sqlite3.connect(str(DB_PATH), timeout=30)
+        conn = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
+        
+        # Enable WAL mode for better concurrent access and crash recovery
+        result = conn.execute("PRAGMA journal_mode=WAL").fetchone()
+        if result[0].lower() != 'wal':
+            print(f"⚠️  Warning: Failed to enable WAL mode, got: {result[0]}")
+        
+        # Set synchronous to NORMAL for better performance while maintaining safety
         conn.execute("PRAGMA synchronous=NORMAL")
+        
+        # Enable foreign key constraints
+        conn.execute("PRAGMA foreign_keys=ON")
+        result = conn.execute("PRAGMA foreign_keys").fetchone()
+        if not result or not result[0]:
+            print(f"⚠️  Warning: Failed to enable foreign keys, got: {result[0] if result else 'None'}")
+        
         return conn
 
 
@@ -190,7 +270,7 @@ def execute_query(query, params=None, fetch=False, fetchone=False, commit=False)
 def init_database():
     """Initialize database with all required tables"""
     global _db_initialized
-    
+
     print("🚀 Initializing database...")
 
     conn = get_db_connection()
@@ -442,7 +522,7 @@ def init_database():
 
         cursor.close()
         conn.close()
-        
+
         # Mark database as successfully initialized
         _db_initialized = True
         print("✅ Database initialization completed successfully")
@@ -503,12 +583,12 @@ def migrate_user_columns(cursor, conn):
 
 def ensure_database_initialized():
     """
-    Ensure database is initialized. 
+    Ensure database is initialized.
     If initialization failed on startup, retry it here.
     This is thread-safe and will only initialize once.
     """
     global _db_initialized
-    
+
     if not _db_initialized:
         with _db_init_lock:
             # Double-check inside the lock
@@ -520,7 +600,7 @@ def ensure_database_initialized():
                 except Exception as e:
                     print(f"⚠️ Database initialization retry failed: {e}")
                     # Don't raise - let the endpoint handle it
-    
+
     return _db_initialized
 
 
@@ -548,11 +628,16 @@ def health_check():
     The app is healthy if this endpoint responds - database initialization
     happens asynchronously and doesn't need to block the healthcheck
     """
-    return jsonify({
-        "status": "healthy",
-        "message": "HireMeBahamas API is running",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }), 200
+    return (
+        jsonify(
+            {
+                "status": "healthy",
+                "message": "HireMeBahamas API is running",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        ),
+        200,
+    )
 
 
 @app.route("/api/health", methods=["GET"])
@@ -568,12 +653,12 @@ def api_health_check():
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "db_initialized": _db_initialized,
     }
-    
+
     # Try to ensure database is initialized
     if not _db_initialized:
         ensure_database_initialized()
         response["db_initialized"] = _db_initialized
-    
+
     # Try to check database connection
     try:
         conn = get_db_connection()
@@ -591,8 +676,8 @@ def api_health_check():
             response["error"] = error_msg
         else:
             # Truncate with ellipsis
-            response["error"] = error_msg[:(MAX_ERROR_MESSAGE_LENGTH - 3)] + "..."
-    
+            response["error"] = error_msg[: (MAX_ERROR_MESSAGE_LENGTH - 3)] + "..."
+
     return jsonify(response), 200
 
 
@@ -1037,7 +1122,9 @@ def verify_session():
 
         except jwt.ExpiredSignatureError:
             return (
-                jsonify({"success": False, "valid": False, "message": "Token has expired"}),
+                jsonify(
+                    {"success": False, "valid": False, "message": "Token has expired"}
+                ),
                 401,
             )
         except jwt.InvalidTokenError:

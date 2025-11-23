@@ -1,6 +1,7 @@
 import os
 
 from decouple import config
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -18,8 +19,15 @@ engine_kwargs = {
     "future": True,
 }
 
-# Add connection pool settings only for non-SQLite databases
-if not DATABASE_URL.startswith("sqlite"):
+# Configure database-specific settings
+if "sqlite" in DATABASE_URL:
+    # For SQLite, use connect_args to enable WAL mode
+    # Note: aiosqlite handles these through connection initialization
+    engine_kwargs["connect_args"] = {
+        "check_same_thread": False,
+    }
+else:
+    # Add connection pool settings only for non-SQLite databases
     engine_kwargs.update(
         {
             "pool_size": 10,
@@ -28,6 +36,17 @@ if not DATABASE_URL.startswith("sqlite"):
     )
 
 engine = create_async_engine(DATABASE_URL, **engine_kwargs)
+
+
+# Enable WAL mode for SQLite connections
+if "sqlite" in DATABASE_URL:
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        """Set SQLite pragmas on connection"""
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 # Create session factory
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
