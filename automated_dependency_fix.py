@@ -71,13 +71,13 @@ def install_system_dependencies():
     print()
     
     # Update package lists
-    print_colored("[1/6] Updating package lists...", Colors.YELLOW)
+    print_colored("[1/8] Updating package lists...", Colors.YELLOW)
     if not run_command("apt-get update -y", "Failed to update package lists"):
         sys.exit(1)
     
     # Install build tools
     print()
-    print_colored("[2/6] Installing build tools and Python development packages...", Colors.YELLOW)
+    print_colored("[2/8] Installing build tools and Python development packages...", Colors.YELLOW)
     build_tools = [
         "build-essential",
         "gcc",
@@ -96,7 +96,7 @@ def install_system_dependencies():
     
     # Install database and cache
     print()
-    print_colored("[3/6] Installing database and cache dependencies...", Colors.YELLOW)
+    print_colored("[3/8] Installing database and cache dependencies...", Colors.YELLOW)
     database_tools = [
         "postgresql",
         "postgresql-contrib",
@@ -110,7 +110,7 @@ def install_system_dependencies():
     
     # Install security libraries
     print()
-    print_colored("[4/6] Installing cryptography and security libraries...", Colors.YELLOW)
+    print_colored("[4/8] Installing cryptography and security libraries...", Colors.YELLOW)
     security_libs = [
         "libssl-dev",
         "libffi-dev",
@@ -121,7 +121,7 @@ def install_system_dependencies():
     
     # Install image processing libraries
     print()
-    print_colored("[5/6] Installing image processing and event libraries...", Colors.YELLOW)
+    print_colored("[5/8] Installing image processing and event libraries...", Colors.YELLOW)
     image_libs = [
         "libjpeg-dev",
         "libpng-dev",
@@ -287,7 +287,7 @@ def print_next_steps():
     print("   cd frontend && npm run dev")
     print()
     print("6. Test the user profile endpoint:")
-    print("   python3 test_user_profile_fix.py")
+    print("   python3 test_profile_endpoint.py")
     print()
     print_colored("✅ All system dependencies (apt-get) installed for backend and frontend!", Colors.GREEN)
     print()

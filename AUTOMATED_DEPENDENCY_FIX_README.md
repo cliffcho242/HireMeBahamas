@@ -120,7 +120,7 @@ cd backend && python3 -m app.main
 cd frontend && npm run dev
 
 # 7. Test the fix
-python3 test_user_profile_fix.py
+python3 test_profile_endpoint.py
 ```
 
 ## Verification

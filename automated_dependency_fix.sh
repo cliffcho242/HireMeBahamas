@@ -34,14 +34,14 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-echo -e "${YELLOW}[1/6] Updating package lists...${NC}"
+echo -e "${YELLOW}[1/8] Updating package lists...${NC}"
 apt-get update -y || {
     echo -e "${RED}Failed to update package lists${NC}"
     exit 1
 }
 
 echo ""
-echo -e "${YELLOW}[2/6] Installing build tools and Python development packages...${NC}"
+echo -e "${YELLOW}[2/8] Installing build tools and Python development packages...${NC}"
 apt-get install -y \
     build-essential \
     gcc \
@@ -59,7 +59,7 @@ apt-get install -y \
 }
 
 echo ""
-echo -e "${YELLOW}[3/6] Installing database and cache dependencies...${NC}"
+echo -e "${YELLOW}[3/8] Installing database and cache dependencies...${NC}"
 apt-get install -y \
     postgresql \
     postgresql-contrib \
@@ -72,7 +72,7 @@ apt-get install -y \
 }
 
 echo ""
-echo -e "${YELLOW}[4/6] Installing cryptography and security libraries...${NC}"
+echo -e "${YELLOW}[4/8] Installing cryptography and security libraries...${NC}"
 apt-get install -y \
     libssl-dev \
     libffi-dev \
@@ -82,7 +82,7 @@ apt-get install -y \
 }
 
 echo ""
-echo -e "${YELLOW}[5/6] Installing image processing and event libraries...${NC}"
+echo -e "${YELLOW}[5/8] Installing image processing and event libraries...${NC}"
 apt-get install -y \
     libjpeg-dev \
     libpng-dev \
@@ -184,7 +184,7 @@ echo "5. Start the frontend development server:"
 echo "   cd frontend && npm run dev"
 echo ""
 echo "6. Test the user profile endpoint:"
-echo "   python3 test_user_profile_fix.py"
+echo "   python3 test_profile_endpoint.py"
 echo ""
 echo -e "${GREEN}✅ All system dependencies (apt-get) installed for backend and frontend!${NC}"
 echo ""
