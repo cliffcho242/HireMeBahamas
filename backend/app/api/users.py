@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from app.core.security import get_current_user
 from app.database import get_db
-from app.models import Follow, User
+from app.models import Follow, Notification, NotificationType, User
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -185,6 +185,17 @@ async def follow_user(
     # Create follow
     follow = Follow(follower_id=current_user.id, followed_id=user_id)
     db.add(follow)
+    
+    # Create notification for the followed user
+    notification = Notification(
+        user_id=user_id,
+        actor_id=current_user.id,
+        notification_type=NotificationType.FOLLOW,
+        content=f"{current_user.first_name} {current_user.last_name} started following you",
+        related_id=current_user.id,
+    )
+    db.add(notification)
+    
     await db.commit()
 
     return {"success": True, "message": "User followed successfully"}

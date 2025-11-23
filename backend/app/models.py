@@ -1,8 +1,19 @@
 from app.database import Base
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Enum as SQLEnum, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+import enum
+
+
+# Notification type enum
+class NotificationType(str, enum.Enum):
+    FOLLOW = "follow"
+    JOB_APPLICATION = "job_application"
+    JOB_POST = "job_post"
+    LIKE = "like"
+    COMMENT = "comment"
+    MENTION = "mention"
 
 
 class User(Base):
@@ -27,6 +38,7 @@ class User(Base):
     avatar_url = Column(String(500))
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
+    is_available_for_hire = Column(Boolean, default=False)  # HireMe availability status
     role = Column(String(50), default="user")  # user, admin, employer, freelancer
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -204,3 +216,20 @@ class Follow(Base):
     # Relationships
     follower = relationship("User", back_populates="following", foreign_keys=[follower_id])
     followed = relationship("User", back_populates="followers", foreign_keys=[followed_id])
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    notification_type = Column(SQLEnum(NotificationType), nullable=False)  # Type from NotificationType enum
+    content = Column(Text, nullable=False)
+    related_id = Column(Integer, nullable=True)  # ID of related job, post, etc.
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id])
+    actor = relationship("User", foreign_keys=[actor_id])

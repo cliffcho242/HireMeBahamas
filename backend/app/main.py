@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import socketio
 
 # Import APIs
-from .api import auth, jobs, messages, reviews, upload, users
+from .api import auth, hireme, jobs, messages, notifications, reviews, upload, users
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -55,8 +55,10 @@ async def health_check():
 
 # Include routers with /api prefix to match frontend expectations
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
 app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
 app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
