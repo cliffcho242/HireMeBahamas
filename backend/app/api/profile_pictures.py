@@ -25,15 +25,15 @@ async def upload_profile_picture(
         )
 
     try:
-        # Upload image
-        file_url = await upload_image(file, folder="profile_pictures", resize=True)
-
-        # Get file size
+        # Read file content once
         content = await file.read()
         file_size = len(content)
         
-        # Reset file pointer for potential future reads
+        # Reset file pointer for upload
         await file.seek(0)
+        
+        # Upload image
+        file_url = await upload_image(file, folder="profile_pictures", resize=True)
 
         # Check if this is the user's first profile picture
         result = await db.execute(
@@ -104,13 +104,15 @@ async def upload_multiple_profile_pictures(
         uploaded_pictures = []
 
         for idx, file in enumerate(files):
-            # Upload image
-            file_url = await upload_image(file, folder="profile_pictures", resize=True)
-
-            # Get file size
+            # Read file content once for size calculation
             content = await file.read()
             file_size = len(content)
+            
+            # Reset file pointer for upload
             await file.seek(0)
+            
+            # Upload image
+            file_url = await upload_image(file, folder="profile_pictures", resize=True)
 
             # Set first picture as current if no existing pictures
             is_current = (not has_existing and idx == 0)

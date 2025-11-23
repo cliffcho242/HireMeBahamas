@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """
 Create profile_pictures table for storing multiple profile images per user
+
+Usage:
+    Run from the project root directory:
+    python3 create_profile_pictures_table.py
 """
 import sys
 import os
 
-# Add backend directory to path
+# Add backend directory to path - this script is meant to be run from project root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
 from app.database import engine, Base
