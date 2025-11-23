@@ -72,8 +72,7 @@ const UserProfile: React.FC = () => {
     setIsLoading(true);
     try {
       const response = await authAPI.getUserProfile(userId);
-      // The API returns response.data which contains {success: true, user: {...}}
-      const userData = (response as any).user || response;
+      const userData = response.user;
       setProfile(userData as unknown as UserProfile);
       
       // Set follow state

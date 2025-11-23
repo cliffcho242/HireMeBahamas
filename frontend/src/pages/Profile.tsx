@@ -84,6 +84,8 @@ const Profile: React.FC = () => {
       } catch (followError) {
         console.error('Error fetching follow stats:', followError);
         // Don't fail the whole page if follow stats fail
+        setFollowersCount(0);
+        setFollowingCount(0);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
