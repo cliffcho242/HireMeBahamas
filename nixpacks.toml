@@ -1,10 +1,14 @@
 # Force Python provider only - prevents Node.js detection
 providers = ["python"]
 
+# Build-time variables only (non-sensitive)
+# IMPORTANT: NEVER add sensitive data (keys, secrets, passwords) here
 [variables]
 NIXPACKS_NO_MUSL = "1"
 PYTHON_VERSION = "3.12"
 
+# Security: Configure phases to prevent sensitive variables from being passed as ARG/ENV
+# Sensitive variables should only be available at runtime via Railway's environment injection
 [phases.setup]
 # Comprehensive system packages for production deployment with PostgreSQL
 aptPkgs = [
