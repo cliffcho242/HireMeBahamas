@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '../lib/api';
+import { usersAPI } from '../lib/api';
 
 interface User {
   id: number;
@@ -23,7 +23,7 @@ export default function UserDetail() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await api.get(`/admin/users/${id}`);
+        const response = await usersAPI.getById(parseInt(id!));
         setUser(response.data);
       } catch (error) {
         console.error('Failed to fetch user:', error);

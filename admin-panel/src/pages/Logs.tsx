@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import { logsAPI } from '../lib/api';
 
 interface Log {
   id: number;
@@ -17,7 +17,7 @@ export default function Logs() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const response = await api.get('/admin/logs');
+        const response = await logsAPI.getAll();
         setLogs(response.data);
       } catch (error) {
         console.error('Failed to fetch logs:', error);

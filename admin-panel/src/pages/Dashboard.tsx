@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { UsersIcon, BriefcaseIcon, ChartBarIcon } from '@heroicons/react/24/outline';
-import { api } from '../lib/api';
+import { dashboardAPI } from '../lib/api';
 
 interface Stats {
   totalUsers: number;
@@ -15,7 +15,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await api.get('/admin/stats');
+        const response = await dashboardAPI.getStats();
         setStats(response.data);
       } catch (error) {
         console.error('Failed to fetch stats:', error);

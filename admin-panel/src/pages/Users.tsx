@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../lib/api';
+import { usersAPI } from '../lib/api';
 
 interface User {
   id: number;
@@ -18,7 +18,7 @@ export default function Users() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await api.get('/admin/users');
+        const response = await usersAPI.getAll();
         setUsers(response.data);
       } catch (error) {
         console.error('Failed to fetch users:', error);
