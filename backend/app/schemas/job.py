@@ -56,7 +56,7 @@ class JobUpdate(BaseModel):
     status: Optional[JobStatus] = None
 
 
-class ClientInfo(BaseModel):
+class EmployerInfo(BaseModel):
     id: str
     first_name: str
     last_name: str
@@ -106,8 +106,8 @@ class JobApplicationResponse(BaseModel):
 
 class JobResponse(JobBase):
     id: str
-    client_id: str
-    client: ClientInfo
+    employer_id: str
+    employer: EmployerInfo
     status: JobStatus
     applications: Optional[List[JobApplicationResponse]] = None
     application_count: int = 0

@@ -27,18 +27,18 @@ async def create_job(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new job posting"""
-    db_job = Job(**job.dict(), client_id=current_user.id)
+    db_job = Job(**job.dict(), employer_id=current_user.id)
     db.add(db_job)
     await db.commit()
     await db.refresh(db_job)
 
-    # Load client relationship
+    # Load employer relationship
     result = await db.execute(
-        select(Job).options(selectinload(Job.client)).where(Job.id == db_job.id)
+        select(Job).options(selectinload(Job.employer)).where(Job.id == db_job.id)
     )
-    job_with_client = result.scalar_one()
+    job_with_employer = result.scalar_one()
 
-    return job_with_client
+    return job_with_employer
 
 
 @router.get("/", response_model=JobListResponse)
@@ -55,7 +55,7 @@ async def get_jobs(
     db: AsyncSession = Depends(get_db),
 ):
     """Get jobs with filtering and pagination"""
-    query = select(Job).options(selectinload(Job.client))
+    query = select(Job).options(selectinload(Job.employer))
 
     # Apply filters
     filters = []
@@ -100,7 +100,7 @@ async def get_job(job_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Job)
         .options(
-            selectinload(Job.client),
+            selectinload(Job.employer),
             selectinload(Job.applications).selectinload(JobApplication.freelancer),
         )
         .where(Job.id == job_id)
@@ -131,7 +131,7 @@ async def update_job(
             status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
 
-    if job.client_id != current_user.id:
+    if job.employer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this job",
@@ -147,7 +147,7 @@ async def update_job(
 
     # Load relationships
     result = await db.execute(
-        select(Job).options(selectinload(Job.client)).where(Job.id == job_id)
+        select(Job).options(selectinload(Job.employer)).where(Job.id == job_id)
     )
     updated_job = result.scalar_one()
 
@@ -169,7 +169,7 @@ async def delete_job(
             status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
 
-    if job.client_id != current_user.id:
+    if job.employer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this job",
@@ -204,7 +204,7 @@ async def apply_to_job(
             detail="Job is not open for applications",
         )
 
-    if job.client_id == current_user.id:
+    if job.employer_id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot apply to your own job",
@@ -263,7 +263,7 @@ async def get_job_applications(
             status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
 
-    if job.client_id != current_user.id:
+    if job.employer_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view applications for this job",
@@ -290,8 +290,8 @@ async def get_my_posted_jobs(
     """Get jobs posted by current user"""
     result = await db.execute(
         select(Job)
-        .options(selectinload(Job.client))
-        .where(Job.client_id == current_user.id)
+        .options(selectinload(Job.employer))
+        .where(Job.employer_id == current_user.id)
         .order_by(desc(Job.created_at))
     )
     jobs = result.scalars().all()
@@ -307,7 +307,7 @@ async def get_my_applications(
     result = await db.execute(
         select(JobApplication)
         .options(
-            selectinload(JobApplication.job).selectinload(Job.client),
+            selectinload(JobApplication.job).selectinload(Job.employer),
             selectinload(JobApplication.freelancer),
         )
         .where(JobApplication.freelancer_id == current_user.id)
