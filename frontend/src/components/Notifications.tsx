@@ -29,6 +29,17 @@ const Notifications: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const response = await notificationsAPI.getUnreadCount();
+      setUnreadCount(response.unread_count || 0);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+      setUnreadCount(0);
+    }
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -42,13 +53,33 @@ const Notifications: React.FC = () => {
     }
   }, []);
 
+  // Fetch unread count on mount and set up periodic polling
+  useEffect(() => {
+    // Initial fetch
+    let mounted = true;
+    
+    const doFetch = async () => {
+      if (mounted) {
+        await fetchUnreadCount();
+      }
+    };
+    
+    doFetch();
+    
+    // Set up polling interval
+    const interval = setInterval(doFetch, 30000); // Poll every 30 seconds
+    
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [fetchUnreadCount]);
+
   useEffect(() => {
     if (isOpen) {
       fetchNotifications();
     }
   }, [isOpen, fetchNotifications]);
-
-  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -77,6 +108,8 @@ const Notifications: React.FC = () => {
       setNotifications(prev =>
         prev.map(n => n.id === id ? { ...n, is_read: true } : n)
       );
+      // Update unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -86,6 +119,8 @@ const Notifications: React.FC = () => {
     try {
       await notificationsAPI.markAllAsRead();
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      // Update unread count
+      setUnreadCount(0);
     } catch (error) {
       console.error('Error marking all as read:', error);
     }

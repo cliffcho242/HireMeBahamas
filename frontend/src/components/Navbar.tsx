@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Bars3Icon,
   XMarkIcon,
-  BellIcon,
   ChatBubbleLeftRightIcon,
   UserIcon,
   HomeIcon,
@@ -14,6 +13,7 @@ import {
 import { HomeIcon as HomeIconSolid } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
+import Notifications from './Notifications';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -82,11 +82,7 @@ const Navbar: React.FC = () => {
             {isAuthenticated ? (
               <>
                 {/* Notifications */}
-                <div className="relative">
-                  <button className="p-2 text-gray-600 hover:text-blue-600 rounded-xl hover:bg-gray-50 transition-colors">
-                    <BellIcon className="h-6 w-6" />
-                  </button>
-                </div>
+                <Notifications />
 
                 {/* Profile Dropdown */}
                 <div className="relative ml-2">
