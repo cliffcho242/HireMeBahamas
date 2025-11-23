@@ -511,7 +511,12 @@ const PostFeed: React.FC = () => {
 
   const handleSharePost = async (post: Post) => {
     const shareUrl = `${window.location.origin}/post/${post.id}`;
-    const shareText = `Check out this post by ${post.user.first_name} ${post.user.last_name}: ${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}`;
+    // Sanitize content by removing any potentially harmful characters and limiting length
+    const sanitizedContent = post.content
+      .replace(/[<>]/g, '') // Remove angle brackets
+      .substring(0, 100)
+      .trim();
+    const shareText = `Check out this post by ${post.user.first_name} ${post.user.last_name}: ${sanitizedContent}${post.content.length > 100 ? '...' : ''}`;
 
     // Check if Web Share API is supported (mainly mobile devices)
     if (navigator.share) {
@@ -554,8 +559,16 @@ const PostFeed: React.FC = () => {
         toast.success('Link copied to clipboard!');
       } catch (err) {
         toast.error('Failed to copy link. Please try again.');
+      } finally {
+        // Ensure cleanup happens regardless of success or failure
+        try {
+          if (textArea.parentNode) {
+            document.body.removeChild(textArea);
+          }
+        } catch (cleanupError) {
+          console.error('Error removing textarea element:', cleanupError);
+        }
       }
-      document.body.removeChild(textArea);
     }
   };
 
