@@ -34,7 +34,16 @@ class User(Base):
     # Relationships
     jobs_posted = relationship("Job", back_populates="employer")
     applications = relationship("JobApplication", back_populates="applicant")
-    sent_messages = relationship("Message", back_populates="sender")
+    sent_messages = relationship(
+        "Message",
+        back_populates="sender",
+        foreign_keys="Message.sender_id"
+    )
+    received_messages = relationship(
+        "Message",
+        foreign_keys="Message.receiver_id",
+        overlaps="receiver"
+    )
     conversations_1 = relationship(
         "Conversation",
         back_populates="participant_1",

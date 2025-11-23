@@ -51,8 +51,13 @@ def migrate_sqlite_messages_table():
             logger.info("is_read column already exists")
         
         # Update existing messages to set receiver_id based on conversation participants
-        if 'receiver_id' in existing_columns or 'receiver_id' not in existing_columns:
-            logger.info("Updating existing messages with receiver_id...")
+        # Only update if receiver_id was just added or if there are NULL values
+        logger.info("Checking for messages with NULL receiver_id...")
+        cursor.execute("SELECT COUNT(*) FROM messages WHERE receiver_id IS NULL")
+        null_count = cursor.fetchone()[0]
+        
+        if null_count > 0:
+            logger.info(f"Updating {null_count} existing messages with receiver_id...")
             cursor.execute("""
                 UPDATE messages 
                 SET receiver_id = (
@@ -67,6 +72,8 @@ def migrate_sqlite_messages_table():
                 WHERE messages.id = m.id AND messages.receiver_id IS NULL
             """)
             logger.info("Existing messages updated successfully")
+        else:
+            logger.info("All messages already have receiver_id set")
         
         conn.commit()
         conn.close()
