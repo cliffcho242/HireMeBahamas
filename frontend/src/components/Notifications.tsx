@@ -99,7 +99,7 @@ const Notifications: React.FC = () => {
     const now = new Date();
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-    if (seconds < 0) return 'Just now'; // Handle future dates
+    if (seconds < 0) return 'Future date'; // Handle future dates explicitly
     if (seconds < 60) return 'Just now';
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;

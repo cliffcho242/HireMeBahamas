@@ -32,9 +32,7 @@ async def get_notifications(
 
     # Get total count
     count_result = await db.execute(
-        select(func.count()).select_from(
-            select(Notification).where(Notification.user_id == current_user.id).subquery()
-        )
+        select(func.count(Notification.id)).where(Notification.user_id == current_user.id)
     )
     total = count_result.scalar()
 
@@ -59,7 +57,7 @@ async def get_notifications(
         notifications_data.append(
             {
                 "id": notification.id,
-                "type": notification.notification_type.value if hasattr(notification.notification_type, 'value') else notification.notification_type,
+                "type": notification.notification_type.value,
                 "content": notification.content,
                 "is_read": notification.is_read,
                 "created_at": notification.created_at.isoformat() if notification.created_at else None,
