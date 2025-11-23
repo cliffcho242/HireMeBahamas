@@ -9,6 +9,7 @@ class UserCreate(BaseModel):
     password: str
     first_name: str
     last_name: str
+    user_type: str = "user"  # Default to "user" if not provided
     phone: Optional[str] = None
     location: Optional[str] = None
 
