@@ -1354,17 +1354,30 @@ def post_comments(post_id):
 
         if request.method == "GET":
             # Get comments
-            cursor.execute(
-                """
-                SELECT c.id, c.content, c.created_at, c.user_id,
-                       u.first_name, u.last_name, u.avatar_url
-                FROM comments c
-                JOIN users u ON c.user_id = u.id
-                WHERE c.post_id = {}
-                ORDER BY c.created_at ASC
-                """.format('%s' if USE_POSTGRESQL else '?'),
-                (post_id,)
-            )
+            if USE_POSTGRESQL:
+                cursor.execute(
+                    """
+                    SELECT c.id, c.content, c.created_at, c.user_id,
+                           u.first_name, u.last_name, u.avatar_url
+                    FROM comments c
+                    JOIN users u ON c.user_id = u.id
+                    WHERE c.post_id = %s
+                    ORDER BY c.created_at ASC
+                    """,
+                    (post_id,)
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT c.id, c.content, c.created_at, c.user_id,
+                           u.first_name, u.last_name, u.avatar_url
+                    FROM comments c
+                    JOIN users u ON c.user_id = u.id
+                    WHERE c.post_id = ?
+                    ORDER BY c.created_at ASC
+                    """,
+                    (post_id,)
+                )
 
             comments_data = cursor.fetchall()
             comments = []
