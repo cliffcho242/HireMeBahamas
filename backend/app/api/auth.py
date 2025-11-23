@@ -45,7 +45,16 @@ async def get_current_user(
                 detail="Invalid authentication credentials",
             )
 
-        result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+        # Convert user_id to integer (User model uses Integer primary key)
+        try:
+            user_id_int = int(user_id)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid user ID in token",
+            )
+        
+        result = await db.execute(select(User).where(User.id == user_id_int))
         user = result.scalar_one_or_none()
 
         if user is None:
@@ -55,6 +64,8 @@ async def get_current_user(
 
         return user
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -83,7 +94,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
         hashed_password=hashed_password,
         first_name=user_data.first_name,
         last_name=user_data.last_name,
-        user_type=user_data.user_type,
+        role=user_data.user_type,  # Map user_type to role field
         location=user_data.location,
         phone=user_data.phone,
     )

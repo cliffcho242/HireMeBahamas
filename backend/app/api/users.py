@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from app.core.security import get_current_user
+from app.api.auth import get_current_user
 from app.database import get_db
 from app.models import Follow, Notification, NotificationType, User
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -135,9 +135,17 @@ async def get_user(
             "occupation": user.occupation,
             "company_name": user.company_name,
             "location": user.location,
+            "phone": user.phone,
             "skills": user.skills,
             "experience": user.experience,
             "education": user.education,
+            "user_type": user.role or "user",
+            "is_available_for_hire": user.is_available_for_hire or False,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "updated_at": user.updated_at.isoformat() if user.updated_at else None,
+            # NOTE: posts_count is hardcoded to 0 until posts feature is fully implemented
+            # This field is included for frontend compatibility
+            "posts_count": 0,
             "is_following": is_following,
             "followers_count": followers_count,
             "following_count": following_count,
