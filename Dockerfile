@@ -113,15 +113,15 @@ USER appuser
 # Expose port
 EXPOSE 8080
 
-# Health check
+# Health check - use PORT environment variable with fallback
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
-# Start command
-CMD ["gunicorn", "final_backend_postgresql:application", \
-     "--bind", "0.0.0.0:8080", \
-     "--workers", "4", \
-     "--timeout", "120", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "--log-level", "info"]
+# Start command - use shell form to allow environment variable expansion
+CMD gunicorn final_backend_postgresql:application \
+     --bind 0.0.0.0:${PORT:-8080} \
+     --workers 4 \
+     --timeout 120 \
+     --access-logfile - \
+     --error-logfile - \
+     --log-level info
