@@ -17,7 +17,7 @@ import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import PostJob from './pages/PostJob';
 import HireMe from './pages/HireMe';
-import Friends from './pages/Friends';
+import Friends from './pages/Users';
 import UserProfile from './pages/UserProfile';
 import Download from './pages/Download';
 import DownloadTest from './pages/DownloadTest';

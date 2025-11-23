@@ -60,6 +60,16 @@ class User(Base):
     reviews_received = relationship(
         "Review", back_populates="reviewee", foreign_keys="Review.reviewee_id"
     )
+    following = relationship(
+        "Follow",
+        back_populates="follower",
+        foreign_keys="Follow.follower_id",
+    )
+    followers = relationship(
+        "Follow",
+        back_populates="followed",
+        foreign_keys="Follow.followed_id",
+    )
 
     @hybrid_property
     def full_name(self):
@@ -181,3 +191,16 @@ class UploadedFile(Base):
 
     # Relationships
     user = relationship("User")
+
+
+class Follow(Base):
+    __tablename__ = "follows"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    follower_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    followed_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    follower = relationship("User", back_populates="following", foreign_keys=[follower_id])
+    followed = relationship("User", back_populates="followers", foreign_keys=[followed_id])
