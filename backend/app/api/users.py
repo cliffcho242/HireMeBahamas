@@ -143,7 +143,9 @@ async def get_user(
             "is_available_for_hire": user.is_available_for_hire or False,
             "created_at": user.created_at.isoformat() if user.created_at else None,
             "updated_at": user.updated_at.isoformat() if user.updated_at else None,
-            "posts_count": 0,  # TODO: Calculate actual posts count when posts feature is implemented
+            # NOTE: posts_count is hardcoded to 0 until posts feature is fully implemented
+            # This field is included for frontend compatibility
+            "posts_count": 0,
             "is_following": is_following,
             "followers_count": followers_count,
             "following_count": following_count,
