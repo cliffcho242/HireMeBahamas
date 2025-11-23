@@ -33,6 +33,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
@@ -41,6 +42,8 @@ permissions:
 jobs:
   Analysis:
     runs-on: ubuntu-latest
+    # Continue on error to prevent blocking CI/CD if SonarCloud is not yet set up
+    continue-on-error: true
 
     steps:
       - name: Checkout code
@@ -48,8 +51,19 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for better analysis relevance
 
-      - name: Analyze with SonarCloud
+      - name: Check if SONAR_TOKEN is set
+        id: check_token
+        run: |
+          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+            echo "SONAR_TOKEN is not set. Please follow the setup instructions in SONARCLOUD_SETUP.md"
+            echo "token_set=false" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "token_set=true" >> $GITHUB_OUTPUT
+          fi
 
+      - name: Analyze with SonarCloud
+        if: steps.check_token.outputs.token_set == 'true'
         # You can pin the exact commit or the version.
         # uses: SonarSource/sonarcloud-github-action@v2.2.0
         uses: SonarSource/sonarcloud-github-action@4006f663ecaf1f8093e8e4abb9227f6041f52216
@@ -71,3 +85,13 @@ jobs:
             #-Dsonar.verbose= # optional, default is false
           # When you need the analysis to take place in a directory other than the one from which it was launched, default is .
           projectBaseDir: .
+      
+      - name: Setup Instructions
+        if: steps.check_token.outputs.token_set == 'false'
+        run: |
+          echo "::warning::SonarCloud is not configured. Follow these steps to set it up:"
+          echo "::warning::1. Go to https://sonarcloud.io and log in with GitHub"
+          echo "::warning::2. Import the HireMeBahamas project"
+          echo "::warning::3. Generate a token at https://sonarcloud.io/account/security/"
+          echo "::warning::4. Add it as SONAR_TOKEN secret at https://github.com/cliffcho242/HireMeBahamas/settings/secrets/actions"
+          echo "::warning::5. See SONARCLOUD_SETUP.md for detailed instructions"
