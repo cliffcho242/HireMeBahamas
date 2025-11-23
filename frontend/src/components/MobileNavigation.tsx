@@ -39,21 +39,26 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = '' }) =
     }
   }, []);
 
-  // Fetch unread count on mount and periodically
+  // Fetch unread count on mount and set up periodic polling
   useEffect(() => {
-    // Use async IIFE to handle async call properly
-    (async () => {
-      await fetchUnreadCount();
-    })();
+    // Initial fetch
+    let mounted = true;
+    
+    const doFetch = async () => {
+      if (mounted) {
+        await fetchUnreadCount();
+      }
+    };
+    
+    doFetch();
     
     // Set up polling interval
-    const interval = setInterval(() => {
-      (async () => {
-        await fetchUnreadCount();
-      })();
-    }, 30000); // Poll every 30 seconds
+    const interval = setInterval(doFetch, 30000); // Poll every 30 seconds
     
-    return () => clearInterval(interval);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, [fetchUnreadCount]);
 
   const navItems = [
