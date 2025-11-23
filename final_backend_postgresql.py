@@ -817,6 +817,110 @@ def login():
         )
 
 
+@app.route("/api/users/<user_id>", methods=["GET", "OPTIONS"])
+def get_user_profile(user_id):
+    """Get user profile by user ID"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Query user by ID
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT id, email, first_name, last_name, username, user_type,
+                       location, phone, bio, avatar_url, created_at,
+                       is_available_for_hire, occupation, company_name
+                FROM users 
+                WHERE id = %s AND is_active = TRUE
+                """,
+                (user_id,)
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id, email, first_name, last_name, username, user_type,
+                       location, phone, bio, avatar_url, created_at,
+                       is_available_for_hire, occupation, company_name
+                FROM users 
+                WHERE id = ? AND is_active = 1
+                """,
+                (user_id,)
+            )
+
+        user = cursor.fetchone()
+
+        if not user:
+            cursor.close()
+            conn.close()
+            return (
+                jsonify({"success": False, "message": "User not found"}),
+                404,
+            )
+
+        # Count user's posts
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "SELECT COUNT(*) FROM posts WHERE user_id = %s",
+                (user_id,)
+            )
+        else:
+            cursor.execute(
+                "SELECT COUNT(*) FROM posts WHERE user_id = ?",
+                (user_id,)
+            )
+        
+        count_result = cursor.fetchone()
+        posts_count = count_result[0] if count_result else 0
+
+        cursor.close()
+        conn.close()
+
+        # Handle created_at field - could be string or datetime
+        created_at_value = user["created_at"]
+        if created_at_value:
+            if isinstance(created_at_value, str):
+                created_at_str = created_at_value
+            else:
+                created_at_str = created_at_value.isoformat()
+        else:
+            created_at_str = ""
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "id": user["id"],
+                    "email": user["email"],
+                    "first_name": user["first_name"] or "",
+                    "last_name": user["last_name"] or "",
+                    "username": user["username"] or "",
+                    "user_type": user["user_type"] or "user",
+                    "location": user["location"] or "",
+                    "phone": user["phone"] or "",
+                    "bio": user["bio"] or "",
+                    "avatar_url": user["avatar_url"] or "",
+                    "created_at": created_at_str,
+                    "is_available_for_hire": bool(user["is_available_for_hire"]),
+                    "occupation": user["occupation"] or "",
+                    "company_name": user["company_name"] or "",
+                    "posts_count": posts_count,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        print(f"Get user profile error: {str(e)}")
+        return (
+            jsonify({"success": False, "message": f"Failed to get user profile: {str(e)}"}),
+            500,
+        )
+
+
 # ==========================================
 # APPLICATION ENTRY POINT
 # ==========================================
