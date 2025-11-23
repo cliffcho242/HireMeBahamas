@@ -23,6 +23,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Install system dependencies required for Python packages
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            gcc \
+            g++ \
+            make \
+            pkg-config \
+            postgresql-client \
+            libpq-dev \
+            python3-dev \
+            libssl-dev \
+            libffi-dev \
+            libjpeg-dev \
+            libpng-dev \
+            zlib1g-dev \
+            libevent-dev \
+            libxml2-dev \
+            libxslt1-dev
+
+      # Set up Python for backend dependencies
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Set up Node.js for frontend dependencies
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - uses: jfrog/frogbot@5d9c42c30f1169d8be4ba5510b40e75ffcbbc2a9  # v2.21.2
         env:
           # [Mandatory if the two conditions below are met]
@@ -30,7 +64,7 @@ jobs:
           # 2. The `installCommand` variable isn't set in your frogbot-config.yml file.
           #
           # The command that installs the project dependencies (e.g "npm i", "nuget restore" or "dotnet restore")
-          # JF_INSTALL_DEPS_CMD: ""
+          JF_INSTALL_DEPS_CMD: "pip install -r requirements.txt && cd frontend && npm install"
 
           # [Mandatory]
           # JFrog platform URL
