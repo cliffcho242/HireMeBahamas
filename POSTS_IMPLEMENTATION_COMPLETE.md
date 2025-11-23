@@ -40,7 +40,7 @@ Four new REST API endpoints added to `final_backend_postgresql.py`:
 
 #### Cliff Users Created
 Two specific users registered as requested:
-- **cliffyv24@gmail.com** - Cliff V (Employer)
+- **cliffyv24@gmail.com** - John Carter (Employer)
 - **cliff242@gmail.com** - Cliff Cho (Admin)
 
 #### Permanent Storage Verified
@@ -53,7 +53,7 @@ Two specific users registered as requested:
 1. admin@hiremebahamas.com (Admin User) - admin
 2. john@hiremebahamas.com (John Doe) - job_seeker  
 3. sarah@hiremebahamas.com (Sarah Johnson) - employer
-4. cliffyv24@gmail.com (Cliff V) - employer
+4. cliffyv24@gmail.com (John Carter) - employer
 5. cliff242@gmail.com (Cliff Cho) - admin
 
 ### 3. System Dependencies Documentation

@@ -20,8 +20,8 @@ CLIFF_USERS = [
     {
         "email": "cliffyv24@gmail.com",
         "password": "SecurePass123!",
-        "first_name": "Cliff",
-        "last_name": "V",
+        "first_name": "John",
+        "last_name": "Carter",
         "user_type": "employer",
         "location": "Nassau, Bahamas"
     },
