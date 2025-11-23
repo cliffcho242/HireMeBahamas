@@ -24,10 +24,12 @@ const Jobs: React.FC = () => {
   const [locationFilter, setLocationFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [activeTab, setActiveTab] = useState<'feed' | 'jobs' | 'hireme'>('feed');
+  const [jobStats, setJobStats] = useState({ active_jobs: 0, companies_hiring: 0, new_this_week: 0 });
   const { user } = useAuth();
 
   useEffect(() => {
     fetchJobs();
+    fetchJobStats();
   }, []);
 
   const fetchJobs = async () => {
@@ -47,6 +49,17 @@ const Jobs: React.FC = () => {
       setSearchResults([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchJobStats = async () => {
+    try {
+      const response = await api.get('/api/jobs/stats/overview');
+      if (response.data.success) {
+        setJobStats(response.data.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching job stats:', error);
     }
   };
 
@@ -222,15 +235,15 @@ const Jobs: React.FC = () => {
             {/* Job Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-2">{jobs.length}</div>
+                <div className="text-3xl font-bold text-blue-600 mb-2">{jobStats.active_jobs}</div>
                 <div className="text-gray-600">Active Jobs</div>
               </div>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
-                <div className="text-3xl font-bold text-green-600 mb-2">24</div>
+                <div className="text-3xl font-bold text-green-600 mb-2">{jobStats.companies_hiring}</div>
                 <div className="text-gray-600">Companies Hiring</div>
               </div>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
-                <div className="text-3xl font-bold text-purple-600 mb-2">156</div>
+                <div className="text-3xl font-bold text-purple-600 mb-2">{jobStats.new_this_week}</div>
                 <div className="text-gray-600">New This Week</div>
               </div>
             </div>

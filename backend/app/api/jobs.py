@@ -316,3 +316,40 @@ async def get_my_applications(
     applications = result.scalars().all()
 
     return applications
+
+
+@router.get("/stats/overview")
+async def get_job_stats(db: AsyncSession = Depends(get_db)):
+    """Get job statistics overview"""
+    from datetime import datetime, timedelta
+
+    # Get total active jobs
+    active_jobs_result = await db.execute(
+        select(func.count()).select_from(Job).where(Job.status == "active")
+    )
+    active_jobs = active_jobs_result.scalar()
+
+    # Get unique companies/employers count
+    companies_result = await db.execute(
+        select(func.count(func.distinct(Job.employer_id))).select_from(Job).where(Job.status == "active")
+    )
+    companies_count = companies_result.scalar()
+
+    # Get jobs created in the last 7 days
+    one_week_ago = datetime.now() - timedelta(days=7)
+    new_jobs_result = await db.execute(
+        select(func.count())
+        .select_from(Job)
+        .where(and_(Job.created_at >= one_week_ago, Job.status == "active"))
+    )
+    new_this_week = new_jobs_result.scalar()
+
+    return {
+        "success": True,
+        "stats": {
+            "active_jobs": active_jobs,
+            "companies_hiring": companies_count,
+            "new_this_week": new_this_week,
+        },
+    }
+

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import socketio
 
 # Import APIs
-from .api import auth, jobs, messages, reviews, upload
+from .api import auth, jobs, messages, reviews, upload, users
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -59,6 +59,7 @@ app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
 app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
 app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
 app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
+app.include_router(users.router, prefix="/api/users", tags=["users"])
 
 
 # Initialize Socket.IO for real-time messaging
