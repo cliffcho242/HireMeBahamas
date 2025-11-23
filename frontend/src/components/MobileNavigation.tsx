@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   HomeIcon,
@@ -17,6 +17,7 @@ import {
   ChatBubbleLeftRightIcon as ChatIconSolid,
 } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
+import { notificationsAPI } from '../services/api';
 
 interface MobileNavigationProps {
   className?: string;
@@ -26,12 +27,40 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = '' }) =
   const location = useLocation();
   const { user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const response = await notificationsAPI.getUnreadCount();
+      setUnreadNotifications(response.unread_count || 0);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+      setUnreadNotifications(0);
+    }
+  }, []);
+
+  // Fetch unread count on mount and periodically
+  useEffect(() => {
+    // Use async IIFE to handle async call properly
+    (async () => {
+      await fetchUnreadCount();
+    })();
+    
+    // Set up polling interval
+    const interval = setInterval(() => {
+      (async () => {
+        await fetchUnreadCount();
+      })();
+    }, 30000); // Poll every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
 
   const navItems = [
     { path: '/', icon: HomeIcon, iconSolid: HomeIconSolid, label: 'Home', badge: null },
-    { path: '/friends', icon: UserGroupIcon, iconSolid: UserGroupIconSolid, label: 'Friends', badge: 3 },
-    { path: '/jobs', icon: BriefcaseIcon, iconSolid: BriefcaseIconSolid, label: 'Jobs', badge: 5 },
-    { path: '/messages', icon: ChatBubbleLeftRightIcon, iconSolid: ChatIconSolid, label: 'Messages', badge: 2 },
+    { path: '/friends', icon: UserGroupIcon, iconSolid: UserGroupIconSolid, label: 'Friends', badge: null },
+    { path: '/jobs', icon: BriefcaseIcon, iconSolid: BriefcaseIconSolid, label: 'Jobs', badge: null },
+    { path: '/messages', icon: ChatBubbleLeftRightIcon, iconSolid: ChatIconSolid, label: 'Messages', badge: null },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -62,7 +91,9 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = '' }) =
               aria-label="Notifications"
             >
               <BellIcon className="w-6 h-6 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              {unreadNotifications > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              )}
             </button>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
