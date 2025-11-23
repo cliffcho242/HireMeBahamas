@@ -17,6 +17,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -44,10 +49,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libpq-dev python3-dev
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Create runtime directories
+        run: |
+          mkdir -p /tmp/runtime-logs
+          touch /tmp/runtime-logs/.gitkeep
 
       - name: Install dependencies
         run: |
