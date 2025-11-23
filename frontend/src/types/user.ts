@@ -20,6 +20,9 @@ export interface User {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  is_following?: boolean; // Whether current user follows this user
+  followers_count?: number; // Number of followers
+  following_count?: number; // Number of users this user is following
 }
 
 export interface LoginCredentials {

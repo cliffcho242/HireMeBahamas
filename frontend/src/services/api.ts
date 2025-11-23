@@ -2,6 +2,22 @@ import axios from 'axios';
 import { User } from '../types/user';
 import { Job } from '../types/job';
 
+// API Response Types
+interface UserResponse {
+  success: boolean;
+  user: User;
+}
+
+interface FollowersResponse {
+  success: boolean;
+  followers: User[];
+}
+
+interface FollowingResponse {
+  success: boolean;
+  following: User[];
+}
+
 // Derive API base URL with safe production fallback
 const DEFAULT_PROD_API = 'https://hiremebahamas.onrender.com';
 const ENV_API = (import.meta as any).env?.VITE_API_URL as string | undefined;
@@ -195,7 +211,7 @@ export const authAPI = {
     return response.data;
   },
 
-  getUserProfile: async (identifier: string | number): Promise<User> => {
+  getUserProfile: async (identifier: string | number): Promise<UserResponse> => {
     const response = await api.get(`/api/users/${identifier}`);
     return response.data;
   },
@@ -478,6 +494,29 @@ export const hireMeAPI = {
 
   toggleAvailability: async () => {
     const response = await api.post('/api/hireme/toggle');
+    return response.data;
+  },
+};
+
+// Users API
+export const usersAPI = {
+  followUser: async (userId: number) => {
+    const response = await api.post(`/api/users/follow/${userId}`);
+    return response.data;
+  },
+
+  unfollowUser: async (userId: number) => {
+    const response = await api.post(`/api/users/unfollow/${userId}`);
+    return response.data;
+  },
+
+  getFollowers: async (): Promise<FollowersResponse> => {
+    const response = await api.get('/api/users/followers/list');
+    return response.data;
+  },
+
+  getFollowing: async (): Promise<FollowingResponse> => {
+    const response = await api.get('/api/users/following/list');
     return response.data;
   },
 };

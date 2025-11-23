@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import api, { hireMeAPI } from '../services/api';
+import api, { hireMeAPI, usersAPI } from '../services/api';
 import { XCircleIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolidIcon } from '@heroicons/react/24/solid';
 import { motion } from 'framer-motion';
@@ -20,6 +20,8 @@ interface Profile {
   occupation?: string;
   company_name?: string;
   avatar_url?: string;
+  followers_count?: number;
+  following_count?: number;
 }
 
 const Profile: React.FC = () => {
@@ -30,6 +32,8 @@ const Profile: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
   const [togglingAvailability, setTogglingAvailability] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -68,6 +72,21 @@ const Profile: React.FC = () => {
         occupation: response.data.occupation || '',
         company_name: response.data.company_name || '',
       });
+
+      // Fetch follower and following counts
+      try {
+        const [followersResponse, followingResponse] = await Promise.all([
+          usersAPI.getFollowers(),
+          usersAPI.getFollowing(),
+        ]);
+        setFollowersCount(followersResponse.followers?.length || 0);
+        setFollowingCount(followingResponse.following?.length || 0);
+      } catch (followError) {
+        console.error('Error fetching follow stats:', followError);
+        // Don't fail the whole page if follow stats fail
+        setFollowersCount(0);
+        setFollowingCount(0);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -171,6 +190,28 @@ const Profile: React.FC = () => {
                   )}
                   {isAvailable ? 'Available for Hire' : 'Not Available'}
                 </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Profile Stats */}
+          {!editing && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6"
+            >
+              <div className="flex justify-around items-center">
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-blue-600">{followersCount}</p>
+                  <p className="text-sm text-gray-600 mt-1">Followers</p>
+                </div>
+                <div className="h-12 w-px bg-blue-200"></div>
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-indigo-600">{followingCount}</p>
+                  <p className="text-sm text-gray-600 mt-1">Following</p>
+                </div>
               </div>
             </motion.div>
           )}

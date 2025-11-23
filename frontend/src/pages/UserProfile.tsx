@@ -11,8 +11,10 @@ import {
   CalendarIcon,
   ChatBubbleLeftIcon,
   ArrowLeftIcon,
+  UserPlusIcon,
+  UserMinusIcon,
 } from '@heroicons/react/24/outline';
-import { authAPI, postsAPI } from '../services/api';
+import { authAPI, postsAPI, usersAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -32,6 +34,9 @@ interface UserProfile {
   created_at: string;
   is_available_for_hire: boolean;
   posts_count: number;
+  is_following?: boolean;
+  followers_count?: number;
+  following_count?: number;
 }
 
 interface Post {
@@ -51,6 +56,9 @@ const UserProfile: React.FC = () => {
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'posts' | 'about'>('posts');
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -63,8 +71,13 @@ const UserProfile: React.FC = () => {
     
     setIsLoading(true);
     try {
-      const userData = await authAPI.getUserProfile(userId);
+      const response = await authAPI.getUserProfile(userId);
+      const userData = response.user;
       setProfile(userData as unknown as UserProfile);
+      
+      // Set follow state
+      setIsFollowing(userData.is_following || false);
+      setFollowersCount(userData.followers_count || 0);
 
       // Fetch user's posts
       const allPosts = await postsAPI.getPosts();
@@ -82,6 +95,30 @@ const UserProfile: React.FC = () => {
     // Navigate to messages with this user
     navigate(`/messages?user=${userId}`);
     toast.success('Opening chat...');
+  };
+
+  const handleFollowToggle = async () => {
+    if (!userId) return;
+    
+    setIsFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await usersAPI.unfollowUser(parseInt(userId));
+        setIsFollowing(false);
+        setFollowersCount(prev => Math.max(0, prev - 1));
+        toast.success('User unfollowed');
+      } else {
+        await usersAPI.followUser(parseInt(userId));
+        setIsFollowing(true);
+        setFollowersCount(prev => prev + 1);
+        toast.success('User followed');
+      }
+    } catch (error: any) {
+      console.error('Failed to toggle follow:', error);
+      toast.error(error.response?.data?.message || 'Failed to update follow status');
+    } finally {
+      setIsFollowLoading(false);
+    }
   };
 
   if (isLoading) {
@@ -187,8 +224,26 @@ const UserProfile: React.FC = () => {
                 {!isOwnProfile && (
                   <div className="flex space-x-3">
                     <button
+                      onClick={handleFollowToggle}
+                      disabled={isFollowLoading}
+                      className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
+                        isFollowing
+                          ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {isFollowLoading ? (
+                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"></div>
+                      ) : isFollowing ? (
+                        <UserMinusIcon className="w-5 h-5 mr-2" />
+                      ) : (
+                        <UserPlusIcon className="w-5 h-5 mr-2" />
+                      )}
+                      {isFollowing ? 'Unfollow' : 'Follow'}
+                    </button>
+                    <button
                       onClick={handleMessageUser}
-                      className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                       <ChatBubbleLeftIcon className="w-5 h-5 mr-2" />
                       Message
@@ -211,6 +266,14 @@ const UserProfile: React.FC = () => {
                 <div className="text-center">
                   <p className="text-2xl font-bold text-gray-900">{profile.posts_count}</p>
                   <p className="text-sm text-gray-600">Posts</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900">{followersCount}</p>
+                  <p className="text-sm text-gray-600">Followers</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900">{profile.following_count || 0}</p>
+                  <p className="text-sm text-gray-600">Following</p>
                 </div>
                 {profile.is_available_for_hire && (
                   <div className="flex items-center">
