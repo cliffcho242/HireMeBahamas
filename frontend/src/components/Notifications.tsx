@@ -1,31 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BellIcon,
   ChatBubbleLeftIcon,
   UserPlusIcon,
+  BriefcaseIcon,
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
+import { notificationsAPI } from '../services/api';
 
 interface NotificationItem {
   id: number;
-  type: 'like' | 'comment' | 'friend_request' | 'mention';
-  user: {
-    name: string;
-    avatar: string;
-  };
+  type: 'like' | 'comment' | 'friend_request' | 'mention' | 'follow' | 'job_application' | 'job_post';
   content: string;
-  time: string;
-  read: boolean;
-  postId?: number;
+  is_read: boolean;
+  created_at: string;
+  related_id?: number;
+  actor?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    username?: string;
+    avatar_url?: string;
+  };
 }
 
 const Notifications: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  // Real notifications will be fetched from API
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications();
+    }
+  }, [isOpen]);
+
+  const fetchNotifications = async () => {
+    setLoading(true);
+    try {
+      const response = await notificationsAPI.getNotifications({ limit: 20 });
+      setNotifications(response.notifications || []);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -35,6 +58,12 @@ const Notifications: React.FC = () => {
         return <ChatBubbleLeftIcon className="w-5 h-5 text-blue-500" />;
       case 'friend_request':
         return <UserPlusIcon className="w-5 h-5 text-green-500" />;
+      case 'follow':
+        return <UserPlusIcon className="w-5 h-5 text-green-500" />;
+      case 'job_application':
+        return <BriefcaseIcon className="w-5 h-5 text-purple-500" />;
+      case 'job_post':
+        return <BriefcaseIcon className="w-5 h-5 text-blue-500" />;
       case 'mention':
         return <span className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">@</span>;
       default:
@@ -42,14 +71,43 @@ const Notifications: React.FC = () => {
     }
   };
 
-  const markAsRead = (id: number) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
+  const markAsRead = async (id: number) => {
+    try {
+      await notificationsAPI.markAsRead(id);
+      setNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    try {
+      await notificationsAPI.markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getInitials = (firstName?: string, lastName?: string) => {
+    if (!firstName) return '?';
+    const first = firstName.charAt(0).toUpperCase();
+    const last = lastName ? lastName.charAt(0).toUpperCase() : '';
+    return first + last;
   };
 
   return (
@@ -91,7 +149,12 @@ const Notifications: React.FC = () => {
 
             {/* Notifications List */}
             <div className="max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
+              {loading ? (
+                <div className="p-8 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-gray-500 mt-3">Loading notifications...</p>
+                </div>
+              ) : notifications.length === 0 ? (
                 <div className="p-8 text-center">
                   <BellIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500">No notifications yet</p>
@@ -101,7 +164,7 @@ const Notifications: React.FC = () => {
                   <div
                     key={notification.id}
                     className={`flex items-start space-x-3 p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 ${
-                      !notification.read ? 'bg-blue-50' : ''
+                      !notification.is_read ? 'bg-blue-50' : ''
                     }`}
                     onClick={() => markAsRead(notification.id)}
                   >
@@ -109,7 +172,10 @@ const Notifications: React.FC = () => {
                     <div className="flex-shrink-0">
                       <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                         <span className="text-white font-semibold text-sm">
-                          {notification.user.avatar}
+                          {notification.actor 
+                            ? getInitials(notification.actor.first_name, notification.actor.last_name)
+                            : '?'
+                          }
                         </span>
                       </div>
                     </div>
@@ -119,10 +185,11 @@ const Notifications: React.FC = () => {
                       <div className="flex items-start space-x-2">
                         <div className="flex-1">
                           <p className="text-sm text-gray-900">
-                            <span className="font-medium">{notification.user.name}</span>{' '}
                             {notification.content}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {getTimeAgo(notification.created_at)}
+                          </p>
                         </div>
                         <div className="flex-shrink-0">
                           {getNotificationIcon(notification.type)}
@@ -131,7 +198,7 @@ const Notifications: React.FC = () => {
                     </div>
 
                     {/* Unread Indicator */}
-                    {!notification.read && (
+                    {!notification.is_read && (
                       <div className="flex-shrink-0">
                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                       </div>

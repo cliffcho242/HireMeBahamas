@@ -204,3 +204,20 @@ class Follow(Base):
     # Relationships
     follower = relationship("User", back_populates="following", foreign_keys=[follower_id])
     followed = relationship("User", back_populates="followers", foreign_keys=[followed_id])
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    notification_type = Column(String(50), nullable=False)  # follow, job_post, job_application, like, comment, mention
+    content = Column(Text, nullable=False)
+    related_id = Column(Integer, nullable=True)  # ID of related job, post, etc.
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id])
+    actor = relationship("User", foreign_keys=[actor_id])

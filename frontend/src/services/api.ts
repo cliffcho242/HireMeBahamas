@@ -521,4 +521,31 @@ export const usersAPI = {
   },
 };
 
+// Notifications API
+export const notificationsAPI = {
+  getNotifications: async (params?: {
+    skip?: number;
+    limit?: number;
+    unread_only?: boolean;
+  }) => {
+    const response = await api.get('/api/notifications/list', { params });
+    return response.data;
+  },
+
+  getUnreadCount: async () => {
+    const response = await api.get('/api/notifications/unread-count');
+    return response.data;
+  },
+
+  markAsRead: async (notificationId: number) => {
+    const response = await api.put(`/api/notifications/${notificationId}/read`);
+    return response.data;
+  },
+
+  markAllAsRead: async () => {
+    const response = await api.put('/api/notifications/mark-all-read');
+    return response.data;
+  },
+};
+
 export default api;
