@@ -4,6 +4,7 @@ import api, { hireMeAPI, usersAPI } from '../services/api';
 import { XCircleIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolidIcon } from '@heroicons/react/24/solid';
 import { motion } from 'framer-motion';
+import ProfilePictureGallery from '../components/ProfilePictureGallery';
 
 interface Profile {
   id: number;
@@ -470,6 +471,13 @@ const Profile: React.FC = () => {
                   <p className="text-gray-900 whitespace-pre-wrap">{profile.education}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Profile Picture Gallery Section */}
+          {!editing && (
+            <div className="mt-8 pt-8 border-t border-gray-200">
+              <ProfilePictureGallery />
             </div>
           )}
         </div>
