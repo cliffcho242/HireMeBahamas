@@ -31,7 +31,9 @@ app.config["JSON_SORT_KEYS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB max file size
 
 # JWT token expiration configuration (in days)
-TOKEN_EXPIRATION_DAYS = int(os.getenv("TOKEN_EXPIRATION_DAYS", "7"))
+# Set to 365 days (1 year) to prevent frequent re-login
+# Users stay logged in for a full year unless they manually log out
+TOKEN_EXPIRATION_DAYS = int(os.getenv("TOKEN_EXPIRATION_DAYS", "365"))
 
 # Rate limiting configuration
 limiter = Limiter(
@@ -1225,15 +1227,42 @@ def get_profile():
 
 @app.route("/api/posts", methods=["GET", "OPTIONS"])
 def get_posts():
-    """Get all posts with user information"""
+    """
+    Get posts with user information
+    
+    Posts are PERMANENTLY stored - never automatically deleted.
+    Supports pagination for handling millions of posts efficiently.
+    
+    Query Parameters:
+    - page: Page number (default: 1)
+    - per_page: Posts per page (default: 20, max: 100)
+    """
     if request.method == "OPTIONS":
         return "", 200
 
     try:
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        
+        # Validate pagination
+        if page < 1:
+            page = 1
+        if per_page < 1:
+            per_page = 20
+        if per_page > 100:
+            per_page = 100  # Max 100 posts per page
+        
+        offset = (page - 1) * per_page
+        
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Get total count
+        cursor.execute("SELECT COUNT(*) as total FROM posts")
+        total_posts = cursor.fetchone()["total"]
 
-        # Get all posts with user information
+        # Get paginated posts with user information
         if USE_POSTGRESQL:
             # PostgreSQL requires all non-aggregate columns in GROUP BY
             cursor.execute(
@@ -1248,7 +1277,9 @@ def get_posts():
                 GROUP BY p.id, p.content, p.image_url, p.created_at, 
                          u.id, u.email, u.first_name, u.last_name, u.avatar_url
                 ORDER BY p.created_at DESC
-            """
+                LIMIT %s OFFSET %s
+            """,
+                (per_page, offset)
             )
         else:
             # SQLite allows grouping by primary key only (functionally dependent columns)
@@ -1263,7 +1294,9 @@ def get_posts():
                 LEFT JOIN likes l ON p.id = l.post_id
                 GROUP BY p.id
                 ORDER BY p.created_at DESC
-            """
+                LIMIT ? OFFSET ?
+            """,
+                (per_page, offset)
             )
 
         posts_data = cursor.fetchall()
@@ -1289,8 +1322,22 @@ def get_posts():
                     },
                 }
             )
+        
+        # Calculate pagination info
+        total_pages = (total_posts + per_page - 1) // per_page  # Ceiling division
 
-        return jsonify({"success": True, "posts": posts}), 200
+        return jsonify({
+            "success": True, 
+            "posts": posts,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total_posts": total_posts,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
+        }), 200
 
     except Exception as e:
         print(f"Get posts error: {str(e)}")
@@ -1350,6 +1397,20 @@ def create_post():
         # Create post in database
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Verify user exists before creating post
+        if USE_POSTGRESQL:
+            cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+        else:
+            cursor.execute("SELECT id FROM users WHERE id = ?", (user_id,))
+        
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return (
+                jsonify({"success": False, "message": "User not found. Please log in again."}),
+                401,
+            )
 
         if USE_POSTGRESQL:
             cursor.execute(
@@ -1549,7 +1610,17 @@ def like_post(post_id):
 
 @app.route("/api/posts/<int:post_id>", methods=["DELETE", "OPTIONS"])
 def delete_post(post_id):
-    """Delete a post"""
+    """
+    Delete a post - MANUAL DELETION ONLY
+    
+    Posts are permanently stored and should NEVER be automatically deleted.
+    This endpoint only allows:
+    1. User to manually delete their own posts
+    2. No automatic deletion based on age, pagination, or number of posts
+    
+    Even with millions of posts, they remain in database.
+    Use pagination on GET /api/posts to handle large datasets.
+    """
     if request.method == "OPTIONS":
         return "", 200
 
