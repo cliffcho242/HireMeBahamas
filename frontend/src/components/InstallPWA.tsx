@@ -18,12 +18,9 @@ const InstallPWA: React.FC = () => {
     const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone ||
       document.referrer.includes('android-app://');
-    
-    setIsStandalone(isStandaloneMode);
 
     // Check if iOS
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    setIsIOS(ios);
 
     // Check if user has dismissed install banner before
     const installDismissed = localStorage.getItem('installBannerDismissed');
@@ -31,6 +28,10 @@ const InstallPWA: React.FC = () => {
     const daysSinceDismissed = dismissedDate 
       ? (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24)
       : 999;
+
+    // Update state based on checks
+    setIsStandalone(isStandaloneMode);
+    setIsIOS(ios);
 
     // Show banner if not installed and not recently dismissed (wait 7 days)
     if (!isStandaloneMode && daysSinceDismissed > 7) {

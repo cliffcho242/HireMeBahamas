@@ -8,7 +8,7 @@ export default {
     extend: {
       // Enhanced breakpoints for ALL devices - Mobile, Tablet, Desktop
       screens: {
-        'xs': '320px',      // Extra small phones (iPhone SE, older Android)
+        'xs': '320px',      // Extra small phones (older Android devices)
         'sm': '640px',      // Large phones (iPhone 12/13/14, most Android)
         'md': '768px',      // Tablets (iPad Mini, Android tablets)
         'lg': '1024px',     // Small laptops / iPad Pro
