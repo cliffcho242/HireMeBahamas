@@ -97,16 +97,22 @@ echo "Step 3: Verifying Python Package Installation"
 echo "================================================================"
 echo ""
 
-# Test critical imports
-echo "Testing critical Python packages..."
-python3 -c "import flask; print('✅ Flask:', flask.__version__)" 2>/dev/null || echo "⚠️  Flask not installed"
-python3 -c "import fastapi; print('✅ FastAPI:', fastapi.__version__)" 2>/dev/null || echo "⚠️  FastAPI not installed"
-python3 -c "import sqlalchemy; print('✅ SQLAlchemy:', sqlalchemy.__version__)" 2>/dev/null || echo "⚠️  SQLAlchemy not installed"
-python3 -c "import psycopg2; print('✅ psycopg2:', psycopg2.__version__)" 2>/dev/null || echo "⚠️  psycopg2 not installed"
-python3 -c "import aiosqlite; print('✅ aiosqlite installed')" 2>/dev/null || echo "⚠️  aiosqlite not installed"
-python3 -c "from decouple import config; print('✅ python-decouple installed')" 2>/dev/null || echo "⚠️  python-decouple not installed"
-python3 -c "import bcrypt; print('✅ bcrypt installed')" 2>/dev/null || echo "⚠️  bcrypt not installed"
-python3 -c "import jwt; print('✅ PyJWT installed')" 2>/dev/null || echo "⚠️  PyJWT not installed"
+# Use the test_dependencies.py script for efficient verification
+if [ -f "./test_dependencies.py" ]; then
+    echo "Running comprehensive dependency tests..."
+    python3 test_dependencies.py || echo "⚠️  Some packages may need installation"
+else
+    # Fallback: test critical imports individually
+    echo "Testing critical Python packages..."
+    python3 -c "import flask; print('✅ Flask:', flask.__version__)" 2>/dev/null || echo "⚠️  Flask not installed"
+    python3 -c "import fastapi; print('✅ FastAPI:', fastapi.__version__)" 2>/dev/null || echo "⚠️  FastAPI not installed"
+    python3 -c "import sqlalchemy; print('✅ SQLAlchemy:', sqlalchemy.__version__)" 2>/dev/null || echo "⚠️  SQLAlchemy not installed"
+    python3 -c "import psycopg2; print('✅ psycopg2:', psycopg2.__version__)" 2>/dev/null || echo "⚠️  psycopg2 not installed"
+    python3 -c "import aiosqlite; print('✅ aiosqlite installed')" 2>/dev/null || echo "⚠️  aiosqlite not installed"
+    python3 -c "from decouple import config; print('✅ python-decouple installed')" 2>/dev/null || echo "⚠️  python-decouple not installed"
+    python3 -c "import bcrypt; print('✅ bcrypt installed')" 2>/dev/null || echo "⚠️  bcrypt not installed"
+    python3 -c "import jwt; print('✅ PyJWT installed')" 2>/dev/null || echo "⚠️  PyJWT not installed"
+fi
 
 echo ""
 echo "================================================================"
@@ -154,6 +160,15 @@ echo "================================================================"
 echo "Step 6: Creating Environment Configuration"
 echo "================================================================"
 echo ""
+
+# Verify backend module exists
+if [ ! -f "final_backend_postgresql.py" ]; then
+    echo "⚠️  WARNING: final_backend_postgresql.py not found!"
+    echo "⚠️  This is the main backend application file."
+    echo "⚠️  Deployment may fail without this file."
+else
+    echo "✅ Backend module verified: final_backend_postgresql.py"
+fi
 
 # Create .env if it doesn't exist
 if [ ! -f ".env" ]; then
