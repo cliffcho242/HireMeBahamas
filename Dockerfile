@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for HireMeBahamas Flask Backend with PostgreSQL
 # This ensures all PostgreSQL dependencies are properly installed
 
-FROM python:3.12-slim as base
+FROM python:3.12-slim AS base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -16,7 +16,7 @@ WORKDIR /app
 # ============================================
 # Stage 1: Install system dependencies
 # ============================================
-FROM base as dependencies
+FROM base AS dependencies
 
 # Update package lists and install PostgreSQL dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -75,7 +75,7 @@ RUN python -c "import psycopg2; print(f'✅ psycopg2 version: {psycopg2.__versio
 # ============================================
 # Stage 2: Production image
 # ============================================
-FROM python:3.12-slim as production
+FROM python:3.12-slim AS production
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
