@@ -75,4 +75,4 @@ aptPkgs = [
 [start]
 # Migration runs automatically in final_backend_postgresql.py
 # PostgreSQL connection is configured via DATABASE_URL environment variable
-cmd = "gunicorn final_backend_postgresql:application --bind 0.0.0.0:${PORT:-8080} --workers 4 --timeout 120 --access-logfile - --error-logfile -"
+cmd = "gunicorn final_backend_postgresql:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120 --access-logfile - --error-logfile -"
