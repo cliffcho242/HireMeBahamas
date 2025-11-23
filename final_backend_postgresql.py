@@ -408,6 +408,20 @@ def init_database():
                 """
                 )
 
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS follows (
+                        id SERIAL PRIMARY KEY,
+                        follower_id INTEGER NOT NULL,
+                        followed_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(follower_id, followed_id),
+                        FOREIGN KEY (follower_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (followed_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+
             else:
                 # SQLite syntax (original)
                 cursor.execute(
@@ -509,6 +523,20 @@ def init_database():
                         expires_at TIMESTAMP NOT NULL,
                         views INTEGER DEFAULT 0,
                         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS follows (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        follower_id INTEGER NOT NULL,
+                        followed_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(follower_id, followed_id),
+                        FOREIGN KEY (follower_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (followed_id) REFERENCES users (id) ON DELETE CASCADE
                     )
                 """
                 )
@@ -1711,6 +1739,571 @@ def delete_post(post_id):
             jsonify({"success": False, "message": f"Failed to delete post: {str(e)}"}),
             500,
         )
+
+
+# ==========================================
+# USER ENDPOINTS
+# ==========================================
+
+@app.route("/api/users/<int:user_id>", methods=["GET", "OPTIONS"])
+def get_user(user_id):
+    """
+    Get a specific user's profile by ID
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.split(" ")[1]
+        
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            current_user_id = payload["user_id"]
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get user details
+        cursor.execute(
+            """
+            SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                   occupation, company_name, location, phone, user_type, 
+                   is_available_for_hire, created_at
+            FROM users
+            WHERE id = %s AND is_active = TRUE
+            """ if USE_POSTGRESQL else """
+            SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                   occupation, company_name, location, phone, user_type, 
+                   is_available_for_hire, created_at
+            FROM users
+            WHERE id = ? AND is_active = 1
+            """,
+            (user_id,)
+        )
+        
+        user = cursor.fetchone()
+        
+        if not user:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "User not found"}), 404
+
+        # Check if current user follows this user
+        cursor.execute(
+            """
+            SELECT id FROM follows
+            WHERE follower_id = %s AND followed_id = %s
+            """ if USE_POSTGRESQL else """
+            SELECT id FROM follows
+            WHERE follower_id = ? AND followed_id = ?
+            """,
+            (current_user_id, user_id)
+        )
+        is_following = cursor.fetchone() is not None
+
+        # Get follower count
+        cursor.execute(
+            """
+            SELECT COUNT(*) as count FROM follows
+            WHERE followed_id = %s
+            """ if USE_POSTGRESQL else """
+            SELECT COUNT(*) as count FROM follows
+            WHERE followed_id = ?
+            """,
+            (user_id,)
+        )
+        followers_count = cursor.fetchone()["count"]
+
+        # Get following count
+        cursor.execute(
+            """
+            SELECT COUNT(*) as count FROM follows
+            WHERE follower_id = %s
+            """ if USE_POSTGRESQL else """
+            SELECT COUNT(*) as count FROM follows
+            WHERE follower_id = ?
+            """,
+            (user_id,)
+        )
+        following_count = cursor.fetchone()["count"]
+
+        # Get posts count
+        cursor.execute(
+            """
+            SELECT COUNT(*) as count FROM posts
+            WHERE user_id = %s
+            """ if USE_POSTGRESQL else """
+            SELECT COUNT(*) as count FROM posts
+            WHERE user_id = ?
+            """,
+            (user_id,)
+        )
+        posts_count = cursor.fetchone()["count"]
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "user": {
+                "id": user["id"],
+                "email": user["email"],
+                "first_name": user["first_name"] or "",
+                "last_name": user["last_name"] or "",
+                "username": user["username"],
+                "avatar_url": user["avatar_url"],
+                "bio": user["bio"],
+                "occupation": user["occupation"],
+                "company_name": user["company_name"],
+                "location": user["location"],
+                "phone": user["phone"],
+                "user_type": user["user_type"] or "user",
+                "is_available_for_hire": user["is_available_for_hire"] or False,
+                "created_at": user["created_at"],
+                "posts_count": posts_count,
+                "is_following": is_following,
+                "followers_count": followers_count,
+                "following_count": following_count,
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"Get user error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to fetch user: {str(e)}"}), 500
+
+
+@app.route("/api/users/list", methods=["GET", "OPTIONS"])
+def get_users_list():
+    """
+    Get list of users with optional search
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.split(" ")[1]
+        
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            current_user_id = payload["user_id"]
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        # Get search parameter
+        search = request.args.get("search", "")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Build query based on search
+        if search:
+            search_pattern = f"%{search}%"
+            cursor.execute(
+                """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, location
+                FROM users
+                WHERE is_active = TRUE AND id != %s
+                AND (first_name ILIKE %s OR last_name ILIKE %s OR email ILIKE %s 
+                     OR occupation ILIKE %s OR location ILIKE %s)
+                LIMIT 50
+                """ if USE_POSTGRESQL else """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, location
+                FROM users
+                WHERE is_active = 1 AND id != ?
+                AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? 
+                     OR occupation LIKE ? OR location LIKE ?)
+                LIMIT 50
+                """,
+                (current_user_id, search_pattern, search_pattern, search_pattern, 
+                 search_pattern, search_pattern)
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, location
+                FROM users
+                WHERE is_active = TRUE AND id != %s
+                LIMIT 50
+                """ if USE_POSTGRESQL else """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, location
+                FROM users
+                WHERE is_active = 1 AND id != ?
+                LIMIT 50
+                """,
+                (current_user_id,)
+            )
+
+        users = cursor.fetchall()
+
+        # Get follow status for each user
+        user_ids = [u["id"] for u in users]
+        if user_ids:
+            placeholders = ",".join(["%s" if USE_POSTGRESQL else "?" for _ in user_ids])
+            cursor.execute(
+                f"""
+                SELECT followed_id FROM follows
+                WHERE follower_id = {'%s' if USE_POSTGRESQL else '?'} 
+                AND followed_id IN ({placeholders})
+                """,
+                [current_user_id] + user_ids
+            )
+            following_ids = {row["followed_id"] for row in cursor.fetchall()}
+        else:
+            following_ids = set()
+
+        # Build user list with follow status and counts
+        users_data = []
+        for user in users:
+            # Get follower count
+            cursor.execute(
+                """
+                SELECT COUNT(*) as count FROM follows
+                WHERE followed_id = %s
+                """ if USE_POSTGRESQL else """
+                SELECT COUNT(*) as count FROM follows
+                WHERE followed_id = ?
+                """,
+                (user["id"],)
+            )
+            followers_count = cursor.fetchone()["count"]
+
+            # Get following count
+            cursor.execute(
+                """
+                SELECT COUNT(*) as count FROM follows
+                WHERE follower_id = %s
+                """ if USE_POSTGRESQL else """
+                SELECT COUNT(*) as count FROM follows
+                WHERE follower_id = ?
+                """,
+                (user["id"],)
+            )
+            following_count = cursor.fetchone()["count"]
+
+            users_data.append({
+                "id": user["id"],
+                "first_name": user["first_name"] or "",
+                "last_name": user["last_name"] or "",
+                "email": user["email"],
+                "username": user["username"],
+                "avatar_url": user["avatar_url"],
+                "bio": user["bio"],
+                "occupation": user["occupation"],
+                "location": user["location"],
+                "is_following": user["id"] in following_ids,
+                "followers_count": followers_count,
+                "following_count": following_count,
+            })
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "users": users_data, "total": len(users_data)}), 200
+
+    except Exception as e:
+        print(f"Get users list error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to fetch users: {str(e)}"}), 500
+
+
+@app.route("/api/users/follow/<int:user_id>", methods=["POST", "OPTIONS"])
+def follow_user(user_id):
+    """
+    Follow a user
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.split(" ")[1]
+        
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            current_user_id = payload["user_id"]
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        if current_user_id == user_id:
+            return jsonify({"success": False, "message": "Cannot follow yourself"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if user exists
+        cursor.execute(
+            """
+            SELECT id FROM users WHERE id = %s
+            """ if USE_POSTGRESQL else """
+            SELECT id FROM users WHERE id = ?
+            """,
+            (user_id,)
+        )
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "User not found"}), 404
+
+        # Check if already following
+        cursor.execute(
+            """
+            SELECT id FROM follows
+            WHERE follower_id = %s AND followed_id = %s
+            """ if USE_POSTGRESQL else """
+            SELECT id FROM follows
+            WHERE follower_id = ? AND followed_id = ?
+            """,
+            (current_user_id, user_id)
+        )
+        if cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Already following this user"}), 400
+
+        # Create follow relationship
+        cursor.execute(
+            """
+            INSERT INTO follows (follower_id, followed_id)
+            VALUES (%s, %s)
+            """ if USE_POSTGRESQL else """
+            INSERT INTO follows (follower_id, followed_id)
+            VALUES (?, ?)
+            """,
+            (current_user_id, user_id)
+        )
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "message": "User followed successfully"}), 200
+
+    except Exception as e:
+        print(f"Follow user error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to follow user: {str(e)}"}), 500
+
+
+@app.route("/api/users/unfollow/<int:user_id>", methods=["POST", "OPTIONS"])
+def unfollow_user(user_id):
+    """
+    Unfollow a user
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.split(" ")[1]
+        
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            current_user_id = payload["user_id"]
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if following
+        cursor.execute(
+            """
+            SELECT id FROM follows
+            WHERE follower_id = %s AND followed_id = %s
+            """ if USE_POSTGRESQL else """
+            SELECT id FROM follows
+            WHERE follower_id = ? AND followed_id = ?
+            """,
+            (current_user_id, user_id)
+        )
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Not following this user"}), 400
+
+        # Delete follow relationship
+        cursor.execute(
+            """
+            DELETE FROM follows
+            WHERE follower_id = %s AND followed_id = %s
+            """ if USE_POSTGRESQL else """
+            DELETE FROM follows
+            WHERE follower_id = ? AND followed_id = ?
+            """,
+            (current_user_id, user_id)
+        )
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "message": "User unfollowed successfully"}), 200
+
+    except Exception as e:
+        print(f"Unfollow user error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to unfollow user: {str(e)}"}), 500
+
+
+@app.route("/api/users/following/list", methods=["GET", "OPTIONS"])
+def get_following_list():
+    """
+    Get list of users that current user is following
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.split(" ")[1]
+        
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            current_user_id = payload["user_id"]
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get users that current user is following
+        cursor.execute(
+            """
+            SELECT u.id, u.email, u.first_name, u.last_name, u.username, 
+                   u.avatar_url, u.bio, u.occupation, u.location
+            FROM users u
+            INNER JOIN follows f ON u.id = f.followed_id
+            WHERE f.follower_id = %s
+            """ if USE_POSTGRESQL else """
+            SELECT u.id, u.email, u.first_name, u.last_name, u.username, 
+                   u.avatar_url, u.bio, u.occupation, u.location
+            FROM users u
+            INNER JOIN follows f ON u.id = f.followed_id
+            WHERE f.follower_id = ?
+            """,
+            (current_user_id,)
+        )
+
+        following_users = cursor.fetchall()
+        
+        following_data = [
+            {
+                "id": user["id"],
+                "first_name": user["first_name"] or "",
+                "last_name": user["last_name"] or "",
+                "email": user["email"],
+                "username": user["username"],
+                "avatar_url": user["avatar_url"],
+                "bio": user["bio"],
+                "occupation": user["occupation"],
+                "location": user["location"],
+            }
+            for user in following_users
+        ]
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "following": following_data}), 200
+
+    except Exception as e:
+        print(f"Get following list error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to fetch following list: {str(e)}"}), 500
+
+
+@app.route("/api/users/followers/list", methods=["GET", "OPTIONS"])
+def get_followers_list():
+    """
+    Get list of users that follow current user
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.split(" ")[1]
+        
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            current_user_id = payload["user_id"]
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get users that follow current user
+        cursor.execute(
+            """
+            SELECT u.id, u.email, u.first_name, u.last_name, u.username, 
+                   u.avatar_url, u.bio, u.occupation, u.location
+            FROM users u
+            INNER JOIN follows f ON u.id = f.follower_id
+            WHERE f.followed_id = %s
+            """ if USE_POSTGRESQL else """
+            SELECT u.id, u.email, u.first_name, u.last_name, u.username, 
+                   u.avatar_url, u.bio, u.occupation, u.location
+            FROM users u
+            INNER JOIN follows f ON u.id = f.follower_id
+            WHERE f.followed_id = ?
+            """,
+            (current_user_id,)
+        )
+
+        followers = cursor.fetchall()
+        
+        followers_data = [
+            {
+                "id": user["id"],
+                "first_name": user["first_name"] or "",
+                "last_name": user["last_name"] or "",
+                "email": user["email"],
+                "username": user["username"],
+                "avatar_url": user["avatar_url"],
+                "bio": user["bio"],
+                "occupation": user["occupation"],
+                "location": user["location"],
+            }
+            for user in followers
+        ]
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "followers": followers_data}), 200
+
+    except Exception as e:
+        print(f"Get followers list error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to fetch followers list: {str(e)}"}), 500
 
 
 # ==========================================
