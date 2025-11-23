@@ -105,6 +105,15 @@ Add the following secrets to your GitHub repository:
 - **Name**: `VITE_API_URL`
   - **Value**: Your Railway backend URL (e.g., `https://your-backend.railway.app`)
 
+#### JFrog Secrets (for Frogbot security scanning - Optional):
+If you want to enable automated security scanning with Frogbot:
+- **Name**: `JF_URL`
+  - **Value**: Your JFrog platform URL (e.g., `https://mycompany.jfrog.io/`)
+- **Name**: `JF_ACCESS_TOKEN`
+  - **Value**: Your JFrog access token with 'read' permissions on Xray service
+
+**Note**: If you don't have JFrog credentials, the Frogbot workflow will fail but won't affect other workflows. You can disable it by removing or commenting out the workflow file, or use alternative security scanning tools like GitHub's Dependabot or CodeQL.
+
 ## 🎯 How Auto-Deploy Works
 
 ### Frontend Deployment (Vercel)
@@ -124,6 +133,14 @@ The workflow `.github/workflows/ci.yml` runs on:
 - Every pull request to `main`
 - Every push to `main`
 - Checks: Linting and building frontend, testing backend
+
+### Security Scanning (Frogbot)
+The workflow `.github/workflows/frogbot-scan-and-fix.yml` runs on:
+- Every push to `main`
+- Automatically scans dependencies for security vulnerabilities
+- Requires JFrog platform credentials (JF_URL and JF_ACCESS_TOKEN)
+- If you don't have JFrog credentials, you can disable this workflow or use alternative security scanning tools
+- The workflow automatically installs all required system dependencies before scanning
 
 ## 🔄 Triggering Deployments
 
