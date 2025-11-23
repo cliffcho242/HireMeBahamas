@@ -1298,12 +1298,16 @@ def get_posts():
                 SELECT 
                     p.id, p.content, p.image_url, p.created_at,
                     u.id as user_id, u.email, u.first_name, u.last_name, u.avatar_url,
-                    COUNT(DISTINCT l.id) as likes_count
+                    u.username, u.occupation, u.company_name,
+                    COUNT(DISTINCT l.id) as likes_count,
+                    COUNT(DISTINCT c.id) as comments_count
                 FROM posts p
                 JOIN users u ON p.user_id = u.id
                 LEFT JOIN likes l ON p.id = l.post_id
+                LEFT JOIN comments c ON p.id = c.post_id
                 GROUP BY p.id, p.content, p.image_url, p.created_at, 
-                         u.id, u.email, u.first_name, u.last_name, u.avatar_url
+                         u.id, u.email, u.first_name, u.last_name, u.avatar_url,
+                         u.username, u.occupation, u.company_name
                 ORDER BY p.created_at DESC
                 LIMIT %s OFFSET %s
             """,
@@ -1316,10 +1320,13 @@ def get_posts():
                 SELECT 
                     p.id, p.content, p.image_url, p.created_at,
                     u.id as user_id, u.email, u.first_name, u.last_name, u.avatar_url,
-                    COUNT(DISTINCT l.id) as likes_count
+                    u.username, u.occupation, u.company_name,
+                    COUNT(DISTINCT l.id) as likes_count,
+                    COUNT(DISTINCT c.id) as comments_count
                 FROM posts p
                 JOIN users u ON p.user_id = u.id
                 LEFT JOIN likes l ON p.id = l.post_id
+                LEFT JOIN comments c ON p.id = c.post_id
                 GROUP BY p.id
                 ORDER BY p.created_at DESC
                 LIMIT ? OFFSET ?
@@ -1341,12 +1348,16 @@ def get_posts():
                     "image_url": post["image_url"],
                     "created_at": post["created_at"],
                     "likes_count": post["likes_count"],
+                    "comments_count": post["comments_count"],
                     "user": {
                         "id": post["user_id"],
                         "email": post["email"],
                         "first_name": post["first_name"] or "",
                         "last_name": post["last_name"] or "",
                         "avatar_url": post["avatar_url"] or "",
+                        "username": post["username"],
+                        "occupation": post["occupation"],
+                        "company_name": post["company_name"],
                     },
                 }
             )
