@@ -1,1 +1,34 @@
-
+services:
+  - type: web
+    name: hiremebahamas-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: |
+      apt-get update
+      apt-get install -y --no-install-recommends \
+        build-essential \
+        gcc \
+        g++ \
+        pkg-config \
+        postgresql-client \
+        libpq-dev \
+        python3-dev \
+        libssl-dev \
+        libffi-dev \
+        libjpeg-dev \
+        libpng-dev \
+        zlib1g-dev
+      pip install --upgrade pip setuptools wheel
+      pip install -r requirements.txt
+    startCommand: gunicorn final_backend:app --bind 0.0.0.0:$PORT --workers 4 --timeout 120
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHONUNBUFFERED
+        value: true
+      - key: PYTHON_VERSION
+        value: 3.12.0
+    healthCheckPath: /health
