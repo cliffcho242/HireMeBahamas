@@ -6,6 +6,7 @@ from app.models import Notification, User
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 router = APIRouter()
 
@@ -19,7 +20,9 @@ async def get_notifications(
     current_user: User = Depends(get_current_user),
 ):
     """Get list of notifications for current user"""
-    query = select(Notification).where(Notification.user_id == current_user.id)
+    query = select(Notification).options(
+        selectinload(Notification.actor)
+    ).where(Notification.user_id == current_user.id)
 
     if unread_only:
         query = query.where(Notification.is_read == False)
@@ -29,7 +32,9 @@ async def get_notifications(
 
     # Get total count
     count_result = await db.execute(
-        select(func.count()).select_from(query.subquery())
+        select(func.count()).select_from(
+            select(Notification).where(Notification.user_id == current_user.id).subquery()
+        )
     )
     total = count_result.scalar()
 
@@ -42,24 +47,19 @@ async def get_notifications(
     notifications_data = []
     for notification in notifications:
         actor_data = None
-        if notification.actor_id:
-            actor_result = await db.execute(
-                select(User).where(User.id == notification.actor_id)
-            )
-            actor = actor_result.scalar_one_or_none()
-            if actor:
-                actor_data = {
-                    "id": actor.id,
-                    "first_name": actor.first_name,
-                    "last_name": actor.last_name,
-                    "username": actor.username,
-                    "avatar_url": actor.avatar_url,
-                }
+        if notification.actor:
+            actor_data = {
+                "id": notification.actor.id,
+                "first_name": notification.actor.first_name,
+                "last_name": notification.actor.last_name,
+                "username": notification.actor.username,
+                "avatar_url": notification.actor.avatar_url,
+            }
 
         notifications_data.append(
             {
                 "id": notification.id,
-                "type": notification.notification_type,
+                "type": notification.notification_type.value if hasattr(notification.notification_type, 'value') else notification.notification_type,
                 "content": notification.content,
                 "is_read": notification.is_read,
                 "created_at": notification.created_at.isoformat() if notification.created_at else None,
@@ -150,25 +150,3 @@ async def mark_all_read(
         "success": True,
         "message": f"Marked {len(notifications)} notifications as read",
     }
-
-
-async def create_notification(
-    db: AsyncSession,
-    user_id: int,
-    actor_id: Optional[int],
-    notification_type: str,
-    content: str,
-    related_id: Optional[int] = None,
-):
-    """Helper function to create a notification"""
-    notification = Notification(
-        user_id=user_id,
-        actor_id=actor_id,
-        notification_type=notification_type,
-        content=content,
-        related_id=related_id,
-    )
-    db.add(notification)
-    await db.commit()
-    await db.refresh(notification)
-    return notification

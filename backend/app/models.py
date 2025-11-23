@@ -224,7 +224,7 @@ class Notification(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    notification_type = Column(String(50), nullable=False)  # Type from NotificationType enum
+    notification_type = Column(SQLEnum(NotificationType), nullable=False)  # Type from NotificationType enum
     content = Column(Text, nullable=False)
     related_id = Column(Integer, nullable=True)  # ID of related job, post, etc.
     is_read = Column(Boolean, default=False)

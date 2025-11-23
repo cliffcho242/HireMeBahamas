@@ -28,7 +28,7 @@ async def add_is_available_for_hire_column():
             if "is_available_for_hire" not in column_names:
                 # Add the column
                 await conn.execute(
-                    text("ALTER TABLE users ADD COLUMN is_available_for_hire BOOLEAN DEFAULT 0")
+                    text("ALTER TABLE users ADD COLUMN is_available_for_hire BOOLEAN DEFAULT FALSE")
                 )
                 print("✓ is_available_for_hire column added successfully!")
             else:

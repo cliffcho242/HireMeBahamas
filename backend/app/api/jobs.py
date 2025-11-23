@@ -3,7 +3,7 @@ from uuid import UUID
 
 from app.core.security import get_current_user
 from app.database import get_db
-from app.models import Job, JobApplication, Notification, User
+from app.models import Job, JobApplication, Notification, NotificationType, User
 from app.schemas.job import (
     JobApplicationCreate,
     JobApplicationResponse,
@@ -236,7 +236,7 @@ async def apply_to_job(
     notification = Notification(
         user_id=job.employer_id,
         actor_id=current_user.id,
-        notification_type="job_application",
+        notification_type=NotificationType.JOB_APPLICATION,
         content=f"{current_user.first_name} {current_user.last_name} applied to your job: {job.title}",
         related_id=job.id,
     )
