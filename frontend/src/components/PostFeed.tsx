@@ -509,6 +509,69 @@ const PostFeed: React.FC = () => {
     }
   };
 
+  const handleSharePost = async (post: Post) => {
+    const shareUrl = `${window.location.origin}/post/${post.id}`;
+    // Sanitize content by removing any potentially harmful characters and limiting length
+    const sanitizedContent = post.content
+      .replace(/[<>]/g, '') // Remove angle brackets
+      .substring(0, 100)
+      .trim();
+    const shareText = `Check out this post by ${post.user.first_name} ${post.user.last_name}: ${sanitizedContent}${post.content.length > 100 ? '...' : ''}`;
+
+    // Check if Web Share API is supported (mainly mobile devices)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Post by ${post.user.first_name} ${post.user.last_name}`,
+          text: shareText,
+          url: shareUrl,
+        });
+        toast.success('Post shared successfully!');
+      } catch (error: any) {
+        // User cancelled the share or error occurred
+        if (error.name !== 'AbortError') {
+          console.error('Error sharing:', error);
+          // Fallback to clipboard
+          copyToClipboard(shareUrl);
+        }
+      }
+    } else {
+      // Fallback to clipboard for desktop browsers
+      copyToClipboard(shareUrl);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Link copied to clipboard!');
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      // Final fallback - create a temporary input element
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast.success('Link copied to clipboard!');
+      } catch (err) {
+        toast.error('Failed to copy link. Please try again.');
+      } finally {
+        // Ensure cleanup happens regardless of success or failure
+        try {
+          if (textArea.parentNode) {
+            document.body.removeChild(textArea);
+          }
+        } catch (cleanupError) {
+          console.error('Error removing textarea element:', cleanupError);
+        }
+      }
+    }
+  };
+
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
     const postDate = new Date(dateString);
@@ -699,7 +762,10 @@ const PostFeed: React.FC = () => {
                 <span className="text-sm font-medium">Comment</span>
               </button>
 
-              <button className="flex items-center space-x-2 flex-1 justify-center py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors text-gray-600">
+              <button 
+                onClick={() => handleSharePost(post)}
+                className="flex items-center space-x-2 flex-1 justify-center py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
+              >
                 <ShareIcon className="w-5 h-5" />
                 <span className="text-sm font-medium">Share</span>
               </button>
