@@ -21,7 +21,7 @@ services:
         zlib1g-dev
       pip install --upgrade pip setuptools wheel
       pip install -r requirements.txt
-    startCommand: gunicorn final_backend:app --bind 0.0.0.0:$PORT --workers 4 --timeout 120
+    startCommand: gunicorn final_backend_postgresql:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: FLASK_ENV
         value: production

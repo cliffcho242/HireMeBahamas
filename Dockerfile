@@ -18,7 +18,8 @@ WORKDIR /app
 # ============================================
 FROM base AS dependencies
 
-# Update package lists and install PostgreSQL dependencies
+# Update package lists and install ALL required dependencies
+# This ensures the database can properly store user information
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Build tools (required for compiling Python packages)
     build-essential \
@@ -26,39 +27,59 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     g++ \
     make \
     pkg-config \
-    # PostgreSQL client and development libraries (REQUIRED)
+    cmake \
+    autoconf \
+    automake \
+    libtool \
+    # PostgreSQL client and development libraries (REQUIRED for production)
+    postgresql \
     postgresql-client \
     postgresql-client-common \
+    postgresql-common \
+    postgresql-contrib \
     libpq-dev \
     libpq5 \
+    # SQLite libraries (for development/testing)
+    sqlite3 \
+    libsqlite3-dev \
+    libsqlite3-0 \
     # Python development headers
     python3-dev \
-    # SSL/TLS libraries (for secure connections)
+    python3-setuptools \
+    python3-wheel \
+    # SSL/TLS libraries (for secure connections and cryptography)
     libssl-dev \
     libffi-dev \
     ca-certificates \
-    # Image processing libraries
+    openssl \
+    # Image processing libraries (for avatar and media uploads)
     libjpeg-dev \
     libpng-dev \
     libtiff-dev \
     libwebp-dev \
     libfreetype6-dev \
     liblcms2-dev \
+    libopenjp2-7-dev \
     zlib1g-dev \
-    # Event notification (for gevent)
+    # Event notification (for gevent and async operations)
     libevent-dev \
     # XML processing
     libxml2-dev \
     libxslt1-dev \
-    # SQLite (for development/testing)
-    libsqlite3-dev \
-    # Additional libraries
+    # Additional libraries for Python packages
     libreadline-dev \
     libbz2-dev \
     libncurses5-dev \
+    libncursesw5-dev \
+    tk-dev \
+    xz-utils \
+    llvm \
     # Utilities
     curl \
     wget \
+    git \
+    vim \
+    net-tools \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
@@ -85,10 +106,13 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install only runtime PostgreSQL libraries (smaller image)
+# Install runtime libraries (needed for database and app to run)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
+    postgresql-client-common \
     libpq5 \
+    sqlite3 \
+    libsqlite3-0 \
     libssl3 \
     ca-certificates \
     curl \
