@@ -9,8 +9,10 @@ FROM ghcr.io/cliffcho242/hiremebahamas-base-frontend:latest AS builder
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies using BuildKit cache for npm
+# Note: --legacy-peer-deps is required due to peer dependency conflicts in the project
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
