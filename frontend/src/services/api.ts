@@ -482,4 +482,27 @@ export const hireMeAPI = {
   },
 };
 
+// Users API
+export const usersAPI = {
+  followUser: async (userId: number) => {
+    const response = await api.post(`/api/users/follow/${userId}`);
+    return response.data;
+  },
+
+  unfollowUser: async (userId: number) => {
+    const response = await api.post(`/api/users/unfollow/${userId}`);
+    return response.data;
+  },
+
+  getFollowers: async () => {
+    const response = await api.get('/api/users/followers/list');
+    return response.data;
+  },
+
+  getFollowing: async () => {
+    const response = await api.get('/api/users/following/list');
+    return response.data;
+  },
+};
+
 export default api;
