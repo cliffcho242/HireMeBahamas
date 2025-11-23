@@ -824,6 +824,20 @@ def get_user_profile(user_id):
         return "", 200
 
     try:
+        # Validate user_id is a valid integer
+        try:
+            user_id_int = int(user_id)
+            if user_id_int <= 0:
+                return (
+                    jsonify({"success": False, "message": "Invalid user ID"}),
+                    400,
+                )
+        except ValueError:
+            return (
+                jsonify({"success": False, "message": "Invalid user ID format"}),
+                400,
+            )
+
         conn = get_db_connection()
         cursor = conn.cursor()
 
@@ -837,7 +851,7 @@ def get_user_profile(user_id):
                 FROM users 
                 WHERE id = %s AND is_active = TRUE
                 """,
-                (user_id,)
+                (user_id_int,)
             )
         else:
             cursor.execute(
@@ -848,7 +862,7 @@ def get_user_profile(user_id):
                 FROM users 
                 WHERE id = ? AND is_active = 1
                 """,
-                (user_id,)
+                (user_id_int,)
             )
 
         user = cursor.fetchone()
@@ -865,12 +879,12 @@ def get_user_profile(user_id):
         if USE_POSTGRESQL:
             cursor.execute(
                 "SELECT COUNT(*) FROM posts WHERE user_id = %s",
-                (user_id,)
+                (user_id_int,)
             )
         else:
             cursor.execute(
                 "SELECT COUNT(*) FROM posts WHERE user_id = ?",
-                (user_id,)
+                (user_id_int,)
             )
         
         count_result = cursor.fetchone()
