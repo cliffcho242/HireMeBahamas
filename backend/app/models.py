@@ -34,7 +34,16 @@ class User(Base):
     # Relationships
     jobs_posted = relationship("Job", back_populates="employer")
     applications = relationship("JobApplication", back_populates="applicant")
-    sent_messages = relationship("Message", back_populates="sender")
+    sent_messages = relationship(
+        "Message",
+        back_populates="sender",
+        foreign_keys="Message.sender_id"
+    )
+    received_messages = relationship(
+        "Message",
+        foreign_keys="Message.receiver_id",
+        overlaps="receiver"
+    )
     conversations_1 = relationship(
         "Conversation",
         back_populates="participant_1",
@@ -125,12 +134,16 @@ class Message(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     conversation = relationship("Conversation", back_populates="messages")
-    sender = relationship("User", back_populates="sent_messages")
+    sender = relationship("User", back_populates="sent_messages", foreign_keys=[sender_id])
+    receiver = relationship("User", foreign_keys=[receiver_id])
+
 
 
 class Review(Base):
