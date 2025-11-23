@@ -168,15 +168,22 @@ echo ""
 echo "Step 6: Installing Admin Panel Dependencies"
 echo "---------------------------------------------"
 
-# Navigate to admin-panel directory
-cd ../admin-panel || { echo "Admin panel directory not found, skipping..."; cd ..; }
+# Save current directory
+FRONTEND_DIR=$(pwd)
 
-if [ -f "package.json" ]; then
+# Navigate to admin-panel directory
+if cd ../admin-panel 2>/dev/null && [ -f "package.json" ]; then
     # Install Node.js packages
     echo "Installing admin-panel npm packages..."
-    npm install
-    echo "Admin panel dependencies installed successfully!"
-    cd ..
+    if npm install; then
+        echo "Admin panel dependencies installed successfully!"
+    else
+        echo "⚠️  Failed to install admin-panel packages"
+    fi
+    cd "$FRONTEND_DIR/.." || cd ..
+else
+    echo "⚠️  Admin panel directory not found or package.json missing, skipping..."
+    cd "$FRONTEND_DIR/.." || cd ..
 fi
 
 echo ""

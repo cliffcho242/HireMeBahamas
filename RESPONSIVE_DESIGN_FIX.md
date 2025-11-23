@@ -15,12 +15,12 @@ While the `package.json` files in both `frontend/` and `admin-panel/` directorie
 ### Frontend (`frontend/`)
 - **@react-hook/window-size@3.1.1** - Hook for detecting window size changes
 - **react-responsive@10.0.1** - Responsive design utilities and media query components
-- Plus 809 other required packages
+- Plus all other required packages for React, TypeScript, Vite, and UI components
 
 ### Admin Panel (`admin-panel/`)
 - **@react-hook/window-size@3.1.1** - Hook for detecting window size changes
 - **react-responsive@10.0.1** - Responsive design utilities and media query components
-- Plus 511 other required packages
+- Plus all other required packages for React, TypeScript, and admin functionality
 
 ## Solution Applied
 
