@@ -1235,6 +1235,7 @@ def get_posts():
 
         # Get all posts with user information
         if USE_POSTGRESQL:
+            # PostgreSQL requires all non-aggregate columns in GROUP BY
             cursor.execute(
                 """
                 SELECT 
@@ -1250,6 +1251,7 @@ def get_posts():
             """
             )
         else:
+            # SQLite allows grouping by primary key only (functionally dependent columns)
             cursor.execute(
                 """
                 SELECT 
@@ -1310,7 +1312,14 @@ def create_post():
                 401,
             )
 
-        token = auth_header.split(" ")[1]
+        parts = auth_header.split(" ")
+        if len(parts) != 2:
+            return (
+                jsonify({"success": False, "message": "Invalid authorization header format"}),
+                401,
+            )
+        
+        token = parts[1]
 
         # Decode token to get user_id
         try:
@@ -1432,7 +1441,14 @@ def like_post(post_id):
                 401,
             )
 
-        token = auth_header.split(" ")[1]
+        parts = auth_header.split(" ")
+        if len(parts) != 2:
+            return (
+                jsonify({"success": False, "message": "Invalid authorization header format"}),
+                401,
+            )
+        
+        token = parts[1]
 
         # Decode token to get user_id
         try:
@@ -1546,7 +1562,14 @@ def delete_post(post_id):
                 401,
             )
 
-        token = auth_header.split(" ")[1]
+        parts = auth_header.split(" ")
+        if len(parts) != 2:
+            return (
+                jsonify({"success": False, "message": "Invalid authorization header format"}),
+                401,
+            )
+        
+        token = parts[1]
 
         # Decode token to get user_id
         try:

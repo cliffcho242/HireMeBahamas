@@ -5,7 +5,6 @@ Tests the complete posts functionality including creation, retrieval, likes, and
 """
 
 import requests
-import json
 import sys
 
 # Configuration
