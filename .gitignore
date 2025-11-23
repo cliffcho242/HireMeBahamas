@@ -40,6 +40,11 @@ frontend/dist/
 frontend/build/
 frontend/.vite/
 
+# Admin Panel
+admin-panel/node_modules/
+admin-panel/dist/
+admin-panel/build/
+
 # Uploads
 uploads/
 static/uploads/
