@@ -73,7 +73,19 @@ Base images include all system dependencies pre-installed:
 
 ### 🎯 Automated Installation (Recommended)
 
-**One-command installation for all dependencies:**
+**NEW: Automated dependency fix for "Failed to load user profile" error:**
+
+```bash
+# Install all system dependencies (apt-get) for backend + frontend
+sudo python3 automated_dependency_fix.py --install-python-deps
+
+# Then install Node.js packages
+cd frontend && npm install
+```
+
+📖 **See [AUTOMATED_DEPENDENCY_FIX_README.md](AUTOMATED_DEPENDENCY_FIX_README.md)** for complete instructions.
+
+**Alternative: One-command installation for all dependencies:**
 
 #### Linux/macOS
 ```bash
@@ -105,6 +117,7 @@ These scripts will automatically:
 ### Manual Installation
 
 📦 **For complete system dependency installation instructions, see:**
+- **[AUTOMATED_DEPENDENCY_FIX_README.md](AUTOMATED_DEPENDENCY_FIX_README.md)** - NEW: Automated apt-get fix for backend + frontend
 - **[INSTALL.md](INSTALL.md)** - Comprehensive production installation guide
 - **[DEPENDENCIES_QUICK_REF.md](DEPENDENCIES_QUICK_REF.md)** - Quick reference for apt-get commands
 

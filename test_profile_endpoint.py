@@ -1,40 +1,96 @@
+#!/usr/bin/env python3
+"""Quick test for user profile endpoint"""
+import requests
 import json
 
-import requests
+BASE_URL = "http://127.0.0.1:8005"
 
-BASE_URL = "http://127.0.0.1:8008"
-
-# First, login to get a token
-print("Logging in to get token...")
-login_data = {"email": "admin@hirebahamas.com", "password": "AdminPass123!"}
-
-try:
-    login_response = requests.post(f"{BASE_URL}/api/auth/login", json=login_data)
-    print(f"Login status: {login_response.status_code}")
-
-    if login_response.status_code == 200:
-        login_data = login_response.json()
-        token = login_data.get("token")
-        print("Login successful, got token")
-
-        # Now test the profile endpoint
-        print("\nTesting /api/auth/profile endpoint...")
-        headers = {"Authorization": f"Bearer {token}"}
-        profile_response = requests.get(f"{BASE_URL}/api/auth/profile", headers=headers)
-        print(f"Profile status: {profile_response.status_code}")
-
-        if profile_response.status_code == 200:
-            profile_data = profile_response.json()
-            print(f'Success: {profile_data.get("success")}')
-            print(
-                f'User: {profile_data.get("first_name")} {profile_data.get("last_name")}'
-            )
-            print(f'Email: {profile_data.get("email")}')
-            print(f'Available for hire: {profile_data.get("is_available_for_hire")}')
+def test_register_and_profile():
+    print("="*60)
+    print("Testing User Profile Fix")
+    print("="*60)
+    
+    # Register a test user
+    print("\n1. Registering test user...")
+    register_data = {
+        "email": "testuser@example.com",
+        "password": "password123",
+        "first_name": "Test",
+        "last_name": "User",
+        "user_type": "job_seeker",
+        "location": "Nassau, Bahamas",
+        "phone": "+1-242-555-0123"
+    }
+    
+    response = requests.post(f"{BASE_URL}/api/auth/register", json=register_data)
+    if response.status_code == 200:
+        data = response.json()
+        token = data.get("access_token")
+        user_id = data.get("user", {}).get("id")
+        print(f"✅ User registered successfully (ID: {user_id})")
+    elif response.status_code == 400 and "already registered" in response.text:
+        # User already exists, try to login
+        print("User already exists, logging in...")
+        login_response = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            json={"email": "testuser@example.com", "password": "password123"}
+        )
+        if login_response.status_code == 200:
+            data = login_response.json()
+            token = data.get("access_token")
+            user_id = data.get("user", {}).get("id")
+            print(f"✅ User logged in successfully (ID: {user_id})")
         else:
-            print(f"Error: {profile_response.text}")
+            print(f"❌ Login failed: {login_response.status_code}")
+            print(response.text)
+            return False
     else:
-        print(f"Login failed: {login_response.text}")
+        print(f"❌ Registration failed: {response.status_code}")
+        print(response.text)
+        return False
+    
+    # Test getting user profile
+    print(f"\n2. Fetching user profile (ID: {user_id})...")
+    headers = {"Authorization": f"Bearer {token}"}
+    profile_response = requests.get(f"{BASE_URL}/api/users/{user_id}", headers=headers)
+    
+    if profile_response.status_code == 200:
+        profile_data = profile_response.json()
+        user_data = profile_data.get("user", {})
+        
+        print(f"✅ Profile fetched successfully!")
+        print("\n3. Checking required fields...")
+        
+        required_fields = [
+            'id', 'first_name', 'last_name', 'email', 
+            'user_type', 'created_at', 'is_available_for_hire',
+            'posts_count', 'phone'
+        ]
+        
+        all_present = True
+        for field in required_fields:
+            present = field in user_data
+            status = "✅" if present else "❌"
+            value = user_data.get(field, "MISSING")
+            print(f"  {status} {field}: {value}")
+            if not present:
+                all_present = False
+        
+        if all_present:
+            print("\n" + "="*60)
+            print("✅ SUCCESS: All required fields are present!")
+            print("✅ User profile endpoint is working correctly!")
+            print("="*60)
+            return True
+        else:
+            print("\n❌ Some required fields are missing!")
+            return False
+    else:
+        print(f"❌ Failed to fetch profile: {profile_response.status_code}")
+        print(profile_response.text)
+        return False
 
-except Exception as e:
-    print(f"Error: {e}")
+if __name__ == "__main__":
+    import sys
+    success = test_register_and_profile()
+    sys.exit(0 if success else 1)
