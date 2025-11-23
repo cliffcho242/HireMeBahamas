@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
-import api, { messagesAPI } from '../services/api';
+import { messagesAPI } from '../services/api';
 import { PaperAirplaneIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -172,13 +172,13 @@ const Messages: React.FC = () => {
 
   const fetchConversations = async () => {
     try {
-      const response = await api.get('/messages/conversations');
-      setConversations(response.data);
+      const conversations = await messagesAPI.getConversations();
+      setConversations(conversations);
       
       // Only auto-select first conversation if there's no user query parameter
       const userIdParam = searchParams.get('user');
-      if (response.data.length > 0 && !userIdParam) {
-        setSelectedConversation(response.data[0]);
+      if (conversations.length > 0 && !userIdParam) {
+        setSelectedConversation(conversations[0]);
       }
     } catch (error) {
       console.error('Error fetching conversations:', error);
@@ -193,17 +193,14 @@ const Messages: React.FC = () => {
 
     setSending(true);
     try {
-      const response = await api.post('/messages/', {
-        conversation_id: selectedConversation.id,
-        content: newMessage.trim(),
-      });
+      const message = await messagesAPI.sendMessage(selectedConversation.id.toString(), newMessage.trim());
 
       setNewMessage('');
 
       // Update the selected conversation with the new message
       setSelectedConversation(prev => prev ? {
         ...prev,
-        messages: [...prev.messages, response.data]
+        messages: [...prev.messages, message]
       } : null);
 
     } catch (error) {
