@@ -27,6 +27,7 @@ class User(Base):
     avatar_url = Column(String(500))
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
+    is_available_for_hire = Column(Boolean, default=False)  # HireMe availability status
     role = Column(String(50), default="user")  # user, admin, employer, freelancer
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
