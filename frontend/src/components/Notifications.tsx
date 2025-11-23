@@ -59,7 +59,7 @@ const Notifications: React.FC = () => {
       case 'friend_request':
         return <UserPlusIcon className="w-5 h-5 text-green-500" />;
       case 'follow':
-        return <UserPlusIcon className="w-5 h-5 text-green-500" />;
+        return <UserPlusIcon className="w-5 h-5 text-teal-500" />;
       case 'job_application':
         return <BriefcaseIcon className="w-5 h-5 text-purple-500" />;
       case 'job_post':
