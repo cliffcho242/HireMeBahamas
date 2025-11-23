@@ -1,10 +1,19 @@
 # Force Python provider only - prevents Node.js detection
 providers = ["python"]
 
+# Build-time variables only (non-sensitive)
+# IMPORTANT: NEVER add sensitive data (keys, secrets, passwords) here
+# ❌ BAD:  [variables]
+# ❌ BAD:  SECRET_KEY = "my-secret"          # This gets baked into image layers!
+# ❌ BAD:  JWT_SECRET_KEY = "jwt-secret"     # Visible in image history!
+# ✅ GOOD: Configure secrets in Railway dashboard as environment variables
+# ✅ GOOD: They will be injected at runtime, not build time
 [variables]
 NIXPACKS_NO_MUSL = "1"
 PYTHON_VERSION = "3.12"
 
+# Security: Sensitive variables should only be available at runtime via Railway's environment injection
+# The phases configuration ensures packages are installed without exposing secrets
 [phases.setup]
 # Comprehensive system packages for production deployment with PostgreSQL
 aptPkgs = [
