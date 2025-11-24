@@ -92,12 +92,35 @@ const UserProfile: React.FC = () => {
     setError(null);
     try {
       const response = await authAPI.getUserProfile(userId);
-      const userData = response.user;
-      setProfile(userData as unknown as UserProfile);
+      const userData = response.user as any; // API response may have additional fields
       
-      // Set follow state
-      setIsFollowing(userData.is_following || false);
-      setFollowersCount(userData.followers_count || 0);
+      // Normalize user data with safe defaults
+      const normalizedProfile: UserProfile = {
+        id: userData.id,
+        email: userData.email || '',
+        first_name: userData.first_name || '',
+        last_name: userData.last_name || '',
+        username: userData.username,
+        user_type: userData.user_type || 'freelancer',
+        location: userData.location,
+        phone: userData.phone,
+        bio: userData.bio,
+        avatar_url: userData.avatar_url,
+        occupation: userData.occupation,
+        company_name: userData.company_name,
+        created_at: userData.created_at || new Date().toISOString(),
+        is_available_for_hire: userData.is_available_for_hire ?? false,
+        posts_count: userData.posts_count ?? 0,
+        is_following: userData.is_following ?? false,
+        followers_count: userData.followers_count ?? 0,
+        following_count: userData.following_count ?? 0,
+      };
+      
+      setProfile(normalizedProfile);
+      
+      // Set follow state - these are now guaranteed to be defined
+      setIsFollowing(normalizedProfile.is_following!);
+      setFollowersCount(normalizedProfile.followers_count!);
 
       // Fetch user's posts
       const allPosts = await postsAPI.getPosts();

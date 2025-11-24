@@ -36,11 +36,21 @@ const Users: React.FC = () => {
     return initials || '?';
   };
 
-  // Helper function to validate and filter user data
+  // Helper function to validate and filter user data with default values
   const validateUsers = (userArray: (User | null | undefined)[]): User[] => {
-    return userArray.filter((u: User | null | undefined): u is User => {
-      return u != null && typeof u === 'object' && 'id' in u;
-    });
+    return userArray
+      .filter((u: User | null | undefined): u is User => {
+        return u != null && typeof u === 'object' && 'id' in u;
+      })
+      .map((u: User) => ({
+        ...u,
+        // Ensure all optional fields have safe default values
+        is_following: u.is_following ?? false,
+        followers_count: u.followers_count ?? 0,
+        following_count: u.following_count ?? 0,
+        first_name: u.first_name || '',
+        last_name: u.last_name || '',
+      }));
   };
 
   // Helper function to extract error message from API errors
@@ -235,10 +245,10 @@ const Users: React.FC = () => {
                         <p className="text-sm text-gray-600 mb-3 line-clamp-2">{userData.bio}</p>
                       )}
                       <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                        <span>{userData.followers_count ?? 0} followers</span>
-                        <span>{userData.following_count ?? 0} following</span>
+                        <span>{userData.followers_count} followers</span>
+                        <span>{userData.following_count} following</span>
                       </div>
-                      {(userData.is_following ?? false) ? (
+                      {userData.is_following ? (
                         <button
                           onClick={() => handleUnfollow(userData.id)}
                           className="w-full bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 flex items-center justify-center text-sm"
