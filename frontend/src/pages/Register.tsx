@@ -6,6 +6,7 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../contexts/AuthContext';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import AppleSignin from 'react-apple-signin-auth';
+import { getOAuthConfig } from '../utils/oauthConfig';
 
 interface RegisterForm {
   firstName: string;
@@ -24,12 +25,13 @@ const Register: React.FC = () => {
   const [selectedUserType, setSelectedUserType] = useState<'freelancer' | 'client'>('freelancer');
   const navigate = useNavigate();
 
-  // Check if OAuth credentials are properly configured
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const appleClientId = import.meta.env.VITE_APPLE_CLIENT_ID;
-  const isGoogleOAuthEnabled = googleClientId && googleClientId !== "placeholder-client-id" && googleClientId.trim() !== '';
-  const isAppleOAuthEnabled = appleClientId && appleClientId !== "com.hiremebahamas.signin" && appleClientId.trim() !== '';
-  const isAnyOAuthEnabled = isGoogleOAuthEnabled || isAppleOAuthEnabled;
+  // Check OAuth configuration using utility function
+  const oauthConfig = getOAuthConfig();
+  const isGoogleOAuthEnabled = oauthConfig.google.enabled;
+  const isAppleOAuthEnabled = oauthConfig.apple.enabled;
+  const isAnyOAuthEnabled = oauthConfig.isAnyEnabled;
+  const googleClientId = oauthConfig.google.clientId || '';
+  const appleClientId = oauthConfig.apple.clientId || '';
 
   // Redirect authenticated users to home
   useEffect(() => {

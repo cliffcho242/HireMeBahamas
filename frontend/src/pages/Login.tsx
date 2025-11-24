@@ -1,10 +1,11 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import AppleSignin from 'react-apple-signin-auth';
+import { getOAuthConfig } from '../utils/oauthConfig';
 import {
   UserIcon,
   BriefcaseIcon,
@@ -20,12 +21,13 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('admin@hiremebahamas.com');
   const [password, setPassword] = useState('AdminPass123!');
 
-  // Check if OAuth credentials are properly configured
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const appleClientId = import.meta.env.VITE_APPLE_CLIENT_ID;
-  const isGoogleOAuthEnabled = googleClientId && googleClientId !== "placeholder-client-id" && googleClientId.trim() !== '';
-  const isAppleOAuthEnabled = appleClientId && appleClientId !== "com.hiremebahamas.signin" && appleClientId.trim() !== '';
-  const isAnyOAuthEnabled = isGoogleOAuthEnabled || isAppleOAuthEnabled;
+  // Check OAuth configuration using utility function
+  const oauthConfig = getOAuthConfig();
+  const isGoogleOAuthEnabled = oauthConfig.google.enabled;
+  const isAppleOAuthEnabled = oauthConfig.apple.enabled;
+  const isAnyOAuthEnabled = oauthConfig.isAnyEnabled;
+  const googleClientId = oauthConfig.google.clientId || '';
+  const appleClientId = oauthConfig.apple.clientId || '';
 
   // Redirect authenticated users to home
   useEffect(() => {
@@ -333,21 +335,23 @@ const Login: React.FC = () => {
                   />
                 )}
 
-                {/* Test Account Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('admin@hiremebahamas.com');
-                    setPassword('admin123');
-                    toast.success('Test credentials loaded!');
-                  }}
-                  className={`w-full flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all ${!isAnyOAuthEnabled ? 'mt-6' : ''}`}
-                >
-                  <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                  <span className="font-medium text-gray-700">Use Test Account</span>
-                </button>
+                {/* Test Account Button - Only visible in development */}
+                {import.meta.env.DEV && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('admin@hiremebahamas.com');
+                      setPassword('admin123');
+                      toast.success('Test credentials loaded!');
+                    }}
+                    className={`w-full flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all ${!isAnyOAuthEnabled ? 'mt-6' : ''}`}
+                  >
+                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                    <span className="font-medium text-gray-700">Use Test Account</span>
+                  </button>
+                )}
 
                 <div className="text-center">
                   <span className="text-gray-600">Don't have an account? </span>
