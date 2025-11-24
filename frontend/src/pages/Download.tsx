@@ -17,44 +17,45 @@ interface BeforeInstallPromptEvent extends Event {
 
 const Download: React.FC = () => {
   const navigate = useNavigate();
-  const [isIOS, setIsIOS] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  
+  // Use lazy initialization for platform detection to avoid cascading renders
+  const [isIOS] = useState(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    return /ipad|iphone|ipod/.test(userAgent) && !(window as any).MSStream;
+  });
+  
+  const [isAndroid] = useState(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    return /android/.test(userAgent);
+  });
+  
+  const [isDesktop] = useState(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const desktop = !/android|iphone|ipad|ipod|mobile/.test(userAgent);
+    const isWindows = /windows/.test(userAgent);
+    const isMac = /macintosh|mac os x/.test(userAgent);
+    const isLinux = /linux/.test(userAgent) && !/android/.test(userAgent);
+    return desktop || isWindows || isMac || isLinux;
+  });
+  
+  // Initialize isInstalled state, but allow updates when user accepts install
+  const [isInstalled, setIsInstalled] = useState(() => {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as any).standalone ||
+      document.referrer.includes('android-app://');
+  });
+  
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
-    // Detect platform with better desktop detection
-    const userAgent = navigator.userAgent.toLowerCase();
-    const iOS = /ipad|iphone|ipod/.test(userAgent) && !(window as any).MSStream;
-    const android = /android/.test(userAgent);
-    const desktop = !/android|iphone|ipad|ipod|mobile/.test(userAgent);
-    
-    // Enhanced desktop detection
-    const isWindows = /windows/.test(userAgent);
-    const isMac = /macintosh|mac os x/.test(userAgent);
-    const isLinux = /linux/.test(userAgent) && !/android/.test(userAgent);
-    const isChrome = /chrome/.test(userAgent) && !/edge|edg/.test(userAgent);
-    const isEdge = /edge|edg/.test(userAgent);
-    const isFirefox = /firefox/.test(userAgent);
-    
+    // Log platform detection results
     console.log('Platform detected:', { 
-      iOS, android, desktop, 
-      isWindows, isMac, isLinux,
-      isChrome, isEdge, isFirefox,
-      userAgent 
+      isIOS, 
+      isAndroid, 
+      isDesktop,
+      userAgent: navigator.userAgent.toLowerCase()
     });
-    
-    setIsIOS(iOS);
-    setIsAndroid(android);
-    setIsDesktop(desktop || isWindows || isMac || isLinux);
-
-    // Check if already installed
-    const standalone = window.matchMedia('(display-mode: standalone)').matches ||
-      (navigator as any).standalone ||
-      document.referrer.includes('android-app://');
-    setIsInstalled(standalone);
 
     // Listen for beforeinstallprompt event (Android/Desktop)
     const handleBeforeInstallPrompt = (e: Event) => {

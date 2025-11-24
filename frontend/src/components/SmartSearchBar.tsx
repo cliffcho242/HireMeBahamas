@@ -29,47 +29,44 @@ const SmartSearchBar: React.FC<SmartSearchBarProps> = ({
   className = ''
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [detectedCategories, setDetectedCategories] = useState<any[]>([]);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [isFocused, setIsFocused] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
-
-  // Load recent searches from localStorage
-  useEffect(() => {
+  const [showSuggestionsOverride, setShowSuggestionsOverride] = useState(false);
+  
+  // Use lazy initialization for localStorage to avoid cascading renders
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     const stored = localStorage.getItem('recentSearches');
     if (stored) {
       try {
-        setRecentSearches(JSON.parse(stored));
+        return JSON.parse(stored);
       } catch (e) {
         console.error('Error loading recent searches:', e);
+        return [];
       }
     }
-  }, []);
+    return [];
+  });
+  
+  const [isFocused, setIsFocused] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
-  // Generate suggestions when query changes
-  useEffect(() => {
-    if (searchQuery.length >= 2) {
-      const newSuggestions = generateSearchSuggestions(searchQuery, 8);
-      setSuggestions(newSuggestions);
-      
-      const categories = detectCategories(searchQuery);
-      setDetectedCategories(categories.slice(0, 3));
-      
-      setShowSuggestions(true);
-    } else {
-      setSuggestions([]);
-      setDetectedCategories([]);
-      setShowSuggestions(searchQuery.length === 0 && isFocused);
-    }
-  }, [searchQuery, isFocused]);
+  // Compute suggestions and categories during render (derived state)
+  const suggestions = searchQuery.length >= 2 
+    ? generateSearchSuggestions(searchQuery, 8)
+    : [];
+    
+  const detectedCategories = searchQuery.length >= 2
+    ? detectCategories(searchQuery).slice(0, 3)
+    : [];
+    
+  // Compute whether to show suggestions
+  const showSuggestions = showSuggestionsOverride || (searchQuery.length >= 2 
+    ? true 
+    : (searchQuery.length === 0 && isFocused));
 
   // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
+        setShowSuggestionsOverride(false);
         setIsFocused(false);
       }
     };
@@ -105,7 +102,7 @@ const SmartSearchBar: React.FC<SmartSearchBarProps> = ({
       category: detectedCategory
     });
 
-    setShowSuggestions(false);
+    setShowSuggestionsOverride(false);
     setSearchQuery(query);
   };
 
@@ -117,7 +114,7 @@ const SmartSearchBar: React.FC<SmartSearchBarProps> = ({
 
   const clearSearch = () => {
     setSearchQuery('');
-    setShowSuggestions(false);
+    setShowSuggestionsOverride(false);
     onSearch('');
   };
 
@@ -138,7 +135,7 @@ const SmartSearchBar: React.FC<SmartSearchBarProps> = ({
           onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchQuery)}
           onFocus={() => {
             setIsFocused(true);
-            setShowSuggestions(true);
+            setShowSuggestionsOverride(true);
           }}
           placeholder={placeholder}
           className="w-full pl-12 pr-12 py-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-gray-900 placeholder-gray-400"
