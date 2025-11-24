@@ -82,7 +82,7 @@ const Users: React.FC = () => {
     try {
       const response = await api.get(`/api/users/list?search=${searchTerm}`);
       if (response.data.success) {
-        setUsers(response.data.users);
+        setUsers(validateUsers(response.data.users));
       }
     } catch (error) {
       console.error('Error searching users:', error);
