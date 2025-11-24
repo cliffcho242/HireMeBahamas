@@ -1,5 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
+import logging
 
 from app.core.security import get_current_user
 from app.database import get_db
@@ -19,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 async def enrich_post_with_metadata(
@@ -104,8 +106,16 @@ async def get_posts(
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
-    """Get posts with pagination"""
+    """Get posts with pagination
+    
+    Note: This endpoint returns posts from ALL users regardless of their account status.
+    Posts remain visible even if the author's account becomes inactive (is_active=False).
+    This ensures posts don't disappear due to user inactivity, especially for admin accounts.
+    Posts are only removed when explicitly deleted via the delete endpoint.
+    """
     # Build query with user relationship
+    # IMPORTANT: We intentionally do NOT filter by User.is_active here
+    # Posts should remain visible regardless of the author's account status
     query = select(Post).options(selectinload(Post.user)).order_by(desc(Post.created_at))
 
     # Apply pagination
@@ -117,6 +127,22 @@ async def get_posts(
     # Build response with like/comment counts using helper
     posts_data = []
     for post in posts:
+        # Defensive check: ensure post has a valid user relationship
+        # This handles edge cases where user might be deleted but post remains
+        if not post.user:
+            logger.warning(
+                f"Post {post.id} has no associated user relationship - "
+                f"possible data integrity issue. Skipping post."
+            )
+            continue
+        
+        # Additional check: log if post is from an inactive user (for monitoring)
+        if not post.user.is_active:
+            logger.info(
+                f"Including post {post.id} from inactive user {post.user.id} "
+                f"({post.user.email}) in feed - posts remain visible after user inactivity"
+            )
+        
         post_data = await enrich_post_with_metadata(post, db, current_user)
         posts_data.append(post_data.model_dump())
 
@@ -129,7 +155,11 @@ async def get_post(
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
-    """Get a specific post by ID"""
+    """Get a specific post by ID
+    
+    Note: Returns post regardless of author's account status (is_active).
+    Posts remain accessible even if the author's account becomes inactive.
+    """
     result = await db.execute(
         select(Post).options(selectinload(Post.user)).where(Post.id == post_id)
     )
@@ -138,6 +168,16 @@ async def get_post(
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
+        )
+    
+    # Defensive check: ensure user relationship exists
+    if not post.user:
+        logger.error(
+            f"Post {post_id} has no associated user - data integrity issue"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Post data incomplete - user information missing"
         )
 
     # Use helper to enrich post with metadata
