@@ -80,6 +80,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         }
       });
 
+      // Setting socket state after initialization
       setSocket(newSocket);
 
       return () => {

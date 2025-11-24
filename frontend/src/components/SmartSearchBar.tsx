@@ -32,21 +32,23 @@ const SmartSearchBar: React.FC<SmartSearchBarProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [detectedCategories, setDetectedCategories] = useState<any[]>([]);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [isFocused, setIsFocused] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
-
-  // Load recent searches from localStorage
-  useEffect(() => {
+  
+  // Use lazy initialization to load from localStorage
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     const stored = localStorage.getItem('recentSearches');
     if (stored) {
       try {
-        setRecentSearches(JSON.parse(stored));
+        return JSON.parse(stored);
       } catch (e) {
         console.error('Error loading recent searches:', e);
+        return [];
       }
     }
-  }, []);
+    return [];
+  });
+  
+  const [isFocused, setIsFocused] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   // Generate suggestions when query changes
   useEffect(() => {

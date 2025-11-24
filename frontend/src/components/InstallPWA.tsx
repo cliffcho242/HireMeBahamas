@@ -10,18 +10,16 @@ interface BeforeInstallPromptEvent extends Event {
 const InstallPWA: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
+  
+  // Use lazy initialization to avoid setState in useEffect
+  const [isIOS] = useState(() => /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream);
+  const [isStandalone] = useState(() => 
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone ||
+    document.referrer.includes('android-app://')
+  );
 
   useEffect(() => {
-    // Check if already installed
-    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone ||
-      document.referrer.includes('android-app://');
-
-    // Check if iOS
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-
     // Check if user has dismissed install banner before
     const installDismissed = localStorage.getItem('installBannerDismissed');
     const dismissedDate = installDismissed ? new Date(installDismissed) : null;
@@ -29,12 +27,8 @@ const InstallPWA: React.FC = () => {
       ? (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24)
       : 999;
 
-    // Update state based on checks
-    setIsStandalone(isStandaloneMode);
-    setIsIOS(ios);
-
     // Show banner if not installed and not recently dismissed (wait 7 days)
-    if (!isStandaloneMode && daysSinceDismissed > 7) {
+    if (!isStandalone && daysSinceDismissed > 7) {
       // Show banner after 3 seconds
       const timer = setTimeout(() => {
         setShowInstallBanner(true);
@@ -57,7 +51,7 @@ const InstallPWA: React.FC = () => {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, []);
+  }, [isStandalone]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt && !isIOS) return;

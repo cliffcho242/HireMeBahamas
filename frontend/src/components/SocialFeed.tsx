@@ -287,9 +287,25 @@ const SocialFeed = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState([]);
   const [userPatterns, setUserPatterns] = useState(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  // Use lazy initialization for auth state from localStorage
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    const userData = localStorage.getItem('user_data');
+    if (userData) {
+      try {
+        return JSON.parse(userData);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+  
+  const [loading] = useState(false);
+  
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return !!localStorage.getItem('auth_token');
+  });
 
   // Login state
   const [loginForm, setLoginForm] = useState({
@@ -321,18 +337,6 @@ const SocialFeed = () => {
       console.error('Error loading analytics:', error);
     }
   }, [isLoggedIn]);
-
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      setIsLoggedIn(true);
-      const userData = localStorage.getItem('user_data');
-      if (userData) {
-        setCurrentUser(JSON.parse(userData));
-      }
-    }
-    setLoading(false);
-  }, []);
 
   useEffect(() => {
     loadPosts();
