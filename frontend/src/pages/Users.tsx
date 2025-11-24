@@ -48,8 +48,8 @@ const Users: React.FC = () => {
         is_following: u.is_following ?? false,
         followers_count: u.followers_count ?? 0,
         following_count: u.following_count ?? 0,
-        first_name: u.first_name || '',
-        last_name: u.last_name || '',
+        first_name: u.first_name ?? '',
+        last_name: u.last_name ?? '',
       }));
   };
 

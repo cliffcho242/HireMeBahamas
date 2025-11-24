@@ -34,9 +34,9 @@ interface UserProfile {
   created_at: string;
   is_available_for_hire: boolean;
   posts_count: number;
-  is_following?: boolean;
-  followers_count?: number;
-  following_count?: number;
+  is_following: boolean; // Changed from optional to required since we always set defaults
+  followers_count: number; // Changed from optional to required since we always set defaults
+  following_count: number; // Changed from optional to required since we always set defaults
 }
 
 interface Post {
@@ -119,8 +119,8 @@ const UserProfile: React.FC = () => {
       setProfile(normalizedProfile);
       
       // Set follow state - these are now guaranteed to be defined
-      setIsFollowing(normalizedProfile.is_following!);
-      setFollowersCount(normalizedProfile.followers_count!);
+      setIsFollowing(normalizedProfile.is_following);
+      setFollowersCount(normalizedProfile.followers_count);
 
       // Fetch user's posts
       const allPosts = await postsAPI.getPosts();
