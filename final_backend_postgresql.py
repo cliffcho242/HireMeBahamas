@@ -636,15 +636,25 @@ def ensure_database_initialized():
     return _db_initialized
 
 
-# Initialize database on startup with error handling
-try:
-    print("🔧 Attempting database initialization...")
-    init_database()
-    print("✅ Database initialization completed successfully")
-except Exception as e:
-    print(f"⚠️ Database initialization warning: {e}")
-    print("⚠️ Application will continue - database will be initialized on first request")
-    # Don't exit - allow the app to start and try again later
+# Initialize database in background thread to avoid blocking healthcheck
+def init_database_background():
+    """Initialize database in background thread to allow app to start quickly"""
+    global _db_initialized
+    time.sleep(1)  # Give the app a moment to start serving requests
+    try:
+        print("🔧 Attempting database initialization in background thread...")
+        init_database()
+        print("✅ Database initialization completed successfully")
+    except Exception as e:
+        print(f"⚠️ Database initialization warning: {e}")
+        print("⚠️ Database will be initialized on first request")
+        # Don't exit - allow retries later
+
+# Start database initialization in background thread
+db_init_thread = threading.Thread(target=init_database_background, daemon=True, name="db-init")
+db_init_thread.start()
+print("🚀 Database initialization started in background thread")
+print("✅ Application ready to serve requests")
 
 
 # ==========================================
