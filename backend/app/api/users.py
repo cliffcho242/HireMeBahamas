@@ -93,12 +93,23 @@ async def get_user(
     current_user: User = Depends(get_current_user),
 ):
     """Get a specific user by ID or username"""
+    # Validate identifier length to prevent DoS attacks
+    if len(identifier) > 150:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid identifier: too long"
+        )
+    
     # Try to parse as integer ID first
     user = None
     if identifier.isdigit():
-        user_id = int(identifier)
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
+        try:
+            user_id = int(identifier)
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+        except (ValueError, OverflowError):
+            # Invalid integer, will try username lookup
+            pass
     
     # If not found by ID or not a digit, try username
     if not user:
