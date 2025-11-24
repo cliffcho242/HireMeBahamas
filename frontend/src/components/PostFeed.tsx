@@ -34,29 +34,6 @@ const PostFeed: React.FC = () => {
   const { user } = useAuth();
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Monitor online/offline status
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      toast.success('Connection restored');
-      syncPendingActions();
-      fetchPosts();
-    };
-    
-    const handleOffline = () => {
-      setIsOnline(false);
-      toast.error('You are offline. Changes will be synced when connection is restored.');
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
   // Sync pending actions when online
   const syncPendingActions = useCallback(async () => {
     if (!isOnline || !postCache.isCacheAvailable()) return;
@@ -110,25 +87,7 @@ const PostFeed: React.FC = () => {
     }
   }, [isOnline]);
 
-  useEffect(() => {
-    fetchPosts();
-    
-    // Setup periodic sync (every 30 seconds)
-    if (isOnline) {
-      syncIntervalRef.current = setInterval(() => {
-        fetchPosts();
-        syncPendingActions();
-      }, 30000);
-    }
-
-    return () => {
-      if (syncIntervalRef.current) {
-        clearInterval(syncIntervalRef.current);
-      }
-    };
-  }, [isOnline]);
-
-  const fetchPosts = async (useCache = true) => {
+  const fetchPosts = useCallback(async (useCache = true) => {
     try {
       // Load from cache first for instant display
       if (useCache && postCache.isCacheAvailable()) {
@@ -161,14 +120,57 @@ const PostFeed: React.FC = () => {
     } catch (error) {
       console.error('Failed to fetch posts:', error);
       
-      // Only show error if we don't have cached posts
-      if (posts.length === 0) {
-        toast.error('Failed to load posts. Showing cached content if available.');
-      }
+      // Only show error if we don't have cached posts - use functional update to avoid dependency
+      setPosts(currentPosts => {
+        if (currentPosts.length === 0) {
+          toast.error('Failed to load posts. Showing cached content if available.');
+        }
+        return currentPosts;
+      });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isOnline]);
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast.success('Connection restored');
+      // Sync and fetch will be handled by the main useEffect
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast.error('You are offline. Changes will be synced when connection is restored.');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchPosts();
+    
+    // Setup periodic sync (every 30 seconds)
+    if (isOnline) {
+      syncIntervalRef.current = setInterval(() => {
+        fetchPosts();
+        syncPendingActions();
+      }, 30000);
+    }
+
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+      }
+    };
+  }, [isOnline, fetchPosts, syncPendingActions]);
 
   // TODO: Implement create post inline functionality
   // const handleCreatePost = async (e: React.FormEvent) => {
