@@ -7,6 +7,10 @@ This tests that all dependencies and components are correctly installed.
 import os
 import sys
 
+# Add backend to path once at module level
+sys.path.insert(0, "backend")
+
+
 def test_upload_directories():
     """Test that all required upload directories exist"""
     print("Testing upload directory structure...")
@@ -27,7 +31,6 @@ def test_upload_directories():
 def test_core_upload_module():
     """Test that core upload module creates directories"""
     print("\nTesting core upload module...")
-    sys.path.insert(0, "backend")
     
     try:
         from app.core.upload import UPLOAD_DIR
@@ -70,15 +73,14 @@ def test_dependencies():
 def test_api_routes():
     """Test that profile pictures API routes are registered"""
     print("\nTesting API routes...")
-    sys.path.insert(0, "backend")
     
     try:
         from app.main import app
         
-        # Check for profile picture routes
+        # Check for profile picture routes - use getattr for safety
         profile_routes = [
-            route.path for route in app.routes 
-            if "profile-pictures" in route.path
+            getattr(route, 'path', '') for route in app.routes 
+            if "profile-pictures" in getattr(route, 'path', '')
         ]
         
         expected_routes = [
@@ -105,7 +107,6 @@ def test_api_routes():
 def test_model():
     """Test that ProfilePicture model exists"""
     print("\nTesting ProfilePicture model...")
-    sys.path.insert(0, "backend")
     
     try:
         from app.models import ProfilePicture
