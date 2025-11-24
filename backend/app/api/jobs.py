@@ -1,9 +1,8 @@
 from typing import List, Optional
-from uuid import UUID
 
 from app.core.security import get_current_user
 from app.database import get_db
-from app.models import Job, JobApplication, Notification, NotificationType, User
+from app.models import Job, JobApplication, Notification, NotificationType, Post, User
 from app.schemas.job import (
     JobApplicationCreate,
     JobApplicationResponse,
@@ -13,7 +12,7 @@ from app.schemas.job import (
     JobUpdate,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, desc, or_, select
+from sqlalchemy import and_, desc, or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -37,6 +36,22 @@ async def create_job(
         select(Job).options(selectinload(Job.employer)).where(Job.id == db_job.id)
     )
     job_with_employer = result.scalar_one()
+
+    # Create a post for the job so it appears in the news feed
+    job_post_content = f"🚀 New Job Opening: {job_with_employer.title}\n\n"
+    job_post_content += f"Company: {job_with_employer.company}\n"
+    job_post_content += f"Location: {job_with_employer.location}\n"
+    job_post_content += f"Type: {job_with_employer.job_type}\n\n"
+    job_post_content += f"{job_with_employer.description[:200]}{'...' if len(job_with_employer.description) > 200 else ''}"
+
+    db_post = Post(
+        user_id=current_user.id,
+        content=job_post_content,
+        post_type="job",
+        related_job_id=db_job.id
+    )
+    db.add(db_post)
+    await db.commit()
 
     return job_with_employer
 
@@ -95,7 +110,7 @@ async def get_jobs(
 
 
 @router.get("/{job_id}", response_model=JobResponse)
-async def get_job(job_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_job(job_id: int, db: AsyncSession = Depends(get_db)):
     """Get a specific job by ID"""
     result = await db.execute(
         select(Job)
@@ -117,7 +132,7 @@ async def get_job(job_id: UUID, db: AsyncSession = Depends(get_db)):
 
 @router.put("/{job_id}", response_model=JobResponse)
 async def update_job(
-    job_id: UUID,
+    job_id: int,
     job_update: JobUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -156,7 +171,7 @@ async def update_job(
 
 @router.delete("/{job_id}")
 async def delete_job(
-    job_id: UUID,
+    job_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -183,7 +198,7 @@ async def delete_job(
 
 @router.post("/{job_id}/apply", response_model=JobApplicationResponse)
 async def apply_to_job(
-    job_id: UUID,
+    job_id: int,
     application: JobApplicationCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -260,7 +275,7 @@ async def apply_to_job(
 
 @router.get("/{job_id}/applications", response_model=List[JobApplicationResponse])
 async def get_job_applications(
-    job_id: UUID,
+    job_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
