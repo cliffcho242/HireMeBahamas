@@ -1,0 +1,337 @@
+name: Dependency Check and Auto-Install
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'requirements.txt'
+      - 'backend/requirements.txt'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'requirements.txt'
+      - 'backend/requirements.txt'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+
+jobs:
+  check-backend-dependencies:
+    name: Check Backend Python Dependencies
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            gcc \
+            g++ \
+            make \
+            pkg-config \
+            python3-dev \
+            libpq-dev \
+            libssl-dev \
+            libffi-dev \
+            libjpeg-dev \
+            libpng-dev \
+            libwebp-dev \
+            zlib1g-dev
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Check for missing dependencies
+        id: check-deps
+        run: |
+          echo "Installing pip tools..."
+          python -m pip install --upgrade pip setuptools wheel
+          
+          echo "Checking root requirements.txt..."
+          if [ -f requirements.txt ]; then
+            echo "✓ Found requirements.txt"
+            pip install -r requirements.txt --dry-run || echo "Some dependencies may need system libraries"
+          else
+            echo "✗ Missing requirements.txt"
+            exit 1
+          fi
+          
+          echo "Checking backend/requirements.txt..."
+          if [ -f backend/requirements.txt ]; then
+            echo "✓ Found backend/requirements.txt"
+            pip install -r backend/requirements.txt --dry-run || echo "Some dependencies may need system libraries"
+          else
+            echo "✗ Missing backend/requirements.txt"
+            exit 1
+          fi
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-flask pytest-asyncio
+          pip install -r requirements.txt
+          pip install -r backend/requirements.txt
+
+      - name: Verify critical imports
+        run: |
+          python -c "
+          import sys
+          errors = []
+          
+          # Check FastAPI and core web framework
+          try:
+              import fastapi
+              print('✓ FastAPI available')
+          except ImportError as e:
+              errors.append(f'FastAPI: {e}')
+          
+          # Check SQLAlchemy and database
+          try:
+              import sqlalchemy
+              print('✓ SQLAlchemy available')
+          except ImportError as e:
+              errors.append(f'SQLAlchemy: {e}')
+          
+          try:
+              import psycopg2
+              print('✓ psycopg2-binary available')
+          except ImportError as e:
+              errors.append(f'psycopg2-binary: {e}')
+          
+          # Check authentication libraries
+          try:
+              from jose import jwt
+              print('✓ python-jose available')
+          except ImportError as e:
+              errors.append(f'python-jose: {e}')
+          
+          try:
+              from passlib.context import CryptContext
+              print('✓ passlib available')
+          except ImportError as e:
+              errors.append(f'passlib: {e}')
+          
+          # Check OAuth libraries
+          try:
+              from google.oauth2 import id_token
+              from google.auth.transport import requests
+              print('✓ Google OAuth libraries available')
+          except ImportError as e:
+              errors.append(f'Google OAuth: {e}')
+          
+          try:
+              import jwt as pyjwt
+              from jwt import PyJWKClient
+              print('✓ PyJWT available')
+          except ImportError as e:
+              errors.append(f'PyJWT: {e}')
+          
+          # Check async support
+          try:
+              import asyncpg
+              print('✓ asyncpg available')
+          except ImportError as e:
+              errors.append(f'asyncpg: {e}')
+          
+          try:
+              import aiosqlite
+              print('✓ aiosqlite available')
+          except ImportError as e:
+              errors.append(f'aiosqlite: {e}')
+          
+          # Check image processing
+          try:
+              from PIL import Image
+              print('✓ Pillow available')
+          except ImportError as e:
+              errors.append(f'Pillow: {e}')
+          
+          # Check validation
+          try:
+              import pydantic
+              print('✓ Pydantic available')
+          except ImportError as e:
+              errors.append(f'Pydantic: {e}')
+          
+          if errors:
+              print('\n✗ Missing dependencies:')
+              for error in errors:
+                  print(f'  - {error}')
+              sys.exit(1)
+          else:
+              print('\n✓ All critical dependencies available')
+          "
+
+      - name: Test backend imports
+        run: |
+          cd backend
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          
+          # Test core modules
+          from app.core.security import create_access_token, verify_password, get_password_hash
+          print('✓ Security module loaded')
+          
+          from app.models import User, Job
+          print('✓ Models loaded')
+          
+          from app.api.auth import router
+          print('✓ Auth API loaded')
+          
+          print('\n✓ All backend modules loaded successfully')
+          "
+
+  check-frontend-dependencies:
+    name: Check Frontend Node.js Dependencies
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Check for package.json
+        run: |
+          if [ ! -f frontend/package.json ]; then
+            echo "✗ Missing frontend/package.json"
+            exit 1
+          fi
+          echo "✓ Found frontend/package.json"
+          
+          if [ ! -f frontend/package-lock.json ]; then
+            echo "⚠ Missing frontend/package-lock.json - will be generated"
+          else
+            echo "✓ Found frontend/package-lock.json"
+          fi
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: |
+          echo "Installing dependencies..."
+          npm ci
+
+      - name: Verify critical packages
+        working-directory: ./frontend
+        run: |
+          echo "Checking for critical packages..."
+          
+          # Check React and core libraries
+          node -e "
+          const fs = require('fs');
+          const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
+          
+          const required = [
+            'react',
+            'react-dom',
+            'react-router-dom',
+            'axios',
+            'react-hook-form',
+            'react-hot-toast',
+            '@react-oauth/google',
+            'react-apple-signin-auth',
+            'vite',
+            'typescript'
+          ];
+          
+          const missing = required.filter(pkg => !deps[pkg]);
+          
+          if (missing.length > 0) {
+            console.error('✗ Missing packages:', missing.join(', '));
+            process.exit(1);
+          }
+          
+          console.log('✓ All critical packages are defined');
+          " || exit 1
+
+      - name: Lint frontend
+        working-directory: ./frontend
+        run: npm run lint || echo "Lint warnings detected"
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+  create-dependency-report:
+    name: Create Dependency Report
+    runs-on: ubuntu-latest
+    needs: [check-backend-dependencies, check-frontend-dependencies]
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate dependency report
+        run: |
+          echo "# Dependency Installation Report" > dependency-report.md
+          echo "" >> dependency-report.md
+          echo "## Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> dependency-report.md
+          echo "" >> dependency-report.md
+          
+          echo "## Backend Dependencies" >> dependency-report.md
+          echo "" >> dependency-report.md
+          if [ -f requirements.txt ]; then
+            echo "### Root requirements.txt" >> dependency-report.md
+            echo "\`\`\`" >> dependency-report.md
+            cat requirements.txt >> dependency-report.md
+            echo "\`\`\`" >> dependency-report.md
+            echo "" >> dependency-report.md
+          fi
+          
+          if [ -f backend/requirements.txt ]; then
+            echo "### Backend requirements.txt" >> dependency-report.md
+            echo "\`\`\`" >> dependency-report.md
+            cat backend/requirements.txt >> dependency-report.md
+            echo "\`\`\`" >> dependency-report.md
+            echo "" >> dependency-report.md
+          fi
+          
+          echo "## Frontend Dependencies" >> dependency-report.md
+          echo "" >> dependency-report.md
+          if [ -f frontend/package.json ]; then
+            echo "### package.json" >> dependency-report.md
+            echo "\`\`\`json" >> dependency-report.md
+            cat frontend/package.json | jq '.dependencies' >> dependency-report.md
+            echo "\`\`\`" >> dependency-report.md
+          fi
+          
+          echo "" >> dependency-report.md
+          echo "## Status" >> dependency-report.md
+          echo "✓ All dependencies checked and verified" >> dependency-report.md
+
+      - name: Upload dependency report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-report
+          path: dependency-report.md
+          if-no-files-found: ignore
