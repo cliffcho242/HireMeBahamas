@@ -227,7 +227,7 @@ class FirebaseService:
             logger.error(f"Error setting data at path '{path}': {str(e)}")
             return False
     
-    def query(self, path: str, order_by: str, limit: Optional[int] = None) -> Optional[List[Dict]]:
+    def query(self, path: str, order_by: str, limit: Optional[int] = None) -> List[Dict]:
         """
         Query data with ordering and limiting
         
@@ -237,15 +237,15 @@ class FirebaseService:
             limit: Maximum number of results to return
             
         Returns:
-            List of matching records, or None on error
+            List of matching records, or empty list on error
         """
         if not self.is_available():
-            return None
+            return []
         
         try:
             ref = self.get_reference(path)
             if ref is None:
-                return None
+                return []
             
             query = ref.order_by_child(order_by)
             if limit:
@@ -257,7 +257,7 @@ class FirebaseService:
             return []
         except Exception as e:
             logger.error(f"Error querying path '{path}': {str(e)}")
-            return None
+            return []
 
 
 # Create a singleton instance

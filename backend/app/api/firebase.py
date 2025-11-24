@@ -105,9 +105,6 @@ async def get_messages(room_id: str, limit: Optional[int] = 50):
         limit=limit
     )
     
-    if messages is None:
-        return []
-    
     return messages
 
 

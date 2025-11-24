@@ -246,6 +246,9 @@ export const useFirebaseQuery = <T = any>(
  * @returns Object containing child data, loading state, and error
  */
 export const useFirebaseChild = <T = any>(path: string, childKey: string) => {
-  const fullPath = `${path}/${childKey}`;
+  // Normalize path by removing trailing slash and childKey leading slash
+  const normalizedPath = path.endsWith('/') ? path.slice(0, -1) : path;
+  const normalizedChildKey = childKey.startsWith('/') ? childKey.slice(1) : childKey;
+  const fullPath = `${normalizedPath}/${normalizedChildKey}`;
   return useFirebaseData<T>(fullPath);
 };
