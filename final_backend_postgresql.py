@@ -640,13 +640,13 @@ def ensure_database_initialized():
 def init_database_background():
     """Initialize database in background thread to allow app to start quickly"""
     global _db_initialized
-    
+
     with _db_init_lock:
         # Check if already initialized by another thread
         if _db_initialized:
             print("✅ Database already initialized")
             return
-        
+
         try:
             print("🔧 Attempting database initialization in background thread...")
             init_database()
@@ -657,8 +657,13 @@ def init_database_background():
             # Don't exit - allow retries later
 
 # Start database initialization in background thread
-threading.Thread(target=init_database_background, daemon=True, name="db-init").start()
-print("🚀 Database initialization started in background thread")
+try:
+    threading.Thread(target=init_database_background, daemon=True, name="db-init").start()
+    print("🚀 Database initialization started in background thread")
+except Exception as e:
+    print(f"⚠️ Failed to start database initialization thread: {e}")
+    print("⚠️ Database will be initialized on first request")
+
 print("✅ Application ready to serve requests")
 
 
