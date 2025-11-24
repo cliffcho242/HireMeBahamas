@@ -294,8 +294,6 @@ const SocialFeed = () => {
     return userData ? JSON.parse(userData) : null;
   });
   
-  const [loading, setLoading] = useState(false);
-  
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return !!localStorage.getItem('auth_token');
   });
@@ -369,15 +367,6 @@ const SocialFeed = () => {
     setUserPatterns(null);
     setRecommendations([]);
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Loading HireMeBahamas...</p>
-      </div>
-    );
-  }
 
   if (!isLoggedIn) {
     return (

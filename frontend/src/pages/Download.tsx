@@ -38,7 +38,8 @@ const Download: React.FC = () => {
     return desktop || isWindows || isMac || isLinux;
   });
   
-  const [isInstalled] = useState(() => {
+  // Initialize isInstalled state, but allow updates when user accepts install
+  const [isInstalled, setIsInstalled] = useState(() => {
     return window.matchMedia('(display-mode: standalone)').matches ||
       (navigator as any).standalone ||
       document.referrer.includes('android-app://');
