@@ -35,6 +35,13 @@ const Users: React.FC = () => {
     return initials || '?';
   };
 
+  // Helper function to validate and filter user data
+  const validateUsers = (userArray: (User | null | undefined)[]): User[] => {
+    return userArray.filter((u: User | null | undefined): u is User => {
+      return u != null && typeof u === 'object' && 'id' in u;
+    });
+  };
+
   useEffect(() => {
     if (user) {
       loadUsersData();
@@ -50,14 +57,14 @@ const Users: React.FC = () => {
         api.get('/api/users/followers/list')
       ]);
 
-      if (usersRes.data.success) {
-        setUsers(usersRes.data.users);
+      if (usersRes.data.success && Array.isArray(usersRes.data.users)) {
+        setUsers(validateUsers(usersRes.data.users));
       }
-      if (followingRes.data.success) {
-        setFollowing(followingRes.data.following);
+      if (followingRes.data.success && Array.isArray(followingRes.data.following)) {
+        setFollowing(validateUsers(followingRes.data.following));
       }
-      if (followersRes.data.success) {
-        setFollowers(followersRes.data.followers);
+      if (followersRes.data.success && Array.isArray(followersRes.data.followers)) {
+        setFollowers(validateUsers(followersRes.data.followers));
       }
     } catch (error) {
       console.error('Error loading users data:', error);
