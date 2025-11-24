@@ -21,6 +21,27 @@ import {
 import { getFirebaseDatabase, isFirebaseAvailable } from '../config/firebase';
 
 /**
+ * Normalize Firebase path to prevent double slashes
+ * @param parts - Path parts to join
+ * @returns Normalized path
+ */
+const normalizePath = (...parts: string[]): string => {
+  return parts
+    .map((part, index) => {
+      // Remove leading slash from all parts except the first
+      if (index > 0 && part.startsWith('/')) {
+        part = part.slice(1);
+      }
+      // Remove trailing slash from all parts except the last
+      if (index < parts.length - 1 && part.endsWith('/')) {
+        part = part.slice(0, -1);
+      }
+      return part;
+    })
+    .join('/');
+};
+
+/**
  * Hook to read data from Firebase Realtime Database
  * @param path - Database path to read from
  * @returns Object containing data, loading state, and error
@@ -246,9 +267,6 @@ export const useFirebaseQuery = <T = any>(
  * @returns Object containing child data, loading state, and error
  */
 export const useFirebaseChild = <T = any>(path: string, childKey: string) => {
-  // Normalize path by removing trailing slash and childKey leading slash
-  const normalizedPath = path.endsWith('/') ? path.slice(0, -1) : path;
-  const normalizedChildKey = childKey.startsWith('/') ? childKey.slice(1) : childKey;
-  const fullPath = `${normalizedPath}/${normalizedChildKey}`;
+  const fullPath = normalizePath(path, childKey);
   return useFirebaseData<T>(fullPath);
 };

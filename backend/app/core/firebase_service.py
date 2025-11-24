@@ -41,10 +41,10 @@ class FirebaseService:
         """Initialize Firebase Admin SDK with credentials from environment"""
         try:
             # Get configuration from environment variables
-            credentials_path = os.getenv('FIREBASE_CREDENTIALS_PATH')
-            database_url = os.getenv('FIREBASE_DATABASE_URL')
+            credentials_path = os.getenv('FIREBASE_CREDENTIALS_PATH', '').strip()
+            database_url = os.getenv('FIREBASE_DATABASE_URL', '').strip()
             
-            # Check if Firebase is configured
+            # Check if Firebase is configured (not None and not empty)
             if not credentials_path or not database_url:
                 logger.warning(
                     "Firebase Realtime Database not configured. "
