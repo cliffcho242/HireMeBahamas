@@ -88,93 +88,7 @@ jobs:
 
       - name: Verify critical imports
         run: |
-          python -c "
-          import sys
-          errors = []
-          
-          # Check FastAPI and core web framework
-          try:
-              import fastapi
-              print('✓ FastAPI available')
-          except ImportError as e:
-              errors.append(f'FastAPI: {e}')
-          
-          # Check SQLAlchemy and database
-          try:
-              import sqlalchemy
-              print('✓ SQLAlchemy available')
-          except ImportError as e:
-              errors.append(f'SQLAlchemy: {e}')
-          
-          try:
-              import psycopg2
-              print('✓ psycopg2-binary available')
-          except ImportError as e:
-              errors.append(f'psycopg2-binary: {e}')
-          
-          # Check authentication libraries
-          try:
-              from jose import jwt
-              print('✓ python-jose available')
-          except ImportError as e:
-              errors.append(f'python-jose: {e}')
-          
-          try:
-              from passlib.context import CryptContext
-              print('✓ passlib available')
-          except ImportError as e:
-              errors.append(f'passlib: {e}')
-          
-          # Check OAuth libraries
-          try:
-              from google.oauth2 import id_token
-              from google.auth.transport import requests
-              print('✓ Google OAuth libraries available')
-          except ImportError as e:
-              errors.append(f'Google OAuth: {e}')
-          
-          try:
-              import jwt as pyjwt
-              from jwt import PyJWKClient
-              print('✓ PyJWT available')
-          except ImportError as e:
-              errors.append(f'PyJWT: {e}')
-          
-          # Check async support
-          try:
-              import asyncpg
-              print('✓ asyncpg available')
-          except ImportError as e:
-              errors.append(f'asyncpg: {e}')
-          
-          try:
-              import aiosqlite
-              print('✓ aiosqlite available')
-          except ImportError as e:
-              errors.append(f'aiosqlite: {e}')
-          
-          # Check image processing
-          try:
-              from PIL import Image
-              print('✓ Pillow available')
-          except ImportError as e:
-              errors.append(f'Pillow: {e}')
-          
-          # Check validation
-          try:
-              import pydantic
-              print('✓ Pydantic available')
-          except ImportError as e:
-              errors.append(f'Pydantic: {e}')
-          
-          if errors:
-              print('\n✗ Missing dependencies:')
-              for error in errors:
-                  print(f'  - {error}')
-              sys.exit(1)
-          else:
-              print('\n✓ All critical dependencies available')
-          "
+          python3 scripts/check-dependencies.py --backend-only
 
       - name: Test backend imports
         run: |
@@ -218,59 +132,13 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Check for package.json
-        run: |
-          if [ ! -f frontend/package.json ]; then
-            echo "✗ Missing frontend/package.json"
-            exit 1
-          fi
-          echo "✓ Found frontend/package.json"
-          
-          if [ ! -f frontend/package-lock.json ]; then
-            echo "⚠ Missing frontend/package-lock.json - will be generated"
-          else
-            echo "✓ Found frontend/package-lock.json"
-          fi
-
       - name: Install frontend dependencies
         working-directory: ./frontend
-        run: |
-          echo "Installing dependencies..."
-          npm ci
+        run: npm ci
 
       - name: Verify critical packages
-        working-directory: ./frontend
         run: |
-          echo "Checking for critical packages..."
-          
-          # Check React and core libraries
-          node -e "
-          const fs = require('fs');
-          const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
-          
-          const required = [
-            'react',
-            'react-dom',
-            'react-router-dom',
-            'axios',
-            'react-hook-form',
-            'react-hot-toast',
-            '@react-oauth/google',
-            'react-apple-signin-auth',
-            'vite',
-            'typescript'
-          ];
-          
-          const missing = required.filter(pkg => !deps[pkg]);
-          
-          if (missing.length > 0) {
-            console.error('✗ Missing packages:', missing.join(', '));
-            process.exit(1);
-          }
-          
-          console.log('✓ All critical packages are defined');
-          " || exit 1
+          python3 scripts/check-dependencies.py --frontend-only
 
       - name: Lint frontend
         working-directory: ./frontend

@@ -30,10 +30,11 @@ async def test_registration():
     
     # Initialize database
     print("Initializing test database...")
-    # Use a fresh test database
+    # Use a fresh test database with secure temp file
     import os
     import tempfile
-    test_db = tempfile.mktemp(suffix=".db")
+    fd, test_db = tempfile.mkstemp(suffix=".db")
+    os.close(fd)  # Close the file descriptor, we'll use the path
     os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{test_db}"
     
     # Recreate engine with test database
