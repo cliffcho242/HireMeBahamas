@@ -193,7 +193,7 @@ const Users: React.FC = () => {
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                            {(userData.first_name[0] + userData.last_name[0]).toUpperCase()}
+                            {((userData.first_name?.[0] || '') + (userData.last_name?.[0] || '')).toUpperCase() || '?'}
                           </div>
                           <div>
                             <h3 className="font-medium text-gray-900">
@@ -215,7 +215,7 @@ const Users: React.FC = () => {
                         <span>{userData.followers_count ?? 0} followers</span>
                         <span>{userData.following_count ?? 0} following</span>
                       </div>
-                      {userData.is_following ? (
+                      {(userData.is_following ?? false) ? (
                         <button
                           onClick={() => handleUnfollow(userData.id)}
                           className="w-full bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 flex items-center justify-center text-sm"
@@ -260,7 +260,7 @@ const Users: React.FC = () => {
                     <div key={userData.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-center space-x-3 mb-3">
                         <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {(userData.first_name[0] + userData.last_name[0]).toUpperCase()}
+                          {((userData.first_name?.[0] || '') + (userData.last_name?.[0] || '')).toUpperCase() || '?'}
                         </div>
                         <div className="flex-1">
                           <h3 className="font-medium text-gray-900">
@@ -302,7 +302,7 @@ const Users: React.FC = () => {
                     <div key={userData.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-center space-x-3">
                         <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {(userData.first_name[0] + userData.last_name[0]).toUpperCase()}
+                          {((userData.first_name?.[0] || '') + (userData.last_name?.[0] || '')).toUpperCase() || '?'}
                         </div>
                         <div className="flex-1">
                           <h3 className="font-medium text-gray-900">
