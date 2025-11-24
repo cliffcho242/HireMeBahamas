@@ -19,7 +19,7 @@ fastapi-users-db-sqlalchemy==6.0.1
 
 # Performance & Async
 redis==5.0.1
-aioredis==2.0.1
+# aioredis==2.0.1  # Removed: incompatible with Python 3.12+, use redis[asyncio] instead
 celery==5.3.4
 orjson==3.11.4
 aiocache[redis]==0.12.3

@@ -72,8 +72,13 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
 
   // Initialize AI system health check
   useEffect(() => {
+    // Initial health check - this pattern is acceptable for initialization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     checkAISystemHealth();
-    const interval = setInterval(checkAISystemHealth, 30000); // Check every 30 seconds
+    // Periodic health checks
+    const interval = setInterval(() => {
+      void checkAISystemHealth();
+    }, 30000); // Check every 30 seconds
     return () => clearInterval(interval);
   }, [checkAISystemHealth]);
 
