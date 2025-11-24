@@ -1,6 +1,7 @@
 import io
 import os
 import uuid
+from datetime import timedelta
 from typing import List
 
 import aiofiles
@@ -70,6 +71,22 @@ def generate_filename(original_filename: str) -> str:
     """Generate unique filename"""
     ext = os.path.splitext(original_filename)[1]
     return f"{uuid.uuid4()}{ext}"
+
+
+def extract_filename_from_url(url: str) -> str:
+    """Extract filename from URL (handles both local paths and cloud URLs with query params)"""
+    from urllib.parse import urlparse, parse_qs
+    
+    # Parse the URL
+    parsed = urlparse(url)
+    
+    # Get the path component (without query params)
+    path = parsed.path
+    
+    # Extract the filename from the path
+    filename = os.path.basename(path)
+    
+    return filename if filename else "unknown"
 
 
 async def save_file_locally(file: UploadFile, folder: str = "general") -> str:
@@ -258,13 +275,14 @@ async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
     
     Configure GCS_MAKE_PUBLIC in your .env file to control this behavior.
     """
+    # Validate file before uploading
+    validate_file(file)
+    
     client = setup_gcs()
     if not client:
         return await save_file_locally(file, folder)
 
     try:
-        from datetime import timedelta
-        
         # Generate unique filename
         filename = generate_filename(file.filename)
         blob_name = f"{folder}/{filename}"

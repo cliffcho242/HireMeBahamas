@@ -5,6 +5,7 @@ from app.core.security import get_current_user
 from app.core.upload import (
     ALLOWED_IMAGE_TYPES,
     delete_file,
+    extract_filename_from_url,
     save_file_locally,
     upload_image,
     upload_multiple_files,
@@ -168,7 +169,7 @@ async def upload_document(
 
         # Save file record
         file_record = UploadedFile(
-            filename=os.path.basename(file_url),
+            filename=extract_filename_from_url(file_url),
             original_filename=file.filename,
             file_path=file_url,
             file_size=file.size or 0,
@@ -205,7 +206,7 @@ async def upload_document_to_gcs(
 
         # Save file record
         file_record = UploadedFile(
-            filename=os.path.basename(file_url),
+            filename=extract_filename_from_url(file_url),
             original_filename=file.filename,
             file_path=file_url,
             file_size=file.size or 0,
