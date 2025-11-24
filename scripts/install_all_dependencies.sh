@@ -247,6 +247,9 @@ install_system_deps() {
         # Redis (for caching and Celery)
         "redis-server"
         "redis-tools"
+        # Apache Kafka (for message streaming and event processing)
+        "openjdk-11-jdk"
+        "kafka"
         # Node.js and npm
         "nodejs"
         "npm"
@@ -295,6 +298,9 @@ install_system_deps() {
         "postgresql-devel"
         # Redis (for caching and Celery)
         "redis"
+        # Apache Kafka (for message streaming and event processing)
+        "java-11-openjdk"
+        "kafka"
         # Node.js and npm
         "nodejs"
         "npm"
@@ -330,6 +336,9 @@ install_system_deps() {
         "postgresql@15"
         # Redis
         "redis"
+        # Apache Kafka
+        "openjdk@11"
+        "kafka"
         # Node.js
         "node"
         # SSL/TLS libraries

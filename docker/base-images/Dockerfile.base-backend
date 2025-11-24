@@ -17,6 +17,7 @@ LABEL version="1.0"
 # - Event handling (libevent-dev)
 # - XML processing (libxml2-dev, libxslt1-dev)
 # - Redis connectivity (redis-tools)
+# - Apache Kafka (openjdk-11-jdk, kafka)
 # - General utilities (curl, wget, git)
 
 RUN apt-get update && apt-get install -y \
@@ -45,6 +46,9 @@ RUN apt-get update && apt-get install -y \
     libxslt1-dev \
     # Redis tools (for Redis connectivity testing)
     redis-tools \
+    # Apache Kafka (for message streaming and event processing)
+    openjdk-11-jdk \
+    kafka \
     # Utilities
     curl \
     wget \
