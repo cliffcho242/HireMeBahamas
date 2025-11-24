@@ -84,7 +84,7 @@ Add the package to the installation command in the relevant workflow file:
 
 ### Cryptography/Security
 - OpenSSL: `libssl-dev`
-- FFI: `libffi-dev`
+- FFI (Foreign Function Interface): `libffi-dev`
 
 ### Build Tools
 - Essential: `build-essential` (includes gcc, g++, make)
@@ -123,11 +123,18 @@ If you need to install a package that is **not** available in standard Ubuntu re
 
 **❌ Invalid:** `sudo apt-get install teamhood`
 
-"teamhood" is not a standard Ubuntu package. If you see this in a requirement:
-1. Verify the correct package name
-2. Check if it's a typo (e.g., "thread" might be what was intended)
+"teamhood" is not a standard Ubuntu package. Teamhood is actually a project management and collaboration SaaS (Software as a Service) tool available at teamhood.com, not a system package that can be installed via apt-get.
+
+If you encountered this in a requirement:
+1. Verify the correct package name - it may be a typo
+2. Check if it's referring to a different package (e.g., "thread-related" libraries)
 3. Determine if it requires a custom repository or installation method
-4. Document the proper installation method
+4. If you need project management tools, consider alternatives like:
+   - OpenProject
+   - Taiga
+   - Redmine
+   - GitLab (for project management features)
+5. Document the proper installation method for the actual intended package
 
 ## Best Practices
 
