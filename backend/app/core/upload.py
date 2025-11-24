@@ -249,7 +249,12 @@ def setup_gcs():
 
 
 async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
-    """Upload file to Google Cloud Storage"""
+    """Upload file to Google Cloud Storage
+    
+    Note: By default, files are uploaded as private. To make files publicly accessible,
+    configure your GCS bucket with public access or uncomment blob.make_public() below.
+    For private files, consider implementing signed URLs for temporary access.
+    """
     client = setup_gcs()
     if not client:
         return await save_file_locally(file, folder)
@@ -263,6 +268,9 @@ async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
         bucket = client.bucket(GCS_BUCKET_NAME)
         blob = bucket.blob(blob_name)
 
+        # Reset file pointer to beginning in case it was read before
+        await file.seek(0)
+        
         # Read file content
         content = await file.read()
 
@@ -272,10 +280,11 @@ async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
         # Upload to GCS
         blob.upload_from_string(content, content_type=content_type)
 
-        # Make the blob publicly accessible (optional)
+        # Make the blob publicly accessible (uncomment if needed)
         # blob.make_public()
 
-        # Return the public URL
+        # Return the public URL (will work if bucket/blob is public)
+        # For private files, consider using blob.generate_signed_url() instead
         return blob.public_url
 
     except Exception as e:
