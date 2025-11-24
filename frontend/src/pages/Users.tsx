@@ -42,6 +42,15 @@ const Users: React.FC = () => {
     });
   };
 
+  // Helper function to extract error message from API errors
+  const getErrorMessage = (error: unknown, defaultMessage: string): string => {
+    if (error instanceof Error && 'response' in error) {
+      const apiError = error as { response?: { data?: { detail?: string } } };
+      return apiError.response?.data?.detail || defaultMessage;
+    }
+    return defaultMessage;
+  };
+
   const loadUsersData = useCallback(async () => {
     setLoading(true);
     try {
@@ -96,10 +105,7 @@ const Users: React.FC = () => {
       await loadUsersData();
     } catch (error) {
       console.error('Error following user:', error);
-      const errorMessage = error instanceof Error && 'response' in error 
-        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail 
-        : 'Failed to follow user';
-      alert(errorMessage || 'Failed to follow user');
+      alert(getErrorMessage(error, 'Failed to follow user'));
     }
   };
 
@@ -110,10 +116,7 @@ const Users: React.FC = () => {
       await loadUsersData();
     } catch (error) {
       console.error('Error unfollowing user:', error);
-      const errorMessage = error instanceof Error && 'response' in error 
-        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail 
-        : 'Failed to unfollow user';
-      alert(errorMessage || 'Failed to unfollow user');
+      alert(getErrorMessage(error, 'Failed to unfollow user'));
     }
   };
 
