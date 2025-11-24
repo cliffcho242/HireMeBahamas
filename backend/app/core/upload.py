@@ -8,6 +8,14 @@ from decouple import config
 from fastapi import HTTPException, UploadFile
 from PIL import Image
 
+# Try to import GCS, but don't fail if not available
+try:
+    from google.cloud import storage
+    GCS_AVAILABLE = True
+except ImportError:
+    GCS_AVAILABLE = False
+    storage = None
+
 # Upload configuration
 UPLOAD_DIR = "uploads"
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -214,10 +222,12 @@ async def upload_to_cloudinary(file: UploadFile, folder: str = "hirebahamas") ->
 # Google Cloud Storage integration (if configured)
 def setup_gcs():
     """Setup Google Cloud Storage if credentials are provided"""
+    if not GCS_AVAILABLE:
+        print("google-cloud-storage not installed. Using local storage.")
+        return None
+        
     if GCS_BUCKET_NAME and (GCS_PROJECT_ID or GCS_CREDENTIALS_PATH):
         try:
-            from google.cloud import storage
-
             if GCS_CREDENTIALS_PATH and os.path.exists(GCS_CREDENTIALS_PATH):
                 # Use credentials file
                 client = storage.Client.from_service_account_json(GCS_CREDENTIALS_PATH)
@@ -228,17 +238,10 @@ def setup_gcs():
                 # Try default credentials without project
                 client = storage.Client()
 
-            # Verify bucket exists
-            bucket = client.bucket(GCS_BUCKET_NAME)
-            if bucket.exists():
-                return client
-            else:
-                print(f"GCS bucket '{GCS_BUCKET_NAME}' does not exist.")
-                return None
+            # Return client without checking bucket existence
+            # Bucket existence will be validated during actual upload
+            return client
 
-        except ImportError:
-            print("google-cloud-storage not installed. Using local storage.")
-            return None
         except Exception as e:
             print(f"GCS setup failed: {e}")
             return None
@@ -252,8 +255,6 @@ async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
         return await save_file_locally(file, folder)
 
     try:
-        from google.cloud import storage
-
         # Generate unique filename
         filename = generate_filename(file.filename)
         blob_name = f"{folder}/{filename}"

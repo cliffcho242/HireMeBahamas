@@ -158,7 +158,10 @@ async def upload_document(
     db: AsyncSession = Depends(get_db),
 ):
     """Upload a document (resume, portfolio, etc.)
-    Uses Cloudinary for cloud storage if configured, otherwise uses local storage.
+    
+    This endpoint uses Cloudinary for cloud storage if configured.
+    For Google Cloud Storage, use the /document-gcs endpoint instead.
+    Falls back to local storage if no cloud provider is configured.
     """
     try:
         # Use Cloudinary for documents if available, otherwise local storage
