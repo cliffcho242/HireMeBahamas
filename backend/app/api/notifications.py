@@ -2,7 +2,7 @@ from typing import Optional
 
 from app.core.security import get_current_user
 from app.database import get_db
-from app.models import Notification, User
+from app.models import Notification, NotificationType, User
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,7 +78,14 @@ async def get_unread_count(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get count of unread notifications"""
+    """Get count of unread notifications for user interactions only (likes, comments, mentions)"""
+    # Define notification types that represent direct user interactions
+    interaction_types = [
+        NotificationType.LIKE,
+        NotificationType.COMMENT,
+        NotificationType.MENTION,
+    ]
+    
     result = await db.execute(
         select(func.count())
         .select_from(Notification)
@@ -86,6 +93,7 @@ async def get_unread_count(
             and_(
                 Notification.user_id == current_user.id,
                 Notification.is_read == False,
+                Notification.notification_type.in_(interaction_types),
             )
         )
     )
