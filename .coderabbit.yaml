@@ -1,0 +1,7 @@
+# CodeRabbit Configuration
+# This configuration disables the review status message for bot users
+# Reference: https://docs.coderabbit.ai/guides/configure-coderabbit/
+
+reviews:
+  # Disable the review status message when bot users are detected
+  review_status: false
