@@ -86,15 +86,24 @@ async def get_users(
     return {"success": True, "users": users_data, "total": total}
 
 
-@router.get("/{user_id}")
+@router.get("/{identifier}")
 async def get_user(
-    user_id: int,
+    identifier: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get a specific user by ID"""
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+    """Get a specific user by ID or username"""
+    # Try to parse as integer ID first
+    user = None
+    if identifier.isdigit():
+        user_id = int(identifier)
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+    
+    # If not found by ID or not a digit, try username
+    if not user:
+        result = await db.execute(select(User).where(User.username == identifier))
+        user = result.scalar_one_or_none()
 
     if not user:
         raise HTTPException(
@@ -105,7 +114,7 @@ async def get_user(
     follow_result = await db.execute(
         select(Follow).where(
             and_(
-                Follow.follower_id == current_user.id, Follow.followed_id == user_id
+                Follow.follower_id == current_user.id, Follow.followed_id == user.id
             )
         )
     )
@@ -113,12 +122,12 @@ async def get_user(
 
     # Get follower/following counts
     followers_result = await db.execute(
-        select(func.count()).select_from(Follow).where(Follow.followed_id == user_id)
+        select(func.count()).select_from(Follow).where(Follow.followed_id == user.id)
     )
     followers_count = followers_result.scalar()
 
     following_result = await db.execute(
-        select(func.count()).select_from(Follow).where(Follow.follower_id == user_id)
+        select(func.count()).select_from(Follow).where(Follow.follower_id == user.id)
     )
     following_count = following_result.scalar()
 
