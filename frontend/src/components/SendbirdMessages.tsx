@@ -7,6 +7,7 @@
 
 import React from 'react';
 import '@sendbird/uikit-react/dist/index.css';
+import '../styles/sendbird.css';
 import { App as SendbirdApp } from '@sendbird/uikit-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSendbirdAppId, isSendbirdConfigured } from '../config/sendbird';
@@ -93,28 +94,7 @@ const SendbirdMessages: React.FC = () => {
         </div>
       </div>
 
-      {/* Custom Styles for Sendbird Integration */}
-      <style>{`
-        .sendbird-wrapper .sendbird-app__wrap {
-          height: 100%;
-        }
-        
-        /* Customize Sendbird UI to match HireMeBahamas theme */
-        .sendbird-conversation {
-          height: 100%;
-        }
-        
-        .sendbird-channel-list {
-          border-right: 1px solid #e5e7eb;
-        }
-        
-        /* Make Sendbird components more responsive */
-        @media (max-width: 768px) {
-          .sendbird-channel-list {
-            display: none;
-          }
-        }
-      `}</style>
+
     </div>
   );
 };

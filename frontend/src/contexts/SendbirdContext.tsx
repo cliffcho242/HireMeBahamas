@@ -67,6 +67,9 @@ export const SendbirdProvider: React.FC<SendbirdProviderProps> = ({ children }) 
     setError(null);
 
     try {
+      // Connect user to Sendbird
+      // Note: In production, consider using session tokens for authentication
+      // For now, using undefined which relies on Sendbird's default authentication
       const user = await sdk.connect(userId, undefined);
       
       // Update user nickname if provided

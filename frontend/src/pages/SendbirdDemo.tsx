@@ -11,6 +11,7 @@
  */
 
 import React, { useState } from 'react';
+import '../styles/sendbird.css';
 import { useSendbird } from '../contexts/SendbirdContext';
 import { useAuth } from '../contexts/AuthContext';
 import SendbirdMessages from '../components/SendbirdMessages';
@@ -167,7 +168,7 @@ const SendbirdDemo: React.FC = () => {
 
         {/* Chat Interface */}
         {showChat && isConnected && (
-          <div className="animate-fadeIn">
+          <div className="sendbird-fade-in">
             <SendbirdMessages />
           </div>
         )}
@@ -241,22 +242,7 @@ const SendbirdDemo: React.FC = () => {
         </div>
       </div>
 
-      <style>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-      `}</style>
+
     </div>
   );
 };
