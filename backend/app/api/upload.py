@@ -5,10 +5,12 @@ from app.core.security import get_current_user
 from app.core.upload import (
     ALLOWED_IMAGE_TYPES,
     delete_file,
+    extract_filename_from_url,
     save_file_locally,
     upload_image,
     upload_multiple_files,
     upload_to_cloudinary,
+    upload_to_gcs,
 )
 from app.database import get_db
 from app.models import UploadedFile, User
@@ -152,18 +154,22 @@ async def delete_portfolio_image(
 @router.post("/document")
 async def upload_document(
     file: UploadFile = File(...),
-    description: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Upload a document (resume, portfolio, etc.)"""
+    """Upload a document (resume, portfolio, etc.)
+    
+    This endpoint uses Cloudinary for cloud storage if configured.
+    For Google Cloud Storage, use the /document-gcs endpoint instead.
+    Falls back to local storage if no cloud provider is configured.
+    """
     try:
         # Use Cloudinary for documents if available, otherwise local storage
         file_url = await upload_to_cloudinary(file, folder="documents")
 
         # Save file record
         file_record = UploadedFile(
-            filename=os.path.basename(file_url),
+            filename=extract_filename_from_url(file_url),
             original_filename=file.filename,
             file_path=file_url,
             file_size=file.size or 0,
@@ -176,6 +182,43 @@ async def upload_document(
 
         return {
             "message": "Document uploaded successfully",
+            "file_id": str(file_record.id),
+            "file_url": file_url,
+            "original_filename": file.filename,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@router.post("/document-gcs")
+async def upload_document_to_gcs(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload a document to Google Cloud Storage
+    Uses GCS for cloud storage if configured, otherwise uses local storage.
+    """
+    try:
+        # Use Google Cloud Storage for documents if available, otherwise local storage
+        file_url = await upload_to_gcs(file, folder="documents")
+
+        # Save file record
+        file_record = UploadedFile(
+            filename=extract_filename_from_url(file_url),
+            original_filename=file.filename,
+            file_path=file_url,
+            file_size=file.size or 0,
+            content_type=file.content_type,
+            user_id=current_user.id,
+        )
+        db.add(file_record)
+        await db.commit()
+        await db.refresh(file_record)
+
+        return {
+            "message": "Document uploaded successfully to GCS",
             "file_id": str(file_record.id),
             "file_url": file_url,
             "original_filename": file.filename,

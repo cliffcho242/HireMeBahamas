@@ -249,7 +249,7 @@ powershell -ExecutionPolicy Bypass -File .\launch_app.ps1 -Force
 
 #### Create Post Modal (`CreatePostModal.tsx`)
 - Rich text posting
-- Image upload
+- Image upload (supports local storage, Cloudinary, or Google Cloud Storage)
 - Privacy settings
 - Character counter
 
@@ -491,7 +491,15 @@ REDIS_URL=redis://localhost:6379
 CLOUDINARY_NAME=your_cloudinary_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
+
+# Google Cloud Storage (optional):
+GCS_BUCKET_NAME=your_bucket_name
+GCS_PROJECT_ID=your_project_id
+GCS_CREDENTIALS_PATH=/path/to/credentials.json
+GCS_MAKE_PUBLIC=False  # Set to True for public files, False for signed URLs
 ```
+
+📖 **[Google Cloud Storage Setup Guide](./docs/GOOGLE_CLOUD_STORAGE.md)** - Learn how to configure GCS for file uploads.
 
 ### Frontend (.env)
 ```

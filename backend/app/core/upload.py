@@ -1,12 +1,22 @@
 import io
 import os
 import uuid
+from datetime import timedelta
 from typing import List
+from urllib.parse import urlparse
 
 import aiofiles
 from decouple import config
 from fastapi import HTTPException, UploadFile
 from PIL import Image
+
+# Try to import GCS, but don't fail if not available
+try:
+    from google.cloud import storage
+    GCS_AVAILABLE = True
+except ImportError:
+    GCS_AVAILABLE = False
+    storage = None
 
 # Upload configuration
 UPLOAD_DIR = "uploads"
@@ -27,6 +37,12 @@ ALLOWED_FILE_TYPES = {
 CLOUDINARY_CLOUD_NAME = config("CLOUDINARY_CLOUD_NAME", default="")
 CLOUDINARY_API_KEY = config("CLOUDINARY_API_KEY", default="")
 CLOUDINARY_API_SECRET = config("CLOUDINARY_API_SECRET", default="")
+
+# Google Cloud Storage config (optional)
+GCS_BUCKET_NAME = config("GCS_BUCKET_NAME", default="")
+GCS_PROJECT_ID = config("GCS_PROJECT_ID", default="")
+GCS_CREDENTIALS_PATH = config("GCS_CREDENTIALS_PATH", default="")
+GCS_MAKE_PUBLIC = config("GCS_MAKE_PUBLIC", default=False, cast=bool)
 
 # Ensure upload directories exist
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -57,6 +73,20 @@ def generate_filename(original_filename: str) -> str:
     """Generate unique filename"""
     ext = os.path.splitext(original_filename)[1]
     return f"{uuid.uuid4()}{ext}"
+
+
+def extract_filename_from_url(url: str) -> str:
+    """Extract filename from URL (handles both local paths and cloud URLs with query params)"""
+    # Parse the URL
+    parsed = urlparse(url)
+    
+    # Get the path component (without query params)
+    path = parsed.path
+    
+    # Extract the filename from the path
+    filename = os.path.basename(path)
+    
+    return filename if filename else "unknown"
 
 
 async def save_file_locally(file: UploadFile, folder: str = "general") -> str:
@@ -203,5 +233,92 @@ async def upload_to_cloudinary(file: UploadFile, folder: str = "hirebahamas") ->
 
     except Exception as e:
         print(f"Cloudinary upload failed: {e}")
+        # Fallback to local storage
+        return await save_file_locally(file, folder)
+
+
+# Google Cloud Storage integration (if configured)
+def setup_gcs():
+    """Setup Google Cloud Storage if credentials are provided"""
+    if not GCS_AVAILABLE:
+        print("google-cloud-storage not installed. Using local storage.")
+        return None
+        
+    if GCS_BUCKET_NAME and (GCS_PROJECT_ID or GCS_CREDENTIALS_PATH):
+        try:
+            if GCS_CREDENTIALS_PATH and os.path.exists(GCS_CREDENTIALS_PATH):
+                # Use credentials file
+                client = storage.Client.from_service_account_json(GCS_CREDENTIALS_PATH)
+            elif GCS_PROJECT_ID:
+                # Use default credentials (Application Default Credentials)
+                client = storage.Client(project=GCS_PROJECT_ID)
+            else:
+                # Try default credentials without project
+                client = storage.Client()
+
+            # Return client without checking bucket existence
+            # Bucket existence will be validated during actual upload
+            return client
+
+        except Exception as e:
+            print(f"GCS setup failed: {e}")
+            return None
+    return None
+
+
+async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
+    """Upload file to Google Cloud Storage
+    
+    Files are uploaded as public or private based on GCS_MAKE_PUBLIC environment variable.
+    - If GCS_MAKE_PUBLIC=True: Files are made public and public URL is returned
+    - If GCS_MAKE_PUBLIC=False (default): Files are private and a 1-hour signed URL is returned
+    
+    Configure GCS_MAKE_PUBLIC in your .env file to control this behavior.
+    """
+    # Validate file before uploading
+    validate_file(file)
+    
+    client = setup_gcs()
+    if not client:
+        return await save_file_locally(file, folder)
+
+    try:
+        # Generate unique filename
+        filename = generate_filename(file.filename)
+        blob_name = f"{folder}/{filename}"
+
+        # Get bucket
+        bucket = client.bucket(GCS_BUCKET_NAME)
+        blob = bucket.blob(blob_name)
+
+        # Reset file pointer to beginning in case it was read before
+        await file.seek(0)
+        
+        # Set content type
+        content_type = file.content_type or "application/octet-stream"
+        
+        # Read content into BytesIO for efficient upload
+        # This is more memory-efficient than reading into a string
+        content = await file.read()
+        file_obj = io.BytesIO(content)
+
+        # Upload to GCS using file object
+        blob.upload_from_file(file_obj, content_type=content_type)
+
+        # Make public or generate signed URL based on configuration
+        if GCS_MAKE_PUBLIC:
+            blob.make_public()
+            return blob.public_url
+        else:
+            # Generate a signed URL valid for 1 hour for private files
+            signed_url = blob.generate_signed_url(
+                version="v4",
+                expiration=timedelta(hours=1),
+                method="GET"
+            )
+            return signed_url
+
+    except Exception as e:
+        print(f"GCS upload failed: {e}")
         # Fallback to local storage
         return await save_file_locally(file, folder)

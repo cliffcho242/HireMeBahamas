@@ -29,7 +29,7 @@ fastapi-cache2==0.2.2
 fastapi-limiter==0.1.6
 
 # Real-time & WebSockets
-python-socketio==5.11.0
+python-socketio==5.15.0
 websockets==12.0
 
 # HTTP & Networking
@@ -46,6 +46,7 @@ python-multipart==0.0.7
 cloudinary==1.38.0
 Pillow==10.2.0
 python-magic
+google-cloud-storage==3.6.0
 
 # Configuration & Templates
 python-decouple==3.8
