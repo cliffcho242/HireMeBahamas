@@ -65,3 +65,9 @@ class UserUpdate(BaseModel):
 class PasswordChange(BaseModel):
     current_password: str
     new_password: str
+
+
+class OAuthLogin(BaseModel):
+    token: str  # ID token from OAuth provider
+    provider: str  # 'google' or 'apple'
+    user_type: Optional[str] = "user"  # For registration flow

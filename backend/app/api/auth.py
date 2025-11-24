@@ -13,6 +13,7 @@ from app.core.upload import upload_image
 from app.database import get_db
 from app.models import User
 from app.schemas.auth import (
+    OAuthLogin,
     PasswordChange,
     Token,
     UserCreate,
@@ -256,3 +257,168 @@ async def delete_account(
     await db.commit()
 
     return {"message": "Account deactivated successfully"}
+
+
+@router.post("/oauth/google", response_model=Token)
+async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)):
+    """Authenticate or register user via Google OAuth"""
+    from google.oauth2 import id_token
+    from google.auth.transport import requests
+    
+    try:
+        # Verify the Google token
+        idinfo = id_token.verify_oauth2_token(
+            oauth_data.token,
+            requests.Request(),
+            # In production, you should validate the audience (client ID)
+        )
+        
+        # Extract user information from token
+        email = idinfo.get('email')
+        given_name = idinfo.get('given_name', '')
+        family_name = idinfo.get('family_name', '')
+        google_id = idinfo.get('sub')
+        picture = idinfo.get('picture')
+        
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email not provided by Google"
+            )
+        
+        # Check if user exists
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        
+        if user:
+            # Update OAuth info if this is first time signing in with Google
+            if not user.oauth_provider:
+                user.oauth_provider = 'google'
+                user.oauth_provider_id = google_id
+                if picture and not user.avatar_url:
+                    user.avatar_url = picture
+                user.updated_at = datetime.utcnow()
+                await db.commit()
+                await db.refresh(user)
+        else:
+            # Create new user
+            user = User(
+                email=email,
+                first_name=given_name or 'User',
+                last_name=family_name or '',
+                oauth_provider='google',
+                oauth_provider_id=google_id,
+                avatar_url=picture,
+                role=oauth_data.user_type or 'user',
+                location='Bahamas',
+                hashed_password=None  # No password for OAuth users
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        
+        # Create access token
+        access_token = create_access_token(data={"sub": str(user.id)})
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": UserResponse.from_orm(user),
+        }
+        
+    except ValueError as e:
+        logger.error(f"Google OAuth verification failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google token"
+        )
+    except Exception as e:
+        logger.error(f"Google OAuth error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="OAuth authentication failed"
+        )
+
+
+@router.post("/oauth/apple", response_model=Token)
+async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)):
+    """Authenticate or register user via Apple OAuth"""
+    import jwt
+    from jwt import PyJWKClient
+    
+    try:
+        # Apple's public keys endpoint
+        jwks_url = 'https://appleid.apple.com/auth/keys'
+        jwks_client = PyJWKClient(jwks_url)
+        
+        # Get signing key from token
+        signing_key = jwks_client.get_signing_key_from_jwt(oauth_data.token)
+        
+        # Decode and verify the token
+        decoded_token = jwt.decode(
+            oauth_data.token,
+            signing_key.key,
+            algorithms=["RS256"],
+            options={"verify_exp": True}
+        )
+        
+        # Extract user information
+        email = decoded_token.get('email')
+        apple_id = decoded_token.get('sub')
+        
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email not provided by Apple"
+            )
+        
+        # Check if user exists
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        
+        if user:
+            # Update OAuth info if this is first time signing in with Apple
+            if not user.oauth_provider:
+                user.oauth_provider = 'apple'
+                user.oauth_provider_id = apple_id
+                user.updated_at = datetime.utcnow()
+                await db.commit()
+                await db.refresh(user)
+        else:
+            # Create new user - Apple doesn't always provide name
+            # The name should be sent from the frontend on first sign in
+            user = User(
+                email=email,
+                first_name='User',  # Frontend should update this
+                last_name='',
+                oauth_provider='apple',
+                oauth_provider_id=apple_id,
+                role=oauth_data.user_type or 'user',
+                location='Bahamas',
+                hashed_password=None  # No password for OAuth users
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        
+        # Create access token
+        access_token = create_access_token(data={"sub": str(user.id)})
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": UserResponse.from_orm(user),
+        }
+        
+    except jwt.InvalidTokenError as e:
+        logger.error(f"Apple OAuth verification failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Apple token"
+        )
+    except Exception as e:
+        logger.error(f"Apple OAuth error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="OAuth authentication failed"
+        )

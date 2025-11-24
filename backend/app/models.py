@@ -21,7 +21,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=True)  # Nullable for OAuth users
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     username = Column(
@@ -40,6 +40,9 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     is_available_for_hire = Column(Boolean, default=False)  # HireMe availability status
     role = Column(String(50), default="user")  # user, admin, employer, freelancer
+    # OAuth fields
+    oauth_provider = Column(String(50))  # 'google', 'apple', or None for regular accounts
+    oauth_provider_id = Column(String(255))  # ID from OAuth provider
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
