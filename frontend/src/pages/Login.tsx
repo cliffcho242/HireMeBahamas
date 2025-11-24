@@ -46,11 +46,13 @@ const Login: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Google login error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Google sign-in failed';
+      toast.error(errorMessage);
     }
   };
 
   const handleGoogleError = () => {
-    toast.error('Google sign-in failed');
+    toast.error('Google sign-in failed. Please try again.');
   };
 
   const handleAppleSuccess = async (response: any) => {
@@ -61,12 +63,14 @@ const Login: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Apple login error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Apple sign-in failed';
+      toast.error(errorMessage);
     }
   };
 
   const handleAppleError = (error: any) => {
     console.error('Apple sign-in error:', error);
-    toast.error('Apple sign-in failed');
+    toast.error('Apple sign-in failed. Please try again.');
   };
 
   const features = [

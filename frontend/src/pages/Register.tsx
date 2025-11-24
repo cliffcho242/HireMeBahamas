@@ -71,11 +71,13 @@ const Register: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Google registration error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Google sign-up failed';
+      toast.error(errorMessage);
     }
   };
 
   const handleGoogleError = () => {
-    toast.error('Google sign-up failed');
+    toast.error('Google sign-up failed. Please try again.');
   };
 
   const handleAppleSuccess = async (response: any) => {
@@ -87,12 +89,14 @@ const Register: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Apple registration error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Apple sign-up failed';
+      toast.error(errorMessage);
     }
   };
 
   const handleAppleError = (error: any) => {
     console.error('Apple sign-up error:', error);
-    toast.error('Apple sign-up failed');
+    toast.error('Apple sign-up failed. Please try again.');
   };
 
   return (

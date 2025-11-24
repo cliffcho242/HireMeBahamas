@@ -264,13 +264,17 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
     """Authenticate or register user via Google OAuth"""
     from google.oauth2 import id_token
     from google.auth.transport import requests
+    import os
     
     try:
-        # Verify the Google token
+        # Get Google Client ID from environment
+        google_client_id = os.getenv('GOOGLE_CLIENT_ID')
+        
+        # Verify the Google token with audience validation
         idinfo = id_token.verify_oauth2_token(
             oauth_data.token,
             requests.Request(),
-            # In production, you should validate the audience (client ID)
+            audience=google_client_id  # Validate token was issued for our app
         )
         
         # Extract user information from token
