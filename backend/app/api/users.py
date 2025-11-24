@@ -341,21 +341,32 @@ async def get_following(
         .where(Follow.follower_id == current_user.id)
     )
     following_users = result.scalars().all()
+    
+    if not following_users:
+        return {"success": True, "following": []}
+    
+    user_ids = [user.id for user in following_users]
+    
+    # Get followers count for all users in one query
+    followers_count_query = (
+        select(Follow.followed_id, func.count().label('count'))
+        .where(Follow.followed_id.in_(user_ids))
+        .group_by(Follow.followed_id)
+    )
+    followers_result = await db.execute(followers_count_query)
+    followers_counts = {row[0]: row[1] for row in followers_result.all()}
+    
+    # Get following count for all users in one query
+    following_count_query = (
+        select(Follow.follower_id, func.count().label('count'))
+        .where(Follow.follower_id.in_(user_ids))
+        .group_by(Follow.follower_id)
+    )
+    following_result = await db.execute(following_count_query)
+    following_counts = {row[0]: row[1] for row in following_result.all()}
 
     users_data = []
     for user in following_users:
-        # Count followers for this user
-        followers_result = await db.execute(
-            select(func.count()).select_from(Follow).where(Follow.followed_id == user.id)
-        )
-        followers_count = followers_result.scalar()
-
-        # Count following for this user
-        following_result = await db.execute(
-            select(func.count()).select_from(Follow).where(Follow.follower_id == user.id)
-        )
-        following_count = following_result.scalar()
-
         users_data.append({
             "id": user.id,
             "first_name": user.first_name,
@@ -367,8 +378,8 @@ async def get_following(
             "occupation": user.occupation,
             "location": user.location,
             "is_following": True,  # Current user is following this user by definition
-            "followers_count": followers_count,
-            "following_count": following_count,
+            "followers_count": followers_counts.get(user.id, 0),
+            "following_count": following_counts.get(user.id, 0),
         })
 
     return {"success": True, "following": users_data}
@@ -386,27 +397,38 @@ async def get_followers(
         .where(Follow.followed_id == current_user.id)
     )
     followers = result.scalars().all()
+    
+    if not followers:
+        return {"success": True, "followers": []}
 
     # Get the list of user IDs that current user is following
     following_result = await db.execute(
         select(Follow.followed_id).where(Follow.follower_id == current_user.id)
     )
     following_ids = {fid for (fid,) in following_result.all()}
+    
+    user_ids = [user.id for user in followers]
+    
+    # Get followers count for all users in one query
+    followers_count_query = (
+        select(Follow.followed_id, func.count().label('count'))
+        .where(Follow.followed_id.in_(user_ids))
+        .group_by(Follow.followed_id)
+    )
+    followers_result = await db.execute(followers_count_query)
+    followers_counts = {row[0]: row[1] for row in followers_result.all()}
+    
+    # Get following count for all users in one query
+    following_count_query = (
+        select(Follow.follower_id, func.count().label('count'))
+        .where(Follow.follower_id.in_(user_ids))
+        .group_by(Follow.follower_id)
+    )
+    following_result = await db.execute(following_count_query)
+    following_counts = {row[0]: row[1] for row in following_result.all()}
 
     users_data = []
     for user in followers:
-        # Count followers for this user
-        followers_result = await db.execute(
-            select(func.count()).select_from(Follow).where(Follow.followed_id == user.id)
-        )
-        followers_count = followers_result.scalar()
-
-        # Count following for this user
-        following_result = await db.execute(
-            select(func.count()).select_from(Follow).where(Follow.follower_id == user.id)
-        )
-        following_count = following_result.scalar()
-
         users_data.append({
             "id": user.id,
             "first_name": user.first_name,
@@ -418,8 +440,8 @@ async def get_followers(
             "occupation": user.occupation,
             "location": user.location,
             "is_following": user.id in following_ids,  # Check if current user follows this follower
-            "followers_count": followers_count,
-            "following_count": following_count,
+            "followers_count": followers_counts.get(user.id, 0),
+            "following_count": following_counts.get(user.id, 0),
         })
 
     return {"success": True, "followers": users_data}
