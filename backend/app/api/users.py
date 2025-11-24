@@ -449,3 +449,161 @@ async def get_followers(
         })
 
     return {"success": True, "followers": users_data}
+
+
+@router.get("/{user_id}/followers")
+async def get_user_followers(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get list of users that follow a specific user"""
+    # Validate user_id
+    if user_id <= 0 or user_id > MAX_INT32:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID"
+        )
+    
+    # Check if target user exists
+    target_user_result = await db.execute(select(User).where(User.id == user_id))
+    target_user = target_user_result.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    result = await db.execute(
+        select(User)
+        .join(Follow, Follow.follower_id == User.id)
+        .where(Follow.followed_id == user_id, User.is_active == True)
+    )
+    followers = result.scalars().all()
+    
+    if not followers:
+        return {"success": True, "followers": []}
+
+    # Get the list of user IDs that current user is following
+    following_ids_result = await db.execute(
+        select(Follow.followed_id).where(Follow.follower_id == current_user.id)
+    )
+    following_ids = {fid for (fid,) in following_ids_result.all()}
+    
+    user_ids = [user.id for user in followers]
+    
+    # Get followers count for all users in one query
+    followers_count_query = (
+        select(Follow.followed_id, func.count().label('count'))
+        .where(Follow.followed_id.in_(user_ids))
+        .group_by(Follow.followed_id)
+    )
+    followers_count_result = await db.execute(followers_count_query)
+    followers_counts = {row[0]: row[1] for row in followers_count_result.all()}
+    
+    # Get following count for all users in one query
+    following_count_query = (
+        select(Follow.follower_id, func.count().label('count'))
+        .where(Follow.follower_id.in_(user_ids))
+        .group_by(Follow.follower_id)
+    )
+    following_count_result = await db.execute(following_count_query)
+    following_counts = {row[0]: row[1] for row in following_count_result.all()}
+
+    users_data = []
+    for user in followers:
+        users_data.append({
+            "id": user.id,
+            "first_name": user.first_name or "",
+            "last_name": user.last_name or "",
+            "email": user.email,
+            "username": user.username,
+            "avatar_url": user.avatar_url,
+            "bio": user.bio,
+            "occupation": user.occupation,
+            "location": user.location,
+            "is_following": user.id in following_ids,
+            "followers_count": followers_counts.get(user.id, 0),
+            "following_count": following_counts.get(user.id, 0),
+        })
+
+    return {"success": True, "followers": users_data}
+
+
+@router.get("/{user_id}/following")
+async def get_user_following(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get list of users that a specific user is following"""
+    # Validate user_id
+    if user_id <= 0 or user_id > MAX_INT32:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID"
+        )
+    
+    # Check if target user exists
+    target_user_result = await db.execute(select(User).where(User.id == user_id))
+    target_user = target_user_result.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    result = await db.execute(
+        select(User)
+        .join(Follow, Follow.followed_id == User.id)
+        .where(Follow.follower_id == user_id, User.is_active == True)
+    )
+    following_users = result.scalars().all()
+    
+    if not following_users:
+        return {"success": True, "following": []}
+    
+    # Get the list of user IDs that current user is following
+    following_ids_result = await db.execute(
+        select(Follow.followed_id).where(Follow.follower_id == current_user.id)
+    )
+    following_ids = {fid for (fid,) in following_ids_result.all()}
+    
+    user_ids = [user.id for user in following_users]
+    
+    # Get followers count for all users in one query
+    followers_count_query = (
+        select(Follow.followed_id, func.count().label('count'))
+        .where(Follow.followed_id.in_(user_ids))
+        .group_by(Follow.followed_id)
+    )
+    followers_result = await db.execute(followers_count_query)
+    followers_counts = {row[0]: row[1] for row in followers_result.all()}
+    
+    # Get following count for all users in one query
+    following_count_query = (
+        select(Follow.follower_id, func.count().label('count'))
+        .where(Follow.follower_id.in_(user_ids))
+        .group_by(Follow.follower_id)
+    )
+    following_result = await db.execute(following_count_query)
+    following_counts = {row[0]: row[1] for row in following_result.all()}
+
+    users_data = []
+    for user in following_users:
+        users_data.append({
+            "id": user.id,
+            "first_name": user.first_name or "",
+            "last_name": user.last_name or "",
+            "email": user.email,
+            "username": user.username,
+            "avatar_url": user.avatar_url,
+            "bio": user.bio,
+            "occupation": user.occupation,
+            "location": user.location,
+            "is_following": user.id in following_ids,
+            "followers_count": followers_counts.get(user.id, 0),
+            "following_count": following_counts.get(user.id, 0),
+        })
+
+    return {"success": True, "following": users_data}
