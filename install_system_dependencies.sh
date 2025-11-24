@@ -78,13 +78,14 @@ apt-get install -y \
 echo "✅ SQLite libraries installed"
 echo ""
 
-# Install Redis (for caching and session storage)
-echo "Step 6: Installing Redis..."
+# Install Redis (for caching and session storage) - Optional
+echo "Step 6: Installing Redis (Optional - Not Critical)..."
 echo "----------------------------------------"
+echo "⚠️  Redis is optional and not required for basic operation"
 apt-get install -y \
     redis-server \
-    redis-tools
-echo "✅ Redis installed"
+    redis-tools || echo "⚠️  Redis installation failed - continuing without Redis (not critical)"
+echo "✅ Redis installation attempted"
 echo ""
 
 # Install SSL/TLS libraries (required for secure database connections)
