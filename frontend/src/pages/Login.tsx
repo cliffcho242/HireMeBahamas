@@ -20,6 +20,13 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('admin@hiremebahamas.com');
   const [password, setPassword] = useState('AdminPass123!');
 
+  // Check if OAuth credentials are properly configured
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const appleClientId = import.meta.env.VITE_APPLE_CLIENT_ID;
+  const isGoogleOAuthEnabled = googleClientId && googleClientId !== "placeholder-client-id" && googleClientId.trim() !== '';
+  const isAppleOAuthEnabled = appleClientId && appleClientId !== "com.hiremebahamas.signin" && appleClientId.trim() !== '';
+  const isAnyOAuthEnabled = isGoogleOAuthEnabled || isAppleOAuthEnabled;
+
   // Redirect authenticated users to home
   useEffect(() => {
     if (isAuthenticated) {
@@ -267,58 +274,64 @@ const Login: React.FC = () => {
                 </button>
               </form>
 
-              {/* Divider */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
+              {/* Divider - Only show if OAuth is enabled */}
+              {isAnyOAuthEnabled && (
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white text-gray-500">or continue with</span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">or continue with</span>
-                </div>
-              </div>
+              )}
 
               {/* OAuth Buttons */}
               <div className="space-y-3">
-                {/* Google Sign-In */}
-                <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "placeholder-client-id"}>
-                  <div className="w-full">
-                    <GoogleLogin
-                      onSuccess={handleGoogleSuccess}
-                      onError={handleGoogleError}
-                      useOneTap
-                      theme="outline"
-                      size="large"
-                      text="signin_with"
-                      shape="rectangular"
-                      width="100%"
-                    />
-                  </div>
-                </GoogleOAuthProvider>
+                {/* Google Sign-In - Only show if properly configured */}
+                {isGoogleOAuthEnabled && (
+                  <GoogleOAuthProvider clientId={googleClientId}>
+                    <div className="w-full">
+                      <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={handleGoogleError}
+                        useOneTap
+                        theme="outline"
+                        size="large"
+                        text="signin_with"
+                        shape="rectangular"
+                        width="100%"
+                      />
+                    </div>
+                  </GoogleOAuthProvider>
+                )}
 
-                {/* Apple Sign-In */}
-                <AppleSignin
-                  uiType="dark"
-                  authOptions={{
-                    clientId: import.meta.env.VITE_APPLE_CLIENT_ID || 'com.hiremebahamas.signin',
-                    scope: 'email name',
-                    redirectURI: window.location.origin + '/auth/apple/callback',
-                    usePopup: true,
-                  }}
-                  onSuccess={handleAppleSuccess}
-                  onError={handleAppleError}
-                  render={(props: any) => (
-                    <button
-                      {...props}
-                      type="button"
-                      className="w-full flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all bg-white"
-                    >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                      </svg>
-                      <span className="font-medium text-gray-700">Sign in with Apple</span>
-                    </button>
-                  )}
-                />
+                {/* Apple Sign-In - Only show if properly configured */}
+                {isAppleOAuthEnabled && (
+                  <AppleSignin
+                    uiType="dark"
+                    authOptions={{
+                      clientId: appleClientId,
+                      scope: 'email name',
+                      redirectURI: window.location.origin + '/auth/apple/callback',
+                      usePopup: true,
+                    }}
+                    onSuccess={handleAppleSuccess}
+                    onError={handleAppleError}
+                    render={(props: any) => (
+                      <button
+                        {...props}
+                        type="button"
+                        className="w-full flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all bg-white"
+                      >
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                        </svg>
+                        <span className="font-medium text-gray-700">Sign in with Apple</span>
+                      </button>
+                    )}
+                  />
+                )}
 
                 {/* Test Account Button */}
                 <button
@@ -328,7 +341,7 @@ const Login: React.FC = () => {
                     setPassword('admin123');
                     toast.success('Test credentials loaded!');
                   }}
-                  className="w-full flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all"
+                  className={`w-full flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all ${!isAnyOAuthEnabled ? 'mt-6' : ''}`}
                 >
                   <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
