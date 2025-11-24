@@ -153,7 +153,6 @@ async def delete_portfolio_image(
 @router.post("/document")
 async def upload_document(
     file: UploadFile = File(...),
-    description: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -194,7 +193,6 @@ async def upload_document(
 @router.post("/document-gcs")
 async def upload_document_to_gcs(
     file: UploadFile = File(...),
-    description: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

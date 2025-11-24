@@ -40,6 +40,7 @@ CLOUDINARY_API_SECRET = config("CLOUDINARY_API_SECRET", default="")
 GCS_BUCKET_NAME = config("GCS_BUCKET_NAME", default="")
 GCS_PROJECT_ID = config("GCS_PROJECT_ID", default="")
 GCS_CREDENTIALS_PATH = config("GCS_CREDENTIALS_PATH", default="")
+GCS_MAKE_PUBLIC = config("GCS_MAKE_PUBLIC", default=False, cast=bool)
 
 # Ensure upload directories exist
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -251,15 +252,19 @@ def setup_gcs():
 async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
     """Upload file to Google Cloud Storage
     
-    Note: By default, files are uploaded as private. To make files publicly accessible,
-    configure your GCS bucket with public access or uncomment blob.make_public() below.
-    For private files, consider implementing signed URLs for temporary access.
+    Files are uploaded as public or private based on GCS_MAKE_PUBLIC environment variable.
+    - If GCS_MAKE_PUBLIC=True: Files are made public and public URL is returned
+    - If GCS_MAKE_PUBLIC=False (default): Files are private and a 1-hour signed URL is returned
+    
+    Configure GCS_MAKE_PUBLIC in your .env file to control this behavior.
     """
     client = setup_gcs()
     if not client:
         return await save_file_locally(file, folder)
 
     try:
+        from datetime import timedelta
+        
         # Generate unique filename
         filename = generate_filename(file.filename)
         blob_name = f"{folder}/{filename}"
@@ -280,12 +285,18 @@ async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
         # Upload to GCS
         blob.upload_from_string(content, content_type=content_type)
 
-        # Make the blob publicly accessible (uncomment if needed)
-        # blob.make_public()
-
-        # Return the public URL (will work if bucket/blob is public)
-        # For private files, consider using blob.generate_signed_url() instead
-        return blob.public_url
+        # Make public or generate signed URL based on configuration
+        if GCS_MAKE_PUBLIC:
+            blob.make_public()
+            return blob.public_url
+        else:
+            # Generate a signed URL valid for 1 hour for private files
+            signed_url = blob.generate_signed_url(
+                version="v4",
+                expiration=timedelta(hours=1),
+                method="GET"
+            )
+            return signed_url
 
     except Exception as e:
         print(f"GCS upload failed: {e}")

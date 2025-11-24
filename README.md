@@ -496,6 +496,7 @@ CLOUDINARY_API_SECRET=your_api_secret
 GCS_BUCKET_NAME=your_bucket_name
 GCS_PROJECT_ID=your_project_id
 GCS_CREDENTIALS_PATH=/path/to/credentials.json
+GCS_MAKE_PUBLIC=False  # Set to True for public files, False for signed URLs
 ```
 
 📖 **[Google Cloud Storage Setup Guide](./docs/GOOGLE_CLOUD_STORAGE.md)** - Learn how to configure GCS for file uploads.

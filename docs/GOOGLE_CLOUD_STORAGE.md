@@ -47,12 +47,17 @@ Add the following environment variables to your `.env` file or deployment enviro
 GCS_BUCKET_NAME=your-bucket-name
 GCS_PROJECT_ID=your-project-id
 GCS_CREDENTIALS_PATH=/path/to/credentials.json
+
+# Optional: Make uploaded files publicly accessible (default: False)
+# If False, signed URLs with 1-hour expiration will be generated
+GCS_MAKE_PUBLIC=False
 ```
 
 **Notes:**
 - `GCS_BUCKET_NAME`: The name of your GCS bucket (required)
 - `GCS_PROJECT_ID`: Your GCP project ID (optional if using credentials file)
 - `GCS_CREDENTIALS_PATH`: Path to your service account JSON key file (optional if using Application Default Credentials)
+- `GCS_MAKE_PUBLIC`: Set to `True` to make files publicly accessible, or `False` (default) to use signed URLs for private access
 
 ### 4. Alternative: Application Default Credentials
 
