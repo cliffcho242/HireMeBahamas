@@ -59,7 +59,7 @@ async def enrich_post_with_metadata(
     return PostResponse(
         id=post.id,
         user_id=post.user_id,
-        user=PostUser.from_orm(post.user),
+        user=PostUser.model_validate(post.user),
         content=post.content,
         image_url=post.image_url,
         video_url=post.video_url,
@@ -80,7 +80,7 @@ async def create_post(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new post"""
-    db_post = Post(**post.dict(), user_id=current_user.id)
+    db_post = Post(**post.model_dump(), user_id=current_user.id)
     db.add(db_post)
     await db.commit()
     await db.refresh(db_post)
@@ -94,7 +94,7 @@ async def create_post(
     # Use helper to enrich post with metadata
     post_data = await enrich_post_with_metadata(post_with_user, db, current_user)
 
-    return {"success": True, "post": post_data.dict()}
+    return {"success": True, "post": post_data.model_dump()}
 
 
 @router.get("/", response_model=dict)
@@ -118,7 +118,7 @@ async def get_posts(
     posts_data = []
     for post in posts:
         post_data = await enrich_post_with_metadata(post, db, current_user)
-        posts_data.append(post_data.dict())
+        posts_data.append(post_data.model_dump())
 
     return {"success": True, "posts": posts_data}
 
@@ -180,7 +180,7 @@ async def update_post(
     # Use helper to enrich post with metadata
     post_data = await enrich_post_with_metadata(updated_post, db, current_user)
 
-    return {"success": True, "post": post_data.dict()}
+    return {"success": True, "post": post_data.model_dump()}
 
 
 @router.delete("/{post_id}")
@@ -289,11 +289,11 @@ async def get_comments(
             id=comment.id,
             post_id=comment.post_id,
             user_id=comment.user_id,
-            user=CommentUser.from_orm(comment.user),
+            user=CommentUser.model_validate(comment.user),
             content=comment.content,
             created_at=comment.created_at,
             updated_at=comment.updated_at,
-        ).dict()
+        ).model_dump()
         for comment in comments
     ]
 
@@ -337,13 +337,13 @@ async def create_comment(
         id=comment_with_user.id,
         post_id=comment_with_user.post_id,
         user_id=comment_with_user.user_id,
-        user=CommentUser.from_orm(comment_with_user.user),
+        user=CommentUser.model_validate(comment_with_user.user),
         content=comment_with_user.content,
         created_at=comment_with_user.created_at,
         updated_at=comment_with_user.updated_at,
     )
 
-    return {"success": True, "comment": comment_data.dict()}
+    return {"success": True, "comment": comment_data.model_dump()}
 
 
 @router.delete("/{post_id}/comments/{comment_id}")
