@@ -438,6 +438,42 @@ export const uploadAPI = {
   },
 };
 
+// Profile Pictures API
+export const profilePicturesAPI = {
+  uploadPicture: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/api/profile-pictures/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  uploadMultiplePictures: async (files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    const response = await api.post('/api/profile-pictures/upload-multiple', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  listPictures: async () => {
+    const response = await api.get('/api/profile-pictures/list');
+    return response.data;
+  },
+
+  setCurrentPicture: async (pictureId: number) => {
+    const response = await api.post(`/api/profile-pictures/${pictureId}/set-current`);
+    return response.data;
+  },
+
+  deletePicture: async (pictureId: number) => {
+    const response = await api.delete(`/api/profile-pictures/${pictureId}`);
+    return response.data;
+  },
+};
+
 // Posts API
 export const postsAPI = {
   getPosts: async () => {

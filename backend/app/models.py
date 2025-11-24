@@ -233,3 +233,18 @@ class Notification(Base):
     # Relationships
     user = relationship("User", foreign_keys=[user_id])
     actor = relationship("User", foreign_keys=[actor_id])
+
+
+class ProfilePicture(Base):
+    __tablename__ = "profile_pictures"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    file_url = Column(String(500), nullable=False)
+    filename = Column(String(255), nullable=False)
+    file_size = Column(Integer, nullable=False)
+    is_current = Column(Boolean, default=False)  # Whether this is the active profile picture
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User")
