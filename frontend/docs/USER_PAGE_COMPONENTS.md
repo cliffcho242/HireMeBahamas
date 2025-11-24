@@ -10,14 +10,15 @@ The UserProfile page (`src/pages/UserProfile.tsx`) is a fully-featured user prof
 
 The following dependencies are essential for the UserProfile page to work correctly:
 
-### 1. **framer-motion** (^12.23.24)
+### 1. **framer-motion** (^12.0.0)
 - **Purpose**: Provides smooth animations and transitions for the page
 - **Used for**: 
   - Page transition animations
   - Card entrance animations
   - Smooth fade-in effects
+- **Current version**: See `package.json` for exact installed version
 
-### 2. **@heroicons/react** (^2.2.0)
+### 2. **@heroicons/react** (^2.0.0)
 - **Purpose**: Provides beautiful, consistent icons throughout the UI
 - **Used for**:
   - User profile icons (UserCircleIcon)
@@ -26,24 +27,28 @@ The following dependencies are essential for the UserProfile page to work correc
   - Contact icons (EnvelopeIcon, PhoneIcon)
   - Action icons (ChatBubbleLeftIcon, ArrowLeftIcon, UserPlusIcon, UserMinusIcon)
   - Date icons (CalendarIcon)
+- **Current version**: See `package.json` for exact installed version
 
-### 3. **react-hot-toast** (^2.6.0)
+### 3. **react-hot-toast** (^2.0.0)
 - **Purpose**: Displays elegant toast notifications for user feedback
 - **Used for**:
   - Success messages (follow/unfollow actions)
   - Error messages (API failures)
   - Info messages (navigation events)
+- **Current version**: See `package.json` for exact installed version
 
-### 4. **react-router-dom** (^7.9.4)
+### 4. **react-router-dom** (^7.0.0)
 - **Purpose**: Handles routing and navigation
 - **Used for**:
   - URL parameter extraction (userId)
   - Navigation between pages
   - Back button functionality
+- **Current version**: See `package.json` for exact installed version
 
-### 5. **react** & **react-dom** (^18.2.0)
+### 5. **react** & **react-dom** (^18.0.0)
 - **Purpose**: Core React library
 - **Used for**: Component rendering and state management
+- **Current version**: See `package.json` for exact installed version
 
 ## Visual Theme Components
 
