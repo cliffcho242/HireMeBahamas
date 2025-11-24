@@ -54,13 +54,15 @@ This guide provides a comprehensive overview of all dependencies used in the Hir
 |---------|---------|---------|
 | sentry-sdk[flask] | 1.40.0 | Error tracking and performance monitoring |
 | flask-compress | 1.14 | Response compression for faster page loads |
-| redis | 5.0.1 | Caching layer for improved performance |
+| redis | 5.0.1 | Caching layer for improved performance (optional) |
 
 **Benefits:**
 - ✅ 40-60% faster page loads with compression
 - ✅ Real-time error tracking with Sentry
-- ✅ ~70% reduction in database load with Redis caching
+- ✅ ~70% reduction in database load with Redis caching (when available)
 - ✅ Improved application reliability
+
+**Note**: Redis is optional. The application will function without it, but performance may be reduced.
 
 ### WebSocket Support
 | Package | Version | Purpose |
@@ -207,6 +209,9 @@ SENTRY_TRACES_SAMPLE_RATE=0.1  # 10% of transactions
 ```
 
 #### Redis Configuration (Optional but Recommended)
+
+⚠️ **Note**: Redis is optional and not required for basic operation.
+
 ```env
 # For Railway/Render with Redis addon
 REDIS_URL=redis://localhost:6379/0
@@ -321,7 +326,9 @@ CELERY_RESULT_BACKEND=redis://localhost:6379/0
 
 ## Optional Service Setup
 
-### Redis Setup
+### Redis Setup (Optional - Not Critical)
+
+⚠️ **Optional**: Redis is not required for basic operation but enhances performance.
 
 #### Local Development
 ```bash
@@ -339,6 +346,8 @@ docker run -d -p 6379:6379 redis:7-alpine
 
 #### Railway/Render
 Add a Redis service through your platform's dashboard and use the provided `REDIS_URL`.
+
+**Note**: If Redis is not available, the application will function without caching features.
 
 ### Celery Setup (For Background Tasks)
 

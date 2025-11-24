@@ -1,6 +1,23 @@
 # System Dependencies Installation Guide
 
-This document provides a comprehensive list of all core system dependencies required to run HireMeBahamas and ensure all features work correctly, including the posts functionality.
+This document provides a comprehensive list of all system dependencies for HireMeBahamas, including both **required** and **optional** dependencies.
+
+## Dependency Categories
+
+### ✅ Required (Critical)
+These dependencies are essential for the application to function:
+- Build tools (gcc, g++, make, etc.)
+- Python environment
+- PostgreSQL database
+- SSL/TLS libraries
+- Basic image processing libraries
+
+### ⚠️ Optional (Not Critical)
+These dependencies enhance functionality but are not required for basic operation:
+- **redis-server** - Provides caching and performance improvements
+- **libvips-dev** - Advanced image optimization
+- **libheif-dev** - HEIF/HEIC format support
+- **libavif-dev** - AVIF format support
 
 ## Quick Install (Ubuntu/Debian)
 
@@ -104,7 +121,9 @@ sudo systemctl start postgresql
 sudo -u postgres createdb hiremebahamas
 ```
 
-### 4. Redis
+### 4. Redis (Optional - Not Critical)
+
+⚠️ **Optional**: Redis is not required for basic operation but provides enhanced performance features.
 
 Redis for caching, session management, and real-time features:
 
@@ -114,18 +133,20 @@ sudo apt-get install -y \
     redis-tools
 ```
 
-**Required for:**
+**Used for (when available):**
 - Session storage
 - Rate limiting
 - WebSocket support
 - Background job queues (Celery)
 
-**Configuration:**
+**Configuration (if installed):**
 ```bash
 # Start Redis service
 sudo systemctl enable redis-server
 sudo systemctl start redis-server
 ```
+
+**Note**: Application will function without Redis, but some features may have reduced performance.
 
 ### 5. Cryptography & Security
 
@@ -147,6 +168,7 @@ sudo apt-get install -y \
 
 Libraries for handling user avatars, post images, and stories:
 
+#### Required Image Libraries
 ```bash
 sudo apt-get install -y \
     libjpeg-dev \
@@ -164,6 +186,23 @@ sudo apt-get install -y \
 - Handling post images
 - Processing story media
 - Image optimization and format conversion
+
+#### Optional Image Optimization Libraries
+
+⚠️ **Optional**: These libraries provide enhanced image format support but are not required for basic operation.
+
+```bash
+# Optional image optimization and modern format support
+sudo apt-get install -y \
+    libvips-dev \
+    libheif-dev \
+    libavif-dev || echo "Optional image libraries not available on this system"
+```
+
+**Provides (when available):**
+- libvips-dev: Advanced image processing and optimization
+- libheif-dev: HEIF/HEIC format support (Apple Photos format)
+- libavif-dev: AVIF format support (modern web image format)
 
 ### 7. Additional Libraries
 

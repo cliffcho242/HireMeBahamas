@@ -244,9 +244,6 @@ install_system_deps() {
         "postgresql-contrib"
         "postgresql-client"
         "libpq-dev"
-        # Redis (for caching and Celery)
-        "redis-server"
-        "redis-tools"
         # Node.js and npm
         "nodejs"
         "npm"
@@ -275,6 +272,13 @@ install_system_deps() {
         "htop"
         "vim"
         "unzip"
+    )
+    
+    # Optional dependencies (not critical for basic operation)
+    local optional_deps_debian=(
+        # Redis (for caching and Celery) - Optional
+        "redis-server"
+        "redis-tools"
     )
     
     local deps_rhel=(
@@ -374,6 +378,15 @@ install_system_deps() {
                 fi
             done
             print_status "System dependencies installed"
+            
+            # Install optional dependencies
+            print_progress "Installing optional packages (not critical)..."
+            print_warning "The following packages are optional and not required for basic operation"
+            for dep in "${optional_deps_debian[@]}"; do
+                print_info "Installing optional: $dep"
+                sudo apt-get install -y "$dep" || print_warning "Optional package $dep not installed (not critical)"
+            done
+            print_status "Optional dependencies installation attempted"
             ;;
         yum)
             print_progress "Installing system packages via yum..."

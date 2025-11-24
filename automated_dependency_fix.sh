@@ -59,17 +59,21 @@ apt-get install -y \
 }
 
 echo ""
-echo -e "${YELLOW}[3/8] Installing database and cache dependencies...${NC}"
+echo -e "${YELLOW}[3/8] Installing database dependencies and optional caching...${NC}"
 apt-get install -y \
     postgresql \
     postgresql-contrib \
     postgresql-client \
-    libpq-dev \
-    redis-server \
-    redis-tools || {
+    libpq-dev || {
     echo -e "${RED}Failed to install database dependencies${NC}"
     exit 1
 }
+
+# Redis is optional
+echo "Installing Redis (optional - not critical for basic operation)..."
+apt-get install -y \
+    redis-server \
+    redis-tools || echo "⚠️  Redis not available - continuing without Redis (not critical)"
 
 echo ""
 echo -e "${YELLOW}[4/8] Installing cryptography and security libraries...${NC}"
@@ -130,13 +134,15 @@ else
 fi
 
 echo ""
-echo -e "${YELLOW}[8/8] Installing frontend build dependencies...${NC}"
+echo -e "${YELLOW}[8/8] Installing optional frontend image optimization libraries...${NC}"
+echo "⚠️  These libraries are optional and provide enhanced image format support"
 apt-get install -y \
     libvips-dev \
     libwebp-dev \
     libheif-dev \
     libavif-dev || {
-    echo "Note: Some optional frontend image optimization libraries may not be available"
+    echo "⚠️  Note: Some optional image optimization libraries are not available on this system"
+    echo "The application will function without these libraries"
 }
 
 echo ""
@@ -144,16 +150,23 @@ echo -e "${GREEN}============================================${NC}"
 echo -e "${GREEN}✅ System dependencies installed successfully!${NC}"
 echo -e "${GREEN}============================================${NC}"
 echo ""
+echo "Optional Dependencies Status:"
+echo "  libvips-dev  - Advanced image optimization (optional)"
+echo "  libheif-dev  - HEIF format support (optional)"
+echo "  libavif-dev  - AVIF format support (optional)"
+echo ""
 
 # Start services
-echo -e "${YELLOW}Starting PostgreSQL and Redis services...${NC}"
+echo -e "${YELLOW}Starting PostgreSQL service...${NC}"
 systemctl start postgresql 2>/dev/null || service postgresql start 2>/dev/null || echo "Note: PostgreSQL service may need manual start"
-systemctl start redis-server 2>/dev/null || service redis-server start 2>/dev/null || echo "Note: Redis service may need manual start"
+
+echo -e "${YELLOW}Starting Redis service (if installed)...${NC}"
+systemctl start redis-server 2>/dev/null || service redis-server start 2>/dev/null || echo "⚠️  Redis not running (optional - not required for basic operation)"
 
 # Enable services on boot
 echo -e "${YELLOW}Enabling services to start on boot...${NC}"
 systemctl enable postgresql 2>/dev/null || echo "Note: PostgreSQL auto-start may need manual configuration"
-systemctl enable redis-server 2>/dev/null || echo "Note: Redis auto-start may need manual configuration"
+systemctl enable redis-server 2>/dev/null || echo "⚠️  Redis auto-start not configured (optional service)"
 
 echo ""
 echo -e "${GREEN}Verifying installations...${NC}"

@@ -75,12 +75,13 @@ $SUDO apt-get install -y \
     libpq-dev
 print_success "Database dependencies installed"
 
-# 5. Install Redis
-print_section "Installing Redis"
+# 5. Install Redis (Optional - Not Critical)
+print_section "Installing Redis (Optional)"
+print_warning "Redis is optional and not required for basic operation"
 $SUDO apt-get install -y \
     redis-server \
-    redis-tools
-print_success "Redis installed"
+    redis-tools || print_warning "Redis installation failed - continuing without Redis (not critical)"
+print_success "Redis installation attempted"
 
 # 6. Install SSL/Crypto Libraries
 print_section "Installing SSL/Crypto Libraries"
@@ -169,10 +170,14 @@ $SUDO systemctl start postgresql 2>/dev/null || print_warning "Could not start P
 $SUDO systemctl enable postgresql 2>/dev/null || print_warning "Could not enable PostgreSQL"
 print_success "PostgreSQL configured"
 
-# Start and enable Redis
-$SUDO systemctl start redis-server 2>/dev/null || print_warning "Could not start Redis (may already be running)"
-$SUDO systemctl enable redis-server 2>/dev/null || print_warning "Could not enable Redis"
-print_success "Redis configured"
+# Start and enable Redis (if installed)
+if command -v redis-server &> /dev/null || command -v redis-cli &> /dev/null; then
+    $SUDO systemctl start redis-server 2>/dev/null || print_warning "Could not start Redis (may already be running or not installed)"
+    $SUDO systemctl enable redis-server 2>/dev/null || print_warning "Could not enable Redis (may not be installed)"
+    print_success "Redis configured (if available)"
+else
+    print_warning "Redis not found - continuing without Redis (not critical)"
+fi
 
 # 15. Summary
 echo ""
@@ -184,7 +189,7 @@ echo "System Dependencies Installed:"
 echo "  ✓ Build tools (gcc, g++, make, pkg-config)"
 echo "  ✓ Python 3 and development headers"
 echo "  ✓ PostgreSQL database"
-echo "  ✓ Redis cache/message broker"
+echo "  ⚠ Redis cache/message broker (optional, may not be installed)"
 echo "  ✓ SSL/Crypto libraries"
 echo "  ✓ Image processing libraries (JPEG, PNG)"
 echo "  ✓ Additional libraries (libevent, libxml2, libxslt)"
