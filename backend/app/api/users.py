@@ -338,7 +338,7 @@ async def get_following(
     result = await db.execute(
         select(User)
         .join(Follow, Follow.followed_id == User.id)
-        .where(Follow.follower_id == current_user.id)
+        .where(Follow.follower_id == current_user.id, User.is_active == True)
     )
     following_users = result.scalars().all()
     
@@ -394,7 +394,7 @@ async def get_followers(
     result = await db.execute(
         select(User)
         .join(Follow, Follow.follower_id == User.id)
-        .where(Follow.followed_id == current_user.id)
+        .where(Follow.followed_id == current_user.id, User.is_active == True)
     )
     followers = result.scalars().all()
     
