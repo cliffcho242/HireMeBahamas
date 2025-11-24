@@ -46,6 +46,7 @@ python-multipart==0.0.7
 cloudinary==1.38.0
 Pillow==10.2.0
 python-magic
+google-cloud-storage==3.6.0
 
 # Configuration & Templates
 python-decouple==3.8

@@ -9,6 +9,7 @@ from app.core.upload import (
     upload_image,
     upload_multiple_files,
     upload_to_cloudinary,
+    upload_to_gcs,
 )
 from app.database import get_db
 from app.models import UploadedFile, User
@@ -156,7 +157,9 @@ async def upload_document(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Upload a document (resume, portfolio, etc.)"""
+    """Upload a document (resume, portfolio, etc.)
+    Uses Cloudinary for cloud storage if configured, otherwise uses local storage.
+    """
     try:
         # Use Cloudinary for documents if available, otherwise local storage
         file_url = await upload_to_cloudinary(file, folder="documents")
@@ -176,6 +179,44 @@ async def upload_document(
 
         return {
             "message": "Document uploaded successfully",
+            "file_id": str(file_record.id),
+            "file_url": file_url,
+            "original_filename": file.filename,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@router.post("/document-gcs")
+async def upload_document_to_gcs(
+    file: UploadFile = File(...),
+    description: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload a document to Google Cloud Storage
+    Uses GCS for cloud storage if configured, otherwise uses local storage.
+    """
+    try:
+        # Use Google Cloud Storage for documents if available, otherwise local storage
+        file_url = await upload_to_gcs(file, folder="documents")
+
+        # Save file record
+        file_record = UploadedFile(
+            filename=os.path.basename(file_url),
+            original_filename=file.filename,
+            file_path=file_url,
+            file_size=file.size or 0,
+            content_type=file.content_type,
+            user_id=current_user.id,
+        )
+        db.add(file_record)
+        await db.commit()
+        await db.refresh(file_record)
+
+        return {
+            "message": "Document uploaded successfully to GCS",
             "file_id": str(file_record.id),
             "file_url": file_url,
             "original_filename": file.filename,

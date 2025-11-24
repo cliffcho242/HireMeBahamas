@@ -28,6 +28,11 @@ CLOUDINARY_CLOUD_NAME = config("CLOUDINARY_CLOUD_NAME", default="")
 CLOUDINARY_API_KEY = config("CLOUDINARY_API_KEY", default="")
 CLOUDINARY_API_SECRET = config("CLOUDINARY_API_SECRET", default="")
 
+# Google Cloud Storage config (optional)
+GCS_BUCKET_NAME = config("GCS_BUCKET_NAME", default="")
+GCS_PROJECT_ID = config("GCS_PROJECT_ID", default="")
+GCS_CREDENTIALS_PATH = config("GCS_CREDENTIALS_PATH", default="")
+
 # Ensure upload directories exist
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(f"{UPLOAD_DIR}/avatars", exist_ok=True)
@@ -202,5 +207,77 @@ async def upload_to_cloudinary(file: UploadFile, folder: str = "hirebahamas") ->
 
     except Exception as e:
         print(f"Cloudinary upload failed: {e}")
+        # Fallback to local storage
+        return await save_file_locally(file, folder)
+
+
+# Google Cloud Storage integration (if configured)
+def setup_gcs():
+    """Setup Google Cloud Storage if credentials are provided"""
+    if GCS_BUCKET_NAME and (GCS_PROJECT_ID or GCS_CREDENTIALS_PATH):
+        try:
+            from google.cloud import storage
+
+            if GCS_CREDENTIALS_PATH and os.path.exists(GCS_CREDENTIALS_PATH):
+                # Use credentials file
+                client = storage.Client.from_service_account_json(GCS_CREDENTIALS_PATH)
+            elif GCS_PROJECT_ID:
+                # Use default credentials (Application Default Credentials)
+                client = storage.Client(project=GCS_PROJECT_ID)
+            else:
+                # Try default credentials without project
+                client = storage.Client()
+
+            # Verify bucket exists
+            bucket = client.bucket(GCS_BUCKET_NAME)
+            if bucket.exists():
+                return client
+            else:
+                print(f"GCS bucket '{GCS_BUCKET_NAME}' does not exist.")
+                return None
+
+        except ImportError:
+            print("google-cloud-storage not installed. Using local storage.")
+            return None
+        except Exception as e:
+            print(f"GCS setup failed: {e}")
+            return None
+    return None
+
+
+async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
+    """Upload file to Google Cloud Storage"""
+    client = setup_gcs()
+    if not client:
+        return await save_file_locally(file, folder)
+
+    try:
+        from google.cloud import storage
+
+        # Generate unique filename
+        filename = generate_filename(file.filename)
+        blob_name = f"{folder}/{filename}"
+
+        # Get bucket
+        bucket = client.bucket(GCS_BUCKET_NAME)
+        blob = bucket.blob(blob_name)
+
+        # Read file content
+        content = await file.read()
+
+        # Set content type
+        content_type = file.content_type or "application/octet-stream"
+
+        # Upload to GCS
+        blob.upload_from_string(content, content_type=content_type)
+
+        # Make the blob publicly accessible (optional)
+        # blob.make_public()
+
+        # Return the public URL
+        return blob.public_url
+
+    except Exception as e:
+        print(f"GCS upload failed: {e}")
         # Fallback to local storage
         return await save_file_locally(file, folder)
