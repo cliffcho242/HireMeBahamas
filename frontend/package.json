@@ -10,7 +10,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "setup": "node setup-and-fix.js",
-    "generate-assets": "node scripts/generate-pwa-assets.js"
+    "generate-assets": "node scripts/generate-pwa-assets.js",
+    "verify:user-page": "node verify-user-page-deps.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
