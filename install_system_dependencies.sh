@@ -87,23 +87,8 @@ apt-get install -y \
 echo "✅ Redis installed"
 echo ""
 
-# Install Apache Kafka tools (for message streaming and event processing)
-echo "Step 7: Installing Apache Kafka tools..."
-echo "----------------------------------------"
-# Try to install OpenJDK 11 first, fall back to 21 if not available
-if apt-cache show openjdk-11-jdk > /dev/null 2>&1; then
-    apt-get install -y openjdk-11-jdk kcat
-elif apt-cache show openjdk-21-jdk > /dev/null 2>&1; then
-    apt-get install -y openjdk-21-jdk kcat
-else
-    echo "⚠️  Warning: No compatible OpenJDK version found. Kafka tools require Java."
-    apt-get install -y kcat || true
-fi
-echo "✅ Apache Kafka tools installed (Java and kcat)"
-echo ""
-
 # Install SSL/TLS libraries (required for secure database connections)
-echo "Step 8: Installing SSL/TLS libraries..."
+echo "Step 7: Installing SSL/TLS libraries..."
 echo "----------------------------------------"
 apt-get install -y \
     libssl-dev \
@@ -114,7 +99,7 @@ echo "✅ SSL/TLS libraries installed"
 echo ""
 
 # Install image processing libraries (for avatar uploads)
-echo "Step 9: Installing image processing libraries..."
+echo "Step 8: Installing image processing libraries..."
 echo "----------------------------------------"
 apt-get install -y \
     libjpeg-dev \
@@ -129,7 +114,7 @@ echo "✅ Image processing libraries installed"
 echo ""
 
 # Install other required libraries
-echo "Step 10: Installing additional libraries..."
+echo "Step 9: Installing additional libraries..."
 echo "----------------------------------------"
 apt-get install -y \
     libevent-dev \
@@ -146,7 +131,7 @@ echo "✅ Additional libraries installed"
 echo ""
 
 # Install utilities
-echo "Step 11: Installing utilities..."
+echo "Step 10: Installing utilities..."
 echo "----------------------------------------"
 apt-get install -y \
     curl \
@@ -160,7 +145,7 @@ echo "✅ Utilities installed"
 echo ""
 
 # Clean up
-echo "Step 12: Cleaning up..."
+echo "Step 11: Cleaning up..."
 echo "----------------------------------------"
 apt-get autoremove -y
 apt-get clean
@@ -169,7 +154,7 @@ echo "✅ Cleanup complete"
 echo ""
 
 # Verify installations
-echo "Step 13: Verifying installations..."
+echo "Step 12: Verifying installations..."
 echo "----------------------------------------"
 echo -n "Python 3: "
 python3 --version
@@ -181,8 +166,6 @@ echo -n "SQLite: "
 sqlite3 --version
 echo -n "Redis: "
 redis-cli --version
-echo -n "Java (for Kafka): "
-java -version 2>&1 | head -n 1
 echo -n "Git: "
 git --version
 echo "✅ All tools verified"

@@ -40,9 +40,7 @@ jobs:
             zlib1g-dev \
             libevent-dev \
             libxml2-dev \
-            libxslt1-dev \
-            openjdk-11-jdk \
-            kcat
+            libxslt1-dev
 
       # Set up Python for backend dependencies
       - name: Set up Python
