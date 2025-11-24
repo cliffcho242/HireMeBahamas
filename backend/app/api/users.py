@@ -185,9 +185,10 @@ async def get_user(
 
     if not user:
         logger.info(f"User not found: identifier={identifier}, method={lookup_method}, requester={current_user.id}")
+        # Use generic message to prevent user enumeration attacks
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User not found: No user exists with {lookup_method} '{identifier}'"
+            detail="User not found"
         )
     
     logger.info(f"User found: id={user.id}, username={user.username}, requester={current_user.id}")

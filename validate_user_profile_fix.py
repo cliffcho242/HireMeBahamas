@@ -64,7 +64,7 @@ def main():
         ("Positive ID validation", "if user_id <= 0"),
         ("Int32 constant defined", "MAX_INT32 ="),  # Just check constant exists, not the value
         ("Int32 overflow check uses constant", "user_id > MAX_INT32"),
-        ("Detailed error message for not found", "User not found: No user exists with"),
+        ("Generic error message for not found", 'detail="User not found"'),
         ("Lookup logging", "logger.info(f\"User lookup requested"),
         ("User found logging", "logger.info(f\"User found:"),
     ]

@@ -67,7 +67,8 @@ const UserProfile: React.FC = () => {
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
   
   // Use ref to store interval ID for proper cleanup
-  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // In browsers, setInterval returns number; in Node.js it returns NodeJS.Timeout
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (userId) {
