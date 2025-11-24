@@ -203,7 +203,7 @@ const Users: React.FC = () => {
                           </div>
                           <div>
                             <h3 className="font-medium text-gray-900">
-                              {userData.first_name} {userData.last_name}
+                              {userData.first_name || ''} {userData.last_name || ''}
                             </h3>
                             {userData.occupation && (
                               <p className="text-sm text-gray-500">{userData.occupation}</p>
@@ -270,7 +270,7 @@ const Users: React.FC = () => {
                         </div>
                         <div className="flex-1">
                           <h3 className="font-medium text-gray-900">
-                            {userData.first_name} {userData.last_name}
+                            {userData.first_name || ''} {userData.last_name || ''}
                           </h3>
                           {userData.occupation && (
                             <p className="text-sm text-gray-500">{userData.occupation}</p>
@@ -312,7 +312,7 @@ const Users: React.FC = () => {
                         </div>
                         <div className="flex-1">
                           <h3 className="font-medium text-gray-900">
-                            {userData.first_name} {userData.last_name}
+                            {userData.first_name || ''} {userData.last_name || ''}
                           </h3>
                           {userData.occupation && (
                             <p className="text-sm text-gray-500">{userData.occupation}</p>
