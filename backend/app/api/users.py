@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 MAX_INT32 = 2147483647  # Maximum value for 32-bit signed integer
+USERNAME_PATTERN = r'^[a-zA-Z0-9_-]+$'  # Valid username format: alphanumeric, underscore, hyphen
 
 
 @router.get("/list")
@@ -132,7 +133,7 @@ async def get_user(
     
     # Validate username format if not a digit (alphanumeric, underscore, hyphen only)
     if not identifier.isdigit():
-        if not re.match(r'^[a-zA-Z0-9_-]+$', identifier):
+        if not re.match(USERNAME_PATTERN, identifier):
             logger.warning(f"Invalid username format: {identifier} from user_id={current_user.id}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

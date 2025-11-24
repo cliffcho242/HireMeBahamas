@@ -48,6 +48,10 @@ interface Post {
   comments_count: number;
 }
 
+// Constants
+const USERS_LIST_ROUTE = '/friends';
+const REDIRECT_DELAY_SECONDS = 3;
+
 const UserProfile: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
@@ -117,8 +121,8 @@ const UserProfile: React.FC = () => {
       
       // Auto-redirect to users page after 3 seconds for 404 errors
       if (error.response?.status === 404) {
-        console.log('User not found. Auto-redirecting to users page in 3 seconds...');
-        setRedirectCountdown(3);
+        console.log(`User not found. Auto-redirecting to users page in ${REDIRECT_DELAY_SECONDS} seconds...`);
+        setRedirectCountdown(REDIRECT_DELAY_SECONDS);
         
         // Clear any existing interval
         if (countdownIntervalRef.current) {
@@ -133,7 +137,7 @@ const UserProfile: React.FC = () => {
                 clearInterval(countdownIntervalRef.current);
                 countdownIntervalRef.current = null;
               }
-              navigate('/friends');
+              navigate(USERS_LIST_ROUTE);
               return null;
             }
             return prev - 1;
@@ -218,7 +222,7 @@ const UserProfile: React.FC = () => {
                 Go Back
               </button>
               <button
-                onClick={() => navigate('/friends')}
+                onClick={() => navigate(USERS_LIST_ROUTE)}
                 className="w-full flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 <UserCircleIcon className="w-5 h-5 mr-2" />
