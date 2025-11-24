@@ -294,7 +294,10 @@ const SocialFeed = () => {
     if (userData) {
       try {
         return JSON.parse(userData);
-      } catch {
+      } catch (error) {
+        // Clear invalid localStorage data
+        console.error('Invalid user_data in localStorage:', error);
+        localStorage.removeItem('user_data');
         return null;
       }
     }

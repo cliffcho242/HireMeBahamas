@@ -48,15 +48,6 @@ const Download: React.FC = () => {
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
-    // Log platform detection info
-    const userAgent = navigator.userAgent.toLowerCase();
-    console.log('Platform detected:', { 
-      isIOS, 
-      isAndroid, 
-      isDesktop,
-      userAgent 
-    });
-
     // Listen for beforeinstallprompt event (Android/Desktop)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
