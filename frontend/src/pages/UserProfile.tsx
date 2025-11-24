@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -48,6 +48,10 @@ interface Post {
   comments_count: number;
 }
 
+// Constants
+const USERS_LIST_ROUTE = '/friends';
+const REDIRECT_DELAY_SECONDS = 3;
+
 const UserProfile: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
@@ -60,11 +64,24 @@ const UserProfile: React.FC = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
+  
+  // Use ref to store interval ID for proper cleanup
+  // In browsers, setInterval returns number; in Node.js it returns NodeJS.Timeout
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (userId) {
       fetchUserProfile();
     }
+    
+    // Cleanup countdown interval on unmount or userId change
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+    };
   }, [userId]);
 
   const fetchUserProfile = async () => {
@@ -87,9 +104,47 @@ const UserProfile: React.FC = () => {
       setUserPosts(filteredPosts);
     } catch (error: any) {
       console.error('Failed to fetch user profile:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to load user profile';
+      
+      // Extract error message with more detail
+      let errorMessage = 'Failed to load user profile';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 404) {
+        errorMessage = `User with ID "${userId}" not found`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setError(errorMessage);
       toast.error(errorMessage);
+      
+      // Auto-redirect to users page after 3 seconds for 404 errors
+      if (error.response?.status === 404) {
+        console.log(`User not found. Auto-redirecting to users page in ${REDIRECT_DELAY_SECONDS} seconds...`);
+        setRedirectCountdown(REDIRECT_DELAY_SECONDS);
+        
+        // Clear any existing interval
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+        }
+        
+        // Countdown timer
+        countdownIntervalRef.current = setInterval(() => {
+          setRedirectCountdown((prev) => {
+            if (prev === null || prev <= 1) {
+              if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+              }
+              navigate(USERS_LIST_ROUTE);
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -150,6 +205,15 @@ const UserProfile: React.FC = () => {
             <p className="text-gray-600 mb-6">
               {error || "The user you're looking for doesn't exist or may have been removed."}
             </p>
+            {redirectCountdown !== null && (
+              <div className="mb-6">
+                <div className="inline-flex items-center justify-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700">
+                  <span className="font-medium">
+                    Auto-redirecting in {redirectCountdown} second{redirectCountdown !== 1 ? 's' : ''}...
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="space-y-3">
               <button
                 onClick={() => navigate(-1)}
@@ -159,7 +223,7 @@ const UserProfile: React.FC = () => {
                 Go Back
               </button>
               <button
-                onClick={() => navigate('/friends')}
+                onClick={() => navigate(USERS_LIST_ROUTE)}
                 className="w-full flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 <UserCircleIcon className="w-5 h-5 mr-2" />
