@@ -342,8 +342,21 @@ async def get_following(
     )
     following_users = result.scalars().all()
 
-    users_data = [
-        {
+    users_data = []
+    for user in following_users:
+        # Count followers for this user
+        followers_result = await db.execute(
+            select(func.count()).select_from(Follow).where(Follow.followed_id == user.id)
+        )
+        followers_count = followers_result.scalar()
+
+        # Count following for this user
+        following_result = await db.execute(
+            select(func.count()).select_from(Follow).where(Follow.follower_id == user.id)
+        )
+        following_count = following_result.scalar()
+
+        users_data.append({
             "id": user.id,
             "first_name": user.first_name,
             "last_name": user.last_name,
@@ -353,9 +366,10 @@ async def get_following(
             "bio": user.bio,
             "occupation": user.occupation,
             "location": user.location,
-        }
-        for user in following_users
-    ]
+            "is_following": True,  # Current user is following this user by definition
+            "followers_count": followers_count,
+            "following_count": following_count,
+        })
 
     return {"success": True, "following": users_data}
 
@@ -373,8 +387,27 @@ async def get_followers(
     )
     followers = result.scalars().all()
 
-    users_data = [
-        {
+    # Get the list of user IDs that current user is following
+    following_result = await db.execute(
+        select(Follow.followed_id).where(Follow.follower_id == current_user.id)
+    )
+    following_ids = {fid for (fid,) in following_result.all()}
+
+    users_data = []
+    for user in followers:
+        # Count followers for this user
+        followers_result = await db.execute(
+            select(func.count()).select_from(Follow).where(Follow.followed_id == user.id)
+        )
+        followers_count = followers_result.scalar()
+
+        # Count following for this user
+        following_result = await db.execute(
+            select(func.count()).select_from(Follow).where(Follow.follower_id == user.id)
+        )
+        following_count = following_result.scalar()
+
+        users_data.append({
             "id": user.id,
             "first_name": user.first_name,
             "last_name": user.last_name,
@@ -384,8 +417,9 @@ async def get_followers(
             "bio": user.bio,
             "occupation": user.occupation,
             "location": user.location,
-        }
-        for user in followers
-    ]
+            "is_following": user.id in following_ids,  # Check if current user follows this follower
+            "followers_count": followers_count,
+            "following_count": following_count,
+        })
 
     return {"success": True, "followers": users_data}

@@ -14,9 +14,9 @@ interface User {
   bio?: string;
   occupation?: string;
   location?: string;
-  is_following: boolean;
-  followers_count: number;
-  following_count: number;
+  is_following?: boolean;  // Make optional for defensive programming
+  followers_count?: number;  // Make optional for defensive programming
+  following_count?: number;  // Make optional for defensive programming
 }
 
 const Users: React.FC = () => {
@@ -212,8 +212,8 @@ const Users: React.FC = () => {
                         <p className="text-sm text-gray-600 mb-3 line-clamp-2">{userData.bio}</p>
                       )}
                       <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                        <span>{userData.followers_count} followers</span>
-                        <span>{userData.following_count} following</span>
+                        <span>{userData.followers_count ?? 0} followers</span>
+                        <span>{userData.following_count ?? 0} following</span>
                       </div>
                       {userData.is_following ? (
                         <button
