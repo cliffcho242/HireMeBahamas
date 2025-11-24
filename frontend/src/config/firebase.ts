@@ -36,13 +36,13 @@ const firebaseConfig = {
 // Check if Firebase is configured
 const isFirebaseConfigured = (): boolean => {
   return !!(
-    firebaseConfig.apiKey &&
-    firebaseConfig.authDomain &&
-    firebaseConfig.databaseURL &&
-    firebaseConfig.projectId &&
-    firebaseConfig.storageBucket &&
-    firebaseConfig.messagingSenderId &&
-    firebaseConfig.appId
+    firebaseConfig.apiKey?.trim() &&
+    firebaseConfig.authDomain?.trim() &&
+    firebaseConfig.databaseURL?.trim() &&
+    firebaseConfig.projectId?.trim() &&
+    firebaseConfig.storageBucket?.trim() &&
+    firebaseConfig.messagingSenderId?.trim() &&
+    firebaseConfig.appId?.trim()
   );
 };
 
@@ -54,14 +54,20 @@ if (isFirebaseConfigured()) {
   try {
     app = initializeApp(firebaseConfig);
     database = getDatabase(app);
-    console.log('Firebase Realtime Database initialized successfully');
+    if (import.meta.env.DEV) {
+      console.log('Firebase Realtime Database initialized successfully');
+    }
   } catch (error) {
-    console.error('Error initializing Firebase:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error initializing Firebase:', error);
+    }
   }
 } else {
-  console.warn(
-    'Firebase Realtime Database not configured. Set VITE_FIREBASE_* environment variables to enable Firebase features.'
-  );
+  if (import.meta.env.DEV) {
+    console.warn(
+      'Firebase Realtime Database not configured. Set VITE_FIREBASE_* environment variables to enable Firebase features.'
+    );
+  }
 }
 
 /**

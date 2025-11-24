@@ -38,7 +38,7 @@ This installs `firebase-admin==6.6.0` for server-side operations.
 cd frontend && npm install
 ```
 
-This installs `firebase==11.1.0` for client-side real-time features.
+This installs `firebase@11.10.0` for client-side real-time features.
 
 ## Setup Instructions
 

@@ -5,10 +5,29 @@ This module provides API endpoints for Firebase Realtime Database operations.
 These endpoints demonstrate how to use Firebase for real-time features.
 
 Note: These endpoints will gracefully handle cases where Firebase is not configured.
+
+SECURITY WARNING: These endpoints currently lack authentication and authorization.
+In production, you should:
+1. Add authentication middleware to verify user identity
+2. Add authorization checks to ensure users can only access their own data
+3. Implement Firebase security rules on the Firebase Console
+4. Use the authenticated user's ID from the JWT token instead of accepting it in the request body
+
+Example with authentication (to be implemented):
+    from ..core.auth import get_current_user
+    
+    @router.post("/messages/{room_id}")
+    async def send_message(
+        room_id: str,
+        message: FirebaseMessage,
+        current_user = Depends(get_current_user)
+    ):
+        # Verify user has access to this room
+        # Use current_user.id instead of message.userId
 """
 
-from fastapi import APIRouter, HTTPException, Depends
-from typing import Optional, List, Dict, Any
+from fastapi import APIRouter, HTTPException
+from typing import Optional
 from pydantic import BaseModel
 from ..core.firebase_service import firebase_service
 
@@ -88,7 +107,7 @@ async def get_messages(room_id: str, limit: Optional[int] = 50):
     
     Args:
         room_id: Chat room identifier
-        limit: Maximum number of messages to retrieve
+        limit: Maximum number of messages to retrieve (1-1000)
         
     Returns:
         list: List of messages
@@ -97,6 +116,13 @@ async def get_messages(room_id: str, limit: Optional[int] = 50):
         raise HTTPException(
             status_code=503,
             detail="Firebase not configured"
+        )
+    
+    # Validate limit parameter
+    if limit is not None and (limit <= 0 or limit > 1000):
+        raise HTTPException(
+            status_code=400,
+            detail="Limit must be between 1 and 1000"
         )
     
     messages = firebase_service.query(
@@ -208,8 +234,10 @@ async def list_rooms():
     
     rooms = firebase_service.read('messages')
     
-    if rooms is None:
+    if rooms is None or not isinstance(rooms, dict):
         return []
     
-    return [{"room_id": room_id, "message_count": len(messages)} 
-            for room_id, messages in rooms.items()]
+    return [
+        {"room_id": room_id, "message_count": len(messages) if isinstance(messages, (dict, list)) else 0}
+        for room_id, messages in rooms.items()
+    ]

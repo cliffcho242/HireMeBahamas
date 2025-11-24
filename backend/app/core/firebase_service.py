@@ -13,6 +13,7 @@ Setup Instructions:
 
 import os
 import logging
+import threading
 from typing import Optional, Dict, Any, List
 import firebase_admin
 from firebase_admin import credentials, db
@@ -25,6 +26,7 @@ class FirebaseService:
     
     _instance: Optional['FirebaseService'] = None
     _initialized: bool = False
+    _lock = threading.Lock()
     
     def __new__(cls):
         """Singleton pattern to ensure only one Firebase instance"""
@@ -34,8 +36,9 @@ class FirebaseService:
     
     def __init__(self):
         """Initialize Firebase service if not already initialized"""
-        if not self._initialized:
-            self._initialize_firebase()
+        with self._lock:
+            if not self._initialized:
+                self._initialize_firebase()
     
     def _initialize_firebase(self) -> None:
         """Initialize Firebase Admin SDK with credentials from environment"""
@@ -80,6 +83,34 @@ class FirebaseService:
         """Check if Firebase is properly initialized and available"""
         return self._initialized
     
+    def _validate_path(self, path: str) -> bool:
+        """
+        Validate Firebase path to prevent injection attacks
+        
+        Args:
+            path: Database path to validate
+            
+        Returns:
+            True if path is valid, False otherwise
+        """
+        if not path:
+            return False
+        
+        # Reject paths with parent directory traversal
+        if '..' in path:
+            return False
+        
+        # Reject absolute paths
+        if path.startswith('/'):
+            return False
+        
+        # Reject paths with invalid characters
+        invalid_chars = ['$', '#', '[', ']', '.']
+        if any(char in path for char in invalid_chars):
+            return False
+        
+        return True
+    
     def get_reference(self, path: str) -> Optional[db.Reference]:
         """
         Get a reference to a specific path in the database
@@ -92,6 +123,11 @@ class FirebaseService:
         """
         if not self.is_available():
             logger.warning("Firebase is not available. Cannot get reference.")
+            return None
+        
+        # Validate path
+        if not self._validate_path(path):
+            logger.warning(f"Invalid path rejected: {path}")
             return None
         
         try:
@@ -253,7 +289,10 @@ class FirebaseService:
             
             results = query.get()
             if results:
-                return [{'key': k, **v} for k, v in results.items()]
+                return [
+                    {'key': k, **v} if isinstance(v, dict) else {'key': k, 'value': v}
+                    for k, v in results.items()
+                ]
             return []
         except Exception as e:
             logger.error(f"Error querying path '{path}': {str(e)}")
