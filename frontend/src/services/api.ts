@@ -484,6 +484,7 @@ export const postsAPI = {
   createPost: async (postData: {
     content: string;
     image_url?: string;
+    video_url?: string;
   }) => {
     const response = await api.post('/api/posts', postData);
     return response.data;

@@ -337,6 +337,7 @@ def init_database():
                         user_id INTEGER NOT NULL,
                         content TEXT NOT NULL,
                         image_url TEXT,
+                        video_url TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
                     )
@@ -456,6 +457,7 @@ def init_database():
                         user_id INTEGER NOT NULL,
                         content TEXT NOT NULL,
                         image_url TEXT,
+                        video_url TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
                     )
@@ -1296,7 +1298,7 @@ def get_posts():
             cursor.execute(
                 """
                 SELECT 
-                    p.id, p.content, p.image_url, p.created_at,
+                    p.id, p.content, p.image_url, p.video_url, p.created_at,
                     u.id as user_id, u.email, u.first_name, u.last_name, u.avatar_url,
                     u.username, u.occupation, u.company_name,
                     COUNT(DISTINCT l.id) as likes_count,
@@ -1305,7 +1307,7 @@ def get_posts():
                 JOIN users u ON p.user_id = u.id
                 LEFT JOIN likes l ON p.id = l.post_id
                 LEFT JOIN comments c ON p.id = c.post_id
-                GROUP BY p.id, p.content, p.image_url, p.created_at, 
+                GROUP BY p.id, p.content, p.image_url, p.video_url, p.created_at, 
                          u.id, u.email, u.first_name, u.last_name, u.avatar_url,
                          u.username, u.occupation, u.company_name
                 ORDER BY p.created_at DESC
@@ -1318,7 +1320,7 @@ def get_posts():
             cursor.execute(
                 """
                 SELECT 
-                    p.id, p.content, p.image_url, p.created_at,
+                    p.id, p.content, p.image_url, p.video_url, p.created_at,
                     u.id as user_id, u.email, u.first_name, u.last_name, u.avatar_url,
                     u.username, u.occupation, u.company_name,
                     COUNT(DISTINCT l.id) as likes_count,
@@ -1346,6 +1348,7 @@ def get_posts():
                     "id": post["id"],
                     "content": post["content"],
                     "image_url": post["image_url"],
+                    "video_url": post["video_url"],
                     "created_at": post["created_at"],
                     "likes_count": post["likes_count"],
                     "comments_count": post["comments_count"],
@@ -1426,6 +1429,7 @@ def create_post():
         data = request.get_json()
         content = data.get("content", "").strip()
         image_url = data.get("image_url", "")
+        video_url = data.get("video_url", "")
 
         if not content:
             return (
@@ -1454,19 +1458,19 @@ def create_post():
         if USE_POSTGRESQL:
             cursor.execute(
                 """
-                INSERT INTO posts (user_id, content, image_url, created_at)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO posts (user_id, content, image_url, video_url, created_at)
+                VALUES (%s, %s, %s, %s, %s)
                 RETURNING id, created_at
             """,
-                (user_id, content, image_url, datetime.now(timezone.utc)),
+                (user_id, content, image_url, video_url, datetime.now(timezone.utc)),
             )
         else:
             cursor.execute(
                 """
-                INSERT INTO posts (user_id, content, image_url, created_at)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO posts (user_id, content, image_url, video_url, created_at)
+                VALUES (?, ?, ?, ?, ?)
             """,
-                (user_id, content, image_url, datetime.now(timezone.utc)),
+                (user_id, content, image_url, video_url, datetime.now(timezone.utc)),
             )
 
         if USE_POSTGRESQL:
@@ -1503,6 +1507,7 @@ def create_post():
                         "id": post_id,
                         "content": content,
                         "image_url": image_url,
+                        "video_url": video_url,
                         "created_at": created_at,
                         "likes_count": 0,
                         "user": {
