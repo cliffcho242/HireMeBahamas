@@ -61,12 +61,11 @@ const ProfilePictureGallery: React.FC = () => {
       }
 
       // Upload files
-      let response;
       if (validFiles.length === 1) {
-        response = await profilePicturesAPI.uploadPicture(validFiles[0]);
+        await profilePicturesAPI.uploadPicture(validFiles[0]);
         toast.success('Profile picture uploaded successfully!');
       } else {
-        response = await profilePicturesAPI.uploadMultiplePictures(validFiles);
+        await profilePicturesAPI.uploadMultiplePictures(validFiles);
         toast.success(`${validFiles.length} profile pictures uploaded successfully!`);
       }
 
