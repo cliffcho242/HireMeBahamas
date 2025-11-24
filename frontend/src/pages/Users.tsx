@@ -35,6 +35,13 @@ const Users: React.FC = () => {
     return initials || '?';
   };
 
+  // Helper function to validate and filter user data
+  const validateUsers = (userArray: (User | null | undefined)[]): User[] => {
+    return userArray.filter((u: User | null | undefined): u is User => {
+      return u != null && typeof u === 'object' && 'id' in u;
+    });
+  };
+
   useEffect(() => {
     if (user) {
       loadUsersData();
@@ -51,23 +58,13 @@ const Users: React.FC = () => {
       ]);
 
       if (usersRes.data.success && Array.isArray(usersRes.data.users)) {
-        // Filter out any null or undefined entries and ensure all required fields exist
-        const validUsers = usersRes.data.users.filter((u: User | null | undefined): u is User => {
-          return u != null && typeof u === 'object' && 'id' in u;
-        });
-        setUsers(validUsers);
+        setUsers(validateUsers(usersRes.data.users));
       }
       if (followingRes.data.success && Array.isArray(followingRes.data.following)) {
-        const validFollowing = followingRes.data.following.filter((u: User | null | undefined): u is User => {
-          return u != null && typeof u === 'object' && 'id' in u;
-        });
-        setFollowing(validFollowing);
+        setFollowing(validateUsers(followingRes.data.following));
       }
       if (followersRes.data.success && Array.isArray(followersRes.data.followers)) {
-        const validFollowers = followersRes.data.followers.filter((u: User | null | undefined): u is User => {
-          return u != null && typeof u === 'object' && 'id' in u;
-        });
-        setFollowers(validFollowers);
+        setFollowers(validateUsers(followersRes.data.followers));
       }
     } catch (error) {
       console.error('Error loading users data:', error);
@@ -205,7 +202,7 @@ const Users: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {users.filter(userData => userData != null && userData.id != null).map((userData) => (
+                  {users.map((userData) => (
                     <div key={userData.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-3">
@@ -273,7 +270,7 @@ const Users: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {following.filter(userData => userData != null && userData.id != null).map((userData) => (
+                  {following.map((userData) => (
                     <div key={userData.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-center space-x-3 mb-3">
                         <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
@@ -315,7 +312,7 @@ const Users: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {followers.filter(userData => userData != null && userData.id != null).map((userData) => (
+                  {followers.map((userData) => (
                     <div key={userData.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-center space-x-3">
                         <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">

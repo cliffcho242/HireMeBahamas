@@ -98,15 +98,11 @@ async def test_user_profile_fields():
         if len(existing_posts) == 0:
             post1 = Post(
                 user_id=user2.id,
-                content="Test post 1 for user2",
-                likes_count=0,
-                comments_count=0
+                content="Test post 1 for user2"
             )
             post2 = Post(
                 user_id=user2.id,
-                content="Test post 2 for user2",
-                likes_count=0,
-                comments_count=0
+                content="Test post 2 for user2"
             )
             db.add(post1)
             db.add(post2)
