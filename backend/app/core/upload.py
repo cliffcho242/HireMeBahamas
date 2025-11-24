@@ -33,6 +33,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(f"{UPLOAD_DIR}/avatars", exist_ok=True)
 os.makedirs(f"{UPLOAD_DIR}/portfolio", exist_ok=True)
 os.makedirs(f"{UPLOAD_DIR}/documents", exist_ok=True)
+os.makedirs(f"{UPLOAD_DIR}/profile_pictures", exist_ok=True)
 
 
 def validate_file(file: UploadFile, allowed_types: set = None) -> None:

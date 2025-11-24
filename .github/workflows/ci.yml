@@ -78,3 +78,7 @@ jobs:
       - name: Run registration tests
         run: |
           python -m pytest test_registration.py -v --tb=short
+
+      - name: Test upload directories
+        run: |
+          cd backend && python3 test_upload_directories.py
