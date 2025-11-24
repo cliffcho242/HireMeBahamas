@@ -1,0 +1,55 @@
+/**
+ * Sendbird Custom Styles
+ * 
+ * This file contains custom styles for Sendbird components
+ * to integrate with the HireMeBahamas theme.
+ */
+
+/* Sendbird wrapper customizations */
+.sendbird-wrapper .sendbird-app__wrap {
+  height: 100%;
+}
+
+/* Conversation and channel customizations */
+.sendbird-conversation {
+  height: 100%;
+}
+
+.sendbird-channel-list {
+  border-right: 1px solid #e5e7eb;
+}
+
+/* Make Sendbird components responsive */
+@media (max-width: 768px) {
+  .sendbird-channel-list {
+    display: none;
+  }
+}
+
+/* Fade-in animation for Sendbird demo */
+@keyframes sendbirdFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sendbird-fade-in {
+  animation: sendbirdFadeIn 0.3s ease-out;
+}
+
+/* Override Sendbird primary colors to match HireMeBahamas theme */
+.sendbird-message-content__middle__body-container--outgoing .sendbird-message-content__middle__message-item-body {
+  background-color: #2563eb;
+}
+
+/* Ensure proper spacing in mobile view */
+@media (max-width: 640px) {
+  .sendbird-conversation__messages {
+    padding: 0.5rem;
+  }
+}
