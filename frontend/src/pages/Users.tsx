@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import axios from 'axios';
 import { UserGroupIcon, UserPlusIcon, CheckIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { UserGroupIcon as UserGroupSolidIcon } from '@heroicons/react/24/solid';
 
@@ -44,9 +45,8 @@ const Users: React.FC = () => {
 
   // Helper function to extract error message from API errors
   const getErrorMessage = (error: unknown, defaultMessage: string): string => {
-    if (error instanceof Error && 'response' in error) {
-      const apiError = error as { response?: { data?: { detail?: string } } };
-      return apiError.response?.data?.detail || defaultMessage;
+    if (axios.isAxiosError(error) && error.response?.data?.detail) {
+      return error.response.data.detail;
     }
     return defaultMessage;
   };
