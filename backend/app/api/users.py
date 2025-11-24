@@ -13,7 +13,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # Constants
-MAX_INT32 = 2147483647  # Maximum value for 32-bit signed integer
+MAX_INT32 = 2147483647  # 2^31 - 1: Maximum value for 32-bit signed integer (PostgreSQL INTEGER type)
 USERNAME_PATTERN = r'^[a-zA-Z0-9_-]+$'  # Valid username format: alphanumeric, underscore, hyphen
 
 
