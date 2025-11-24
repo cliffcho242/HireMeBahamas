@@ -2,6 +2,11 @@
 
 This document provides a quick reference for all system packages needed to run HireMeBahamas in production.
 
+## Dependency Status
+
+✅ **Required** - Essential for basic operation
+⚠️ **Optional** - Enhances functionality but not critical
+
 ## One-Command Installation (Ubuntu/Debian)
 
 ```bash
@@ -11,13 +16,15 @@ sudo apt-get install -y \
     build-essential gcc g++ make pkg-config \
     python3 python3-pip python3-dev python3-venv python3-setuptools python3-wheel \
     postgresql postgresql-contrib postgresql-client libpq-dev \
-    redis-server redis-tools \
     libssl-dev libffi-dev ca-certificates \
     libjpeg-dev libpng-dev libtiff-dev libwebp-dev libopenjp2-7-dev zlib1g-dev \
     libevent-dev \
     libxml2-dev libxslt1-dev \
     nginx \
     curl wget git htop vim unzip
+
+# Optional packages (not critical)
+sudo apt-get install -y redis-server redis-tools || echo "Redis not installed (optional)"
 ```
 
 ## Package Categories
@@ -40,10 +47,12 @@ sudo apt-get install -y \
     postgresql postgresql-contrib postgresql-client libpq-dev
 ```
 
-### Redis (for caching, sessions, Celery)
+### Redis ⚠️ (Optional - for caching, sessions, Celery)
 ```bash
 sudo apt-get install -y redis-server redis-tools
 ```
+
+**Note**: Redis is optional and not required for basic operation.
 
 ### SSL/TLS Libraries (for cryptography package)
 ```bash
@@ -94,13 +103,15 @@ sudo yum install -y \
     gcc gcc-c++ make pkgconfig \
     python3 python3-pip python3-devel python3-setuptools python3-wheel \
     postgresql postgresql-server postgresql-devel \
-    redis \
     openssl-devel libffi-devel ca-certificates \
     libjpeg-devel libpng-devel libtiff-devel libwebp-devel zlib-devel \
     libevent-devel \
     libxml2-devel libxslt-devel \
     nginx \
     curl wget git htop vim
+
+# Optional packages (not critical)
+sudo yum install -y redis || echo "Redis not installed (optional)"
 ```
 
 ## Docker Alternative
@@ -128,8 +139,8 @@ node --version
 psql --version
 sudo systemctl status postgresql
 
-# Check Redis
-redis-cli ping
+# Check Redis (optional)
+redis-cli ping || echo "Redis not installed (optional)"
 
 # Check Nginx
 nginx -v
@@ -150,21 +161,25 @@ make --version
 | Pillow | libjpeg-dev, libpng-dev, libtiff-dev, libwebp-dev, zlib1g-dev | Image processing |
 | gevent | libevent-dev | Asynchronous I/O |
 | lxml | libxml2-dev, libxslt1-dev | XML/HTML processing |
-| redis | redis-server | Redis client |
-| celery | redis-server | Task queue (uses Redis) |
+| redis ⚠️ | redis-server (optional) | Redis client |
+| celery ⚠️ | redis-server (optional) | Task queue (uses Redis) |
 
 ## Service Management
 
 ```bash
-# Start all services
-sudo systemctl start postgresql redis-server nginx
+# Start all required services
+sudo systemctl start postgresql nginx
+
+# Start optional services
+sudo systemctl start redis-server || echo "Redis not installed (optional)"
 
 # Enable services on boot
-sudo systemctl enable postgresql redis-server nginx
+sudo systemctl enable postgresql nginx
+sudo systemctl enable redis-server || echo "Redis not configured (optional)"
 
 # Check service status
 sudo systemctl status postgresql
-sudo systemctl status redis-server
+sudo systemctl status redis-server  # Optional
 sudo systemctl status nginx
 ```
 
