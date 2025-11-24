@@ -3,6 +3,7 @@ import os
 import uuid
 from datetime import timedelta
 from typing import List
+from urllib.parse import urlparse
 
 import aiofiles
 from decouple import config
@@ -75,8 +76,6 @@ def generate_filename(original_filename: str) -> str:
 
 def extract_filename_from_url(url: str) -> str:
     """Extract filename from URL (handles both local paths and cloud URLs with query params)"""
-    from urllib.parse import urlparse, parse_qs
-    
     # Parse the URL
     parsed = urlparse(url)
     
@@ -294,14 +293,16 @@ async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
         # Reset file pointer to beginning in case it was read before
         await file.seek(0)
         
-        # Read file content
-        content = await file.read()
-
         # Set content type
         content_type = file.content_type or "application/octet-stream"
+        
+        # Read content into BytesIO for efficient upload
+        # This is more memory-efficient than reading into a string
+        content = await file.read()
+        file_obj = io.BytesIO(content)
 
-        # Upload to GCS
-        blob.upload_from_string(content, content_type=content_type)
+        # Upload to GCS using file object
+        blob.upload_from_file(file_obj, content_type=content_type)
 
         # Make public or generate signed URL based on configuration
         if GCS_MAKE_PUBLIC:
