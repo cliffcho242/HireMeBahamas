@@ -18,6 +18,8 @@ LABEL version="1.0"
 # - XML processing (libxml2-dev, libxslt1-dev)
 # - Redis connectivity (redis-tools)
 # - Apache Kafka tools (openjdk-21-jdk-headless, kcat)
+#   Note: Using OpenJDK 21 instead of 11 because it's the version available in Debian Trixie
+#         (the base of python:3.11-slim). OpenJDK 21 is the current LTS and is fully compatible.
 # - General utilities (curl, wget, git)
 
 RUN apt-get update && apt-get install -y \
