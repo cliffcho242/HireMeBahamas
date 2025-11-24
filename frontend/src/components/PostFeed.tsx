@@ -527,7 +527,7 @@ const PostFeed: React.FC = () => {
       .replace(/[<>]/g, '') // Remove angle brackets
       .substring(0, 100)
       .trim();
-    const userName = post.user ? `${post.user.first_name} ${post.user.last_name}` : 'Unknown User';
+    const userName = `${post.user.first_name} ${post.user.last_name}`;
     const shareText = `Check out this post by ${userName}: ${sanitizedContent}${post.content.length > 100 ? '...' : ''}`;
 
     // Check if Web Share API is supported (mainly mobile devices)
