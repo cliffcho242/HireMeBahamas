@@ -159,7 +159,7 @@ const UserProfile: React.FC = () => {
                 Go Back
               </button>
               <button
-                onClick={() => navigate('/users')}
+                onClick={() => navigate('/friends')}
                 className="w-full flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 <UserCircleIcon className="w-5 h-5 mr-2" />
