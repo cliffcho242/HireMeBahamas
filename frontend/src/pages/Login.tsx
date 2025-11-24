@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import AppleSignin from 'react-apple-signin-auth';
 import {
   UserIcon,
   BriefcaseIcon,
@@ -13,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 const Login: React.FC = () => {
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const { login, loginWithGoogle, loginWithApple, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('admin@hiremebahamas.com');
   const [password, setPassword] = useState('AdminPass123!');
@@ -34,6 +36,41 @@ const Login: React.FC = () => {
     } catch (error: any) {
       toast.error(error.message || 'Login failed');
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      if (credentialResponse.credential) {
+        await loginWithGoogle(credentialResponse.credential);
+        navigate('/');
+      }
+    } catch (error: any) {
+      console.error('Google login error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Google sign-in failed';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleGoogleError = () => {
+    toast.error('Google sign-in failed. Please try again.');
+  };
+
+  const handleAppleSuccess = async (response: any) => {
+    try {
+      if (response.authorization?.id_token) {
+        await loginWithApple(response.authorization.id_token);
+        navigate('/');
+      }
+    } catch (error: any) {
+      console.error('Apple login error:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Apple sign-in failed';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleAppleError = (error: any) => {
+    console.error('Apple sign-in error:', error);
+    toast.error('Apple sign-in failed. Please try again.');
   };
 
   const features = [
@@ -236,12 +273,54 @@ const Login: React.FC = () => {
                   <div className="w-full border-t border-gray-300"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">or</span>
+                  <span className="px-4 bg-white text-gray-500">or continue with</span>
                 </div>
               </div>
 
-              {/* Quick Login */}
+              {/* OAuth Buttons */}
               <div className="space-y-3">
+                {/* Google Sign-In */}
+                <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "placeholder-client-id"}>
+                  <div className="w-full">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={handleGoogleError}
+                      useOneTap
+                      theme="outline"
+                      size="large"
+                      text="signin_with"
+                      shape="rectangular"
+                      width="100%"
+                    />
+                  </div>
+                </GoogleOAuthProvider>
+
+                {/* Apple Sign-In */}
+                <AppleSignin
+                  uiType="dark"
+                  authOptions={{
+                    clientId: import.meta.env.VITE_APPLE_CLIENT_ID || 'com.hiremebahamas.signin',
+                    scope: 'email name',
+                    redirectURI: window.location.origin + '/auth/apple/callback',
+                    usePopup: true,
+                  }}
+                  onSuccess={handleAppleSuccess}
+                  onError={handleAppleError}
+                  render={(props: any) => (
+                    <button
+                      {...props}
+                      type="button"
+                      className="w-full flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all bg-white"
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                      </svg>
+                      <span className="font-medium text-gray-700">Sign in with Apple</span>
+                    </button>
+                  )}
+                />
+
+                {/* Test Account Button */}
                 <button
                   type="button"
                   onClick={() => {

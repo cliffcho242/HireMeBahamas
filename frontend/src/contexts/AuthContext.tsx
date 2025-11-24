@@ -12,6 +12,8 @@ interface AuthContextType {
   rememberMe: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
+  loginWithGoogle: (token: string, userType?: string) => Promise<void>;
+  loginWithApple: (token: string, userType?: string) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
   refreshToken: () => Promise<void>;
@@ -262,6 +264,90 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const loginWithGoogle = async (token: string, userType?: string) => {
+    try {
+      console.log('AuthContext: Starting Google OAuth login');
+      const response = await authAPI.googleLogin(token, userType);
+      console.log('AuthContext: Google OAuth response received:', response);
+      
+      if (!response.access_token) {
+        console.error('AuthContext: No token in Google OAuth response:', response);
+        throw new Error('No authentication token received');
+      }
+      
+      if (!response.user) {
+        console.error('AuthContext: No user in Google OAuth response:', response);
+        throw new Error('No user data received');
+      }
+      
+      // Save to localStorage for backward compatibility
+      localStorage.setItem('token', response.access_token);
+      setToken(response.access_token);
+      setUser(response.user);
+      setRememberMeState(true); // OAuth logins are persistent by default
+      
+      // Save session with encryption
+      const expiresAt = sessionManager.getTokenExpiration(response.access_token);
+      sessionManager.saveSession({
+        token: response.access_token,
+        user: response.user,
+        lastActivity: Date.now(),
+        expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
+        rememberMe: true,
+      });
+      
+      console.log('AuthContext: Google OAuth login successful, user set:', response.user);
+      toast.success('Google sign-in successful!');
+    } catch (error: any) {
+      console.error('AuthContext: Google OAuth error:', error);
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'Google sign-in failed';
+      toast.error(errorMessage);
+      throw error;
+    }
+  };
+
+  const loginWithApple = async (token: string, userType?: string) => {
+    try {
+      console.log('AuthContext: Starting Apple OAuth login');
+      const response = await authAPI.appleLogin(token, userType);
+      console.log('AuthContext: Apple OAuth response received:', response);
+      
+      if (!response.access_token) {
+        console.error('AuthContext: No token in Apple OAuth response:', response);
+        throw new Error('No authentication token received');
+      }
+      
+      if (!response.user) {
+        console.error('AuthContext: No user in Apple OAuth response:', response);
+        throw new Error('No user data received');
+      }
+      
+      // Save to localStorage for backward compatibility
+      localStorage.setItem('token', response.access_token);
+      setToken(response.access_token);
+      setUser(response.user);
+      setRememberMeState(true); // OAuth logins are persistent by default
+      
+      // Save session with encryption
+      const expiresAt = sessionManager.getTokenExpiration(response.access_token);
+      sessionManager.saveSession({
+        token: response.access_token,
+        user: response.user,
+        lastActivity: Date.now(),
+        expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
+        rememberMe: true,
+      });
+      
+      console.log('AuthContext: Apple OAuth login successful, user set:', response.user);
+      toast.success('Apple sign-in successful!');
+    } catch (error: any) {
+      console.error('AuthContext: Apple OAuth error:', error);
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'Apple sign-in failed';
+      toast.error(errorMessage);
+      throw error;
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -310,6 +396,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     rememberMe,
     login,
     register,
+    loginWithGoogle,
+    loginWithApple,
     logout,
     updateProfile,
     refreshToken,

@@ -215,6 +215,25 @@ export const authAPI = {
     const response = await api.get(`/api/users/${identifier}`);
     return response.data;
   },
+
+  // OAuth methods
+  googleLogin: async (token: string, userType?: string) => {
+    const response = await api.post('/api/auth/oauth/google', {
+      token,
+      provider: 'google',
+      user_type: userType || 'user'
+    });
+    return response.data;
+  },
+
+  appleLogin: async (token: string, userType?: string) => {
+    const response = await api.post('/api/auth/oauth/apple', {
+      token,
+      provider: 'apple',
+      user_type: userType || 'user'
+    });
+    return response.data;
+  },
 };
 
 // Jobs API
