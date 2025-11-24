@@ -14,13 +14,23 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { postsAPI } from '../services/api';
-import { Post } from '../types';
+import { Post, PostUser } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { postCache } from '../services/postCache';
 
+// Type for posts that have a valid user - used after filtering
+interface ValidPost extends Post {
+  user: PostUser;
+}
+
+// Type guard to check if a post has a valid user
+function hasValidUser(post: Post): post is ValidPost {
+  return post.user != null && typeof post.user.id === 'number';
+}
+
 const PostFeed: React.FC = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<ValidPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const navigate = useNavigate();
@@ -92,8 +102,10 @@ const PostFeed: React.FC = () => {
       // Load from cache first for instant display
       if (useCache && postCache.isCacheAvailable()) {
         const cachedPosts = await postCache.getCachedPosts();
-        if (cachedPosts.length > 0) {
-          setPosts(cachedPosts);
+        // Filter out posts with missing user data using type guard
+        const validCachedPosts = cachedPosts.filter(hasValidUser);
+        if (validCachedPosts.length > 0) {
+          setPosts(validCachedPosts);
           setIsLoading(false);
         }
       }
@@ -103,11 +115,13 @@ const PostFeed: React.FC = () => {
         const postsData = await postsAPI.getPosts();
         
         if (Array.isArray(postsData)) {
-          setPosts(postsData);
+          // Filter out posts with missing user data to prevent runtime errors
+          const validPosts = postsData.filter(hasValidUser);
+          setPosts(validPosts);
           
           // Cache the fresh data
           if (postCache.isCacheAvailable()) {
-            await postCache.cachePosts(postsData);
+            await postCache.cachePosts(validPosts);
           }
         } else {
           console.warn('Posts data is not an array:', postsData);
@@ -422,7 +436,7 @@ const PostFeed: React.FC = () => {
     }
   };
 
-  const handleEditPost = (post: Post) => {
+  const handleEditPost = (post: ValidPost) => {
     setEditingPostId(post.id);
     setEditContent(post.content);
   };
@@ -506,20 +520,21 @@ const PostFeed: React.FC = () => {
     }
   };
 
-  const handleSharePost = async (post: Post) => {
+  const handleSharePost = async (post: ValidPost) => {
     const shareUrl = `${window.location.origin}/post/${post.id}`;
     // Sanitize content by removing any potentially harmful characters and limiting length
     const sanitizedContent = post.content
       .replace(/[<>]/g, '') // Remove angle brackets
       .substring(0, 100)
       .trim();
-    const shareText = `Check out this post by ${post.user.first_name} ${post.user.last_name}: ${sanitizedContent}${post.content.length > 100 ? '...' : ''}`;
+    const userName = post.user ? `${post.user.first_name} ${post.user.last_name}` : 'Unknown User';
+    const shareText = `Check out this post by ${userName}: ${sanitizedContent}${post.content.length > 100 ? '...' : ''}`;
 
     // Check if Web Share API is supported (mainly mobile devices)
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Post by ${post.user.first_name} ${post.user.last_name}`,
+          title: `Post by ${userName}`,
           text: shareText,
           url: shareUrl,
         });

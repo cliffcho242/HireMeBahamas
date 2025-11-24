@@ -37,21 +37,23 @@ export interface Review {
   createdAt: string;
 }
 
+export interface PostUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  username?: string;
+  occupation?: string;
+  company_name?: string;
+}
+
 export interface Post {
   id: number;
   content: string;
   image_url?: string;
   video_url?: string;
   created_at: string;
-  user: {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-    username?: string;
-    occupation?: string;
-    company_name?: string;
-  };
+  user?: PostUser;
   likes_count: number;
   comments_count: number;
   is_liked?: boolean;
