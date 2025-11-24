@@ -21,17 +21,20 @@ const InstallPWA: React.FC = () => {
       (window.navigator as any).standalone ||
       document.referrer.includes('android-app://');
   });
-
-  useEffect(() => {
-    // Check if user has dismissed install banner before
+  
+  // Helper to check if banner should be shown
+  const shouldShowBanner = () => {
     const installDismissed = localStorage.getItem('installBannerDismissed');
     const dismissedDate = installDismissed ? new Date(installDismissed) : null;
     const daysSinceDismissed = dismissedDate 
       ? (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24)
       : 999;
+    return daysSinceDismissed > 7;
+  };
 
+  useEffect(() => {
     // Show banner if not installed and not recently dismissed (wait 7 days)
-    if (!isStandalone && daysSinceDismissed > 7) {
+    if (!isStandalone && shouldShowBanner()) {
       // Show banner after 3 seconds
       const timer = setTimeout(() => {
         setShowInstallBanner(true);
@@ -43,16 +46,10 @@ const InstallPWA: React.FC = () => {
 
   useEffect(() => {
     // Listen for beforeinstallprompt event
-    const installDismissed = localStorage.getItem('installBannerDismissed');
-    const dismissedDate = installDismissed ? new Date(installDismissed) : null;
-    const daysSinceDismissed = dismissedDate 
-      ? (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24)
-      : 999;
-      
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      if (daysSinceDismissed > 7) {
+      if (shouldShowBanner()) {
         setShowInstallBanner(true);
       }
     };
