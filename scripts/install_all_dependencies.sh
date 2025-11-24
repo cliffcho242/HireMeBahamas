@@ -279,6 +279,10 @@ install_system_deps() {
         # Redis (for caching and Celery) - Optional
         "redis-server"
         "redis-tools"
+        # Advanced image format support - Optional
+        "libvips-dev"
+        "libheif-dev"
+        "libavif-dev"
     )
     
     local deps_rhel=(

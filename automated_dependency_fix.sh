@@ -86,23 +86,30 @@ apt-get install -y \
 }
 
 echo ""
-echo -e "${YELLOW}[5/8] Installing image processing and event libraries...${NC}"
+echo -e "${YELLOW}[5/8] Installing image processing libraries...${NC}"
 apt-get install -y \
     libjpeg-dev \
     libpng-dev \
     libtiff-dev \
     libwebp-dev \
     libopenjp2-7-dev \
-    zlib1g-dev \
-    libevent-dev \
-    libxml2-dev \
-    libxslt1-dev || {
+    zlib1g-dev || {
     echo -e "${RED}Failed to install image processing libraries${NC}"
     exit 1
 }
 
 echo ""
-echo -e "${YELLOW}[6/8] Installing additional utilities...${NC}"
+echo -e "${YELLOW}[6/8] Installing additional libraries...${NC}"
+apt-get install -y \
+    libevent-dev \
+    libxml2-dev \
+    libxslt1-dev || {
+    echo -e "${RED}Failed to install additional libraries${NC}"
+    exit 1
+}
+
+echo ""
+echo -e "${YELLOW}[7/8] Installing utilities...${NC}"
 apt-get install -y \
     curl \
     wget \
@@ -115,30 +122,10 @@ apt-get install -y \
 }
 
 echo ""
-echo -e "${YELLOW}[7/8] Installing Node.js (for frontend)...${NC}"
-# Check if Node.js is already installed
-if command -v node >/dev/null 2>&1; then
-    NODE_VERSION=$(node --version)
-    echo "Node.js is already installed: $NODE_VERSION"
-else
-    echo "Installing Node.js 18.x LTS..."
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - || {
-        echo -e "${RED}Failed to setup Node.js repository${NC}"
-        exit 1
-    }
-    apt-get install -y nodejs || {
-        echo -e "${RED}Failed to install Node.js${NC}"
-        exit 1
-    }
-    echo "Node.js installed successfully: $(node --version)"
-fi
-
-echo ""
 echo -e "${YELLOW}[8/8] Installing optional frontend image optimization libraries...${NC}"
 echo "⚠️  These libraries are optional and provide enhanced image format support"
 apt-get install -y \
     libvips-dev \
-    libwebp-dev \
     libheif-dev \
     libavif-dev || {
     echo "⚠️  Note: Some optional image optimization libraries are not available on this system"

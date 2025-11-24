@@ -171,7 +171,7 @@ $SUDO systemctl enable postgresql 2>/dev/null || print_warning "Could not enable
 print_success "PostgreSQL configured"
 
 # Start and enable Redis (if installed)
-if command -v redis-server &> /dev/null || command -v redis-cli &> /dev/null; then
+if systemctl list-unit-files 2>/dev/null | grep -q redis-server.service || command -v redis-server &> /dev/null; then
     $SUDO systemctl start redis-server 2>/dev/null || print_warning "Could not start Redis (may already be running or not installed)"
     $SUDO systemctl enable redis-server 2>/dev/null || print_warning "Could not enable Redis (may not be installed)"
     print_success "Redis configured (if available)"
