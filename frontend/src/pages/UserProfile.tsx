@@ -61,12 +61,20 @@ const UserProfile: React.FC = () => {
   const [followersCount, setFollowersCount] = useState(0);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
+  const [countdownIntervalId, setCountdownIntervalId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (userId) {
       fetchUserProfile();
     }
-  }, [userId]);
+    
+    // Cleanup countdown interval on unmount or userId change
+    return () => {
+      if (countdownIntervalId) {
+        clearInterval(countdownIntervalId);
+      }
+    };
+  }, [userId, countdownIntervalId]);
 
   const fetchUserProfile = async () => {
     if (!userId) return;
@@ -110,10 +118,10 @@ const UserProfile: React.FC = () => {
         setRedirectCountdown(3);
         
         // Countdown timer
-        const countdownInterval = setInterval(() => {
+        const interval = setInterval(() => {
           setRedirectCountdown((prev) => {
             if (prev === null || prev <= 1) {
-              clearInterval(countdownInterval);
+              clearInterval(interval);
               navigate('/friends');
               return null;
             }
@@ -121,8 +129,8 @@ const UserProfile: React.FC = () => {
           });
         }, 1000);
         
-        // Cleanup on unmount
-        return () => clearInterval(countdownInterval);
+        // Store interval ID for cleanup
+        setCountdownIntervalId(interval);
       }
     } finally {
       setIsLoading(false);

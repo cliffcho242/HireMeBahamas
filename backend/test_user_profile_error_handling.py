@@ -2,12 +2,16 @@
 """
 Test script to verify improved error handling for user profile lookups.
 Tests input validation, error messages, and edge cases.
+
+Note: This test modifies sys.path to import the app module.
+In a production setup, consider using pytest with proper package configuration.
 """
 import asyncio
 import sys
 from pathlib import Path
 
-# Add backend to path
+# Add backend to path (needed for standalone script execution)
+# In production, use pytest with proper PYTHONPATH configuration
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.database import init_db, get_db, engine
