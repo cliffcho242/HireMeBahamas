@@ -146,21 +146,33 @@ async def get_user(
     if identifier.isdigit():
         try:
             user_id = int(identifier)
-            # Validate ID is positive and reasonable
-            if user_id <= 0 or user_id > MAX_INT32:
-                logger.warning(f"Invalid user ID: {user_id} from user_id={current_user.id}")
+            
+            # Validate ID is positive
+            if user_id <= 0:
+                logger.warning(f"Non-positive user ID: {user_id} from user_id={current_user.id}")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid user ID"
+                    detail="Invalid user ID: must be a positive integer"
+                )
+            
+            # Validate ID doesn't overflow (max int32)
+            if user_id > MAX_INT32:
+                logger.warning(f"User ID overflow: {user_id} from user_id={current_user.id}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid user ID: value too large"
                 )
             
             result = await db.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
             lookup_method = "ID"
             logger.debug(f"Lookup by ID {user_id}: {'found' if user else 'not found'}")
+        except HTTPException:
+            # Re-raise our validation errors
+            raise
         except (ValueError, OverflowError) as e:
-            # Invalid integer, will try username lookup
-            logger.warning(f"Failed to parse ID {identifier}: {e}")
+            # Invalid integer format, will try username lookup
+            logger.debug(f"Failed to parse as integer: {identifier}, error: {e}")
             pass
     
     # If not found by ID or not a digit, try username

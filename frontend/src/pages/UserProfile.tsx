@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -61,7 +61,9 @@ const UserProfile: React.FC = () => {
   const [followersCount, setFollowersCount] = useState(0);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
-  const [countdownIntervalId, setCountdownIntervalId] = useState<NodeJS.Timeout | null>(null);
+  
+  // Use ref to store interval ID for proper cleanup
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -70,11 +72,12 @@ const UserProfile: React.FC = () => {
     
     // Cleanup countdown interval on unmount or userId change
     return () => {
-      if (countdownIntervalId) {
-        clearInterval(countdownIntervalId);
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
       }
     };
-  }, [userId, countdownIntervalId]);
+  }, [userId]);
 
   const fetchUserProfile = async () => {
     if (!userId) return;
@@ -117,20 +120,25 @@ const UserProfile: React.FC = () => {
         console.log('User not found. Auto-redirecting to users page in 3 seconds...');
         setRedirectCountdown(3);
         
+        // Clear any existing interval
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+        }
+        
         // Countdown timer
-        const interval = setInterval(() => {
+        countdownIntervalRef.current = setInterval(() => {
           setRedirectCountdown((prev) => {
             if (prev === null || prev <= 1) {
-              clearInterval(interval);
+              if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+              }
               navigate('/friends');
               return null;
             }
             return prev - 1;
           });
         }, 1000);
-        
-        // Store interval ID for cleanup
-        setCountdownIntervalId(interval);
       }
     } finally {
       setIsLoading(false);
