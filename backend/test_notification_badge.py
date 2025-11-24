@@ -141,12 +141,10 @@ async def test_notification_badge_count():
             print(f"✅ Badge count after marking LIKE as read: {badge_count_after}")
             
             # Cleanup
-            await session.execute(
+            notifications_result = await session.execute(
                 select(Notification).where(Notification.user_id == user.id)
             )
-            for notification in (await session.execute(
-                select(Notification).where(Notification.user_id == user.id)
-            )).scalars().all():
+            for notification in notifications_result.scalars().all():
                 await session.delete(notification)
             
             await session.delete(user)
