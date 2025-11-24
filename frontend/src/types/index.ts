@@ -41,6 +41,7 @@ export interface Post {
   id: number;
   content: string;
   image_url?: string;
+  video_url?: string;
   created_at: string;
   user: {
     id: number;

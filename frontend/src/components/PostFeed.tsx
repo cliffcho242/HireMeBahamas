@@ -721,6 +721,18 @@ const PostFeed: React.FC = () => {
                     />
                   </div>
                 )}
+                {post.video_url && (
+                  <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 bg-black">
+                    <video
+                      src={post.video_url}
+                      controls
+                      className="w-full h-auto max-h-96"
+                      preload="metadata"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                )}
               </>
             )}
           </div>

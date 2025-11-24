@@ -134,6 +134,7 @@ class handler(BaseHTTPRequestHandler):
                 "id": len(posts) + 1,
                 "content": data.get("content"),
                 "image_url": data.get("image_url"),
+                "video_url": data.get("video_url"),
                 "user": {
                     "id": 1,
                     "first_name": "Admin",
