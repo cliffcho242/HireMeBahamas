@@ -3,7 +3,7 @@ from uuid import UUID
 
 from app.core.security import get_current_user
 from app.database import get_db
-from app.models import Job, JobApplication, Notification, NotificationType, User
+from app.models import Job, JobApplication, Notification, NotificationType, Post, User
 from app.schemas.job import (
     JobApplicationCreate,
     JobApplicationResponse,
@@ -37,6 +37,22 @@ async def create_job(
         select(Job).options(selectinload(Job.employer)).where(Job.id == db_job.id)
     )
     job_with_employer = result.scalar_one()
+
+    # Create a post for the job so it appears in the news feed
+    job_post_content = f"🚀 New Job Opening: {job_with_employer.title}\n\n"
+    job_post_content += f"Company: {job_with_employer.company}\n"
+    job_post_content += f"Location: {job_with_employer.location}\n"
+    job_post_content += f"Type: {job_with_employer.job_type}\n\n"
+    job_post_content += f"{job_with_employer.description[:200]}{'...' if len(job_with_employer.description) > 200 else ''}"
+
+    db_post = Post(
+        user_id=current_user.id,
+        content=job_post_content,
+        post_type="job",
+        related_job_id=db_job.id
+    )
+    db.add(db_post)
+    await db.commit()
 
     return job_with_employer
 
