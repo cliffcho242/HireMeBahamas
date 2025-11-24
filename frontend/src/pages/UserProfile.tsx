@@ -43,6 +43,7 @@ interface Post {
   id: number;
   content: string;
   image_url?: string;
+  video_url?: string;
   created_at: string;
   likes_count: number;
   comments_count: number;
@@ -60,7 +61,7 @@ const UserProfile: React.FC = () => {
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'posts' | 'about'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'about' | 'photos' | 'videos'>('posts');
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
@@ -404,6 +405,26 @@ const UserProfile: React.FC = () => {
               >
                 About
               </button>
+              <button
+                onClick={() => setActiveTab('photos')}
+                className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
+                  activeTab === 'photos'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Photos ({userPosts.filter(p => p.image_url).length})
+              </button>
+              <button
+                onClick={() => setActiveTab('videos')}
+                className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
+                  activeTab === 'videos'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Videos ({userPosts.filter(p => p.video_url).length})
+              </button>
             </nav>
           </div>
 
@@ -439,6 +460,83 @@ const UserProfile: React.FC = () => {
                       </div>
                     </motion.div>
                   ))
+                )}
+              </div>
+            )}
+
+            {activeTab === 'photos' && (
+              <div>
+                {userPosts.filter(p => p.image_url).length === 0 ? (
+                  <div className="text-center py-12">
+                    <UserCircleIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">No photos yet</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {userPosts
+                      .filter(p => p.image_url)
+                      .map((post) => (
+                        <motion.div
+                          key={post.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer group"
+                        >
+                          <img
+                            src={post.image_url}
+                            alt="Photo"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 text-white text-sm space-x-4 transition-opacity duration-200">
+                              <span>❤️ {post.likes_count}</span>
+                              <span>💬 {post.comments_count}</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'videos' && (
+              <div>
+                {userPosts.filter(p => p.video_url).length === 0 ? (
+                  <div className="text-center py-12">
+                    <UserCircleIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">No videos yet</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {userPosts
+                      .filter(p => p.video_url)
+                      .map((post) => (
+                        <motion.div
+                          key={post.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="relative bg-gray-100 rounded-lg overflow-hidden"
+                        >
+                          <video
+                            src={post.video_url}
+                            controls
+                            className="w-full h-auto max-h-64 object-cover"
+                            preload="metadata"
+                          >
+                            Your browser does not support the video tag.
+                          </video>
+                          <div className="p-3 bg-white">
+                            <p className="text-sm text-gray-900 line-clamp-2">{post.content}</p>
+                            <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
+                              <span>❤️ {post.likes_count}</span>
+                              <span>💬 {post.comments_count}</span>
+                              <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                  </div>
                 )}
               </div>
             )}
