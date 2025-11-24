@@ -150,7 +150,11 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
     try {
       // For now, just create post with first image or video
       // TODO: Implement proper multi-image/video upload to a storage service
-      const postData: any = {
+      const postData: {
+        content: string;
+        image_url?: string;
+        video_url?: string;
+      } = {
         content: content.trim(),
       };
       
