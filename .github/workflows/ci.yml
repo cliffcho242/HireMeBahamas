@@ -71,5 +71,5 @@ jobs:
 
       - name: Run backend tests
         run: |
-          python -m pytest backend/test_app.py || \
+          python -m pytest backend/test_app.py backend/test_database_integrity.py -v || \
             echo "Tests passed or no tests found"
