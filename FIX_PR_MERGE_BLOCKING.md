@@ -11,12 +11,12 @@ Five open pull requests (#20, #24, #35, #100, #118) are unable to merge because 
 | #118 | Fix Python 3.12 incompatibility and React cascading render warnings | ❌ Failed |
 | #100 | Add Firebase Realtime Database integration | ❌ Failed |
 | #35 | Add CI/CD workflow, automated deployment, backend build fix | ❌ Failed |
-| #24 | Automate complete dependency installation | ✅ Success |
+| #24 | Automate complete dependency installation | ✅ Success (not blocked) |
 | #20 | Fix Railway deployment: Update config files and fix gunicorn.conf.py | ❌ Failed |
 
 ## Root Cause
 
-Railway has a direct integration with this GitHub repository (via webhooks) that automatically attempts to deploy every PR to a preview environment. These preview deployments are failing, and Railway is configured as a **required status check** for merging PRs.
+Railway has a direct integration with this GitHub repository (via webhooks) that automatically attempts to deploy every PR to a preview environment. Most of these preview deployments are failing (4 out of 5 PRs), and Railway is configured as a **required status check** for merging PRs.
 
 The Railway check is named: **"zealous-heart - web"**
 
@@ -63,7 +63,11 @@ If you want to keep Railway as a required check, you need to fix the deployment 
    - **Health Check Failures**: The `/health` endpoint must respond within the timeout period
 
 3. **Environment Variables to Check:**
+   
+   ⚠️ **WARNING**: These are example variable names only. Never commit actual secrets to documentation!
+   
    ```bash
+   # Example variables needed (use your actual secret values in Railway dashboard):
    DATABASE_URL=postgresql://...  # Required for PostgreSQL
    SECRET_KEY=your-secret-key     # Required for Flask sessions
    JWT_SECRET_KEY=your-jwt-secret # Required for JWT tokens

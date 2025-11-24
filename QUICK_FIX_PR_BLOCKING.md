@@ -23,7 +23,7 @@ Make Railway check optional in GitHub settings.
    - Look for "zealous-heart - web" (Railway check)
 
 4. **Uncheck Railway**
-   - ☐ Uncheck "zealous-heart - web"
+   - Uncheck the "zealous-heart - web" checkbox
    - Click "Save changes" at the bottom
 
 5. **Merge PRs**
