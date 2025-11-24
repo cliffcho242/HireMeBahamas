@@ -27,11 +27,17 @@ def app():
     # Create a temporary database for testing
     db_fd, db_path = tempfile.mkstemp(suffix=".db")
     
+    # Store original values to restore after test
+    original_db_path = getattr(final_backend, 'DB_PATH', None)
+    original_use_postgresql = getattr(final_backend, 'USE_POSTGRESQL', None)
+    
     # Update the app to use test database
     final_backend.DB_PATH = Path(db_path)
     final_backend.USE_POSTGRESQL = False
     
     # Initialize the database with users table
+    # Note: This schema mirrors the production schema in final_backend.py
+    # If the production schema changes, this should be updated accordingly
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
@@ -59,11 +65,17 @@ def app():
     conn.close()
     
     final_backend.app.config['TESTING'] = True
-    final_backend.app.config['SECRET_KEY'] = 'test-secret-key'
+    # Use a unique secret key for each test to prevent cross-test issues
+    import secrets
+    final_backend.app.config['SECRET_KEY'] = secrets.token_hex(32)
     
     yield final_backend.app
     
-    # Cleanup
+    # Cleanup: restore original values and remove temp database
+    if original_db_path is not None:
+        final_backend.DB_PATH = original_db_path
+    if original_use_postgresql is not None:
+        final_backend.USE_POSTGRESQL = original_use_postgresql
     os.close(db_fd)
     os.unlink(db_path)
 

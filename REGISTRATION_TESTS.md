@@ -13,7 +13,7 @@ The registration test suite contains **17 comprehensive test cases** that valida
 ```bash
 # Install dependencies
 pip install pytest pytest-flask
-pip install -r requirements.txt
+pip install -r requirements.txt  # Main requirements file in project root
 
 # Run all registration tests
 python -m pytest test_registration.py -v
