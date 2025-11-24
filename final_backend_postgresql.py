@@ -650,15 +650,15 @@ def init_database_background():
         try:
             print("🔧 Attempting database initialization in background thread...")
             init_database()
-            # init_database() sets _db_initialized = True and prints success message
         except Exception as e:
             print(f"⚠️ Database initialization warning: {e}")
             print("⚠️ Database will be initialized on first request")
-            # Don't exit - allow retries later
 
 # Start database initialization in background thread
+_db_init_thread = None
 try:
-    threading.Thread(target=init_database_background, daemon=True, name="db-init").start()
+    _db_init_thread = threading.Thread(target=init_database_background, daemon=True, name="db-init")
+    _db_init_thread.start()
     print("🚀 Database initialization started in background thread")
 except Exception as e:
     print(f"⚠️ Failed to start database initialization thread: {e}")
