@@ -119,14 +119,7 @@ const PostFeed: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch posts:', error);
-      
-      // Only show error if we don't have cached posts - use functional update to avoid dependency
-      setPosts(currentPosts => {
-        if (currentPosts.length === 0) {
-          toast.error('Failed to load posts. Showing cached content if available.');
-        }
-        return currentPosts;
-      });
+      // Error toast will be shown by the calling code if needed
     } finally {
       setIsLoading(false);
     }
@@ -137,7 +130,9 @@ const PostFeed: React.FC = () => {
     const handleOnline = () => {
       setIsOnline(true);
       toast.success('Connection restored');
-      // Sync and fetch will be handled by the main useEffect
+      // Immediately sync and fetch when coming back online
+      syncPendingActions();
+      fetchPosts();
     };
     
     const handleOffline = () => {
@@ -152,7 +147,7 @@ const PostFeed: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [fetchPosts, syncPendingActions]);
 
   useEffect(() => {
     fetchPosts();
