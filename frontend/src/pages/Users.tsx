@@ -28,6 +28,12 @@ const Users: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'discover' | 'following' | 'followers'>('discover');
 
+  const getUserInitials = (userData: User): string => {
+    const firstInitial = userData.first_name?.[0] || '';
+    const lastInitial = userData.last_name?.[0] || '';
+    return (firstInitial + lastInitial).toUpperCase() || '?';
+  };
+
   useEffect(() => {
     if (user) {
       loadUsersData();
@@ -193,7 +199,7 @@ const Users: React.FC = () => {
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                            {((userData.first_name?.[0] || '') + (userData.last_name?.[0] || '')).toUpperCase() || '?'}
+                            {getUserInitials(userData)}
                           </div>
                           <div>
                             <h3 className="font-medium text-gray-900">
@@ -260,7 +266,7 @@ const Users: React.FC = () => {
                     <div key={userData.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-center space-x-3 mb-3">
                         <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {((userData.first_name?.[0] || '') + (userData.last_name?.[0] || '')).toUpperCase() || '?'}
+                          {getUserInitials(userData)}
                         </div>
                         <div className="flex-1">
                           <h3 className="font-medium text-gray-900">
@@ -302,7 +308,7 @@ const Users: React.FC = () => {
                     <div key={userData.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-center space-x-3">
                         <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {((userData.first_name?.[0] || '') + (userData.last_name?.[0] || '')).toUpperCase() || '?'}
+                          {getUserInitials(userData)}
                         </div>
                         <div className="flex-1">
                           <h3 className="font-medium text-gray-900">
