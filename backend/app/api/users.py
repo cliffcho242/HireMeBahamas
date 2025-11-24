@@ -323,7 +323,7 @@ async def unfollow_user(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Not following this user"
         )
 
-    await db.delete(follow)
+    db.delete(follow)
     await db.commit()
 
     return {"success": True, "message": "User unfollowed successfully"}
