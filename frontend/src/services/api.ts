@@ -575,6 +575,16 @@ export const usersAPI = {
     const response = await api.get('/api/users/following/list');
     return response.data;
   },
+
+  getUserFollowers: async (userId: number): Promise<FollowersResponse> => {
+    const response = await api.get(`/api/users/${userId}/followers`);
+    return response.data;
+  },
+
+  getUserFollowing: async (userId: number): Promise<FollowingResponse> => {
+    const response = await api.get(`/api/users/${userId}/following`);
+    return response.data;
+  },
 };
 
 // Notifications API

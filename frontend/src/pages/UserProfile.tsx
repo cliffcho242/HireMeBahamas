@@ -49,6 +49,21 @@ interface Post {
   comments_count: number;
 }
 
+interface FollowUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  username?: string;
+  avatar_url?: string;
+  bio?: string;
+  occupation?: string;
+  location?: string;
+  is_following?: boolean;
+  followers_count?: number;
+  following_count?: number;
+}
+
 // Constants
 const USERS_LIST_ROUTE = '/friends';
 const REDIRECT_DELAY_SECONDS = 3;
@@ -61,11 +76,16 @@ const UserProfile: React.FC = () => {
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'posts' | 'about' | 'photos' | 'videos'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'about' | 'photos' | 'videos' | 'followers' | 'following'>('posts');
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
+  const [followersList, setFollowersList] = useState<FollowUser[]>([]);
+  const [followingList, setFollowingList] = useState<FollowUser[]>([]);
+  const [isLoadingFollowers, setIsLoadingFollowers] = useState(false);
+  const [isLoadingFollowing, setIsLoadingFollowing] = useState(false);
   
   // Use ref to store interval ID for proper cleanup
   // In browsers, setInterval returns number; in Node.js it returns NodeJS.Timeout
@@ -121,6 +141,7 @@ const UserProfile: React.FC = () => {
       // Set follow state - these are now guaranteed to be defined
       setIsFollowing(normalizedProfile.is_following);
       setFollowersCount(normalizedProfile.followers_count);
+      setFollowingCount(normalizedProfile.following_count);
 
       // Fetch user's posts
       const allPosts = await postsAPI.getPosts();
@@ -201,6 +222,45 @@ const UserProfile: React.FC = () => {
       toast.error(error.response?.data?.message || 'Failed to update follow status');
     } finally {
       setIsFollowLoading(false);
+    }
+  };
+
+  const fetchFollowers = async () => {
+    if (!userId) return;
+    
+    setIsLoadingFollowers(true);
+    try {
+      const response = await usersAPI.getUserFollowers(parseInt(userId));
+      setFollowersList(response.followers || []);
+    } catch (error: any) {
+      console.error('Failed to fetch followers:', error);
+      toast.error('Failed to load followers');
+    } finally {
+      setIsLoadingFollowers(false);
+    }
+  };
+
+  const fetchFollowing = async () => {
+    if (!userId) return;
+    
+    setIsLoadingFollowing(true);
+    try {
+      const response = await usersAPI.getUserFollowing(parseInt(userId));
+      setFollowingList(response.following || []);
+    } catch (error: any) {
+      console.error('Failed to fetch following:', error);
+      toast.error('Failed to load following');
+    } finally {
+      setIsLoadingFollowing(false);
+    }
+  };
+
+  const handleTabChange = (tab: 'posts' | 'about' | 'photos' | 'videos' | 'followers' | 'following') => {
+    setActiveTab(tab);
+    if (tab === 'followers' && followersList.length === 0) {
+      fetchFollowers();
+    } else if (tab === 'following' && followingList.length === 0) {
+      fetchFollowing();
     }
   };
 
@@ -380,18 +440,27 @@ const UserProfile: React.FC = () => {
 
               {/* Stats */}
               <div className="flex space-x-8 mt-6 pt-6 border-t border-gray-200">
-                <div className="text-center">
+                <button
+                  onClick={() => handleTabChange('posts')}
+                  className="text-center hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors"
+                >
                   <p className="text-2xl font-bold text-gray-900">{profile.posts_count}</p>
                   <p className="text-sm text-gray-600">Posts</p>
-                </div>
-                <div className="text-center">
+                </button>
+                <button
+                  onClick={() => handleTabChange('followers')}
+                  className="text-center hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors"
+                >
                   <p className="text-2xl font-bold text-gray-900">{followersCount}</p>
                   <p className="text-sm text-gray-600">Followers</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900">{profile.following_count || 0}</p>
+                </button>
+                <button
+                  onClick={() => handleTabChange('following')}
+                  className="text-center hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors"
+                >
+                  <p className="text-2xl font-bold text-gray-900">{followingCount}</p>
                   <p className="text-sm text-gray-600">Following</p>
-                </div>
+                </button>
                 {profile.is_available_for_hire && (
                   <div className="flex items-center">
                     <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
@@ -407,9 +476,9 @@ const UserProfile: React.FC = () => {
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="border-b border-gray-200">
-            <nav className="flex">
+            <nav className="flex flex-wrap">
               <button
-                onClick={() => setActiveTab('posts')}
+                onClick={() => handleTabChange('posts')}
                 className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
                   activeTab === 'posts'
                     ? 'text-blue-600 border-b-2 border-blue-600'
@@ -419,7 +488,7 @@ const UserProfile: React.FC = () => {
                 Posts ({profile.posts_count})
               </button>
               <button
-                onClick={() => setActiveTab('about')}
+                onClick={() => handleTabChange('about')}
                 className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
                   activeTab === 'about'
                     ? 'text-blue-600 border-b-2 border-blue-600'
@@ -429,7 +498,27 @@ const UserProfile: React.FC = () => {
                 About
               </button>
               <button
-                onClick={() => setActiveTab('photos')}
+                onClick={() => handleTabChange('followers')}
+                className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
+                  activeTab === 'followers'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Followers ({followersCount})
+              </button>
+              <button
+                onClick={() => handleTabChange('following')}
+                className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
+                  activeTab === 'following'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Following ({followingCount})
+              </button>
+              <button
+                onClick={() => handleTabChange('photos')}
                 className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
                   activeTab === 'photos'
                     ? 'text-blue-600 border-b-2 border-blue-600'
@@ -439,7 +528,7 @@ const UserProfile: React.FC = () => {
                 Photos ({userPosts.filter(p => p.image_url).length})
               </button>
               <button
-                onClick={() => setActiveTab('videos')}
+                onClick={() => handleTabChange('videos')}
                 className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
                   activeTab === 'videos'
                     ? 'text-blue-600 border-b-2 border-blue-600'
@@ -601,6 +690,122 @@ const UserProfile: React.FC = () => {
                     {profile.user_type.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                   </span>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'followers' && (
+              <div>
+                {isLoadingFollowers ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading followers...</p>
+                  </div>
+                ) : followersList.length === 0 ? (
+                  <div className="text-center py-12">
+                    <UserCircleIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">No followers yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {followersList.map((follower) => (
+                      <motion.div
+                        key={follower.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center justify-between bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors"
+                      >
+                        <div
+                          className="flex items-center space-x-4 cursor-pointer"
+                          onClick={() => navigate(`/user/${follower.id}`)}
+                        >
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                            {follower.avatar_url ? (
+                              <img
+                                src={follower.avatar_url}
+                                alt={`${follower.first_name} ${follower.last_name}`}
+                                className="w-full h-full rounded-full object-cover"
+                              />
+                            ) : (
+                              <span>{follower.first_name?.[0]}{follower.last_name?.[0]}</span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {follower.first_name} {follower.last_name}
+                            </p>
+                            {follower.username && (
+                              <p className="text-sm text-blue-600">@{follower.username}</p>
+                            )}
+                            {follower.occupation && (
+                              <p className="text-sm text-gray-500">{follower.occupation}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right text-sm text-gray-500">
+                          <p>{follower.followers_count} followers</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'following' && (
+              <div>
+                {isLoadingFollowing ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading following...</p>
+                  </div>
+                ) : followingList.length === 0 ? (
+                  <div className="text-center py-12">
+                    <UserCircleIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">Not following anyone yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {followingList.map((followed) => (
+                      <motion.div
+                        key={followed.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center justify-between bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors"
+                      >
+                        <div
+                          className="flex items-center space-x-4 cursor-pointer"
+                          onClick={() => navigate(`/user/${followed.id}`)}
+                        >
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                            {followed.avatar_url ? (
+                              <img
+                                src={followed.avatar_url}
+                                alt={`${followed.first_name} ${followed.last_name}`}
+                                className="w-full h-full rounded-full object-cover"
+                              />
+                            ) : (
+                              <span>{followed.first_name?.[0]}{followed.last_name?.[0]}</span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {followed.first_name} {followed.last_name}
+                            </p>
+                            {followed.username && (
+                              <p className="text-sm text-blue-600">@{followed.username}</p>
+                            )}
+                            {followed.occupation && (
+                              <p className="text-sm text-gray-500">{followed.occupation}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right text-sm text-gray-500">
+                          <p>{followed.followers_count} followers</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
