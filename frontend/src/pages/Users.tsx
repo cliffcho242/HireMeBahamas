@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import axios from 'axios';
 import { UserGroupIcon, UserPlusIcon, CheckIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { UserGroupIcon as UserGroupSolidIcon } from '@heroicons/react/24/solid';
 
@@ -42,13 +43,15 @@ const Users: React.FC = () => {
     });
   };
 
-  useEffect(() => {
-    if (user) {
-      loadUsersData();
+  // Helper function to extract error message from API errors
+  const getErrorMessage = (error: unknown, defaultMessage: string): string => {
+    if (axios.isAxiosError(error) && error.response?.data?.detail) {
+      return error.response.data.detail;
     }
-  }, [user]);
+    return defaultMessage;
+  };
 
-  const loadUsersData = async () => {
+  const loadUsersData = useCallback(async () => {
     setLoading(true);
     try {
       const [usersRes, followingRes, followersRes] = await Promise.all([
@@ -71,7 +74,13 @@ const Users: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadUsersData();
+    }
+  }, [user, loadUsersData]);
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
@@ -94,9 +103,9 @@ const Users: React.FC = () => {
       await api.post(`/api/users/follow/${userId}`);
       // Refresh data
       await loadUsersData();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error following user:', error);
-      alert(error.response?.data?.detail || 'Failed to follow user');
+      alert(getErrorMessage(error, 'Failed to follow user'));
     }
   };
 
@@ -105,9 +114,9 @@ const Users: React.FC = () => {
       await api.post(`/api/users/unfollow/${userId}`);
       // Refresh data
       await loadUsersData();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error unfollowing user:', error);
-      alert(error.response?.data?.detail || 'Failed to unfollow user');
+      alert(getErrorMessage(error, 'Failed to unfollow user'));
     }
   };
 
