@@ -1,5 +1,4 @@
 from typing import List, Optional
-from uuid import UUID
 
 from app.core.security import get_current_user
 from app.database import get_db
@@ -13,7 +12,7 @@ from app.schemas.job import (
     JobUpdate,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, desc, or_, select
+from sqlalchemy import and_, desc, or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -111,7 +110,7 @@ async def get_jobs(
 
 
 @router.get("/{job_id}", response_model=JobResponse)
-async def get_job(job_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_job(job_id: int, db: AsyncSession = Depends(get_db)):
     """Get a specific job by ID"""
     result = await db.execute(
         select(Job)
@@ -133,7 +132,7 @@ async def get_job(job_id: UUID, db: AsyncSession = Depends(get_db)):
 
 @router.put("/{job_id}", response_model=JobResponse)
 async def update_job(
-    job_id: UUID,
+    job_id: int,
     job_update: JobUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -172,7 +171,7 @@ async def update_job(
 
 @router.delete("/{job_id}")
 async def delete_job(
-    job_id: UUID,
+    job_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -199,7 +198,7 @@ async def delete_job(
 
 @router.post("/{job_id}/apply", response_model=JobApplicationResponse)
 async def apply_to_job(
-    job_id: UUID,
+    job_id: int,
     application: JobApplicationCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -276,7 +275,7 @@ async def apply_to_job(
 
 @router.get("/{job_id}/applications", response_model=List[JobApplicationResponse])
 async def get_job_applications(
-    job_id: UUID,
+    job_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

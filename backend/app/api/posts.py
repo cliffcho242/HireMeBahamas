@@ -21,6 +21,58 @@ from sqlalchemy.orm import selectinload
 router = APIRouter()
 
 
+async def enrich_post_with_metadata(
+    post: Post,
+    db: AsyncSession,
+    current_user: Optional[User] = None
+) -> PostResponse:
+    """
+    Helper function to enrich a post with metadata (likes count, comments count, is_liked).
+    This helps avoid N+1 query problems by centralizing the logic.
+    """
+    # Get likes count
+    likes_result = await db.execute(
+        select(func.count()).select_from(PostLike).where(PostLike.post_id == post.id)
+    )
+    likes_count = likes_result.scalar() or 0
+
+    # Get comments count
+    comments_result = await db.execute(
+        select(func.count())
+        .select_from(PostComment)
+        .where(PostComment.post_id == post.id)
+    )
+    comments_count = comments_result.scalar() or 0
+
+    # Check if current user liked this post
+    is_liked = False
+    if current_user:
+        liked_result = await db.execute(
+            select(PostLike).where(
+                and_(
+                    PostLike.post_id == post.id, PostLike.user_id == current_user.id
+                )
+            )
+        )
+        is_liked = liked_result.scalar_one_or_none() is not None
+
+    return PostResponse(
+        id=post.id,
+        user_id=post.user_id,
+        user=PostUser.from_orm(post.user),
+        content=post.content,
+        image_url=post.image_url,
+        video_url=post.video_url,
+        post_type=post.post_type,
+        related_job_id=post.related_job_id,
+        likes_count=likes_count,
+        comments_count=comments_count,
+        is_liked=is_liked,
+        created_at=post.created_at,
+        updated_at=post.updated_at,
+    )
+
+
 @router.post("/", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_post(
     post: PostCreate,
@@ -39,22 +91,8 @@ async def create_post(
     )
     post_with_user = result.scalar_one()
 
-    # Format response to match frontend expectations
-    post_data = PostResponse(
-        id=post_with_user.id,
-        user_id=post_with_user.user_id,
-        user=PostUser.from_orm(post_with_user.user),
-        content=post_with_user.content,
-        image_url=post_with_user.image_url,
-        video_url=post_with_user.video_url,
-        post_type=post_with_user.post_type,
-        related_job_id=post_with_user.related_job_id,
-        likes_count=0,
-        comments_count=0,
-        is_liked=False,
-        created_at=post_with_user.created_at,
-        updated_at=post_with_user.updated_at,
-    )
+    # Use helper to enrich post with metadata
+    post_data = await enrich_post_with_metadata(post_with_user, db, current_user)
 
     return {"success": True, "post": post_data.dict()}
 
@@ -76,50 +114,10 @@ async def get_posts(
     result = await db.execute(query)
     posts = result.scalars().all()
 
-    # Build response with like/comment counts
+    # Build response with like/comment counts using helper
     posts_data = []
     for post in posts:
-        # Get likes count
-        likes_result = await db.execute(
-            select(func.count()).select_from(PostLike).where(PostLike.post_id == post.id)
-        )
-        likes_count = likes_result.scalar() or 0
-
-        # Get comments count
-        comments_result = await db.execute(
-            select(func.count())
-            .select_from(PostComment)
-            .where(PostComment.post_id == post.id)
-        )
-        comments_count = comments_result.scalar() or 0
-
-        # Check if current user liked this post
-        is_liked = False
-        if current_user:
-            liked_result = await db.execute(
-                select(PostLike).where(
-                    and_(
-                        PostLike.post_id == post.id, PostLike.user_id == current_user.id
-                    )
-                )
-            )
-            is_liked = liked_result.scalar_one_or_none() is not None
-
-        post_data = PostResponse(
-            id=post.id,
-            user_id=post.user_id,
-            user=PostUser.from_orm(post.user),
-            content=post.content,
-            image_url=post.image_url,
-            video_url=post.video_url,
-            post_type=post.post_type,
-            related_job_id=post.related_job_id,
-            likes_count=likes_count,
-            comments_count=comments_count,
-            is_liked=is_liked,
-            created_at=post.created_at,
-            updated_at=post.updated_at,
-        )
+        post_data = await enrich_post_with_metadata(post, db, current_user)
         posts_data.append(post_data.dict())
 
     return {"success": True, "posts": posts_data}
@@ -142,43 +140,8 @@ async def get_post(
             status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
         )
 
-    # Get likes count
-    likes_result = await db.execute(
-        select(func.count()).select_from(PostLike).where(PostLike.post_id == post.id)
-    )
-    likes_count = likes_result.scalar() or 0
-
-    # Get comments count
-    comments_result = await db.execute(
-        select(func.count()).select_from(PostComment).where(PostComment.post_id == post.id)
-    )
-    comments_count = comments_result.scalar() or 0
-
-    # Check if current user liked this post
-    is_liked = False
-    if current_user:
-        liked_result = await db.execute(
-            select(PostLike).where(
-                and_(PostLike.post_id == post.id, PostLike.user_id == current_user.id)
-            )
-        )
-        is_liked = liked_result.scalar_one_or_none() is not None
-
-    return PostResponse(
-        id=post.id,
-        user_id=post.user_id,
-        user=PostUser.from_orm(post.user),
-        content=post.content,
-        image_url=post.image_url,
-        video_url=post.video_url,
-        post_type=post.post_type,
-        related_job_id=post.related_job_id,
-        likes_count=likes_count,
-        comments_count=comments_count,
-        is_liked=is_liked,
-        created_at=post.created_at,
-        updated_at=post.updated_at,
-    )
+    # Use helper to enrich post with metadata
+    return await enrich_post_with_metadata(post, db, current_user)
 
 
 @router.put("/{post_id}", response_model=dict)
@@ -214,21 +177,8 @@ async def update_post(
     )
     updated_post = result.scalar_one()
 
-    post_data = PostResponse(
-        id=updated_post.id,
-        user_id=updated_post.user_id,
-        user=PostUser.from_orm(updated_post.user),
-        content=updated_post.content,
-        image_url=updated_post.image_url,
-        video_url=updated_post.video_url,
-        post_type=updated_post.post_type,
-        related_job_id=updated_post.related_job_id,
-        likes_count=0,
-        comments_count=0,
-        is_liked=False,
-        created_at=updated_post.created_at,
-        updated_at=updated_post.updated_at,
-    )
+    # Use helper to enrich post with metadata
+    post_data = await enrich_post_with_metadata(updated_post, db, current_user)
 
     return {"success": True, "post": post_data.dict()}
 
