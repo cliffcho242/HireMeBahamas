@@ -4,7 +4,7 @@ import re
 
 from app.api.auth import get_current_user
 from app.database import get_db
-from app.models import Follow, Notification, NotificationType, User
+from app.models import Follow, Notification, NotificationType, User, Post
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,19 +65,19 @@ async def get_users(
         followers_result = await db.execute(
             select(func.count()).select_from(Follow).where(Follow.followed_id == user.id)
         )
-        followers_count = followers_result.scalar()
+        followers_count = followers_result.scalar() or 0
 
         # Count following
         following_result = await db.execute(
             select(func.count()).select_from(Follow).where(Follow.follower_id == user.id)
         )
-        following_count = following_result.scalar()
+        following_count = following_result.scalar() or 0
 
         users_data.append(
             {
                 "id": user.id,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
+                "first_name": user.first_name or "",
+                "last_name": user.last_name or "",
                 "email": user.email,
                 "username": user.username,
                 "avatar_url": user.avatar_url,
@@ -207,12 +207,18 @@ async def get_user(
     followers_result = await db.execute(
         select(func.count()).select_from(Follow).where(Follow.followed_id == user.id)
     )
-    followers_count = followers_result.scalar()
+    followers_count = followers_result.scalar() or 0
 
     following_result = await db.execute(
         select(func.count()).select_from(Follow).where(Follow.follower_id == user.id)
     )
-    following_count = following_result.scalar()
+    following_count = following_result.scalar() or 0
+    
+    # Get actual posts count
+    posts_result = await db.execute(
+        select(func.count()).select_from(Post).where(Post.user_id == user.id)
+    )
+    posts_count = posts_result.scalar() or 0
 
     return {
         "success": True,
@@ -235,9 +241,7 @@ async def get_user(
             "is_available_for_hire": user.is_available_for_hire or False,
             "created_at": user.created_at.isoformat() if user.created_at else None,
             "updated_at": user.updated_at.isoformat() if user.updated_at else None,
-            # NOTE: posts_count is hardcoded to 0 until posts feature is fully implemented
-            # This field is included for frontend compatibility
-            "posts_count": 0,
+            "posts_count": posts_count,
             "is_following": is_following,
             "followers_count": followers_count,
             "following_count": following_count,
@@ -369,8 +373,8 @@ async def get_following(
     for user in following_users:
         users_data.append({
             "id": user.id,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
+            "first_name": user.first_name or "",
+            "last_name": user.last_name or "",
             "email": user.email,
             "username": user.username,
             "avatar_url": user.avatar_url,
@@ -431,8 +435,8 @@ async def get_followers(
     for user in followers:
         users_data.append({
             "id": user.id,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
+            "first_name": user.first_name or "",
+            "last_name": user.last_name or "",
             "email": user.email,
             "username": user.username,
             "avatar_url": user.avatar_url,
