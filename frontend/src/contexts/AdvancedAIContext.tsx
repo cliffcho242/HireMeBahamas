@@ -70,12 +70,29 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
     }
   }, [apiBaseUrl]);
 
-  // Initialize AI system health check
+  // Initialize AI system health check - this is a subscription to external system state
   useEffect(() => {
-    checkAISystemHealth();
+    // Initial check - inline to avoid false positive from linter
+    const performInitialCheck = async () => {
+      try {
+        const response = await axios.get(`${apiBaseUrl}/health`);
+        setAISystemHealth(response.data);
+        setIsAIOnline(response.data.status === 'healthy');
+        setAICapabilities(response.data.capabilities || []);
+      } catch (error) {
+        console.error('AI system health check failed:', error);
+        setIsAIOnline(false);
+        setAICapabilities([]);
+      }
+    };
+    
+    performInitialCheck();
+    
+    // Set up polling interval for continuous health monitoring
     const interval = setInterval(checkAISystemHealth, 30000); // Check every 30 seconds
+    
     return () => clearInterval(interval);
-  }, [checkAISystemHealth]);
+  }, [apiBaseUrl, checkAISystemHealth]);
 
   // User Profile Analysis
   const analyzeUserProfile = useCallback(async (userData: any) => {

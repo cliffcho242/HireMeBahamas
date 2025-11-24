@@ -26,68 +26,71 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const { user, token } = useAuth();
 
   useEffect(() => {
-    if (user && token) {
-      const socketUrl = (import.meta as any).env.VITE_SOCKET_URL || 'http://localhost:8000';
-      
-      // Create socket connection
-      const newSocket = io(socketUrl, {
-        auth: {
-          token: token
-        },
-        transports: ['websocket', 'polling']
-      });
+    if (!user || !token) return;
 
-      // Connection events
-      newSocket.on('connect', () => {
-        setIsConnected(true);
-        console.log('Connected to server');
-      });
+    const socketUrl = (import.meta as any).env.VITE_SOCKET_URL || 'http://localhost:8000';
+    
+    // Create socket connection
+    const newSocket = io(socketUrl, {
+      auth: {
+        token: token
+      },
+      transports: ['websocket', 'polling']
+    });
 
-      newSocket.on('disconnect', () => {
-        setIsConnected(false);
-        console.log('Disconnected from server');
-      });
+    // Connection events
+    newSocket.on('connect', () => {
+      setIsConnected(true);
+      console.log('Connected to server');
+    });
 
-      newSocket.on('connected', (data) => {
-        console.log('Socket authenticated:', data);
-      });
+    newSocket.on('disconnect', () => {
+      setIsConnected(false);
+      console.log('Disconnected from server');
+    });
 
-      newSocket.on('error', (error) => {
-        console.error('Socket error:', error);
-        toast.error('Connection error: ' + error.message);
-      });
+    newSocket.on('connected', (data) => {
+      console.log('Socket authenticated:', data);
+    });
 
-      // Message events
-      newSocket.on('new_message', (message) => {
-        // Handle new message
-        console.log('New message received:', message);
-        // You can dispatch this to a global state or handle it in components
-      });
+    newSocket.on('error', (error) => {
+      console.error('Socket error:', error);
+      toast.error('Connection error: ' + error.message);
+    });
 
-      // Typing events
-      newSocket.on('typing', (data) => {
-        console.log('Typing indicator:', data);
-        // Handle typing indicator
-      });
+    // Message events
+    newSocket.on('new_message', (message) => {
+      // Handle new message
+      console.log('New message received:', message);
+      // You can dispatch this to a global state or handle it in components
+    });
 
-      // User status events
-      newSocket.on('user_status', (data) => {
-        console.log('User status update:', data);
-        if (data.status === 'online') {
-          setOnlineUsers(prev => [...prev.filter(id => id !== data.user_id), data.user_id]);
-        } else if (data.status === 'offline') {
-          setOnlineUsers(prev => prev.filter(id => id !== data.user_id));
-        }
-      });
+    // Typing events
+    newSocket.on('typing', (data) => {
+      console.log('Typing indicator:', data);
+      // Handle typing indicator
+    });
 
-      setSocket(newSocket);
+    // User status events
+    newSocket.on('user_status', (data) => {
+      console.log('User status update:', data);
+      if (data.status === 'online') {
+        setOnlineUsers(prev => [...prev.filter(id => id !== data.user_id), data.user_id]);
+      } else if (data.status === 'offline') {
+        setOnlineUsers(prev => prev.filter(id => id !== data.user_id));
+      }
+    });
 
-      return () => {
-        newSocket.close();
-        setSocket(null);
-        setIsConnected(false);
-      };
-    }
+    // Set socket after all event listeners are attached
+    // This is a valid subscription pattern for external systems (WebSocket)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+      setSocket(null);
+      setIsConnected(false);
+    };
   }, [user, token]);
 
   const joinConversation = (conversationId: string) => {

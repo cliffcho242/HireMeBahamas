@@ -287,9 +287,18 @@ const SocialFeed = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState([]);
   const [userPatterns, setUserPatterns] = useState(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  // Use lazy initialization to avoid cascading renders
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    const userData = localStorage.getItem('user_data');
+    return userData ? JSON.parse(userData) : null;
+  });
+  
+  const [loading, setLoading] = useState(false);
+  
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return !!localStorage.getItem('auth_token');
+  });
 
   // Login state
   const [loginForm, setLoginForm] = useState({
@@ -322,19 +331,10 @@ const SocialFeed = () => {
     }
   }, [isLoggedIn]);
 
+  // Load posts and analytics on mount and when login state changes
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      setIsLoggedIn(true);
-      const userData = localStorage.getItem('user_data');
-      if (userData) {
-        setCurrentUser(JSON.parse(userData));
-      }
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
+    // These are intentional data fetching operations on mount/login
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPosts();
     if (isLoggedIn) {
       loadAnalytics();

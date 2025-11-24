@@ -10,18 +10,19 @@ interface BeforeInstallPromptEvent extends Event {
 const InstallPWA: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
-
-  useEffect(() => {
-    // Check if already installed
-    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
+  
+  // Use lazy initialization to avoid cascading renders
+  const [isIOS] = useState(() => {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  });
+  
+  const [isStandalone] = useState(() => {
+    return window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone ||
       document.referrer.includes('android-app://');
+  });
 
-    // Check if iOS
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-
+  useEffect(() => {
     // Check if user has dismissed install banner before
     const installDismissed = localStorage.getItem('installBannerDismissed');
     const dismissedDate = installDismissed ? new Date(installDismissed) : null;
@@ -29,12 +30,8 @@ const InstallPWA: React.FC = () => {
       ? (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24)
       : 999;
 
-    // Update state based on checks
-    setIsStandalone(isStandaloneMode);
-    setIsIOS(ios);
-
     // Show banner if not installed and not recently dismissed (wait 7 days)
-    if (!isStandaloneMode && daysSinceDismissed > 7) {
+    if (!isStandalone && daysSinceDismissed > 7) {
       // Show banner after 3 seconds
       const timer = setTimeout(() => {
         setShowInstallBanner(true);
@@ -42,8 +39,16 @@ const InstallPWA: React.FC = () => {
 
       return () => clearTimeout(timer);
     }
+  }, [isStandalone]);
 
+  useEffect(() => {
     // Listen for beforeinstallprompt event
+    const installDismissed = localStorage.getItem('installBannerDismissed');
+    const dismissedDate = installDismissed ? new Date(installDismissed) : null;
+    const daysSinceDismissed = dismissedDate 
+      ? (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24)
+      : 999;
+      
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
