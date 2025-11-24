@@ -484,7 +484,7 @@ const UserProfile: React.FC = () => {
                         >
                           <img
                             src={post.image_url}
-                            alt="Photo"
+                            alt={post.content ? `Photo: ${post.content.substring(0, 50)}${post.content.length > 50 ? '...' : ''}` : 'User photo'}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                           />
                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
@@ -524,10 +524,10 @@ const UserProfile: React.FC = () => {
                             className="w-full h-auto max-h-64 object-cover"
                             preload="metadata"
                           >
-                            Your browser does not support the video tag.
+                            Video playback is not supported on this browser.
                           </video>
                           <div className="p-3 bg-white">
-                            <p className="text-sm text-gray-900 line-clamp-2">{post.content}</p>
+                            <p className="text-sm text-gray-900 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{post.content}</p>
                             <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
                               <span>❤️ {post.likes_count}</span>
                               <span>💬 {post.comments_count}</span>
