@@ -1,4 +1,6 @@
 from typing import List, Optional
+import logging
+import re
 
 from app.api.auth import get_current_user
 from app.database import get_db
@@ -8,6 +10,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/list")
@@ -92,34 +95,86 @@ async def get_user(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get a specific user by ID or username"""
-    # Validate identifier length to prevent DoS attacks
-    if len(identifier) > 150:
+    """Get a specific user by ID or username
+    
+    Args:
+        identifier: User ID (integer) or username (string)
+        db: Database session
+        current_user: Currently authenticated user
+        
+    Returns:
+        User profile data with follower/following counts
+        
+    Raises:
+        HTTPException: 400 for invalid input, 404 if user not found
+    """
+    logger.info(f"User lookup requested by user_id={current_user.id} for identifier={identifier}")
+    
+    # Validate identifier is not empty
+    if not identifier or not identifier.strip():
+        logger.warning(f"Empty identifier provided by user_id={current_user.id}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid identifier: too long"
+            detail="Identifier cannot be empty"
         )
+    
+    # Sanitize and validate identifier length to prevent DoS attacks
+    identifier = identifier.strip()
+    if len(identifier) > 150:
+        logger.warning(f"Identifier too long ({len(identifier)} chars) from user_id={current_user.id}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid identifier: too long (max 150 characters)"
+        )
+    
+    # Validate username format if not a digit (alphanumeric, underscore, hyphen only)
+    if not identifier.isdigit():
+        if not re.match(r'^[a-zA-Z0-9_-]+$', identifier):
+            logger.warning(f"Invalid username format: {identifier} from user_id={current_user.id}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid username format. Use only letters, numbers, underscores, and hyphens."
+            )
     
     # Try to parse as integer ID first
     user = None
+    lookup_method = None
+    
     if identifier.isdigit():
         try:
             user_id = int(identifier)
+            # Validate ID is positive and reasonable
+            if user_id <= 0 or user_id > 2147483647:  # Max int32
+                logger.warning(f"Invalid user ID: {user_id} from user_id={current_user.id}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid user ID"
+                )
+            
             result = await db.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
-        except (ValueError, OverflowError):
+            lookup_method = "ID"
+            logger.debug(f"Lookup by ID {user_id}: {'found' if user else 'not found'}")
+        except (ValueError, OverflowError) as e:
             # Invalid integer, will try username lookup
+            logger.warning(f"Failed to parse ID {identifier}: {e}")
             pass
     
     # If not found by ID or not a digit, try username
     if not user:
         result = await db.execute(select(User).where(User.username == identifier))
         user = result.scalar_one_or_none()
+        lookup_method = "username"
+        logger.debug(f"Lookup by username '{identifier}': {'found' if user else 'not found'}")
 
     if not user:
+        logger.info(f"User not found: identifier={identifier}, method={lookup_method}, requester={current_user.id}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User not found: No user exists with {lookup_method} '{identifier}'"
         )
+    
+    logger.info(f"User found: id={user.id}, username={user.username}, requester={current_user.id}")
 
     # Check if current user follows this user
     follow_result = await db.execute(

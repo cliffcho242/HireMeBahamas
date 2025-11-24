@@ -60,6 +60,7 @@ const UserProfile: React.FC = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -87,9 +88,42 @@ const UserProfile: React.FC = () => {
       setUserPosts(filteredPosts);
     } catch (error: any) {
       console.error('Failed to fetch user profile:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to load user profile';
+      
+      // Extract error message with more detail
+      let errorMessage = 'Failed to load user profile';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 404) {
+        errorMessage = `User with ID "${userId}" not found`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setError(errorMessage);
       toast.error(errorMessage);
+      
+      // Auto-redirect to users page after 3 seconds for 404 errors
+      if (error.response?.status === 404) {
+        console.log('User not found. Auto-redirecting to users page in 3 seconds...');
+        setRedirectCountdown(3);
+        
+        // Countdown timer
+        const countdownInterval = setInterval(() => {
+          setRedirectCountdown((prev) => {
+            if (prev === null || prev <= 1) {
+              clearInterval(countdownInterval);
+              navigate('/friends');
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        
+        // Cleanup on unmount
+        return () => clearInterval(countdownInterval);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -150,6 +184,15 @@ const UserProfile: React.FC = () => {
             <p className="text-gray-600 mb-6">
               {error || "The user you're looking for doesn't exist or may have been removed."}
             </p>
+            {redirectCountdown !== null && (
+              <div className="mb-6">
+                <div className="inline-flex items-center justify-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700">
+                  <span className="font-medium">
+                    Auto-redirecting in {redirectCountdown} second{redirectCountdown !== 1 ? 's' : ''}...
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="space-y-3">
               <button
                 onClick={() => navigate(-1)}

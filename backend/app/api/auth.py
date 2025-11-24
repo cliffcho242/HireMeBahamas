@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional
+import logging
 
 from app.core.security import (
     create_access_token,
@@ -26,6 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 security = HTTPBearer()
+logger = logging.getLogger(__name__)
 
 
 # Helper function to get current user
@@ -33,13 +35,25 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Get current authenticated user"""
+    """Get current authenticated user
+    
+    Args:
+        credentials: Bearer token credentials
+        db: Database session
+        
+    Returns:
+        User object for the authenticated user
+        
+    Raises:
+        HTTPException: 401 if authentication fails
+    """
     try:
         token = credentials.credentials
         payload = decode_access_token(token)
         user_id = payload.get("sub")
 
         if user_id is None:
+            logger.warning("Token missing 'sub' claim")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials",
@@ -48,7 +62,8 @@ async def get_current_user(
         # Convert user_id to integer (User model uses Integer primary key)
         try:
             user_id_int = int(user_id)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Invalid user ID format in token: {user_id}, error: {e}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid user ID in token",
@@ -58,8 +73,18 @@ async def get_current_user(
         user = result.scalar_one_or_none()
 
         if user is None:
+            logger.warning(f"User not found for authenticated token: user_id={user_id_int}")
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="User not found. Your account may have been deleted or deactivated."
+            )
+        
+        # Check if user is active
+        if not user.is_active:
+            logger.warning(f"Inactive user attempted access: user_id={user_id_int}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is deactivated"
             )
 
         return user
@@ -67,6 +92,7 @@ async def get_current_user(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Unexpected error in get_current_user: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
