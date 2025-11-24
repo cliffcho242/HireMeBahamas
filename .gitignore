@@ -54,6 +54,9 @@ admin-panel/build/
 # Uploads
 uploads/
 static/uploads/
+# But keep directory structure
+!uploads/*/.gitkeep
+!backend/uploads/*/.gitkeep
 
 # Testing
 .pytest_cache/
