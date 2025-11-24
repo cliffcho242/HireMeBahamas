@@ -402,10 +402,10 @@ async def get_followers(
         return {"success": True, "followers": []}
 
     # Get the list of user IDs that current user is following
-    following_result = await db.execute(
+    following_ids_result = await db.execute(
         select(Follow.followed_id).where(Follow.follower_id == current_user.id)
     )
-    following_ids = {fid for (fid,) in following_result.all()}
+    following_ids = {fid for (fid,) in following_ids_result.all()}
     
     user_ids = [user.id for user in followers]
     
@@ -415,8 +415,8 @@ async def get_followers(
         .where(Follow.followed_id.in_(user_ids))
         .group_by(Follow.followed_id)
     )
-    followers_result = await db.execute(followers_count_query)
-    followers_counts = {row[0]: row[1] for row in followers_result.all()}
+    followers_count_result = await db.execute(followers_count_query)
+    followers_counts = {row[0]: row[1] for row in followers_count_result.all()}
     
     # Get following count for all users in one query
     following_count_query = (
@@ -424,8 +424,8 @@ async def get_followers(
         .where(Follow.follower_id.in_(user_ids))
         .group_by(Follow.follower_id)
     )
-    following_result = await db.execute(following_count_query)
-    following_counts = {row[0]: row[1] for row in following_result.all()}
+    following_count_result = await db.execute(following_count_query)
+    following_counts = {row[0]: row[1] for row in following_count_result.all()}
 
     users_data = []
     for user in followers:
