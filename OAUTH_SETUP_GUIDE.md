@@ -163,11 +163,43 @@ The following fields were added to the `users` table:
 
 ## Troubleshooting
 
+### Common Error: "Error 401: invalid_client"
+
+**Symptoms:**
+- Error message: "Error 401: invalid_client"
+- Request details: "flowName=GeneralOAuthFlow"
+- Appears when clicking Google Sign-In button
+
+**Root Cause:**
+This error occurs when the Google Client ID is not properly configured or is using a placeholder value.
+
+**Solution:**
+1. **If you haven't set up Google OAuth yet:**
+   - The OAuth buttons will be automatically hidden if credentials are not configured
+   - Users can still sign in with email/password
+   - Follow the "Google OAuth Setup" section above to enable OAuth
+
+2. **If you have a Google Client ID but still see the error:**
+   - Verify your `VITE_GOOGLE_CLIENT_ID` environment variable is set correctly
+   - Check that it's not set to `"placeholder-client-id"` or empty string
+   - Ensure the Client ID matches your Google Cloud Console configuration
+   - For Vercel deployments, add the variable in: Dashboard → Settings → Environment Variables
+   - Redeploy your frontend after updating environment variables
+
+3. **Check authorized origins in Google Cloud Console:**
+   - Go to Google Cloud Console → APIs & Services → Credentials
+   - Select your OAuth 2.0 Client ID
+   - Verify these origins are listed:
+     - `http://localhost:5173` (for development)
+     - `https://yourdomain.com` (your production domain)
+   - Authorized redirect URIs should match authorized origins
+
 ### Google Sign-In Issues
 
 1. **"popup_closed_by_user"**: User closed the popup, this is normal
 2. **"idpiframe_initialization_failed"**: Check that your domain is authorized in Google Console
 3. **"access_denied"**: User declined permissions
+4. **"invalid_client"**: See detailed solution above
 
 ### Apple Sign-In Issues
 
