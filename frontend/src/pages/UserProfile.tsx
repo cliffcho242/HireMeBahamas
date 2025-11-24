@@ -55,6 +55,7 @@ const UserProfile: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'about'>('posts');
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
@@ -70,6 +71,7 @@ const UserProfile: React.FC = () => {
     if (!userId) return;
     
     setIsLoading(true);
+    setError(null);
     try {
       const response = await authAPI.getUserProfile(userId);
       const userData = response.user;
@@ -85,7 +87,9 @@ const UserProfile: React.FC = () => {
       setUserPosts(filteredPosts);
     } catch (error: any) {
       console.error('Failed to fetch user profile:', error);
-      toast.error(error.response?.data?.message || 'Failed to load user profile');
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Failed to load user profile';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -135,16 +139,41 @@ const UserProfile: React.FC = () => {
   if (!profile) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">User Not Found</h2>
-          <p className="text-gray-600 mb-4">The user you're looking for doesn't exist</p>
-          <button
-            onClick={() => navigate(-1)}
-            className="text-blue-600 hover:text-blue-700 font-medium"
-          >
-            Go Back
-          </button>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-md mx-auto px-4"
+        >
+          <div className="bg-white rounded-lg shadow-md p-8">
+            <UserCircleIcon className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">User Not Found</h2>
+            <p className="text-gray-600 mb-6">
+              {error || "The user you're looking for doesn't exist or may have been removed."}
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => navigate(-1)}
+                className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <ArrowLeftIcon className="w-5 h-5 mr-2" />
+                Go Back
+              </button>
+              <button
+                onClick={() => navigate('/friends')}
+                className="w-full flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <UserCircleIcon className="w-5 h-5 mr-2" />
+                Browse All Users
+              </button>
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="w-full px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Return to Dashboard
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }
