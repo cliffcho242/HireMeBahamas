@@ -275,7 +275,8 @@ powershell -ExecutionPolicy Bypass -File .\launch_app.ps1 -Force
 
 ### Backend
 - **Flask** (Python)
-- **SQLite** database
+- **PostgreSQL** database (primary storage)
+- **Firebase Realtime Database** (optional - for real-time features)
 - **JWT** authentication
 - **CORS** enabled
 
@@ -284,6 +285,7 @@ powershell -ExecutionPolicy Bypass -File .\launch_app.ps1 -Force
 - **React Icons** - Additional icons
 - **Date-fns** - Date formatting
 - **Socket.io** - Real-time features
+- **Firebase SDK** - Real-time data synchronization (optional)
 
 ## 📱 Responsive Design
 
@@ -501,10 +503,21 @@ GCS_MAKE_PUBLIC=False  # Set to True for public files, False for signed URLs
 
 📖 **[Google Cloud Storage Setup Guide](./docs/GOOGLE_CLOUD_STORAGE.md)** - Learn how to configure GCS for file uploads.
 
+📖 **[Firebase Realtime Database Setup Guide](./FIREBASE_SETUP.md)** - Learn how to configure Firebase for real-time features.
+
 ### Frontend (.env)
 ```
 VITE_API_URL=http://localhost:8000
 VITE_SOCKET_URL=http://localhost:8000
+
+# Firebase Configuration (optional - for real-time features)
+VITE_FIREBASE_API_KEY=your-firebase-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+VITE_FIREBASE_DATABASE_URL=https://your-project-id.firebaseio.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
 ```
 
 ### Docker Security

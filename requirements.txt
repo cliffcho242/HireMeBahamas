@@ -38,6 +38,9 @@ flower==2.0.1
 # Cloud Storage
 google-cloud-storage==3.6.0
 
+# Firebase Realtime Database
+firebase-admin==6.6.0
+
 # Production Utilities
 python-dotenv==1.2.1
 python-decouple==3.8

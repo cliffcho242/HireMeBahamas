@@ -611,7 +611,34 @@ sudo firewall-cmd --reload
 - [Redis Documentation](https://redis.io/docs/)
 - [Nginx Documentation](https://nginx.org/en/docs/)
 - [Docker Documentation](https://docs.docker.com/)
+- [Firebase Realtime Database Setup](./FIREBASE_SETUP.md) - Optional real-time features
 - [HireMeBahamas Repository](https://github.com/cliffcho242/HireMeBahamas)
+
+---
+
+## Optional Integrations
+
+### Firebase Realtime Database (Optional)
+
+Firebase Realtime Database can be added for enhanced real-time features like live chat, presence tracking, and instant notifications.
+
+**Note**: Firebase is NOT a system package and cannot be installed with `apt-get`. It's a cloud service that requires:
+
+1. **Backend Integration**: Python SDK installed via pip (already in requirements.txt)
+   ```bash
+   pip install firebase-admin
+   ```
+
+2. **Frontend Integration**: JavaScript SDK installed via npm (already in package.json)
+   ```bash
+   cd frontend && npm install firebase
+   ```
+
+3. **Configuration**: Set up Firebase project and configure environment variables
+
+📖 **For complete Firebase setup instructions, see [FIREBASE_SETUP.md](./FIREBASE_SETUP.md)**
+
+Firebase is entirely optional - HireMeBahamas works perfectly with just PostgreSQL.
 
 ---
 

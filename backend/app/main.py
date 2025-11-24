@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import socketio
 
 # Import APIs
-from .api import auth, hireme, jobs, messages, notifications, profile_pictures, reviews, upload, users
+from .api import auth, hireme, jobs, messages, notifications, profile_pictures, reviews, upload, users, firebase
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -63,6 +63,7 @@ app.include_router(profile_pictures.router, prefix="/api/profile-pictures", tags
 app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
 app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(firebase.router, prefix="/api/firebase", tags=["firebase"])
 
 
 # Initialize Socket.IO for real-time messaging
