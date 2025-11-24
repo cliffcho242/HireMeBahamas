@@ -31,7 +31,8 @@ const Users: React.FC = () => {
   const getUserInitials = (userData: User): string => {
     const firstInitial = userData.first_name?.[0] || '';
     const lastInitial = userData.last_name?.[0] || '';
-    return (firstInitial + lastInitial).toUpperCase() || '?';
+    const initials = (firstInitial + lastInitial).toUpperCase();
+    return initials || '?';
   };
 
   useEffect(() => {
