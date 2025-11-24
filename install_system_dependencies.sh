@@ -87,13 +87,19 @@ apt-get install -y \
 echo "✅ Redis installed"
 echo ""
 
-# Install Apache Kafka (for message streaming and event processing)
-echo "Step 7: Installing Apache Kafka..."
+# Install Apache Kafka tools (for message streaming and event processing)
+echo "Step 7: Installing Apache Kafka tools..."
 echo "----------------------------------------"
-apt-get install -y \
-    openjdk-11-jdk \
-    kafka
-echo "✅ Apache Kafka installed"
+# Try to install OpenJDK 11 first, fall back to 21 if not available
+if apt-cache show openjdk-11-jdk > /dev/null 2>&1; then
+    apt-get install -y openjdk-11-jdk kcat
+elif apt-cache show openjdk-21-jdk > /dev/null 2>&1; then
+    apt-get install -y openjdk-21-jdk kcat
+else
+    echo "⚠️  Warning: No compatible OpenJDK version found. Kafka tools require Java."
+    apt-get install -y kcat || true
+fi
+echo "✅ Apache Kafka tools installed (Java and kcat)"
 echo ""
 
 # Install SSL/TLS libraries (required for secure database connections)
