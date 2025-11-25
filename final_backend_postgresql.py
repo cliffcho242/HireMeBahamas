@@ -1496,10 +1496,12 @@ print("✅ Application ready to serve requests")
 
 
 @app.route("/", methods=["GET"])
+@limiter.exempt
 def root():
     """
     Root endpoint - returns API information
     Provides a welcome message and basic API status for monitoring tools
+    Exempt from rate limiting to allow monitoring services to check frequently
     """
     return (
         jsonify(
@@ -1519,12 +1521,14 @@ def root():
 
 
 @app.route("/health", methods=["GET"])
+@limiter.exempt
 def health_check():
     """
     Health check endpoint for Railway
     Returns 200 OK immediately to ensure Railway healthcheck passes
     The app is healthy if this endpoint responds - database initialization
     happens asynchronously and doesn't need to block the healthcheck
+    Exempt from rate limiting to allow monitoring services to check frequently
     """
     return (
         jsonify(
@@ -1539,11 +1543,13 @@ def health_check():
 
 
 @app.route("/api/health", methods=["GET"])
+@limiter.exempt
 def api_health_check():
     """
     Detailed health check endpoint with database status
     This can be used for monitoring but won't block Railway healthcheck
     Attempts to retry database initialization if it failed on startup
+    Exempt from rate limiting to allow monitoring services to check frequently
     """
     # Determine HTTP status code based on service availability
     # 200: Service is healthy or degraded but functional
