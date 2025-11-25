@@ -87,9 +87,14 @@ def check_backend_modules() -> bool:
     """Check if backend modules can be imported"""
     print(f"\n{Colors.YELLOW}Checking Backend Modules...{Colors.NC}")
     
-    # Add backend to path
-    backend_path = Path(__file__).parent.parent / 'backend'
-    sys.path.insert(0, str(backend_path))
+    # Add project root and backend to path
+    project_root = Path(__file__).parent.parent
+    backend_path = project_root / 'backend'
+    
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    if str(backend_path) not in sys.path:
+        sys.path.insert(0, str(backend_path))
     
     try:
         from app.core.security import create_access_token, verify_password, get_password_hash
@@ -100,6 +105,10 @@ def check_backend_modules() -> bool:
         
         from app.api.auth import router
         print_status("success", "Auth API loaded")
+        
+        # Also check the production Flask app
+        import final_backend_postgresql
+        print_status("success", "Production Flask app loaded")
         
         return True
     except ImportError as e:
