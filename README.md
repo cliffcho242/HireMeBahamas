@@ -59,6 +59,20 @@ For production deployments on Railway, you need to configure PostgreSQL for pers
 
 📖 **[Complete Railway DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Step-by-step instructions with screenshots and troubleshooting.
 
+### 🗄️ Database Admin Interface
+
+For local development, access the built-in database management interface (Adminer):
+
+1. **Start services**: `docker-compose up -d`
+2. **Access Adminer**: http://localhost:8081
+3. **Login credentials**:
+   - Server: `postgres`
+   - Username: `hiremebahamas_user`
+   - Password: `hiremebahamas_password`
+   - Database: `hiremebahamas`
+
+📖 **[Database Admin Interface Guide](./DATABASE_ADMIN_INTERFACE.md)** - Complete guide for using Adminer to inspect and manage your database.
+
 ## 🌟 Features
 
 ### Core Social Features (Facebook-Style)
