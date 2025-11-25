@@ -24,9 +24,36 @@ interface ValidPost extends Post {
   user: PostUser;
 }
 
+// Interface for comment user data
+interface CommentUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  username?: string;
+}
+
+// Interface for comment data
+interface Comment {
+  id: number;
+  user?: CommentUser;
+  content: string;
+  created_at: string;
+}
+
+// Type for comments that have a valid user - used after filtering
+interface ValidComment extends Comment {
+  user: CommentUser;
+}
+
 // Type guard to check if a post has a valid user
 function hasValidUser(post: Post): post is ValidPost {
   return post.user != null && typeof post.user.id === 'number';
+}
+
+// Type guard to check if a comment has a valid user
+function hasValidCommentUser(comment: Comment): comment is ValidComment {
+  return comment.user != null && typeof comment.user.id === 'number';
 }
 
 const PostFeed: React.FC = () => {
@@ -38,7 +65,7 @@ const PostFeed: React.FC = () => {
   const [commentText, setCommentText] = useState<{ [key: number]: string }>({});
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState<string>('');
-  const [comments, setComments] = useState<{ [key: number]: any[] }>({});
+  const [comments, setComments] = useState<{ [key: number]: Comment[] }>({});
   const [loadingComments, setLoadingComments] = useState<{ [key: number]: boolean }>({});
   const [showEmojiPicker, setShowEmojiPicker] = useState<{ [key: number]: boolean }>({});
   const { user } = useAuth();
@@ -857,57 +884,60 @@ const PostFeed: React.FC = () => {
               )}
 
               {/* Comments List */}
-              {!loadingComments[post.id] && comments[post.id] && (
-                <div className="space-y-3">
-                  {comments[post.id].length === 0 ? (
-                    <p className="text-center text-gray-500 text-sm py-4">
-                      No comments yet. Be the first to comment!
-                    </p>
-                  ) : (
-                    comments[post.id].map((comment: any) => (
-                      <div key={comment.id} className="flex space-x-3">
-                        <button
-                          onClick={() => navigate(`/user/${comment.user.id}`)}
-                          className="flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
-                        >
-                          <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer">
-                            <span className="text-white font-semibold text-xs">
-                              {comment.user.first_name[0]}{comment.user.last_name[0]}
-                            </span>
-                          </div>
-                        </button>
-                        <div className="flex-1">
-                          <div className="bg-white rounded-2xl px-3 py-2">
-                            <div className="flex items-start justify-between">
-                              <button
-                                onClick={() => navigate(`/user/${comment.user.id}`)}
-                                className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
-                              >
-                                {comment.user.first_name} {comment.user.last_name}
-                              </button>
-                              {user && comment.user.id === user.id && (
-                                <button
-                                  onClick={() => handleDeleteComment(post.id, comment.id)}
-                                  className="text-red-600 hover:text-red-700 text-xs"
-                                  title="Delete comment"
-                                >
-                                  Delete
-                                </button>
-                              )}
+              {!loadingComments[post.id] && comments[post.id] && (() => {
+                const validComments = comments[post.id].filter(hasValidCommentUser);
+                return (
+                  <div className="space-y-3">
+                    {validComments.length === 0 ? (
+                      <p className="text-center text-gray-500 text-sm py-4">
+                        No comments yet. Be the first to comment!
+                      </p>
+                    ) : (
+                      validComments.map((comment) => (
+                        <div key={comment.id} className="flex space-x-3">
+                          <button
+                            onClick={() => navigate(`/user/${comment.user.id}`)}
+                            className="flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
+                          >
+                            <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer">
+                              <span className="text-white font-semibold text-xs">
+                                {comment.user.first_name?.[0] || '?'}{comment.user.last_name?.[0] || '?'}
+                              </span>
                             </div>
-                            <p className="text-sm text-gray-700">{comment.content}</p>
-                          </div>
-                          <div className="flex items-center space-x-4 mt-1 ml-3">
-                            <span className="text-xs text-gray-400">
-                              {formatTimeAgo(comment.created_at)}
-                            </span>
+                          </button>
+                          <div className="flex-1">
+                            <div className="bg-white rounded-2xl px-3 py-2">
+                              <div className="flex items-start justify-between">
+                                <button
+                                  onClick={() => navigate(`/user/${comment.user.id}`)}
+                                  className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                                >
+                                  {comment.user.first_name || ''} {comment.user.last_name || ''}
+                                </button>
+                                {user && comment.user.id === user.id && (
+                                  <button
+                                    onClick={() => handleDeleteComment(post.id, comment.id)}
+                                    className="text-red-600 hover:text-red-700 text-xs"
+                                    title="Delete comment"
+                                  >
+                                    Delete
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-700">{comment.content}</p>
+                            </div>
+                            <div className="flex items-center space-x-4 mt-1 ml-3">
+                              <span className="text-xs text-gray-400">
+                                {formatTimeAgo(comment.created_at)}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
+                      ))
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </motion.div>
