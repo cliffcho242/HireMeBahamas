@@ -98,6 +98,16 @@ def uploaded_file(filename):
 DATABASE_URL = os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None
 
+# PostgreSQL extensions to initialize during database setup
+# Pre-defined SQL statements prevent SQL injection by avoiding string formatting
+# Each extension requires server-side configuration (shared_preload_libraries)
+POSTGRESQL_EXTENSIONS = {
+    "pg_stat_statements": {
+        "sql": "CREATE EXTENSION IF NOT EXISTS pg_stat_statements",
+        "description": "Query performance statistics tracking",
+    },
+}
+
 # Check if this is a production environment
 # Detect Railway environment using Railway-specific variables:
 # - RAILWAY_ENVIRONMENT: Set by Railway to indicate the environment (e.g., "production")
@@ -354,23 +364,12 @@ def init_postgresql_extensions(cursor, conn):
     on the PostgreSQL server. On managed services like Railway, this is typically
     pre-configured, but we still need to CREATE EXTENSION.
     
-    Returns True if successful, False if any error occurred (but errors are non-fatal).
+    Returns True if all extensions initialized successfully, False otherwise.
+    Extension failures are non-fatal - the application continues regardless.
     """
-    # Pre-defined SQL statements for each allowed extension
-    # This approach prevents SQL injection by using a dictionary mapping
-    # instead of string formatting with user/config-provided values
-    # Extensions to initialize and their SQL statements are defined together
-    # to ensure consistency and prevent mismatches
-    EXTENSIONS = {
-        "pg_stat_statements": {
-            "sql": "CREATE EXTENSION IF NOT EXISTS pg_stat_statements",
-            "description": "Query performance statistics tracking",
-        },
-    }
-    
     success = True
     
-    for ext_name, ext_config in EXTENSIONS.items():
+    for ext_name, ext_config in POSTGRESQL_EXTENSIONS.items():
         ext_sql = ext_config["sql"]
         ext_description = ext_config["description"]
         
@@ -406,7 +405,7 @@ def init_postgresql_extensions(cursor, conn):
             if is_installed:
                 print(f"✅ Extension '{ext_name}' is already installed")
             else:
-                # Execute pre-defined SQL statement from the EXTENSIONS dictionary
+                # Execute pre-defined SQL statement from the POSTGRESQL_EXTENSIONS constant
                 # This ensures only validated, pre-defined SQL is executed
                 cursor.execute(ext_sql)
                 conn.commit()
@@ -455,7 +454,6 @@ def init_postgresql_extensions(cursor, conn):
     return success
 
 
-
 def init_database():
     """Initialize database with all required tables"""
     global _db_initialized
@@ -474,6 +472,9 @@ def init_database():
                 print("⚠️  Some extensions could not be initialized, but this is non-fatal")
                 # Ensure connection is in a clean state before continuing
                 _safe_rollback(conn)
+                # Recreate cursor after rollback to ensure it's in a valid state
+                cursor.close()
+                cursor = conn.cursor()
         
         # Detect if we need to create tables
         if USE_POSTGRESQL:
