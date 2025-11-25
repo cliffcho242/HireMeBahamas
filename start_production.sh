@@ -70,10 +70,15 @@ npm install
 npm run build
 cd ..
 
-# Start backend in production mode
+# Start backend in production mode with environment variables
 echo "🖥️  Starting backend in production mode..."
 cd backend
-source .env 2>/dev/null || true
+# Export all variables from .env file
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-reload --workers 2 &
 BACKEND_PID=$!
 cd ..

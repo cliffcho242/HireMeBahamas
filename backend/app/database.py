@@ -17,12 +17,12 @@ if "postgresql" in DATABASE_URL and "localhost" not in DATABASE_URL:
     if "sslmode" not in DATABASE_URL:
         DATABASE_URL = f"{DATABASE_URL}?sslmode=prefer"
 
-# Create async engine with production settings
+# Create async engine with production settings (optimized for local development)
 engine_kwargs = {
     "echo": config("DB_ECHO", default=False, cast=bool),
     "future": True,
-    "pool_size": 10,
-    "max_overflow": 20,
+    "pool_size": 5,  # Reduced for local development
+    "max_overflow": 10,  # Reduced for local development
     "pool_pre_ping": True,  # Enable connection health checks
 }
 

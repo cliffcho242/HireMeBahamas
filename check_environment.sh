@@ -18,11 +18,12 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 
-# Check Docker Compose
+# Check docker compose
 echo -n "Checking docker compose... "
 if docker compose version &> /dev/null 2>&1; then
-    COMPOSE_VERSION=$(docker compose version --short 2>/dev/null || echo "installed")
-    echo "✅ Available (v$COMPOSE_VERSION)"
+    # Try to get version, but don't fail if --short flag doesn't exist
+    COMPOSE_VERSION=$(docker compose version 2>/dev/null | grep -oP 'v\d+\.\d+\.\d+' | head -1 || echo "installed")
+    echo "✅ Available ($COMPOSE_VERSION)"
 else
     echo "❌ Not available"
     echo "   → Update Docker Desktop or see DOCKER_SETUP.md"

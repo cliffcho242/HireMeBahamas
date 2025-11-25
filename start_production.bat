@@ -72,6 +72,15 @@ cd ..
 
 REM Start backend in production mode
 echo 🖥️  Starting backend in production mode...
+
+REM Load environment variables from .env file if it exists
+if exist backend\.env (
+    echo Loading environment variables from backend\.env...
+    for /f "usebackq tokens=1,2 delims==" %%a in ("backend\.env") do (
+        set "%%a=%%b"
+    )
+)
+
 start "HireMeBahamas Backend" cmd /k "cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-reload --workers 2"
 
 REM Wait for backend to start
