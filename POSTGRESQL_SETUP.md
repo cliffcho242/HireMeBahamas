@@ -6,6 +6,8 @@ This application is tested and compatible with **PostgreSQL 17.x** (recommended)
 
 The Docker setup uses PostgreSQL 17 by default. When deploying to Railway, Render, or other platforms, PostgreSQL 17 is recommended for the latest features and security updates.
 
+> **Note**: For information about PostgreSQL initialization and recovery fixes (handling improper shutdowns), see [POSTGRESQL_INITIALIZATION_FIX.md](./POSTGRESQL_INITIALIZATION_FIX.md).
+
 ## ⚠️ Important: PostgreSQL is REQUIRED for Production
 
 **SQLite is NOT suitable for production use** because:
