@@ -242,7 +242,13 @@ _pool_lock = threading.Lock()
 # Connection pool timeout in seconds
 # This prevents requests from blocking indefinitely waiting for a connection
 # If no connection is available within this time, fall back to direct connection
-POOL_TIMEOUT_SECONDS = 10
+# Reduced from 10s to 5s to fail faster and prevent HTTP 499 timeouts
+POOL_TIMEOUT_SECONDS = 5
+
+# Statement timeout in milliseconds for PostgreSQL queries
+# This prevents long-running queries from blocking connections
+# Set to 30 seconds to allow complex queries but prevent indefinite blocking
+STATEMENT_TIMEOUT_MS = 30000
 
 
 def _get_connection_pool():
@@ -250,6 +256,11 @@ def _get_connection_pool():
     Get or create the PostgreSQL connection pool.
     Uses ThreadedConnectionPool for thread-safe connection management.
     Pool is created lazily on first request.
+    
+    Pool configuration optimized for preventing HTTP 499 timeouts:
+    - Increased maxconn from 10 to 20 for better concurrent handling
+    - Reduced connect_timeout to 10s for faster failure detection
+    - Added options for statement timeout on all connections
     """
     global _connection_pool
     
@@ -262,11 +273,11 @@ def _get_connection_pool():
                 try:
                     # Create a threaded connection pool
                     # minconn=2: Start with 2 connections for faster initial requests
-                    # maxconn=10: Increased to handle concurrent requests better
+                    # maxconn=20: Increased from 10 to handle concurrent requests better
                     # This helps prevent pool exhaustion during traffic spikes
                     _connection_pool = pool.ThreadedConnectionPool(
                         minconn=2,
-                        maxconn=10,
+                        maxconn=20,
                         host=DB_CONFIG["host"],
                         port=DB_CONFIG["port"],
                         database=DB_CONFIG["database"],
@@ -274,9 +285,11 @@ def _get_connection_pool():
                         password=DB_CONFIG["password"],
                         sslmode=DB_CONFIG["sslmode"],
                         cursor_factory=RealDictCursor,
-                        connect_timeout=15,  # Timeout for establishing new connections
+                        connect_timeout=10,  # Reduced from 15s for faster failure detection
+                        # Set statement_timeout on connection to prevent long-running queries
+                        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
                     )
-                    print("✅ PostgreSQL connection pool created (min=2, max=10)")
+                    print("✅ PostgreSQL connection pool created (min=2, max=20)")
                 except Exception as e:
                     print(f"⚠️ Failed to create connection pool: {e}")
                     # Pool creation failed, will fall back to direct connections
@@ -286,8 +299,9 @@ def _get_connection_pool():
 
 
 # Thread pool executor for connection timeout handling
-# Using a small pool to avoid resource overhead
-_timeout_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="db-conn-timeout")
+# Increased from 2 to 4 workers to handle more concurrent timeout checks
+# This prevents blocking when many requests are waiting for connections
+_timeout_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="db-conn-timeout")
 
 
 def _shutdown_executor():
@@ -419,7 +433,9 @@ def get_db_connection():
                 password=DB_CONFIG["password"],
                 sslmode=DB_CONFIG["sslmode"],
                 cursor_factory=RealDictCursor,
-                connect_timeout=15,  # Timeout for establishing connection
+                connect_timeout=10,  # Reduced from 15s for faster failure detection
+                # Set statement_timeout on connection to prevent long-running queries
+                options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
             )
             return conn
         except psycopg2.OperationalError as e:
@@ -436,7 +452,9 @@ def get_db_connection():
                         password=DB_CONFIG["password"],
                         sslmode="prefer",
                         cursor_factory=RealDictCursor,
-                        connect_timeout=15,
+                        connect_timeout=10,
+                        # Set statement_timeout on connection to prevent long-running queries
+                        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
                     )
                     return conn
                 except Exception as fallback_error:
@@ -1526,9 +1544,12 @@ def login():
     """Login user
     
     Performance optimizations to prevent HTTP 499 timeouts:
-    - Uses connection pool with timeout to prevent indefinite blocking
+    - Uses connection pool with 5-second timeout to fail fast
+    - Pool expanded to 20 max connections for high concurrency
+    - Statement timeout of 30 seconds prevents long-running queries
     - Proper connection cleanup with try/finally pattern
     - Returns connections to pool instead of closing to improve reuse
+    - All database operations have timeout protection
     """
     if request.method == "OPTIONS":
         return "", 200

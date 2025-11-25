@@ -6,6 +6,7 @@ Optimized for:
 - Memory-constrained environments (free tier hosting)
 - CPU-intensive bcrypt password hashing
 - PostgreSQL connections with SSL
+- Preventing HTTP 499 (Client Closed Request) timeout errors
 """
 import os
 
@@ -17,13 +18,16 @@ bind = f"0.0.0.0:{os.environ.get('PORT', '8080')}"
 # - Using gthread for thread-based concurrency with I/O waiting
 workers = int(os.environ.get("WEB_CONCURRENCY", "2"))
 worker_class = "gthread"
-threads = 4  # 4 threads per worker for handling concurrent requests
+# Increased from 4 to 8 threads per worker for better concurrent handling
+# This helps prevent HTTP 499 errors by allowing more simultaneous requests
+threads = 8
 
 # Timeout configuration
-# - Increased timeout to 180s to accommodate bcrypt hashing + database latency
+# - Reduced from 180s to 60s to fail faster and prevent long waits
+# - If a request takes >60s, something is wrong - better to fail fast
 # - Added graceful timeout to allow clean worker shutdown
-timeout = 180
-graceful_timeout = 60
+timeout = 60
+graceful_timeout = 30
 keepalive = 5
 
 # Memory management
