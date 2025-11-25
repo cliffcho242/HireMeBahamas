@@ -333,6 +333,61 @@ def execute_query(query, params=None, fetch=False, fetchone=False, commit=False)
         raise e
 
 
+def _get_psycopg2_error_details(e):
+    """
+    Extract detailed error information from a psycopg2 exception.
+    
+    psycopg2 exceptions contain additional attributes that provide more
+    context than the default string representation:
+    - pgerror: The full error message from PostgreSQL
+    - pgcode: The PostgreSQL error code (e.g., '42501' for permission denied)
+    - diag: Additional diagnostic information
+    
+    This function combines these to provide a comprehensive error message
+    that is more useful for debugging than just `str(e)`.
+    
+    Args:
+        e: A psycopg2 exception (Error, OperationalError, ProgrammingError, etc.)
+        
+    Returns:
+        A string with the full error details
+    """
+    parts = []
+    
+    # Primary error message - use pgerror if available as it's more detailed
+    pgerror = getattr(e, 'pgerror', None)
+    if pgerror:
+        parts.append(pgerror.strip())
+    
+    # Get the string representation
+    str_repr = str(e).strip() if str(e) else ""
+    
+    # Only add str_repr if:
+    # 1. We don't have pgerror (so we need some information), or
+    # 2. str_repr contains useful information not already in pgerror
+    # Skip if it's just a numeric code and we already have pgerror
+    is_just_numeric = str_repr.isdigit() or (
+        len(str_repr) > 1 and str_repr.startswith('-') and str_repr[1:].isdigit()
+    )
+    
+    if str_repr and not is_just_numeric and (not pgerror or str_repr not in pgerror):
+        parts.append(str_repr)
+    elif str_repr and is_just_numeric and not pgerror:
+        # Only include numeric code if we have no other information
+        parts.append(f"Error code: {str_repr}")
+    
+    # Include the PostgreSQL error code if available
+    pgcode = getattr(e, 'pgcode', None)
+    if pgcode:
+        parts.append(f"[Code: {pgcode}]")
+    
+    # If we still have no information, provide a fallback
+    if not parts:
+        parts.append(f"Unknown error (type: {type(e).__name__})")
+    
+    return " ".join(parts)
+
+
 def _safe_rollback(conn):
     """
     Safely rollback a database connection.
@@ -342,10 +397,10 @@ def _safe_rollback(conn):
         conn.rollback()
     except psycopg2.InterfaceError as e:
         # Connection is closed or in a bad state
-        print(f"⚠️  Cannot rollback: connection interface error: {e}")
+        print(f"⚠️  Cannot rollback: connection interface error: {_get_psycopg2_error_details(e)}")
     except psycopg2.OperationalError as e:
         # Connection lost or other operational issue
-        print(f"⚠️  Cannot rollback: operational error: {e}")
+        print(f"⚠️  Cannot rollback: operational error: {_get_psycopg2_error_details(e)}")
     except Exception as e:
         # Unexpected error during rollback
         print(f"⚠️  Rollback failed with unexpected error: {e}")
@@ -412,7 +467,8 @@ def init_postgresql_extensions(cursor, conn):
                 print(f"✅ Extension '{ext_name}' installed successfully ({ext_description})")
                 
         except psycopg2.OperationalError as e:
-            error_msg = str(e).lower()
+            error_details = _get_psycopg2_error_details(e)
+            error_msg = error_details.lower()
             success = False
             
             # Handle specific known errors gracefully
@@ -421,12 +477,13 @@ def init_postgresql_extensions(cursor, conn):
                 print(f"   The extension must be added to shared_preload_libraries in postgresql.conf")
                 print(f"   On Railway/managed PostgreSQL: Contact your provider to enable this extension")
             else:
-                print(f"⚠️  Database operation error for extension '{ext_name}': {e}")
+                print(f"⚠️  Database operation error for extension '{ext_name}': {error_details}")
             
             _safe_rollback(conn)
             
         except psycopg2.ProgrammingError as e:
-            error_msg = str(e).lower()
+            error_details = _get_psycopg2_error_details(e)
+            error_msg = error_details.lower()
             success = False
             
             if "permission denied" in error_msg:
@@ -435,13 +492,14 @@ def init_postgresql_extensions(cursor, conn):
             elif "does not exist" in error_msg:
                 print(f"⚠️  Extension '{ext_name}' is not installed on the PostgreSQL server")
             else:
-                print(f"⚠️  Programming error for extension '{ext_name}': {e}")
+                print(f"⚠️  Programming error for extension '{ext_name}': {error_details}")
             
             _safe_rollback(conn)
             
         except psycopg2.Error as e:
             # Catch other psycopg2 errors
-            print(f"⚠️  Database error initializing extension '{ext_name}': {e}")
+            error_details = _get_psycopg2_error_details(e)
+            print(f"⚠️  Database error initializing extension '{ext_name}': {error_details}")
             success = False
             _safe_rollback(conn)
             
@@ -756,6 +814,17 @@ def init_database():
         _db_initialized = True
         print("✅ Database initialization completed successfully")
 
+    except psycopg2.Error as e:
+        # Use detailed error extraction for psycopg2 errors
+        error_details = _get_psycopg2_error_details(e)
+        print(f"❌ Database initialization error: {error_details}")
+        try:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass  # Connection might already be closed
+        raise
     except Exception as e:
         print(f"❌ Database initialization error: {e}")
         try:
@@ -826,6 +895,10 @@ def ensure_database_initialized():
                     print("🔧 Retrying database initialization...")
                     init_database()
                     print("✅ Database initialization successful on retry")
+                except psycopg2.Error as e:
+                    error_details = _get_psycopg2_error_details(e)
+                    print(f"⚠️ Database initialization retry failed: {error_details}")
+                    # Don't raise - let the endpoint handle it
                 except Exception as e:
                     print(f"⚠️ Database initialization retry failed: {e}")
                     # Don't raise - let the endpoint handle it
@@ -847,6 +920,10 @@ def init_database_background():
         try:
             print("🔧 Attempting database initialization in background thread...")
             init_database()
+        except psycopg2.Error as e:
+            error_details = _get_psycopg2_error_details(e)
+            print(f"⚠️ Database initialization warning: {error_details}")
+            print("⚠️ Database will be initialized on first request")
         except Exception as e:
             print(f"⚠️ Database initialization warning: {e}")
             print("⚠️ Database will be initialized on first request")
