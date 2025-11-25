@@ -323,6 +323,85 @@ def execute_query(query, params=None, fetch=False, fetchone=False, commit=False)
         raise e
 
 
+def init_postgresql_extensions(cursor, conn):
+    """
+    Initialize PostgreSQL extensions including pg_stat_statements.
+    
+    pg_stat_statements provides query performance statistics and is useful for:
+    - Monitoring slow queries
+    - Identifying frequently executed queries
+    - Performance tuning
+    
+    Note: pg_stat_statements requires shared_preload_libraries configuration
+    on the PostgreSQL server. On managed services like Railway, this is typically
+    pre-configured, but we still need to CREATE EXTENSION.
+    """
+    extensions = [
+        ("pg_stat_statements", "Query performance statistics tracking"),
+    ]
+    
+    for ext_name, ext_description in extensions:
+        try:
+            # Check if extension is available in the system
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM pg_available_extensions 
+                    WHERE name = %s
+                )
+                """,
+                (ext_name,)
+            )
+            is_available = cursor.fetchone()[0]
+            
+            if not is_available:
+                print(f"⚠️  Extension '{ext_name}' is not available on this PostgreSQL server")
+                print(f"   This is normal for some managed database providers")
+                continue
+            
+            # Check if extension is already installed
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM pg_extension WHERE extname = %s
+                )
+                """,
+                (ext_name,)
+            )
+            is_installed = cursor.fetchone()[0]
+            
+            if is_installed:
+                print(f"✅ Extension '{ext_name}' is already installed")
+            else:
+                # Try to create the extension
+                cursor.execute(f"CREATE EXTENSION IF NOT EXISTS {ext_name}")
+                conn.commit()
+                print(f"✅ Extension '{ext_name}' installed successfully ({ext_description})")
+                
+        except Exception as e:
+            error_msg = str(e).lower()
+            
+            # Handle specific known errors gracefully
+            if "shared_preload_libraries" in error_msg:
+                print(f"⚠️  Extension '{ext_name}' requires server-side configuration")
+                print(f"   The extension must be added to shared_preload_libraries in postgresql.conf")
+                print(f"   On Railway/managed PostgreSQL: Contact your provider to enable this extension")
+            elif "permission denied" in error_msg:
+                print(f"⚠️  Insufficient permissions to create extension '{ext_name}'")
+                print(f"   This is normal for non-superuser database roles")
+            elif "does not exist" in error_msg:
+                print(f"⚠️  Extension '{ext_name}' is not installed on the PostgreSQL server")
+            else:
+                print(f"⚠️  Could not initialize extension '{ext_name}': {e}")
+            
+            # Don't fail initialization due to extension issues
+            # Extensions are optional performance enhancements
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
+
 def init_database():
     """Initialize database with all required tables"""
     global _db_initialized
@@ -333,6 +412,10 @@ def init_database():
     cursor = conn.cursor()
 
     try:
+        # Initialize PostgreSQL extensions if using PostgreSQL
+        if USE_POSTGRESQL:
+            init_postgresql_extensions(cursor, conn)
+        
         # Detect if we need to create tables
         if USE_POSTGRESQL:
             cursor.execute(
