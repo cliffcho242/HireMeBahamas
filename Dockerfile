@@ -142,4 +142,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD sh -c 'curl -f http://localhost:${PORT:-8080}/health || exit 1'
 
 # Start command - use exec form with shell to allow environment variable expansion
-CMD ["sh", "-c", "gunicorn final_backend_postgresql:application --bind 0.0.0.0:${PORT:-8080} --workers 4 --timeout 120 --access-logfile - --error-logfile - --log-level info"]
+# Optimized for memory-constrained environments with gevent workers
+CMD ["sh", "-c", "gunicorn final_backend_postgresql:application --config gunicorn.conf.py"]
