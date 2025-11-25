@@ -49,6 +49,8 @@
    DATABASE_URL=postgresql://... (Railway provides this)
    FLASK_ENV=production
    ```
+   
+   📖 **[Detailed DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Complete step-by-step instructions for adding PostgreSQL to Railway.
 
 5. **Deploy:**
    - Railway auto-deploys on git push

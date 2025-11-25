@@ -1,0 +1,313 @@
+# 🗄️ Railway DATABASE_URL Setup Guide
+
+This guide provides step-by-step instructions for adding and configuring DATABASE_URL in Railway for the HireMeBahamas application.
+
+## 📋 Why You Need DATABASE_URL
+
+**CRITICAL**: SQLite is NOT suitable for production deployment in Railway because:
+- ❌ Data is lost on every deployment or restart
+- ❌ User accounts and all content will disappear
+- ❌ No support for concurrent access
+
+**PostgreSQL provides**:
+- ✅ Persistent data storage
+- ✅ Data survives deployments and restarts
+- ✅ Scalable and production-ready
+
+---
+
+## 🚀 Quick Start (5 Minutes)
+
+### Step 1: Access Railway Dashboard
+
+1. Go to [Railway Dashboard](https://railway.app/dashboard)
+2. Log in with your GitHub account
+3. Open your **HireMeBahamas** project
+
+### Step 2: Add PostgreSQL Database
+
+1. Click the **"+ New"** button (top right corner of your project)
+2. Select **"Database"** from the dropdown
+3. Click **"Add PostgreSQL"**
+4. Wait 1-2 minutes for the database to provision
+
+### Step 3: Verify DATABASE_URL is Set
+
+Railway automatically creates and connects the DATABASE_URL when you add PostgreSQL to your project.
+
+1. Click on your **Backend service** (not the PostgreSQL service)
+2. Go to the **"Variables"** tab
+3. Look for `DATABASE_URL` in the list
+
+You should see something like:
+```
+DATABASE_URL = postgresql://postgres:abc123xyz@containers-us-west-1.railway.app:5432/railway
+```
+
+### Step 4: Add Required Environment Variables
+
+While in the Variables tab, add these additional variables:
+
+| Variable Name | Value | Description |
+|--------------|-------|-------------|
+| `SECRET_KEY` | `<generate-random-key>` | Flask secret key |
+| `JWT_SECRET_KEY` | `<generate-random-key>` | JWT signing key |
+| `ENVIRONMENT` | `production` | Enables PostgreSQL mode |
+
+**Generate secure keys with:**
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+### Step 5: Redeploy Your Application
+
+1. Go to the **"Deployments"** tab
+2. Click the **⋮** menu on the latest deployment
+3. Select **"Redeploy"**
+4. Wait for deployment to complete (2-3 minutes)
+
+### Step 6: Verify Success
+
+Check the deployment logs for these messages:
+```
+🗄️ Database Mode: PostgreSQL (Production)
+✅ PostgreSQL URL detected: postgresql://...
+✅ Database tables created successfully!
+🚀 Starting HireMeBahamas backend...
+```
+
+---
+
+## 📖 Detailed Setup Instructions
+
+### Option 1: Adding PostgreSQL Through Railway UI
+
+#### 1. Create PostgreSQL Service
+
+1. **Navigate to your project** in [Railway Dashboard](https://railway.app/dashboard)
+2. **Click "+ New"** in the top right corner
+3. **Select "Database"** → **"PostgreSQL"**
+4. Railway will create a new PostgreSQL instance
+
+#### 2. Connect PostgreSQL to Your Backend
+
+Railway automatically shares the `DATABASE_URL` variable between services in the same project. If it's not appearing:
+
+1. Click on the **PostgreSQL service**
+2. Go to **"Variables"** tab
+3. Copy the **"DATABASE_URL"** value
+4. Click on your **Backend service**
+5. Go to **"Variables"** → **"+ New Variable"**
+6. Add:
+   - **Name**: `DATABASE_URL`
+   - **Value**: Paste the PostgreSQL URL
+
+#### 3. Verify Variable is Available
+
+Your backend service should now have:
+```
+DATABASE_URL=postgresql://postgres:password@host:5432/railway
+```
+
+### Option 2: Manual DATABASE_URL Configuration
+
+If you're using an external PostgreSQL provider (e.g., Supabase, Neon, ElephantSQL):
+
+#### 1. Get Your PostgreSQL Connection String
+
+Your provider will give you a connection string like:
+```
+postgresql://username:password@hostname:5432/database_name
+```
+
+#### 2. Add to Railway
+
+1. Go to your **Backend service** in Railway
+2. Click **"Variables"** tab
+3. Click **"+ New Variable"**
+4. Add:
+   - **Name**: `DATABASE_URL`
+   - **Value**: Your PostgreSQL connection string
+
+**Example:**
+```
+DATABASE_URL=postgresql://myuser:mypassword@db.supabase.co:5432/mydb
+```
+
+---
+
+## ⚙️ Environment Variables Reference
+
+### Required Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
+| `SECRET_KEY` | Flask session secret | `your-secure-random-key-here` |
+| `JWT_SECRET_KEY` | JWT token signing key | `another-secure-random-key` |
+| `ENVIRONMENT` | Set to "production" | `production` |
+
+### Optional Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port (auto-set by Railway) | `8080` |
+| `TOKEN_EXPIRATION_DAYS` | JWT token expiration | `7` |
+| `FRONTEND_URL` | Frontend URL for CORS | `https://hiremebahamas.vercel.app` |
+
+---
+
+## 🔧 Troubleshooting
+
+### DATABASE_URL Not Appearing
+
+**Cause**: PostgreSQL service not linked to backend
+
+**Solution**:
+1. Delete the PostgreSQL service
+2. Click **"+ New"** → **"Database"** → **"PostgreSQL"** again
+3. Ensure both services are in the same project
+4. Check the Variables tab after 1-2 minutes
+
+### "Connection Refused" Error
+
+**Cause**: PostgreSQL service not running or wrong URL
+
+**Solution**:
+1. Verify PostgreSQL service status (should show "Active")
+2. Copy DATABASE_URL directly from PostgreSQL service
+3. Paste into backend service variables manually
+
+### "Database Does Not Exist" Error
+
+**Cause**: Database was deleted or not created
+
+**Solution**:
+1. Check PostgreSQL service is running
+2. Railway auto-creates the database named `railway`
+3. If using external provider, create the database first
+
+### Users Disappearing After Restart
+
+**Cause**: App still using SQLite instead of PostgreSQL
+
+**Solution**:
+1. Verify `ENVIRONMENT=production` is set
+2. Verify `DATABASE_URL` is set and correct
+3. Check logs for "Database Mode: PostgreSQL"
+4. Redeploy the application
+
+### Authentication Errors After Setting DATABASE_URL
+
+**Cause**: Missing SECRET_KEY or JWT_SECRET_KEY
+
+**Solution**:
+1. Add `SECRET_KEY` to environment variables
+2. Add `JWT_SECRET_KEY` to environment variables
+3. Generate secure random values for both
+4. Redeploy
+
+---
+
+## ✅ Verification Checklist
+
+After setup, verify everything works:
+
+- [ ] PostgreSQL service is "Active" in Railway
+- [ ] `DATABASE_URL` appears in backend Variables tab
+- [ ] `ENVIRONMENT=production` is set
+- [ ] `SECRET_KEY` and `JWT_SECRET_KEY` are set
+- [ ] Deployment logs show "Database Mode: PostgreSQL"
+- [ ] Health check at `/health` returns OK
+- [ ] Users can register and login
+- [ ] Data persists after restart
+
+---
+
+## 📊 Testing Data Persistence
+
+### Test 1: Create Test User
+
+1. Go to your deployed site
+2. Register a new user
+3. Note down email and password
+
+### Test 2: Restart Backend
+
+1. In Railway dashboard, click on backend service
+2. Click **⋮** menu → **"Restart"**
+3. Wait for restart to complete
+
+### Test 3: Verify Data Persisted
+
+1. Go back to your site
+2. Login with the test user credentials
+3. **If login succeeds** → PostgreSQL is working! ✅
+4. **If login fails** → Check troubleshooting section above
+
+---
+
+## 🔗 Useful Links
+
+- [Railway Dashboard](https://railway.app/dashboard)
+- [Railway Documentation](https://docs.railway.app)
+- [Railway PostgreSQL Guide](https://docs.railway.app/databases/postgresql)
+- [PostgreSQL Setup Guide](./POSTGRESQL_SETUP.md) - More detailed PostgreSQL configuration
+- [Deployment Guide](./DEPLOYMENT_GUIDE.md) - Complete deployment instructions
+
+---
+
+## 📝 Quick Reference Commands
+
+### Generate Secure Keys
+```bash
+# Generate SECRET_KEY
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Generate JWT_SECRET_KEY  
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+### Test Database Connection Locally
+```bash
+# Set your DATABASE_URL
+export DATABASE_URL="postgresql://user:pass@host:5432/db"
+
+# Test connection
+python3 -c "
+import os
+from sqlalchemy import create_engine
+engine = create_engine(os.environ['DATABASE_URL'])
+conn = engine.connect()
+print('✅ Connected to PostgreSQL!')
+conn.close()
+"
+```
+
+### Check Database Mode in Application
+```bash
+curl https://your-app.railway.app/health
+```
+
+Should return:
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "mode": "postgresql"
+}
+```
+
+---
+
+## 🎉 Success!
+
+Once configured, your HireMeBahamas application will:
+- ✅ Store all user data persistently
+- ✅ Survive deployments and restarts
+- ✅ Scale with your user base
+- ✅ Provide reliable production service
+
+---
+
+**Need more help?** Check the [POSTGRESQL_SETUP.md](./POSTGRESQL_SETUP.md) for advanced configuration options.
