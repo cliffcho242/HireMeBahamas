@@ -1519,9 +1519,20 @@ def api_health_check():
 @limiter.limit("5 per minute")  # Prevent rapid registration attempts
 @requires_database
 def register():
-    """Register a new user"""
+    """Register a new user
+    
+    Performance optimizations to prevent HTTP 499 timeouts:
+    - Uses single database connection for all operations
+    - Proper try/finally pattern ensures connection is always returned to pool
+    - Uses return_db_connection() for proper pool management
+    - Uses RETURNING clause in PostgreSQL to avoid second query
+    - Validates all input before acquiring database connection
+    """
     if request.method == "OPTIONS":
         return "", 200
+
+    conn = None
+    cursor = None
 
     try:
         # Handle invalid JSON or empty body
@@ -1576,18 +1587,23 @@ def register():
                 400,
             )
 
-        # Check if user already exists
+        # Hash password before acquiring database connection to avoid holding
+        # connection during CPU-intensive operation
+        password_hash = bcrypt.hashpw(
+            password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
+
+        # Get database connection - use single connection for all operations
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # Check if user already exists
         if USE_POSTGRESQL:
             cursor.execute("SELECT id FROM users WHERE LOWER(email) = %s", (email,))
         else:
             cursor.execute("SELECT id FROM users WHERE LOWER(email) = ?", (email,))
 
         if cursor.fetchone():
-            cursor.close()
-            conn.close()
             return (
                 jsonify(
                     {"success": False, "message": "User with this email already exists"}
@@ -1595,35 +1611,39 @@ def register():
                 409,
             )
 
-        # Hash password
-        password_hash = bcrypt.hashpw(
-            password.encode("utf-8"), bcrypt.gensalt()
-        ).decode("utf-8")
-
-        # Insert new user
+        # Insert new user and get all fields in one query (PostgreSQL)
+        # or insert and fetch separately (SQLite)
         now = datetime.now(timezone.utc)
+        first_name = data["first_name"].strip()
+        last_name = data["last_name"].strip()
+        user_type = data["user_type"]
+        location = data["location"].strip()
+        phone = data.get("phone", "").strip()
+        bio = data.get("bio", "").strip()
 
         if USE_POSTGRESQL:
+            # Use RETURNING * to get all user data in a single query
             cursor.execute(
                 """
                 INSERT INTO users (email, password_hash, first_name, last_name, user_type, location, phone, bio, is_active, created_at, last_login, is_available_for_hire)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s, %s, FALSE)
-                RETURNING id
+                RETURNING id, email, first_name, last_name, user_type, location, phone, bio, avatar_url, is_available_for_hire
                 """,
                 (
                     email,
                     password_hash,
-                    data["first_name"].strip(),
-                    data["last_name"].strip(),
-                    data["user_type"],
-                    data["location"].strip(),
-                    data.get("phone", "").strip(),
-                    data.get("bio", "").strip(),
+                    first_name,
+                    last_name,
+                    user_type,
+                    location,
+                    phone,
+                    bio,
                     now,
                     now,
                 ),
             )
-            user_id = cursor.fetchone()["id"]
+            user = cursor.fetchone()
+            user_id = user["id"]
         else:
             cursor.execute(
                 """
@@ -1633,34 +1653,22 @@ def register():
                 (
                     email,
                     password_hash,
-                    data["first_name"].strip(),
-                    data["last_name"].strip(),
-                    data["user_type"],
-                    data["location"].strip(),
-                    data.get("phone", "").strip(),
-                    data.get("bio", "").strip(),
+                    first_name,
+                    last_name,
+                    user_type,
+                    location,
+                    phone,
+                    bio,
                     now,
                     now,
                 ),
             )
             user_id = cursor.lastrowid
+            # Fetch the created user for SQLite
+            cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+            user = cursor.fetchone()
 
         conn.commit()
-        cursor.close()
-        conn.close()
-
-        # Get the created user
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        if USE_POSTGRESQL:
-            cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-        else:
-            cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
 
         # Create JWT token
         token_payload = {
@@ -1706,6 +1714,15 @@ def register():
             ),
             500,
         )
+    finally:
+        # Always clean up database resources
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
 
 
 @app.route("/api/auth/login", methods=["POST", "OPTIONS"])
