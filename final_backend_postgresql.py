@@ -610,26 +610,41 @@ def _get_psycopg2_error_details(e):
     """
     parts = []
     
+    # Helper to check if a string is just a numeric value (integer or float)
+    # This is used to detect unhelpful error messages that are just error codes
+    def is_numeric_string(s):
+        if not s:
+            return False
+        # Use lstrip('-') to handle negative numbers correctly
+        stripped = s.lstrip('-')
+        if not stripped:
+            return False  # Handle case of just "-"
+        # Check for integer or simple decimal (handles "0", "-1", "3.14", "-2.5")
+        return stripped.isdigit() or (stripped.count('.') == 1 and stripped.replace('.', '').isdigit())
+    
     # Primary error message - use pgerror if available as it's more detailed
     pgerror = getattr(e, 'pgerror', None)
-    if pgerror:
-        parts.append(pgerror.strip())
+    pgerror_stripped = pgerror.strip() if pgerror else ""
+    pgerror_is_numeric = is_numeric_string(pgerror_stripped)
+    
+    # Only add pgerror if it's not just a numeric code
+    if pgerror_stripped and not pgerror_is_numeric:
+        parts.append(pgerror_stripped)
     
     # Get the string representation
     str_repr = str(e).strip() if str(e) else ""
+    str_repr_is_numeric = is_numeric_string(str_repr)
     
     # Only add str_repr if:
-    # 1. We don't have pgerror (so we need some information), or
+    # 1. We don't have useful pgerror (so we need some information), or
     # 2. str_repr contains useful information not already in pgerror
-    # Skip if it's just a numeric code and we already have pgerror
-    is_just_numeric = str_repr.isdigit() or (
-        len(str_repr) > 1 and str_repr.startswith('-') and str_repr[1:].isdigit()
-    )
+    # Skip if it's just a numeric code and we already have useful pgerror
+    has_useful_pgerror = pgerror_stripped and not pgerror_is_numeric
     
-    if str_repr and not is_just_numeric and (not pgerror or str_repr not in pgerror):
+    if str_repr and not str_repr_is_numeric and (not has_useful_pgerror or str_repr not in pgerror_stripped):
         parts.append(str_repr)
-    elif str_repr and is_just_numeric and not pgerror:
-        # Only include numeric code if we have no other information
+    elif str_repr and str_repr_is_numeric and not has_useful_pgerror:
+        # Only include numeric code if we have no other useful information
         # Provide more context about what the code means
         parts.append(f"Error code: {str_repr} (extension may not be available or requires server configuration)")
     
