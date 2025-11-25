@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 import bcrypt
 import jwt
@@ -186,13 +186,18 @@ if USE_POSTGRESQL:
         print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
         raise
 
+    # Parse query string for SSL mode and other options
+    query_params = parse_qs(parsed.query)
+    # Get sslmode from URL if present, otherwise default to "require"
+    sslmode = query_params.get("sslmode", ["require"])[0]
+    
     DB_CONFIG = {
         "host": parsed.hostname,
         "port": port,
         "database": database,
         "user": parsed.username,
         "password": parsed.password,
-        "sslmode": "require",
+        "sslmode": sslmode,
     }
 
     # Validate all required fields are present
@@ -206,7 +211,7 @@ if USE_POSTGRESQL:
         raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
     print(
-        f"✅ Database config parsed: {DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+        f"✅ Database config parsed: {DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']} (sslmode={sslmode})"
     )
 else:
     # SQLite for local development
@@ -217,13 +222,41 @@ else:
 def get_db_connection():
     """Get database connection (PostgreSQL on Railway, SQLite locally)"""
     if USE_POSTGRESQL:
-        conn = psycopg2.connect(
-            DATABASE_URL,
-            sslmode="require",
-            cursor_factory=RealDictCursor,
-            connect_timeout=10,  # 10 second timeout for connection
-        )
-        return conn
+        # Use connection parameters from parsed URL to avoid conflicts
+        # This prevents issues when DATABASE_URL already contains sslmode
+        try:
+            conn = psycopg2.connect(
+                host=DB_CONFIG["host"],
+                port=DB_CONFIG["port"],
+                database=DB_CONFIG["database"],
+                user=DB_CONFIG["user"],
+                password=DB_CONFIG["password"],
+                sslmode=DB_CONFIG.get("sslmode", "require"),
+                cursor_factory=RealDictCursor,
+                connect_timeout=10,  # 10 second timeout for connection
+            )
+            return conn
+        except psycopg2.OperationalError as e:
+            error_msg = str(e).lower()
+            # Handle SSL-related errors by trying without SSL
+            if "ssl" in error_msg or "certificate" in error_msg:
+                print(f"⚠️ SSL connection failed, attempting without SSL mode require...")
+                try:
+                    conn = psycopg2.connect(
+                        host=DB_CONFIG["host"],
+                        port=DB_CONFIG["port"],
+                        database=DB_CONFIG["database"],
+                        user=DB_CONFIG["user"],
+                        password=DB_CONFIG["password"],
+                        sslmode="prefer",
+                        cursor_factory=RealDictCursor,
+                        connect_timeout=10,
+                    )
+                    return conn
+                except Exception as fallback_error:
+                    print(f"❌ Fallback connection also failed: {fallback_error}")
+                    raise
+            raise
     else:
         conn = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)
         conn.row_factory = sqlite3.Row
