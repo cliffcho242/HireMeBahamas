@@ -1096,12 +1096,18 @@ def init_database():
 
             conn.commit()
             print("✅ Database tables created successfully!")
+            
+            # Create indexes for new database
+            create_database_indexes(cursor, conn)
 
         else:
             print("✅ Database tables already exist")
 
             # Run migrations to add missing columns
             migrate_user_columns(cursor, conn)
+            
+            # Ensure indexes exist (idempotent)
+            create_database_indexes(cursor, conn)
 
         cursor.close()
         conn.close()
@@ -1136,6 +1142,67 @@ def init_database():
         except Exception:
             pass  # Connection might already be closed
         raise
+
+
+def create_database_indexes(cursor, conn):
+    """
+    Create database indexes to optimize query performance.
+    
+    HTTP 499 "Client Closed Request" errors occur when clients timeout waiting
+    for server responses. For the login endpoint, slow database queries are a
+    primary cause. Without indexes, queries like "SELECT * FROM users WHERE 
+    LOWER(email) = ?" require full table scans, which become increasingly slow
+    as the user base grows.
+    
+    These indexes ensure queries complete in milliseconds instead of seconds:
+    - users_email_lower_idx: Speeds up LOWER(email) lookups in login queries
+    - users_is_active_idx: Speeds up active user queries (partial index)
+    - posts_user_id_idx: Speeds up user's posts queries
+    - posts_created_at_idx: Speeds up posts ordering
+    
+    All indexes use IF NOT EXISTS to be idempotent.
+    
+    Note: SQLite indexes are simpler because SQLite's LIKE is case-insensitive
+    by default for ASCII characters.
+    """
+    if USE_POSTGRESQL:
+        indexes = [
+            # Critical for login performance - avoids full table scan on LOWER(email)
+            ("users_email_lower_idx", "CREATE INDEX IF NOT EXISTS users_email_lower_idx ON users (LOWER(email))"),
+            # Speeds up queries filtering by active users
+            ("users_is_active_idx", "CREATE INDEX IF NOT EXISTS users_is_active_idx ON users (is_active) WHERE is_active = TRUE"),
+            # Speeds up user's posts queries
+            ("posts_user_id_idx", "CREATE INDEX IF NOT EXISTS posts_user_id_idx ON posts (user_id)"),
+            # Speeds up posts ordering by date
+            ("posts_created_at_idx", "CREATE INDEX IF NOT EXISTS posts_created_at_idx ON posts (created_at DESC)"),
+            # Speeds up job searches
+            ("jobs_is_active_idx", "CREATE INDEX IF NOT EXISTS jobs_is_active_idx ON jobs (is_active) WHERE is_active = TRUE"),
+            ("jobs_created_at_idx", "CREATE INDEX IF NOT EXISTS jobs_created_at_idx ON jobs (created_at DESC)"),
+        ]
+        
+        for index_name, index_sql in indexes:
+            try:
+                cursor.execute(index_sql)
+                print(f"✅ Index '{index_name}' created or already exists")
+            except Exception as e:
+                # Index creation errors are non-fatal
+                print(f"⚠️  Could not create index '{index_name}': {e}")
+        
+        conn.commit()
+    else:
+        # SQLite indexes - note SQLite's LIKE is case-insensitive by default
+        # for ASCII characters, and email column has UNIQUE constraint which
+        # implicitly creates an index. These additional indexes help with
+        # queries not covered by the UNIQUE constraint.
+        try:
+            cursor.execute("CREATE INDEX IF NOT EXISTS posts_user_id_idx ON posts (user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS posts_created_at_idx ON posts (created_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS jobs_is_active_idx ON jobs (is_active)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS jobs_created_at_idx ON jobs (created_at)")
+            conn.commit()
+            print("✅ SQLite indexes created or already exist")
+        except Exception as e:
+            print(f"⚠️  Could not create SQLite indexes: {e}")
 
 
 def migrate_user_columns(cursor, conn):
@@ -1238,6 +1305,55 @@ def requires_database(f):
             )
         return f(*args, **kwargs)
     return decorated_function
+
+
+def get_connection_pool_stats():
+    """
+    Get connection pool statistics for monitoring and debugging.
+    
+    Returns information about pool usage to help diagnose
+    connection exhaustion issues that can cause HTTP 499 timeouts.
+    
+    Note: This function accesses private attributes of the psycopg2 
+    ThreadedConnectionPool (_used and _pool). This is necessary because
+    psycopg2 doesn't provide public methods for pool introspection.
+    If psycopg2's internal implementation changes, this function will
+    gracefully return an error status instead of crashing.
+    
+    Returns:
+        dict with pool statistics, or error status if stats unavailable
+    """
+    if not USE_POSTGRESQL:
+        return {"type": "sqlite", "pooled": False}
+    
+    conn_pool = _get_connection_pool()
+    if conn_pool is None:
+        return {"type": "postgresql", "pooled": False, "status": "pool_not_initialized"}
+    
+    try:
+        # ThreadedConnectionPool internal attributes:
+        # - _used: dict of connections currently checked out
+        # - _pool: list of connections available for checkout
+        # These are implementation details that may change in future versions.
+        used_count = len(getattr(conn_pool, '_used', {}))
+        available_count = len(getattr(conn_pool, '_pool', []))
+        
+        return {
+            "type": "postgresql",
+            "pooled": True,
+            "max_connections": DB_POOL_MAX_CONNECTIONS,
+            "connections_in_use": used_count,
+            "connections_available": available_count,
+            "pool_timeout_seconds": POOL_TIMEOUT_SECONDS,
+            "statement_timeout_ms": STATEMENT_TIMEOUT_MS,
+        }
+    except Exception as e:
+        return {
+            "type": "postgresql",
+            "pooled": True,
+            "status": "error_reading_stats",
+            "error": str(e)[:100],
+        }
 
 
 # Initialize database in background thread to avoid blocking healthcheck
@@ -1370,9 +1486,15 @@ def api_health_check():
         cursor = conn.cursor()
         cursor.execute("SELECT 1")
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
         response["database"] = "connected"
         response["db_type"] = "PostgreSQL" if USE_POSTGRESQL else "SQLite"
+        
+        # Add connection pool stats for monitoring
+        pool_stats = get_connection_pool_stats()
+        if pool_stats:
+            response["connection_pool"] = pool_stats
+            
     except Exception as e:
         response["database"] = "error"
         response["status"] = "unhealthy"
@@ -1394,6 +1516,7 @@ def api_health_check():
 
 
 @app.route("/api/auth/register", methods=["POST", "OPTIONS"])
+@limiter.limit("5 per minute")  # Prevent rapid registration attempts
 @requires_database
 def register():
     """Register a new user"""
@@ -1586,17 +1709,20 @@ def register():
 
 
 @app.route("/api/auth/login", methods=["POST", "OPTIONS"])
+@limiter.limit("10 per minute")  # Prevent rapid login attempts that can exhaust connection pool
 @requires_database
 def login():
     """Login user
     
     Performance optimizations to prevent HTTP 499 timeouts:
+    - Rate limited to 10 requests per minute per IP to prevent pool exhaustion
     - Uses connection pool with 5-second timeout to fail fast
     - Pool expanded to 20 max connections for high concurrency
     - Statement timeout of 30 seconds prevents long-running queries
     - Proper connection cleanup with try/finally pattern
     - Returns connections to pool instead of closing to improve reuse
     - All database operations have timeout protection
+    - Email lookup uses LOWER(email) index for fast queries
     """
     if request.method == "OPTIONS":
         return "", 200
@@ -1630,6 +1756,17 @@ def login():
 
         # Get user from database with connection pool timeout protection
         conn = get_db_connection()
+        
+        if conn is None:
+            # Connection pool exhausted - return 503 to indicate temporary unavailability
+            return (
+                jsonify({
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment."
+                }),
+                503,
+            )
+        
         cursor = conn.cursor()
 
         if USE_POSTGRESQL:
