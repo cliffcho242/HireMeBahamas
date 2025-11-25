@@ -69,9 +69,16 @@ npm run dev
 # Using Docker
 docker run --name hirebahamas-postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=hirebahamas -p 5432:5432 -d postgres:15
 
-# Using Docker Compose
-docker-compose up postgres -d
+# Using Docker Compose (includes Adminer database interface)
+docker-compose up postgres adminer -d
+
+# Access Adminer at http://localhost:8081
+# Server: postgres
+# Username: hiremebahamas_user
+# Password: hiremebahamas_password
 ```
+
+📖 See [DATABASE_ADMIN_INTERFACE.md](./DATABASE_ADMIN_INTERFACE.md) for complete database management guide.
 
 ## 🏗️ Project Structure
 
