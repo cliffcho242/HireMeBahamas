@@ -99,28 +99,47 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None
 
 # Check if this is a production environment
+# Detect Railway environment using Railway-specific variables:
+# - RAILWAY_ENVIRONMENT: Set by Railway to indicate the environment (e.g., "production")
+# - RAILWAY_PROJECT_ID: Always present in Railway deployments, used as fallback detection
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-IS_PRODUCTION = ENVIRONMENT in ["production", "prod"]
+RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT", "").lower()
+IS_RAILWAY = os.getenv("RAILWAY_PROJECT_ID") is not None
 
-# For production, PostgreSQL is REQUIRED
+# Production is determined by:
+# 1. Explicit ENVIRONMENT=production setting, OR
+# 2. Railway deployment with explicit production environment setting
+# Note: If RAILWAY_ENVIRONMENT is not set or empty, we don't assume production
+# to avoid unexpected behavior - require explicit configuration
+IS_PRODUCTION = (
+    ENVIRONMENT in ["production", "prod"] or 
+    (IS_RAILWAY and RAILWAY_ENVIRONMENT in ["production", "prod"])
+)
+
+# Track if database configuration is valid for production
+# Don't crash at startup - allow health check to report issues
+DATABASE_CONFIG_WARNING = None
+
+# For production, PostgreSQL is REQUIRED - but don't crash, just warn
 if IS_PRODUCTION and not USE_POSTGRESQL:
-    print("❌" * 50)
-    print("❌  ERROR: Production environment REQUIRES PostgreSQL!")
-    print("❌  DATABASE_URL environment variable is not set.")
-    print("❌")
-    print("❌  SQLite is NOT suitable for production use because:")
-    print("❌  - No data persistence in containerized environments (Railway, Docker)")
-    print("❌  - Users and data will be lost on every deployment/restart")
-    print("❌  - No concurrent access support at scale")
-    print("❌")
-    print("❌  Please set DATABASE_URL to a PostgreSQL connection string:")
-    print("❌  DATABASE_URL=postgresql://username:password@hostname:5432/database")
-    print("❌" * 50)
-    # In production, we should fail fast
-    raise ValueError(
+    DATABASE_CONFIG_WARNING = (
         "DATABASE_URL must be set in production. "
         "PostgreSQL is required for data persistence."
     )
+    print("⚠️" * 50)
+    print("⚠️  WARNING: Production environment REQUIRES PostgreSQL!")
+    print("⚠️  DATABASE_URL environment variable is not set.")
+    print("⚠️")
+    print("⚠️  SQLite is NOT suitable for production use because:")
+    print("⚠️  - No data persistence in containerized environments (Railway, Docker)")
+    print("⚠️  - Users and data will be lost on every deployment/restart")
+    print("⚠️  - No concurrent access support at scale")
+    print("⚠️")
+    print("⚠️  Please set DATABASE_URL to a PostgreSQL connection string:")
+    print("⚠️  DATABASE_URL=postgresql://username:password@hostname:5432/database")
+    print("⚠️" * 50)
+    # Don't raise an exception - allow the app to start so health check can report the issue
+    # This prevents Gunicorn worker boot failures while still warning about the misconfiguration
 
 print(
     f"🗄️ Database Mode: {'PostgreSQL (Production)' if USE_POSTGRESQL else 'SQLite (Development Only)'}"
@@ -699,12 +718,28 @@ def api_health_check():
     This can be used for monitoring but won't block Railway healthcheck
     Attempts to retry database initialization if it failed on startup
     """
+    # Determine HTTP status code based on service availability
+    # 200: Service is healthy or degraded but functional
+    # 503: Service is unavailable (cannot connect to database)
+    http_status = 200
+    
     response = {
         "status": "healthy",
         "message": "HireMeBahamas API is running",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "db_initialized": _db_initialized,
+        "environment": ENVIRONMENT,
+        "is_production": IS_PRODUCTION,
+        "is_railway": IS_RAILWAY,
+        "database_url_configured": USE_POSTGRESQL,
     }
+
+    # Report database configuration warning if present
+    # Use 200 status with 'degraded' state - the service is still functional
+    if DATABASE_CONFIG_WARNING:
+        response["status"] = "degraded"
+        response["config_warning"] = DATABASE_CONFIG_WARNING
+        # Keep http_status = 200 since the service is still functional
 
     # Try to ensure database is initialized
     if not _db_initialized:
@@ -722,6 +757,8 @@ def api_health_check():
         response["db_type"] = "PostgreSQL" if USE_POSTGRESQL else "SQLite"
     except Exception as e:
         response["database"] = "error"
+        response["status"] = "unhealthy"
+        http_status = 503  # Service Unavailable - actual database connection failure
         # Keep meaningful error information up to MAX_ERROR_MESSAGE_LENGTH
         error_msg = str(e)
         if len(error_msg) <= MAX_ERROR_MESSAGE_LENGTH:
@@ -730,7 +767,7 @@ def api_health_check():
             # Truncate with ellipsis
             response["error"] = error_msg[: (MAX_ERROR_MESSAGE_LENGTH - 3)] + "..."
 
-    return jsonify(response), 200
+    return jsonify(response), http_status
 
 
 # ==========================================
