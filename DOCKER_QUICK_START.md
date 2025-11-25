@@ -17,6 +17,24 @@ docker-compose up
 
 The docker-compose.yml automatically uses the optimized Dockerfiles.
 
+### Database Admin Interface
+
+Access the built-in database management interface:
+
+```bash
+# Start all services including Adminer
+docker-compose up -d
+
+# Access Adminer at http://localhost:8081
+# Login credentials:
+#   Server: postgres
+#   Username: hiremebahamas_user
+#   Password: hiremebahamas_password
+#   Database: hiremebahamas
+```
+
+📖 See [DATABASE_ADMIN_INTERFACE.md](./DATABASE_ADMIN_INTERFACE.md) for complete guide.
+
 ### Building Images Locally
 
 To build application images locally:
