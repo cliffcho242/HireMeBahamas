@@ -108,10 +108,12 @@ IS_RAILWAY = os.getenv("RAILWAY_PROJECT_ID") is not None
 
 # Production is determined by:
 # 1. Explicit ENVIRONMENT=production setting, OR
-# 2. Railway deployment with production environment
+# 2. Railway deployment with explicit production environment setting
+# Note: If RAILWAY_ENVIRONMENT is not set or empty, we don't assume production
+# to avoid unexpected behavior - require explicit configuration
 IS_PRODUCTION = (
     ENVIRONMENT in ["production", "prod"] or 
-    (IS_RAILWAY and RAILWAY_ENVIRONMENT in ["production", "prod", ""])  # Railway defaults to production if not specified
+    (IS_RAILWAY and RAILWAY_ENVIRONMENT in ["production", "prod"])
 )
 
 # Track if database configuration is valid for production
@@ -716,7 +718,9 @@ def api_health_check():
     This can be used for monitoring but won't block Railway healthcheck
     Attempts to retry database initialization if it failed on startup
     """
-    # Determine HTTP status code based on configuration
+    # Determine HTTP status code based on service availability
+    # 200: Service is healthy or degraded but functional
+    # 503: Service is unavailable (cannot connect to database)
     http_status = 200
     
     response = {
@@ -731,10 +735,11 @@ def api_health_check():
     }
 
     # Report database configuration warning if present
+    # Use 200 status with 'degraded' state - the service is still functional
     if DATABASE_CONFIG_WARNING:
         response["status"] = "degraded"
         response["config_warning"] = DATABASE_CONFIG_WARNING
-        http_status = 503  # Service Unavailable - configuration issue
+        # Keep http_status = 200 since the service is still functional
 
     # Try to ensure database is initialized
     if not _db_initialized:
@@ -753,7 +758,7 @@ def api_health_check():
     except Exception as e:
         response["database"] = "error"
         response["status"] = "unhealthy"
-        http_status = 503  # Service Unavailable - database connection issue
+        http_status = 503  # Service Unavailable - actual database connection failure
         # Keep meaningful error information up to MAX_ERROR_MESSAGE_LENGTH
         error_msg = str(e)
         if len(error_msg) <= MAX_ERROR_MESSAGE_LENGTH:
