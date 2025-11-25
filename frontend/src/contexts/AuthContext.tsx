@@ -229,7 +229,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       toast.success('Login successful!');
     } catch (error: any) {
       console.error('AuthContext: Login error:', error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Login failed';
+      const errorMessage = error.response?.data?.detail || error.response?.data?.error || error.response?.data?.message || error.message || 'Login failed';
       toast.error(errorMessage);
       throw error;
     }
@@ -258,7 +258,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       toast.success('Registration successful!');
     } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Registration failed';
+      const message = error?.response?.data?.detail || error?.response?.data?.message || error?.message || 'Registration failed';
       toast.error(message);
       throw error;
     }
