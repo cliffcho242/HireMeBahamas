@@ -201,9 +201,15 @@ If issues occur, revert by:
 
 ```bash
 git checkout HEAD~1 docker-compose.yml
-docker-compose down -v  # WARNING: Deletes all data!
 docker-compose up -d
 ```
+
+> ⚠️ **WARNING**: If you need to completely reset the database (only do this if absolutely necessary):
+> ```bash
+> docker-compose down -v  # This will DELETE ALL DATA including users, posts, and messages!
+> docker-compose up -d
+> ```
+> Only use `docker-compose down -v` if you want to start with a completely fresh database.
 
 ## Maintenance
 

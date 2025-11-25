@@ -14,10 +14,15 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Proper shutdown signal handling
-    stop_signal: SIGTERM
-    stop_grace_period: 60s
-    # Use postgres -c commands for better shutdown handling
+    # Proper shutdown signal handling to prevent data corruption
+    stop_signal: SIGTERM  # Send termination signal for graceful shutdown
+    stop_grace_period: 60s  # Wait 60s for PostgreSQL to flush buffers and close connections
+    # PostgreSQL performance tuning optimized for Docker containers (512MB-1GB RAM)
+    # Key settings explained:
+    # - checkpoint_completion_target=0.9: Spread checkpoints over 90% of interval (reduces I/O spikes)
+    # - random_page_cost=1.1: Optimized for SSD storage (default is 4.0 for spinning disks)
+    # - effective_io_concurrency=200: Higher value for SSD parallel I/O capabilities
+    # - min_wal_size/max_wal_size: Prevent frequent WAL creation/deletion, improve recovery
     command: >
       postgres
       -c shared_buffers=256MB
@@ -29,7 +34,7 @@ services:
       -c default_statistics_target=100
       -c random_page_cost=1.1
       -c effective_io_concurrency=200
-      -c work_mem=2621kB
+      -c work_mem=3MB
       -c min_wal_size=1GB
       -c max_wal_size=4GB
       -c max_worker_processes=2
