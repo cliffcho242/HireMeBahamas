@@ -189,7 +189,9 @@ if USE_POSTGRESQL:
     # Parse query string for SSL mode and other options
     query_params = parse_qs(parsed.query)
     # Get sslmode from URL if present, otherwise default to "require"
-    sslmode = query_params.get("sslmode", ["require"])[0]
+    # Handles empty values like ?sslmode= by checking if the list is non-empty
+    sslmode_list = query_params.get("sslmode", [])
+    sslmode = sslmode_list[0] if sslmode_list and sslmode_list[0] else "require"
     
     DB_CONFIG = {
         "host": parsed.hostname,
@@ -231,16 +233,16 @@ def get_db_connection():
                 database=DB_CONFIG["database"],
                 user=DB_CONFIG["user"],
                 password=DB_CONFIG["password"],
-                sslmode=DB_CONFIG.get("sslmode", "require"),
+                sslmode=DB_CONFIG["sslmode"],
                 cursor_factory=RealDictCursor,
                 connect_timeout=10,  # 10 second timeout for connection
             )
             return conn
         except psycopg2.OperationalError as e:
             error_msg = str(e).lower()
-            # Handle SSL-related errors by trying without SSL
+            # Handle SSL-related errors by trying with sslmode=prefer
             if "ssl" in error_msg or "certificate" in error_msg:
-                print(f"⚠️ SSL connection failed, attempting without SSL mode require...")
+                print(f"⚠️ SSL connection failed, attempting with sslmode=prefer...")
                 try:
                     conn = psycopg2.connect(
                         host=DB_CONFIG["host"],
