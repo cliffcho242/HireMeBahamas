@@ -3,6 +3,7 @@ import sqlite3
 import threading
 import time
 from datetime import datetime, timedelta, timezone
+from functools import wraps
 from pathlib import Path
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -1016,6 +1017,39 @@ def ensure_database_initialized():
     return _db_initialized
 
 
+def requires_database(f):
+    """
+    Decorator that ensures the database is initialized before executing an endpoint.
+    
+    If the database is not initialized or initialization fails, returns a 503 Service
+    Unavailable response with a user-friendly message asking to retry.
+    
+    This prevents SQL errors like "relation 'users' does not exist" when requests
+    arrive before database tables are created.
+    
+    Usage:
+        @app.route("/api/example", methods=["GET"])
+        @requires_database
+        def example_endpoint():
+            # Database is guaranteed to be initialized here
+            ...
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not ensure_database_initialized():
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Service temporarily unavailable. Please try again in a moment.",
+                    }
+                ),
+                503,
+            )
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 # Initialize database in background thread to avoid blocking healthcheck
 def init_database_background():
     """Initialize database in background thread to allow app to start quickly"""
@@ -1169,22 +1203,11 @@ def api_health_check():
 
 
 @app.route("/api/auth/register", methods=["POST", "OPTIONS"])
+@requires_database
 def register():
     """Register a new user"""
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Handle invalid JSON or empty body
@@ -1372,22 +1395,11 @@ def register():
 
 
 @app.route("/api/auth/login", methods=["POST", "OPTIONS"])
+@requires_database
 def login():
     """Login user"""
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Handle invalid JSON or empty body
@@ -1513,22 +1525,11 @@ def login():
 
 
 @app.route("/api/auth/refresh", methods=["POST", "OPTIONS"])
+@requires_database
 def refresh_token():
     """Refresh authentication token"""
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Get token from Authorization header
@@ -1619,22 +1620,11 @@ def refresh_token():
 
 
 @app.route("/api/auth/verify", methods=["GET", "OPTIONS"])
+@requires_database
 def verify_session():
     """Verify if the current session is valid"""
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Get token from Authorization header
@@ -1706,22 +1696,11 @@ def verify_session():
 
 
 @app.route("/api/auth/profile", methods=["GET", "OPTIONS"])
+@requires_database
 def get_profile():
     """Get user profile"""
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Get token from Authorization header
@@ -1800,6 +1779,7 @@ def get_profile():
 
 
 @app.route("/api/posts", methods=["GET", "OPTIONS"])
+@requires_database
 def get_posts():
     """
     Get posts with user information
@@ -1813,18 +1793,6 @@ def get_posts():
     """
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Get pagination parameters
@@ -1946,20 +1914,9 @@ def get_posts():
 
 
 @app.route("/api/posts", methods=["POST"])
+@requires_database
 def create_post():
     """Create a new post"""
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
-
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization", "")
@@ -2100,22 +2057,11 @@ def create_post():
 
 
 @app.route("/api/posts/<int:post_id>/like", methods=["POST", "OPTIONS"])
+@requires_database
 def like_post(post_id):
     """Like or unlike a post"""
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Get token from Authorization header
@@ -2233,6 +2179,7 @@ def like_post(post_id):
 
 
 @app.route("/api/posts/<int:post_id>", methods=["DELETE", "OPTIONS"])
+@requires_database
 def delete_post(post_id):
     """
     Delete a post - MANUAL DELETION ONLY
@@ -2247,18 +2194,6 @@ def delete_post(post_id):
     """
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Get token from Authorization header
@@ -2354,24 +2289,13 @@ def delete_post(post_id):
 # ==========================================
 
 @app.route("/api/users/<int:user_id>", methods=["GET", "OPTIONS"])
+@requires_database
 def get_user(user_id):
     """
     Get a specific user's profile by ID
     """
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Verify authentication
@@ -2500,24 +2424,13 @@ def get_user(user_id):
 
 
 @app.route("/api/users/list", methods=["GET", "OPTIONS"])
+@requires_database
 def get_users_list():
     """
     Get list of users with optional search
     """
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Verify authentication
@@ -2676,24 +2589,13 @@ def get_users_list():
 
 
 @app.route("/api/users/follow/<int:user_id>", methods=["POST", "OPTIONS"])
+@requires_database
 def follow_user(user_id):
     """
     Follow a user
     """
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Verify authentication
@@ -2769,24 +2671,13 @@ def follow_user(user_id):
 
 
 @app.route("/api/users/unfollow/<int:user_id>", methods=["POST", "OPTIONS"])
+@requires_database
 def unfollow_user(user_id):
     """
     Unfollow a user
     """
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Verify authentication
@@ -2845,24 +2736,13 @@ def unfollow_user(user_id):
 
 
 @app.route("/api/users/following/list", methods=["GET", "OPTIONS"])
+@requires_database
 def get_following_list():
     """
     Get list of users that current user is following
     """
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Verify authentication
@@ -2927,24 +2807,13 @@ def get_following_list():
 
 
 @app.route("/api/users/followers/list", methods=["GET", "OPTIONS"])
+@requires_database
 def get_followers_list():
     """
     Get list of users that follow current user
     """
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         # Verify authentication
@@ -3014,24 +2883,13 @@ def get_followers_list():
 
 
 @app.route("/api/jobs", methods=["GET", "OPTIONS"])
+@requires_database
 def get_jobs():
     """
     Get all active jobs with optional filtering
     """
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         conn = get_db_connection()
@@ -3146,6 +3004,7 @@ def get_jobs():
 
 
 @app.route("/api/jobs/stats/overview", methods=["GET", "OPTIONS"])
+@requires_database
 def get_job_stats():
     """
     Get job statistics overview
@@ -3153,18 +3012,6 @@ def get_job_stats():
     """
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         conn = get_db_connection()
@@ -3237,24 +3084,13 @@ def get_job_stats():
 
 
 @app.route("/api/jobs/<int:job_id>", methods=["GET", "OPTIONS"])
+@requires_database
 def get_job(job_id):
     """
     Get a specific job by ID
     """
     if request.method == "OPTIONS":
         return "", 200
-
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
 
     try:
         conn = get_db_connection()
@@ -3328,22 +3164,11 @@ def get_job(job_id):
 
 
 @app.route("/api/jobs", methods=["POST"])
+@requires_database
 def create_job():
     """
     Create a new job posting
     """
-    # Ensure database is initialized before processing request
-    if not ensure_database_initialized():
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Service temporarily unavailable. Please try again in a moment.",
-                }
-            ),
-            503,
-        )
-
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization", "")
