@@ -99,10 +99,20 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None
 
 # Check if this is a production environment
-# Detect Railway environment using Railway-specific variables
+# Detect Railway environment using Railway-specific variables:
+# - RAILWAY_ENVIRONMENT: Set by Railway to indicate the environment (e.g., "production")
+# - RAILWAY_PROJECT_ID: Always present in Railway deployments, used as fallback detection
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-IS_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None or os.getenv("RAILWAY_PROJECT_ID") is not None
-IS_PRODUCTION = ENVIRONMENT in ["production", "prod"] or IS_RAILWAY
+RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT", "").lower()
+IS_RAILWAY = os.getenv("RAILWAY_PROJECT_ID") is not None
+
+# Production is determined by:
+# 1. Explicit ENVIRONMENT=production setting, OR
+# 2. Railway deployment with production environment
+IS_PRODUCTION = (
+    ENVIRONMENT in ["production", "prod"] or 
+    (IS_RAILWAY and RAILWAY_ENVIRONMENT in ["production", "prod", ""])  # Railway defaults to production if not specified
+)
 
 # Track if database configuration is valid for production
 # Don't crash at startup - allow health check to report issues
@@ -706,6 +716,9 @@ def api_health_check():
     This can be used for monitoring but won't block Railway healthcheck
     Attempts to retry database initialization if it failed on startup
     """
+    # Determine HTTP status code based on configuration
+    http_status = 200
+    
     response = {
         "status": "healthy",
         "message": "HireMeBahamas API is running",
@@ -714,12 +727,14 @@ def api_health_check():
         "environment": ENVIRONMENT,
         "is_production": IS_PRODUCTION,
         "is_railway": IS_RAILWAY,
+        "database_url_configured": USE_POSTGRESQL,
     }
 
     # Report database configuration warning if present
     if DATABASE_CONFIG_WARNING:
         response["status"] = "degraded"
         response["config_warning"] = DATABASE_CONFIG_WARNING
+        http_status = 503  # Service Unavailable - configuration issue
 
     # Try to ensure database is initialized
     if not _db_initialized:
@@ -737,6 +752,8 @@ def api_health_check():
         response["db_type"] = "PostgreSQL" if USE_POSTGRESQL else "SQLite"
     except Exception as e:
         response["database"] = "error"
+        response["status"] = "unhealthy"
+        http_status = 503  # Service Unavailable - database connection issue
         # Keep meaningful error information up to MAX_ERROR_MESSAGE_LENGTH
         error_msg = str(e)
         if len(error_msg) <= MAX_ERROR_MESSAGE_LENGTH:
@@ -745,7 +762,7 @@ def api_health_check():
             # Truncate with ellipsis
             response["error"] = error_msg[: (MAX_ERROR_MESSAGE_LENGTH - 3)] + "..."
 
-    return jsonify(response), 200
+    return jsonify(response), http_status
 
 
 # ==========================================
