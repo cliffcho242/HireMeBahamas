@@ -99,28 +99,35 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None
 
 # Check if this is a production environment
+# Detect Railway environment using Railway-specific variables
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-IS_PRODUCTION = ENVIRONMENT in ["production", "prod"]
+IS_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None or os.getenv("RAILWAY_PROJECT_ID") is not None
+IS_PRODUCTION = ENVIRONMENT in ["production", "prod"] or IS_RAILWAY
 
-# For production, PostgreSQL is REQUIRED
+# Track if database configuration is valid for production
+# Don't crash at startup - allow health check to report issues
+DATABASE_CONFIG_WARNING = None
+
+# For production, PostgreSQL is REQUIRED - but don't crash, just warn
 if IS_PRODUCTION and not USE_POSTGRESQL:
-    print("❌" * 50)
-    print("❌  ERROR: Production environment REQUIRES PostgreSQL!")
-    print("❌  DATABASE_URL environment variable is not set.")
-    print("❌")
-    print("❌  SQLite is NOT suitable for production use because:")
-    print("❌  - No data persistence in containerized environments (Railway, Docker)")
-    print("❌  - Users and data will be lost on every deployment/restart")
-    print("❌  - No concurrent access support at scale")
-    print("❌")
-    print("❌  Please set DATABASE_URL to a PostgreSQL connection string:")
-    print("❌  DATABASE_URL=postgresql://username:password@hostname:5432/database")
-    print("❌" * 50)
-    # In production, we should fail fast
-    raise ValueError(
+    DATABASE_CONFIG_WARNING = (
         "DATABASE_URL must be set in production. "
         "PostgreSQL is required for data persistence."
     )
+    print("⚠️" * 50)
+    print("⚠️  WARNING: Production environment REQUIRES PostgreSQL!")
+    print("⚠️  DATABASE_URL environment variable is not set.")
+    print("⚠️")
+    print("⚠️  SQLite is NOT suitable for production use because:")
+    print("⚠️  - No data persistence in containerized environments (Railway, Docker)")
+    print("⚠️  - Users and data will be lost on every deployment/restart")
+    print("⚠️  - No concurrent access support at scale")
+    print("⚠️")
+    print("⚠️  Please set DATABASE_URL to a PostgreSQL connection string:")
+    print("⚠️  DATABASE_URL=postgresql://username:password@hostname:5432/database")
+    print("⚠️" * 50)
+    # Don't raise an exception - allow the app to start so health check can report the issue
+    # This prevents Gunicorn worker boot failures while still warning about the misconfiguration
 
 print(
     f"🗄️ Database Mode: {'PostgreSQL (Production)' if USE_POSTGRESQL else 'SQLite (Development Only)'}"
@@ -704,7 +711,15 @@ def api_health_check():
         "message": "HireMeBahamas API is running",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "db_initialized": _db_initialized,
+        "environment": ENVIRONMENT,
+        "is_production": IS_PRODUCTION,
+        "is_railway": IS_RAILWAY,
     }
+
+    # Report database configuration warning if present
+    if DATABASE_CONFIG_WARNING:
+        response["status"] = "degraded"
+        response["config_warning"] = DATABASE_CONFIG_WARNING
 
     # Try to ensure database is initialized
     if not _db_initialized:
