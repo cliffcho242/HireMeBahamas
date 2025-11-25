@@ -1,3 +1,5 @@
+import { Job } from '../types/job';
+
 /**
  * Smart Search Algorithm for HireBahamas
  * Provides intelligent job/service/people search with fuzzy matching,
@@ -342,20 +344,13 @@ export function generateSearchSuggestions(query: string, limit: number = 5): str
 /**
  * Calculate relevance score for a job posting
  */
-export interface JobSearchResult {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  location: string;
-  company?: string;
-  skills?: string[];
+export interface JobSearchResult extends Job {
   relevanceScore: number;
   matchedFields: string[];
 }
 
 export function calculateJobRelevance(
-  job: any,
+  job: Job,
   searchQuery: string
 ): { score: number; matchedFields: string[] } {
   if (!searchQuery) return { score: 1, matchedFields: [] };
@@ -428,7 +423,7 @@ export function calculateJobRelevance(
  * Main search function with intelligent filtering
  */
 export function smartSearch(
-  jobs: any[],
+  jobs: Job[],
   searchQuery: string,
   filters?: {
     category?: string;

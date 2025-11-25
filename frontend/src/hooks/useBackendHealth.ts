@@ -34,11 +34,12 @@ export const useBackendHealth = () => {
             lastCheck: new Date(),
           });
         }
-      } catch (error: any) {
-        console.warn('Backend health check failed:', error.message);
+      } catch (error: unknown) {
+        const apiError = error as { message?: string; code?: string };
+        console.warn('Backend health check failed:', apiError.message);
         
         // Backend might be sleeping (Render.com free tier)
-        if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
+        if (apiError.code === 'ECONNABORTED' || apiError.code === 'ERR_NETWORK') {
           setHealth({
             isHealthy: false,
             isWaking: true,

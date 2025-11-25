@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { toast } from 'react-hot-toast';
+import { SocketMessageData } from '../types';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -9,7 +10,7 @@ interface SocketContextType {
   onlineUsers: string[];
   joinConversation: (conversationId: string) => void;
   leaveConversation: (conversationId: string) => void;
-  sendMessage: (data: any) => void;
+  sendMessage: (data: SocketMessageData) => void;
   sendTyping: (conversationId: string, isTyping: boolean) => void;
 }
 
@@ -28,7 +29,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   useEffect(() => {
     if (!user || !token) return;
 
-    const socketUrl = (import.meta as any).env.VITE_SOCKET_URL || 'http://localhost:8000';
+    const socketUrl = (import.meta as ImportMeta & { env?: { VITE_SOCKET_URL?: string } }).env?.VITE_SOCKET_URL || 'http://localhost:8000';
     
     // Create socket connection
     const newSocket = io(socketUrl, {
@@ -105,7 +106,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
   };
 
-  const sendMessage = (data: any) => {
+  const sendMessage = (data: SocketMessageData) => {
     if (socket) {
       socket.emit('send_message', data);
     }

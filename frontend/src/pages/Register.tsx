@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import AppleSignin from 'react-apple-signin-auth';
 import { getOAuthConfig } from '../utils/oauthConfig';
+import { ApiError, GoogleCredentialResponse, AppleSignInResponse } from '../types';
 
 interface RegisterForm {
   firstName: string;
@@ -63,24 +64,26 @@ const Register: React.FC = () => {
       });
       toast.success('Account created successfully!');
       navigate('/');
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || error?.response?.data?.message || error?.message || 'Registration failed';
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      const message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Registration failed';
       toast.error(message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
+  const handleGoogleSuccess = async (credentialResponse: GoogleCredentialResponse) => {
     try {
       if (credentialResponse.credential) {
         await loginWithGoogle(credentialResponse.credential, selectedUserType);
         toast.success('Account created successfully!');
         navigate('/');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Google registration error:', error);
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Google sign-up failed';
+      const errorMessage = apiError?.response?.data?.detail || apiError?.message || 'Google sign-up failed';
       toast.error(errorMessage);
     }
   };
@@ -89,21 +92,22 @@ const Register: React.FC = () => {
     toast.error('Google sign-up failed. Please try again.');
   };
 
-  const handleAppleSuccess = async (response: any) => {
+  const handleAppleSuccess = async (response: AppleSignInResponse) => {
     try {
       if (response.authorization?.id_token) {
         await loginWithApple(response.authorization.id_token, selectedUserType);
         toast.success('Account created successfully!');
         navigate('/');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Apple registration error:', error);
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Apple sign-up failed';
+      const errorMessage = apiError?.response?.data?.detail || apiError?.message || 'Apple sign-up failed';
       toast.error(errorMessage);
     }
   };
 
-  const handleAppleError = (error: any) => {
+  const handleAppleError = (error: unknown) => {
     console.error('Apple sign-up error:', error);
     toast.error('Apple sign-up failed. Please try again.');
   };
@@ -323,7 +327,7 @@ const Register: React.FC = () => {
                 }}
                 onSuccess={handleAppleSuccess}
                 onError={handleAppleError}
-                render={(props: any) => (
+                render={(props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
                   <button
                     {...props}
                     type="button"

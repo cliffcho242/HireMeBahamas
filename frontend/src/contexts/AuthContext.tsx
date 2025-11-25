@@ -3,6 +3,7 @@ import { User } from '../types/user';
 import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { sessionManager } from '../services/sessionManager';
+import { ApiError } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -221,9 +222,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       console.log('AuthContext: Login successful, user set:', response.user);
       toast.success('Login successful!');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('AuthContext: Login error:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.error || error.response?.data?.message || error.message || 'Login failed';
+      const errorMessage = apiError.response?.data?.detail || apiError.message || 'Login failed';
       toast.error(errorMessage);
       throw error;
     }
@@ -251,8 +253,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
       
       toast.success('Registration successful!');
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || error?.response?.data?.message || error?.message || 'Registration failed';
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      const message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Registration failed';
       toast.error(message);
       throw error;
     }
@@ -292,9 +295,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       console.log('AuthContext: Google OAuth login successful, user set:', response.user);
       toast.success('Google sign-in successful!');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('AuthContext: Google OAuth error:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'Google sign-in failed';
+      const errorMessage = apiError.response?.data?.detail || apiError.response?.data?.message || apiError.message || 'Google sign-in failed';
       toast.error(errorMessage);
       throw error;
     }
@@ -334,9 +338,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       console.log('AuthContext: Apple OAuth login successful, user set:', response.user);
       toast.success('Apple sign-in successful!');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('AuthContext: Apple OAuth error:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'Apple sign-in failed';
+      const errorMessage = apiError.response?.data?.detail || apiError.response?.data?.message || apiError.message || 'Apple sign-in failed';
       toast.error(errorMessage);
       throw error;
     }
@@ -365,8 +370,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
       
       toast.success('Profile updated successfully!');
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || error.response?.data?.message || 'Profile update failed');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      toast.error(apiError.response?.data?.detail || apiError.response?.data?.message || 'Profile update failed');
       throw error;
     }
   };

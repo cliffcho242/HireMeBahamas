@@ -6,6 +6,7 @@ import { messagesAPI } from '../services/api';
 import { PaperAirplaneIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { ApiError } from '../types';
 
 interface Message {
   id: number;
@@ -174,10 +175,8 @@ const Messages: React.FC = () => {
           setSearchParams({});
         } catch (error) {
           console.error('Error creating conversation:', error);
-          const errorMessage =
-            error && typeof error === 'object' && 'response' in error && (error as any).response?.data?.detail
-              ? (error as any).response.data.detail
-              : 'Failed to open chat. Please try again.';
+          const apiError = error as ApiError;
+          const errorMessage = apiError.response?.data?.detail || 'Failed to open chat. Please try again.';
           toast.error(errorMessage);
           // Clear the query parameter even on error to prevent infinite retries
           setSearchParams({});

@@ -17,6 +17,7 @@ import {
 import { authAPI, postsAPI, usersAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { ApiError } from '../types';
 
 interface UserProfile {
   id: number;
@@ -218,9 +219,10 @@ const UserProfile: React.FC = () => {
         setFollowersCount(prev => prev + 1);
         toast.success('User followed');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Failed to toggle follow:', error);
-      toast.error(error.response?.data?.message || 'Failed to update follow status');
+      toast.error(apiError.response?.data?.message || 'Failed to update follow status');
     } finally {
       setIsFollowLoading(false);
     }
@@ -233,7 +235,7 @@ const UserProfile: React.FC = () => {
     try {
       const response = await usersAPI.getUserFollowers(parseInt(userId));
       setFollowersList(response.followers || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch followers:', error);
       toast.error('Failed to load followers');
     } finally {
@@ -248,7 +250,7 @@ const UserProfile: React.FC = () => {
     try {
       const response = await usersAPI.getUserFollowing(parseInt(userId));
       setFollowingList(response.following || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch following:', error);
       toast.error('Failed to load following');
     } finally {

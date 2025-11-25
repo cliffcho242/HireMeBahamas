@@ -82,11 +82,17 @@ const PostFeed: React.FC = () => {
         try {
           switch (action.type) {
             case 'create':
-              await postsAPI.createPost(action.data);
+              if (action.data.content) {
+                await postsAPI.createPost({
+                  content: action.data.content,
+                  image_url: action.data.image_url,
+                  video_url: action.data.video_url
+                });
+              }
               break;
             case 'update':
-              if (action.postId) {
-                await postsAPI.updatePost(action.postId, action.data);
+              if (action.postId && action.data.content) {
+                await postsAPI.updatePost(action.postId, { content: action.data.content });
               }
               break;
             case 'delete':
@@ -100,7 +106,7 @@ const PostFeed: React.FC = () => {
               }
               break;
             case 'comment':
-              if (action.postId) {
+              if (action.postId && action.data.content) {
                 await postsAPI.createComment(action.postId, action.data.content);
               }
               break;
