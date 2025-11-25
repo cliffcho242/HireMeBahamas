@@ -153,4 +153,12 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8005)
+    # Production mode - no reload, multiple workers for better performance
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=False,
+        workers=2,  # Use 2 workers for production mode
+        log_level="info"
+    )
