@@ -99,7 +99,7 @@ services:
     stop_grace_period: 30s
     command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --timeout 120 --reload --access-logfile - --error-logfile -
 
-  # FastAPI Backend (Alternative backend in backend/ directory)
+  # FastAPI Backend - Production Mode
   backend-fastapi:
     build:
       context: ./backend
@@ -107,10 +107,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://hiremebahamas_user:hiremebahamas_password@postgres:5432/hiremebahamas
+      DATABASE_URL: postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@postgres:5432/hiremebahamas
       REDIS_URL: redis://redis:6379
-      ENVIRONMENT: development
+      ENVIRONMENT: production
       SECRET_KEY: dev-secret-key-change-in-production
+      DB_ECHO: false
     depends_on:
       postgres:
         condition: service_healthy
@@ -121,25 +122,24 @@ services:
       - backend_uploads:/app/uploads
     stop_signal: SIGTERM
     stop_grace_period: 30s
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-reload --workers 2
     profiles:
       - fastapi  # Only start if explicitly requested
 
-  # Frontend (for development)
+  # Frontend - Production Mode
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     environment:
-      # Use Flask backend by default
-      VITE_API_URL: http://localhost:8080
-      VITE_SOCKET_URL: http://localhost:8080
+      VITE_API_URL: http://localhost:8000
+      VITE_SOCKET_URL: http://localhost:8000
+      NODE_ENV: production
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: npm run dev
+      - ./frontend/dist:/app/dist
+    command: npm run start
     profiles:
       - frontend  # Only start if explicitly requested
 

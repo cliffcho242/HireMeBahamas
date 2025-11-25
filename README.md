@@ -4,6 +4,28 @@
 
 A modern, Facebook-inspired social platform designed specifically for professionals in the Bahamas to connect, share career opportunities, and build meaningful professional relationships.
 
+## 🚀 Production Mode (Recommended for Local Development)
+
+**NEW**: Run HireMeBahamas in full production mode with PostgreSQL!
+
+```bash
+# Quick Start - Linux/macOS
+./start_production.sh
+
+# Quick Start - Windows
+start_production.bat
+```
+
+This runs the app with:
+- ✅ **PostgreSQL** (production-ready database)
+- ✅ **Production builds** (optimized, minified)
+- ✅ **No hot-reload** (stable, production-like)
+- ✅ **Production settings** (security, performance)
+
+📖 **[Read the Production Mode Guide](./PRODUCTION_MODE_GUIDE.md)** for detailed setup instructions.
+
+---
+
 ## ✅ Recent Updates: Data Persistence & Session Management
 
 **What's Fixed:**

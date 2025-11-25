@@ -339,24 +339,6 @@ const Login: React.FC = () => {
                   />
                 )}
 
-                {/* Test Account Button - Only visible in development */}
-                {import.meta.env.DEV && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail('admin@hiremebahamas.com');
-                      setPassword('admin123');
-                      toast.success('Test credentials loaded!');
-                    }}
-                    className={`w-full flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all ${!isAnyOAuthEnabled ? 'mt-6' : ''}`}
-                  >
-                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
-                    <span className="font-medium text-gray-700">Use Test Account</span>
-                  </button>
-                )}
-
                 <div className="text-center">
                   <span className="text-gray-600">Don't have an account? </span>
                   <Link to="/register" className="text-blue-600 hover:text-blue-700 font-semibold">
