@@ -366,7 +366,9 @@ def _get_psycopg2_error_details(e):
     # 1. We don't have pgerror (so we need some information), or
     # 2. str_repr contains useful information not already in pgerror
     # Skip if it's just a numeric code and we already have pgerror
-    is_just_numeric = str_repr.isdigit() or (str_repr.startswith('-') and str_repr[1:].isdigit())
+    is_just_numeric = str_repr.isdigit() or (
+        len(str_repr) > 1 and str_repr.startswith('-') and str_repr[1:].isdigit()
+    )
     
     if str_repr and not is_just_numeric and (not pgerror or str_repr not in pgerror):
         parts.append(str_repr)
