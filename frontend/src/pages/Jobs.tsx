@@ -42,7 +42,7 @@ const Jobs: React.FC = () => {
         relevanceScore: 100,
         matchedFields: []
       })));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching jobs:', error);
       // Don't throw error - just show empty jobs list
       setJobs([]);
@@ -337,7 +337,7 @@ const Jobs: React.FC = () => {
                       </div>
                     )}
                     
-                    <JobCard job={job as any} />
+                    <JobCard job={job as Job} />
                   </motion.div>
                 ))}
               </div>

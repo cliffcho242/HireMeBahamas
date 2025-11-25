@@ -147,7 +147,7 @@ export const getOptimalImageSize = () => {
 };
 
 // Debounce for resize events
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): ((...args: Parameters<T>) => void) => {
@@ -160,7 +160,7 @@ export const debounce = <T extends (...args: any[]) => any>(
 };
 
 // Throttle for scroll events
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): ((...args: Parameters<T>) => void) => {
@@ -196,13 +196,19 @@ export const useResponsive = () => {
   };
 };
 
+// PWA install prompt interface
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 // PWA install prompt
 export const promptPWAInstall = () => {
-  let deferredPrompt: any;
+  let deferredPrompt: BeforeInstallPromptEvent | null = null;
   
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
-    deferredPrompt = e;
+    deferredPrompt = e as BeforeInstallPromptEvent;
   });
   
   return {

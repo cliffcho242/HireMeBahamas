@@ -21,6 +21,23 @@ import {
   Star
 } from 'lucide-react';
 
+interface DashboardJob {
+  id: number;
+  title: string;
+  company: string;
+  location: string;
+  salary: string;
+  type: string;
+  postedTime: string;
+  description: string;
+  skills: string[];
+  likes: number;
+  comments: number;
+  applicants: number;
+  isLiked: boolean;
+  isSaved: boolean;
+}
+
 const FacebookLikeDashboard = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('feed');
@@ -92,7 +109,7 @@ const FacebookLikeDashboard = () => {
     { name: 'Maria Rodriguez', type: 'HR Manager', connections: 'mutual 8' }
   ];
 
-  const JobCard = ({ job }: { job: any }) => (
+  const JobCard = ({ job }: { job: DashboardJob }) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}

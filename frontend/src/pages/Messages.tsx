@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
@@ -6,6 +6,7 @@ import { messagesAPI } from '../services/api';
 import { PaperAirplaneIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { ApiError } from '../types';
 
 interface Message {
   id: number;
@@ -54,6 +55,24 @@ const Messages: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Define fetchConversations with useCallback before useEffects that depend on it
+  const fetchConversations = useCallback(async () => {
+    try {
+      const conversations = await messagesAPI.getConversations();
+      setConversations(conversations);
+      
+      // Only auto-select first conversation if there's no user query parameter
+      const userIdParam = searchParams.get('user');
+      if (conversations.length > 0 && !userIdParam) {
+        setSelectedConversation(conversations[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchParams]);
+
   // Keep conversations ref in sync
   useEffect(() => {
     conversationsRef.current = conversations;
@@ -63,7 +82,7 @@ const Messages: React.FC = () => {
     if (user) {
       fetchConversations();
     }
-  }, [user]);
+  }, [user, fetchConversations]);
 
   useEffect(() => {
     scrollToBottom();
@@ -156,10 +175,8 @@ const Messages: React.FC = () => {
           setSearchParams({});
         } catch (error) {
           console.error('Error creating conversation:', error);
-          const errorMessage =
-            error && typeof error === 'object' && 'response' in error && (error as any).response?.data?.detail
-              ? (error as any).response.data.detail
-              : 'Failed to open chat. Please try again.';
+          const apiError = error as ApiError;
+          const errorMessage = apiError.response?.data?.detail || 'Failed to open chat. Please try again.';
           toast.error(errorMessage);
           // Clear the query parameter even on error to prevent infinite retries
           setSearchParams({});
@@ -168,24 +185,7 @@ const Messages: React.FC = () => {
     };
 
     handleUserQueryParam();
-  }, [searchParams, user, loading, setSearchParams]);
-
-  const fetchConversations = async () => {
-    try {
-      const conversations = await messagesAPI.getConversations();
-      setConversations(conversations);
-      
-      // Only auto-select first conversation if there's no user query parameter
-      const userIdParam = searchParams.get('user');
-      if (conversations.length > 0 && !userIdParam) {
-        setSelectedConversation(conversations[0]);
-      }
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [searchParams, user, loading, setSearchParams, fetchConversations]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();

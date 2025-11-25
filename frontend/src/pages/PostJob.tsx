@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { ApiError } from '../types';
 
 const PostJob: React.FC = () => {
   const { user } = useAuth();
@@ -85,46 +86,47 @@ const PostJob: React.FC = () => {
       
       alert('Job posted successfully!');
       navigate('/jobs');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Error posting job:', error);
       console.error('Error details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message,
-        code: error.code
+        status: apiError.response?.status,
+        statusText: (apiError.response as { statusText?: string })?.statusText,
+        data: apiError.response?.data,
+        message: apiError.message,
+        code: apiError.code
       });
       
       // Better error messages with auto-fix suggestions
       let errorMessage = 'Error posting job.\n\n';
       
-      if (error.response?.status === 401) {
+      if (apiError.response?.status === 401) {
         errorMessage += '🔐 Authentication issue detected.\n';
         errorMessage += 'Redirecting to login page...';
         alert(errorMessage);
         // Wait a moment so user can read the message
         setTimeout(() => navigate('/login'), 1500);
         return;
-      } else if (error.response?.status === 400) {
+      } else if (apiError.response?.status === 400) {
         errorMessage += '❌ Validation Error:\n';
-        errorMessage += error.response.data?.message || 'Please fill in all required fields.';
-      } else if (error.response?.status === 500) {
+        errorMessage += apiError.response.data?.message || 'Please fill in all required fields.';
+      } else if (apiError.response?.status === 500) {
         errorMessage += '⚠️ Server Error:\n';
-        errorMessage += error.response.data?.message || 'The server encountered an error. Please try again.';
-      } else if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
+        errorMessage += apiError.response.data?.message || 'The server encountered an error. Please try again.';
+      } else if (apiError.code === 'ERR_NETWORK' || apiError.message?.includes('Network Error')) {
         errorMessage += '🌐 Network Error:\n';
         errorMessage += 'Cannot connect to server. Please check:\n';
         errorMessage += '• Your internet connection\n';
         errorMessage += '• The server might be starting up (wait 30 seconds)\n';
         errorMessage += '• Try refreshing the page';
-      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      } else if (apiError.code === 'ECONNABORTED' || apiError.message?.includes('timeout')) {
         errorMessage += '⏱️ Request Timeout:\n';
         errorMessage += 'The server is taking too long to respond.\n';
         errorMessage += 'Please try again in a moment.';
-      } else if (error.response?.data?.message) {
-        errorMessage += error.response.data.message;
-      } else if (error.message) {
-        errorMessage += error.message;
+      } else if (apiError.response?.data?.message) {
+        errorMessage += apiError.response.data.message;
+      } else if (apiError.message) {
+        errorMessage += apiError.message;
       } else {
         errorMessage += '❓ Unknown error occurred.\n';
         errorMessage += 'Please try:\n';

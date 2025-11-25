@@ -5,6 +5,8 @@
  * It manages the connection to Sendbird and provides helper methods.
  */
 
+/* eslint-disable react-refresh/only-export-components */
+// Context files export both Provider components and custom hooks
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import SendbirdChat, { User as SendbirdUser } from '@sendbird/chat';
 import { GroupChannelModule } from '@sendbird/chat/groupChannel';

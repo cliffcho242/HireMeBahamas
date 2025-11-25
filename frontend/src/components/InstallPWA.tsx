@@ -13,12 +13,12 @@ const InstallPWA: React.FC = () => {
   
   // Use lazy initialization to avoid cascading renders
   const [isIOS] = useState(() => {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as { MSStream?: unknown }).MSStream;
   });
   
   const [isStandalone] = useState(() => {
     return window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone ||
       document.referrer.includes('android-app://');
   });
   

@@ -1,3 +1,5 @@
+import { User } from '../types/user';
+
 const SESSION_KEY = 'hireme_session';
 const ACTIVITY_KEY = 'hireme_last_activity';
 const TOKEN_KEY = 'token';
@@ -14,7 +16,7 @@ const TOKEN_REFRESH_THRESHOLD = 24 * 60 * 60 * 1000;
 
 export interface SessionData {
   token: string;
-  user: any;
+  user: User;
   lastActivity: number;
   expiresAt: number;
   rememberMe: boolean;

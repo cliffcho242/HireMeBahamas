@@ -43,9 +43,10 @@ app = FastAPI(default_response_class=ORJSONResponse)
 
 ### 5. Caching & Background Tasks
 **Packages:**
-- `redis==5.0.1` - In-memory data store for caching
-- `aioredis==2.0.1` - Async Redis client
+- `redis==5.0.1` - In-memory data store for caching with built-in async support (since v4.2.0)
 - `celery==5.3.4` - Distributed task queue
+
+**Note:** The `aioredis` package is deprecated and no longer needed. The `redis` package (v4.2.0+) now includes native async support via `redis.asyncio`.
 
 **Benefits:**
 - ✅ Cache frequently accessed data

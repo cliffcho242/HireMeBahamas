@@ -82,11 +82,17 @@ const PostFeed: React.FC = () => {
         try {
           switch (action.type) {
             case 'create':
-              await postsAPI.createPost(action.data);
+              if (action.data.content) {
+                await postsAPI.createPost({
+                  content: action.data.content,
+                  image_url: action.data.image_url,
+                  video_url: action.data.video_url
+                });
+              }
               break;
             case 'update':
-              if (action.postId) {
-                await postsAPI.updatePost(action.postId, action.data);
+              if (action.postId && action.data.content) {
+                await postsAPI.updatePost(action.postId, { content: action.data.content });
               }
               break;
             case 'delete':
@@ -100,7 +106,7 @@ const PostFeed: React.FC = () => {
               }
               break;
             case 'comment':
-              if (action.postId) {
+              if (action.postId && action.data.content) {
                 await postsAPI.createComment(action.postId, action.data.content);
               }
               break;
@@ -108,7 +114,7 @@ const PostFeed: React.FC = () => {
           
           // Remove successful action
           await postCache.removePendingAction(action.id);
-        } catch (error) {
+        } catch {
           // Update retry count
           if (action.retryCount < 3) {
             await postCache.updatePendingActionRetry(action.id);
@@ -566,9 +572,10 @@ const PostFeed: React.FC = () => {
           url: shareUrl,
         });
         toast.success('Post shared successfully!');
-      } catch (error: any) {
+      } catch (error: unknown) {
         // User cancelled the share or error occurred
-        if (error.name !== 'AbortError') {
+        const shareError = error as { name?: string };
+        if (shareError.name !== 'AbortError') {
           console.error('Error sharing:', error);
           // Fallback to clipboard
           copyToClipboard(shareUrl);
@@ -596,7 +603,7 @@ const PostFeed: React.FC = () => {
       try {
         document.execCommand('copy');
         toast.success('Link copied to clipboard!');
-      } catch (err) {
+      } catch {
         toast.error('Failed to copy link. Please try again.');
       } finally {
         // Ensure cleanup happens regardless of success or failure

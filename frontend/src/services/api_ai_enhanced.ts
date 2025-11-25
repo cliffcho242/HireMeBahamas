@@ -23,7 +23,7 @@ const selectBestEndpoint = async () => {
         console.log(`AI: Selected optimal endpoint: ${endpoint}`);
         return endpoint;
       }
-    } catch (error) {
+    } catch {
       console.warn(`AI: Endpoint ${endpoint} unavailable`);
     }
   }
@@ -87,7 +87,7 @@ api.interceptors.request.use((config) => {
         console.log('AI: Token expired, removing from storage');
         localStorage.removeItem('token');
       }
-    } catch (error) {
+    } catch {
       console.log('AI: Invalid token format, removing from storage');
       localStorage.removeItem('token');
     }
@@ -108,13 +108,14 @@ export const authAPI = {
       }
       
       return response.data;
-    } catch (error: any) {
-      console.error('AI: Login error detected:', error.message);
+    } catch (error: unknown) {
+      const apiError = error as { message?: string };
+      console.error('AI: Login error detected:', apiError.message);
       throw error;
     }
   },
 
-  register: async (userData: any) => {
+  register: async (userData: Record<string, unknown>) => {
     try {
       const response = await api.post('/auth/register', userData);
       return response.data;

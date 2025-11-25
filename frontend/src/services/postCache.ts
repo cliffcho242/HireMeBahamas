@@ -10,11 +10,17 @@ export interface CachedPost extends Post {
   cachedAt: number;
 }
 
+export interface PendingActionData {
+  content?: string;
+  image_url?: string;
+  video_url?: string;
+}
+
 export interface PendingAction {
   id: string;
   type: 'create' | 'update' | 'delete' | 'like' | 'comment';
   postId?: number;
-  data: any;
+  data: PendingActionData;
   timestamp: number;
   retryCount: number;
 }
@@ -126,7 +132,7 @@ class PostCache {
       );
 
       // Remove cache timestamp before returning
-      return validPosts.map(({ cachedAt, ...post }) => post);
+      return validPosts.map(({ cachedAt: _cachedAt, ...post }) => post);
     } catch (error) {
       console.error('Failed to get cached posts:', error);
       return [];

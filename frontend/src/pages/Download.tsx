@@ -21,7 +21,7 @@ const Download: React.FC = () => {
   // Use lazy initialization for platform detection to avoid cascading renders
   const [isIOS] = useState(() => {
     const userAgent = navigator.userAgent.toLowerCase();
-    return /ipad|iphone|ipod/.test(userAgent) && !(window as any).MSStream;
+    return /ipad|iphone|ipod/.test(userAgent) && !(window as { MSStream?: unknown }).MSStream;
   });
   
   const [isAndroid] = useState(() => {
@@ -41,7 +41,7 @@ const Download: React.FC = () => {
   // Initialize isInstalled state, but allow updates when user accepts install
   const [isInstalled, setIsInstalled] = useState(() => {
     return window.matchMedia('(display-mode: standalone)').matches ||
-      (navigator as any).standalone ||
+      (navigator as Navigator & { standalone?: boolean }).standalone ||
       document.referrer.includes('android-app://');
   });
   
@@ -68,7 +68,7 @@ const Download: React.FC = () => {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, []);
+  }, [isIOS, isAndroid, isDesktop]);
 
   const handleInstallClick = async (e?: React.MouseEvent) => {
     if (e) {

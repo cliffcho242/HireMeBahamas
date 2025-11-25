@@ -30,7 +30,7 @@ const AIDashboard: React.FC = () => {
     try {
       const response = await sendChatMessage(chatMessage);
       setChatResponse(response);
-    } catch (error) {
+    } catch {
       setChatResponse('Sorry, I encountered an error. Please try again.');
     } finally {
       setIsLoading(false);

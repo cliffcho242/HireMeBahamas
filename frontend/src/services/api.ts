@@ -20,7 +20,7 @@ interface FollowingResponse {
 
 // Derive API base URL with safe production fallback
 const DEFAULT_PROD_API = 'https://hiremebahamas.onrender.com';
-const ENV_API = (import.meta as any).env?.VITE_API_URL as string | undefined;
+const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
 let API_BASE_URL = ENV_API || 'http://127.0.0.1:9999';
 
 // If no env is set and we're on the hiremebahamas.com domain, use the Render backend
@@ -47,7 +47,13 @@ const RETRY_DELAY = 3000; // 2 seconds (increased from 1s)
 const BACKEND_WAKE_TIME = 90000; // 60 seconds for Render.com free tier (increased from 30s)
 
 // Helper to check if backend is sleeping (Render free tier)
-const isBackendSleeping = (error: any): boolean => {
+interface ApiErrorType {
+  response?: { status?: number };
+  code?: string;
+  config?: { timeout?: number };
+}
+
+const isBackendSleeping = (error: ApiErrorType): boolean => {
   // Render.com returns 503 when service is sleeping
   if (error.response?.status === 503) return true;
   
@@ -55,7 +61,7 @@ const isBackendSleeping = (error: any): boolean => {
   if (error.response?.status === 405) return true;
   
   // Long timeout suggests cold start
-  if (error.code === 'ECONNABORTED' && error.config?.timeout > 15000) return true;
+  if (error.code === 'ECONNABORTED' && (error.config?.timeout ?? 0) > 15000) return true;
   
   // Connection refused during wake-up
   if (error.code === 'ECONNREFUSED') return true;

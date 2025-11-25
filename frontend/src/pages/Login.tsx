@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import AppleSignin from 'react-apple-signin-auth';
 import { getOAuthConfig } from '../utils/oauthConfig';
+import { ApiError, GoogleCredentialResponse, AppleSignInResponse } from '../types';
 import {
   UserIcon,
   BriefcaseIcon,
@@ -42,20 +43,22 @@ const Login: React.FC = () => {
       await login(email, password);
       toast.success('Welcome back to HireMeBahamas!');
       navigate('/');
-    } catch (error: any) {
-      toast.error(error.message || 'Login failed');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      toast.error(apiError.message || 'Login failed');
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
+  const handleGoogleSuccess = async (credentialResponse: GoogleCredentialResponse) => {
     try {
       if (credentialResponse.credential) {
         await loginWithGoogle(credentialResponse.credential);
         navigate('/');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Google login error:', error);
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Google sign-in failed';
+      const errorMessage = apiError?.response?.data?.detail || apiError?.message || 'Google sign-in failed';
       toast.error(errorMessage);
     }
   };
@@ -64,20 +67,21 @@ const Login: React.FC = () => {
     toast.error('Google sign-in failed. Please try again.');
   };
 
-  const handleAppleSuccess = async (response: any) => {
+  const handleAppleSuccess = async (response: AppleSignInResponse) => {
     try {
       if (response.authorization?.id_token) {
         await loginWithApple(response.authorization.id_token);
         navigate('/');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Apple login error:', error);
-      const errorMessage = error?.response?.data?.detail || error?.message || 'Apple sign-in failed';
+      const errorMessage = apiError?.response?.data?.detail || apiError?.message || 'Apple sign-in failed';
       toast.error(errorMessage);
     }
   };
 
-  const handleAppleError = (error: any) => {
+  const handleAppleError = (error: unknown) => {
     console.error('Apple sign-in error:', error);
     toast.error('Apple sign-in failed. Please try again.');
   };
@@ -320,7 +324,7 @@ const Login: React.FC = () => {
                     }}
                     onSuccess={handleAppleSuccess}
                     onError={handleAppleError}
-                    render={(props: any) => (
+                    render={(props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
                       <button
                         {...props}
                         type="button"

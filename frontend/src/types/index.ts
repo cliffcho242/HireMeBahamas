@@ -1,3 +1,46 @@
+// Common API error type
+export interface ApiError {
+  response?: {
+    data?: {
+      detail?: string;
+      message?: string;
+    };
+    status?: number;
+  };
+  message?: string;
+  code?: string;
+  config?: {
+    timeout?: number;
+  };
+}
+
+// Google OAuth credential response
+export interface GoogleCredentialResponse {
+  credential?: string;
+}
+
+// Apple OAuth response  
+export interface AppleSignInResponse {
+  authorization?: {
+    id_token?: string;
+  };
+}
+
+// Socket message data type
+export interface SocketMessageData {
+  conversationId: string;
+  content: string;
+  receiverId: string;
+}
+
+// Vite import.meta environment
+export interface ImportMetaEnv {
+  VITE_API_URL?: string;
+  VITE_SOCKET_URL?: string;
+  VITE_GOOGLE_CLIENT_ID?: string;
+  VITE_APPLE_CLIENT_ID?: string;
+}
+
 export interface Message {
   id: string;
   content: string;
