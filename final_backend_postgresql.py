@@ -1462,7 +1462,6 @@ def init_database_background():
             return
 
         try:
-            print("🔧 Attempting database initialization in background thread...")
             init_database()
         except psycopg2.Error as e:
             error_details = _get_psycopg2_error_details(e)
@@ -1481,9 +1480,9 @@ def init_database_background():
 # Start database initialization in background thread
 _db_init_thread = None
 try:
+    print("🚀 Starting database initialization in background thread...")
     _db_init_thread = threading.Thread(target=init_database_background, daemon=True, name="db-init")
     _db_init_thread.start()
-    print("🚀 Database initialization started in background thread")
 except Exception as e:
     print(f"⚠️ Failed to start database initialization thread: {e}")
     print("⚠️ Database will be initialized on first request")
