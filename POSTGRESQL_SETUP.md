@@ -268,6 +268,31 @@ Should return:
 }
 ```
 
+### Understanding PostgreSQL Checkpoint Logs
+
+You may see checkpoint log messages like this in your PostgreSQL logs:
+
+```
+LOG: checkpoint complete: wrote 1 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.101 s, sync=0.002 s, total=0.113 s; sync files=1, longest=0.002 s, average=0.002 s; distance=8 kB, estimate=2262 kB
+```
+
+**This is completely normal and not an error.** Checkpoints are a routine PostgreSQL operation that:
+
+- Writes all modified data from memory to disk
+- Ensures data durability and crash recovery
+- Runs automatically based on time or WAL size (default: every 5 minutes or 1GB of WAL, whichever occurs first)
+
+**What the message means:**
+- `wrote X buffers` - Number of data pages written to disk
+- `WAL file(s) added/removed/recycled` - Write-ahead log file management
+- `write/sync/total` - Time spent on different phases
+- `distance/estimate` - Amount of data processed
+
+**When to be concerned:**
+- ❌ `checkpoints are occurring too frequently` - May need tuning
+- ❌ Long sync times (several seconds) - May indicate disk I/O issues
+- ✅ Normal checkpoint completion messages - Everything is working correctly
+
 ## Support
 
 If you encounter issues:
