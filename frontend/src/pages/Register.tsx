@@ -64,7 +64,7 @@ const Register: React.FC = () => {
       toast.success('Account created successfully!');
       navigate('/');
     } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Registration failed';
+      const message = error?.response?.data?.detail || error?.response?.data?.message || error?.message || 'Registration failed';
       toast.error(message);
     } finally {
       setSubmitting(false);
