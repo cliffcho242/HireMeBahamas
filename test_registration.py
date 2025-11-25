@@ -434,6 +434,74 @@ class TestRegistration:
         data = response.get_json()
         assert data["success"] is False
     
+    def test_registration_null_password(self, client):
+        """Test registration fails with null password without crashing (fixes strip() on None error)"""
+        # This test is for the bug: 'NoneType' object has no attribute 'strip'
+        registration_data = {
+            "email": "test@example.com",
+            "password": None,  # Null value
+            "first_name": "John",
+            "last_name": "Doe",
+            "user_type": "freelancer",
+            "location": "Nassau, Bahamas"
+        }
+        
+        response = client.post(
+            "/api/auth/register",
+            data=json.dumps(registration_data),
+            content_type="application/json"
+        )
+        
+        # Should return 400 Bad Request, not 500 Server Error
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data["success"] is False
+        assert "Password" in data["message"]
+    
+    def test_registration_null_email(self, client):
+        """Test registration fails with null email without crashing"""
+        registration_data = {
+            "email": None,
+            "password": "TestPass123",
+            "first_name": "John",
+            "last_name": "Doe",
+            "user_type": "freelancer",
+            "location": "Nassau, Bahamas"
+        }
+        
+        response = client.post(
+            "/api/auth/register",
+            data=json.dumps(registration_data),
+            content_type="application/json"
+        )
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data["success"] is False
+        assert "Email" in data["message"]
+    
+    def test_registration_null_first_name(self, client):
+        """Test registration fails with null first_name without crashing"""
+        registration_data = {
+            "email": "test@example.com",
+            "password": "TestPass123",
+            "first_name": None,
+            "last_name": "Doe",
+            "user_type": "freelancer",
+            "location": "Nassau, Bahamas"
+        }
+        
+        response = client.post(
+            "/api/auth/register",
+            data=json.dumps(registration_data),
+            content_type="application/json"
+        )
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data["success"] is False
+        assert "First Name" in data["message"]
+    
     def test_registration_whitespace_trimming(self, client):
         """Test that registration trims whitespace from fields"""
         registration_data = {

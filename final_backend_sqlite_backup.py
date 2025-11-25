@@ -389,7 +389,8 @@ def register():
             "location",
         ]
         for field in required_fields:
-            if field not in data or not data[field].strip():
+            value = data.get(field)
+            if value is None or (isinstance(value, str) and not value.strip()):
                 return (
                     jsonify(
                         {
