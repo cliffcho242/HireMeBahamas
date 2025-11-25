@@ -660,11 +660,11 @@ def init_postgresql_extensions(cursor, conn):
                 SELECT EXISTS (
                     SELECT 1 FROM pg_available_extensions 
                     WHERE name = %s
-                )
+                ) as is_available
                 """,
                 (ext_name,)
             )
-            is_available = cursor.fetchone()[0]
+            is_available = cursor.fetchone()["is_available"]
             
             if not is_available:
                 print(f"⚠️  Extension '{ext_name}' is not available on this PostgreSQL server")
@@ -676,11 +676,11 @@ def init_postgresql_extensions(cursor, conn):
                 """
                 SELECT EXISTS (
                     SELECT 1 FROM pg_extension WHERE extname = %s
-                )
+                ) as is_installed
                 """,
                 (ext_name,)
             )
-            is_installed = cursor.fetchone()[0]
+            is_installed = cursor.fetchone()["is_installed"]
             
             if is_installed:
                 print(f"✅ Extension '{ext_name}' is already installed")
@@ -735,7 +735,8 @@ def init_postgresql_extensions(cursor, conn):
                 error_details = _get_psycopg2_error_details(e)
                 print(f"⚠️  Unexpected error initializing extension '{ext_name}': {error_details}")
             else:
-                print(f"⚠️  Unexpected error initializing extension '{ext_name}': {e}")
+                # Include exception type for better debugging of unexpected errors
+                print(f"⚠️  Unexpected error initializing extension '{ext_name}': {type(e).__name__}: {e}")
             success = False
             _safe_rollback(conn)
     
@@ -771,10 +772,10 @@ def init_database():
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables 
                     WHERE table_name = 'users'
-                )
+                ) as table_exists
             """
             )
-            table_exists = cursor.fetchone()[0]
+            table_exists = cursor.fetchone()["table_exists"]
         else:
             cursor.execute(
                 """
@@ -1061,7 +1062,8 @@ def init_database():
             error_details = _get_psycopg2_error_details(e)
             print(f"❌ Database initialization error: {error_details}")
         else:
-            print(f"❌ Database initialization error: {e}")
+            # Include exception type for better debugging of unexpected errors
+            print(f"❌ Database initialization error: {type(e).__name__}: {e}")
         try:
             conn.rollback()
             cursor.close()
@@ -1135,7 +1137,8 @@ def ensure_database_initialized():
                     print(f"⚠️ Database initialization retry failed: {error_details}")
                     # Don't raise - let the endpoint handle it
                 except Exception as e:
-                    print(f"⚠️ Database initialization retry failed: {e}")
+                    # Include exception type for better debugging of unexpected errors
+                    print(f"⚠️ Database initialization retry failed: {type(e).__name__}: {e}")
                     # Don't raise - let the endpoint handle it
 
     return _db_initialized
@@ -1196,7 +1199,8 @@ def init_database_background():
                 error_details = _get_psycopg2_error_details(e)
                 print(f"⚠️ Database initialization warning: {error_details}")
             else:
-                print(f"⚠️ Database initialization warning: {e}")
+                # Include exception type for better debugging of unexpected errors
+                print(f"⚠️ Database initialization warning: {type(e).__name__}: {e}")
             print("⚠️ Database will be initialized on first request")
 
 # Start database initialization in background thread
