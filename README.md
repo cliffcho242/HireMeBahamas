@@ -8,11 +8,17 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 **NEW**: Run HireMeBahamas in full production mode with PostgreSQL!
 
+### Prerequisites
+- **Docker & Docker Compose** - [Install Docker Desktop](https://www.docker.com/products/docker-desktop)
+  - Windows/macOS: Docker Desktop includes everything
+  - Linux: See [DOCKER_SETUP.md](./DOCKER_SETUP.md)
+
+### Quick Start
 ```bash
-# Quick Start - Linux/macOS
+# Linux/macOS
 ./start_production.sh
 
-# Quick Start - Windows
+# Windows
 start_production.bat
 ```
 
@@ -23,6 +29,7 @@ This runs the app with:
 - ✅ **Production settings** (security, performance)
 
 📖 **[Read the Production Mode Guide](./PRODUCTION_MODE_GUIDE.md)** for detailed setup instructions.
+📖 **[Read the Docker Setup Guide](./DOCKER_SETUP.md)** for Docker installation help.
 
 ---
 

@@ -7,10 +7,36 @@ echo 🚀 Starting HireMeBahamas in Full Production Mode
 echo ==================================================
 echo.
 
-REM Check if Docker is running
+REM Check if Docker is installed
+docker --version >nul 2>&1
+if errorlevel 1 (
+    echo ❌ Docker is not installed.
+    echo.
+    echo Please install Docker Desktop:
+    echo https://www.docker.com/products/docker-desktop
+    echo.
+    pause
+    exit /b 1
+)
+
+REM Check if Docker daemon is running
 docker info >nul 2>&1
 if errorlevel 1 (
-    echo ❌ Docker is not running. Please start Docker Desktop first.
+    echo ❌ Docker is not running.
+    echo.
+    echo Please start Docker Desktop and try again.
+    echo.
+    pause
+    exit /b 1
+)
+
+REM Check if docker compose is available
+docker compose version >nul 2>&1
+if errorlevel 1 (
+    echo ❌ docker compose is not available.
+    echo.
+    echo Please update Docker Desktop to get docker compose.
+    echo.
     pause
     exit /b 1
 )

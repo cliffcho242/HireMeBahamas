@@ -10,13 +10,34 @@ echo ""
 
 # Check if Docker is available
 if ! command -v docker &> /dev/null; then
-    echo "❌ Docker is not installed. Please install Docker first."
+    echo "❌ Docker is not installed."
+    echo ""
+    echo "Please install Docker first:"
+    echo "  • Windows/macOS: https://www.docker.com/products/docker-desktop"
+    echo "  • Linux: See DOCKER_SETUP.md"
+    echo ""
     exit 1
 fi
 
-# Check if docker-compose is available
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ docker-compose is not installed. Please install docker-compose first."
+# Check if docker compose is available (new command)
+if ! docker compose version &> /dev/null; then
+    echo "❌ docker compose is not available."
+    echo ""
+    echo "Please install Docker Compose:"
+    echo "  • It's included with Docker Desktop (Windows/macOS)"
+    echo "  • Linux: See DOCKER_SETUP.md"
+    echo ""
+    exit 1
+fi
+
+# Check if Docker daemon is running
+if ! docker info &> /dev/null; then
+    echo "❌ Docker daemon is not running."
+    echo ""
+    echo "Please start Docker:"
+    echo "  • Windows/macOS: Open Docker Desktop"
+    echo "  • Linux: sudo systemctl start docker"
+    echo ""
     exit 1
 fi
 

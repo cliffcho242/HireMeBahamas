@@ -2,6 +2,21 @@
 
 This guide explains how to run HireMeBahamas in **full production mode** for local development.
 
+## ⚠️ Prerequisites
+
+Before starting, you need **Docker** and **Docker Compose** installed:
+
+- **Windows/macOS**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- **Linux**: Follow the [Docker Setup Guide](./DOCKER_SETUP.md)
+
+📖 **[Read the complete Docker Setup Guide](./DOCKER_SETUP.md)** for installation instructions.
+
+To verify Docker is installed:
+```bash
+docker --version
+docker compose version
+```
+
 ## 🎯 What is Production Mode?
 
 Production mode means:
