@@ -68,7 +68,7 @@ const Download: React.FC = () => {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, []);
+  }, [isIOS, isAndroid, isDesktop]);
 
   const handleInstallClick = async (e?: React.MouseEvent) => {
     if (e) {

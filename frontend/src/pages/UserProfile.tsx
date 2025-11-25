@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -91,49 +91,35 @@ const UserProfile: React.FC = () => {
   // In browsers, setInterval returns number; in Node.js it returns NodeJS.Timeout
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    if (userId) {
-      fetchUserProfile();
-    }
-    
-    // Cleanup countdown interval on unmount or userId change
-    return () => {
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
-    };
-  }, [userId]);
-
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     if (!userId) return;
     
     setIsLoading(true);
     setError(null);
     try {
       const response = await authAPI.getUserProfile(userId);
-      const userData = response.user as any; // API response may have additional fields
+      const userData = response.user as unknown as Record<string, unknown>; // API response may have additional fields
       
       // Normalize user data with safe defaults
       const normalizedProfile: UserProfile = {
-        id: userData.id,
-        email: userData.email || '',
-        first_name: userData.first_name || '',
-        last_name: userData.last_name || '',
-        username: userData.username,
-        user_type: userData.user_type || 'freelancer',
-        location: userData.location,
-        phone: userData.phone,
-        bio: userData.bio,
-        avatar_url: userData.avatar_url,
-        occupation: userData.occupation,
-        company_name: userData.company_name,
-        created_at: userData.created_at || new Date().toISOString(),
-        is_available_for_hire: userData.is_available_for_hire ?? false,
-        posts_count: userData.posts_count ?? 0,
-        is_following: userData.is_following ?? false,
-        followers_count: userData.followers_count ?? 0,
-        following_count: userData.following_count ?? 0,
+        id: userData.id as number,
+        email: (userData.email as string) || '',
+        first_name: (userData.first_name as string) || '',
+        last_name: (userData.last_name as string) || '',
+        username: userData.username as string | undefined,
+        user_type: (userData.user_type as string) || 'freelancer',
+        location: userData.location as string | undefined,
+        phone: userData.phone as string | undefined,
+        bio: userData.bio as string | undefined,
+        avatar_url: userData.avatar_url as string | undefined,
+        occupation: userData.occupation as string | undefined,
+        company_name: userData.company_name as string | undefined,
+        created_at: (userData.created_at as string) || new Date().toISOString(),
+        is_available_for_hire: (userData.is_available_for_hire as boolean) ?? false,
+        posts_count: (userData.posts_count as number) ?? 0,
+        is_following: (userData.is_following as boolean) ?? false,
+        followers_count: (userData.followers_count as number) ?? 0,
+        following_count: (userData.following_count as number) ?? 0,
       };
       
       setProfile(normalizedProfile);
@@ -145,28 +131,29 @@ const UserProfile: React.FC = () => {
 
       // Fetch user's posts
       const allPosts = await postsAPI.getPosts();
-      const filteredPosts = allPosts.filter((post: any) => post.user_id === parseInt(userId));
+      const filteredPosts = allPosts.filter((post: { user_id?: number }) => post.user_id === parseInt(userId));
       setUserPosts(filteredPosts);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch user profile:', error);
       
       // Extract error message with more detail
       let errorMessage = 'Failed to load user profile';
-      if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.status === 404) {
+      const errorObj = error as { response?: { data?: { detail?: string; message?: string }; status?: number }; message?: string };
+      if (errorObj.response?.data?.detail) {
+        errorMessage = errorObj.response.data.detail;
+      } else if (errorObj.response?.data?.message) {
+        errorMessage = errorObj.response.data.message;
+      } else if (errorObj.response?.status === 404) {
         errorMessage = `User with ID "${userId}" not found`;
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (errorObj.message) {
+        errorMessage = errorObj.message;
       }
       
       setError(errorMessage);
       toast.error(errorMessage);
       
       // Auto-redirect to users page after 3 seconds for 404 errors
-      if (error.response?.status === 404) {
+      if (errorObj.response?.status === 404) {
         console.log(`User not found. Auto-redirecting to users page in ${REDIRECT_DELAY_SECONDS} seconds...`);
         setRedirectCountdown(REDIRECT_DELAY_SECONDS);
         
@@ -193,7 +180,21 @@ const UserProfile: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId, navigate]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchUserProfile();
+    }
+    
+    // Cleanup countdown interval on unmount or userId change
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+    };
+  }, [userId, fetchUserProfile]);
 
   const handleMessageUser = () => {
     // Navigate to messages with this user

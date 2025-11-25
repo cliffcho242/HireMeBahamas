@@ -50,6 +50,53 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [rememberMe, setRememberMeState] = useState(false);
 
+  // Token refresh function - memoized to prevent useEffect dependency issues
+  // Must be defined before useEffects that depend on it
+  const refreshTokenInternal = useCallback(async () => {
+    const currentToken = localStorage.getItem('token');
+    if (!currentToken) {
+      throw new Error('No token to refresh');
+    }
+
+    try {
+      // Call refresh token endpoint
+      const response = await authAPI.refreshToken();
+      
+      if (response.access_token) {
+        // Update with new token
+        localStorage.setItem('token', response.access_token);
+        setToken(response.access_token);
+        setUser(response.user);
+        
+        // Update session with new token and data
+        const expiresAt = sessionManager.getTokenExpiration(response.access_token);
+        sessionManager.saveSession({
+          token: response.access_token,
+          user: response.user,
+          lastActivity: Date.now(),
+          expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
+          rememberMe,
+        });
+        
+        console.log('Token refreshed successfully');
+      } else {
+        throw new Error('No token in refresh response');
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      throw error;
+    }
+  }, [rememberMe]);
+
+  const refreshToken = useCallback(async () => {
+    try {
+      await refreshTokenInternal();
+    } catch (error) {
+      console.error('Manual token refresh failed:', error);
+      throw error;
+    }
+  }, [refreshTokenInternal]);
+
   // Initialize auth from session manager
   useEffect(() => {
     const initializeAuth = async () => {
@@ -63,15 +110,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setUser(savedSession.user);
           setRememberMeState(savedSession.rememberMe);
           
-          // Check if token needs refresh
-          const expiresAt = sessionManager.getTokenExpiration(savedSession.token);
-          if (expiresAt && sessionManager.shouldRefreshToken(expiresAt)) {
-            try {
-              await refreshTokenInternal();
-            } catch (error) {
-              console.error('Token refresh failed during initialization:', error);
-            }
-          }
+          // Check if token needs refresh - do this in a separate effect
+          // to avoid calling refreshTokenInternal before it's stable
         } else {
           // Fallback to old method if session doesn't exist
           const storedToken = localStorage.getItem('token');
@@ -121,52 +161,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
   }, []);
 
-  // Token refresh function
-  const refreshTokenInternal = async () => {
-    const currentToken = localStorage.getItem('token');
-    if (!currentToken) {
-      throw new Error('No token to refresh');
-    }
-
-    try {
-      // Call refresh token endpoint
-      const response = await authAPI.refreshToken();
-      
-      if (response.access_token) {
-        // Update with new token
-        localStorage.setItem('token', response.access_token);
-        setToken(response.access_token);
-        setUser(response.user);
-        
-        // Update session with new token and data
-        const expiresAt = sessionManager.getTokenExpiration(response.access_token);
-        sessionManager.saveSession({
-          token: response.access_token,
-          user: response.user,
-          lastActivity: Date.now(),
-          expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
-          rememberMe,
-        });
-        
-        console.log('Token refreshed successfully');
-      } else {
-        throw new Error('No token in refresh response');
-      }
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      throw error;
-    }
-  };
-
-  const refreshToken = useCallback(async () => {
-    try {
-      await refreshTokenInternal();
-    } catch (error) {
-      console.error('Manual token refresh failed:', error);
-      throw error;
-    }
-  }, [rememberMe]);
-
   // Setup automatic token refresh
   useEffect(() => {
     if (!token) return;
@@ -191,7 +185,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     checkAndRefresh();
 
     return () => clearInterval(interval);
-  }, [token, rememberMe]);
+  }, [token, refreshTokenInternal]);
 
   const login = async (email: string, password: string, remember: boolean = false) => {
     try {
