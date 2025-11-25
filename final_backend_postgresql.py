@@ -610,11 +610,17 @@ def _get_psycopg2_error_details(e):
     """
     parts = []
     
-    # Helper to check if a string is just a numeric value
+    # Helper to check if a string is just a numeric value (integer or float)
+    # This is used to detect unhelpful error messages that are just error codes
     def is_numeric_string(s):
         if not s:
             return False
-        return s.isdigit() or (len(s) > 1 and s.startswith('-') and s[1:].isdigit())
+        # Use lstrip('-') to handle negative numbers correctly
+        stripped = s.lstrip('-')
+        if not stripped:
+            return False  # Handle case of just "-"
+        # Check for integer or simple decimal (handles "0", "-1", "3.14", "-2.5")
+        return stripped.isdigit() or (stripped.count('.') == 1 and stripped.replace('.', '').isdigit())
     
     # Primary error message - use pgerror if available as it's more detailed
     pgerror = getattr(e, 'pgerror', None)
