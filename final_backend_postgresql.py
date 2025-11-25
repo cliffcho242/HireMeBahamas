@@ -456,7 +456,8 @@ def _get_psycopg2_error_details(e):
         parts.append(str_repr)
     elif str_repr and is_just_numeric and not pgerror:
         # Only include numeric code if we have no other information
-        parts.append(f"Error code: {str_repr}")
+        # Provide more context about what the code means
+        parts.append(f"Error code: {str_repr} (extension may not be available or requires server configuration)")
     
     # Include the PostgreSQL error code if available
     pgcode = getattr(e, 'pgcode', None)
@@ -1175,6 +1176,19 @@ def register():
         return "", 200
 
     try:
+        # Ensure database is initialized before any database operations
+        # This handles cases where requests arrive before background init completes
+        if not ensure_database_initialized():
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Database is initializing. Please try again.",
+                    }
+                ),
+                503,
+            )
+
         # Handle invalid JSON or empty body
         # silent=True returns None for invalid JSON instead of raising exception
         data = request.get_json(silent=True)
@@ -1366,6 +1380,19 @@ def login():
         return "", 200
 
     try:
+        # Ensure database is initialized before any database operations
+        # This handles cases where requests arrive before background init completes
+        if not ensure_database_initialized():
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Database is initializing. Please try again.",
+                    }
+                ),
+                503,
+            )
+
         # Handle invalid JSON or empty body
         # silent=True returns None for invalid JSON instead of raising exception
         data = request.get_json(silent=True)
