@@ -8,15 +8,40 @@ services:
       POSTGRES_DB: hiremebahamas
       POSTGRES_USER: hiremebahamas_user
       POSTGRES_PASSWORD: hiremebahamas_password
+      # Improve database shutdown behavior
+      POSTGRES_INITDB_ARGS: "--data-checksums"
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Proper shutdown signal handling
+    stop_signal: SIGTERM
+    stop_grace_period: 60s
+    # Use postgres -c commands for better shutdown handling
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c max_connections=100
+      -c effective_cache_size=512MB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=2621kB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+      -c max_worker_processes=2
+      -c max_parallel_workers_per_gather=1
+      -c max_parallel_workers=2
+      -c max_parallel_maintenance_workers=1
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hiremebahamas_user -d hiremebahamas"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   # Redis for caching and sessions
   redis:
@@ -25,6 +50,8 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -50,6 +77,8 @@ services:
         condition: service_healthy
     volumes:
       - ./uploads:/app/uploads
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
     command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --timeout 120 --reload --access-logfile - --error-logfile -
 
   # FastAPI Backend (Alternative backend in backend/ directory)
@@ -72,6 +101,8 @@ services:
     volumes:
       - ./backend:/app
       - backend_uploads:/app/uploads
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     profiles:
       - fastapi  # Only start if explicitly requested
