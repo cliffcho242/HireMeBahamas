@@ -1133,13 +1133,22 @@ def create_database_indexes(cursor, conn):
     """
     Create database indexes to optimize query performance.
     
-    These indexes are critical for preventing HTTP 499 timeout errors:
-    - users_email_lower_idx: Speeds up LOWER(email) lookups in login
-    - users_is_active_idx: Speeds up active user queries
+    HTTP 499 "Client Closed Request" errors occur when clients timeout waiting
+    for server responses. For the login endpoint, slow database queries are a
+    primary cause. Without indexes, queries like "SELECT * FROM users WHERE 
+    LOWER(email) = ?" require full table scans, which become increasingly slow
+    as the user base grows.
+    
+    These indexes ensure queries complete in milliseconds instead of seconds:
+    - users_email_lower_idx: Speeds up LOWER(email) lookups in login queries
+    - users_is_active_idx: Speeds up active user queries (partial index)
     - posts_user_id_idx: Speeds up user's posts queries
     - posts_created_at_idx: Speeds up posts ordering
     
     All indexes use IF NOT EXISTS to be idempotent.
+    
+    Note: SQLite indexes are simpler because SQLite's LIKE is case-insensitive
+    by default for ASCII characters.
     """
     if USE_POSTGRESQL:
         indexes = [
@@ -1166,11 +1175,15 @@ def create_database_indexes(cursor, conn):
         
         conn.commit()
     else:
-        # SQLite indexes
+        # SQLite indexes - note SQLite's LIKE is case-insensitive by default
+        # for ASCII characters, and email column has UNIQUE constraint which
+        # implicitly creates an index. These additional indexes help with
+        # queries not covered by the UNIQUE constraint.
         try:
-            cursor.execute("CREATE INDEX IF NOT EXISTS users_email_idx ON users (email)")
             cursor.execute("CREATE INDEX IF NOT EXISTS posts_user_id_idx ON posts (user_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS posts_created_at_idx ON posts (created_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS jobs_is_active_idx ON jobs (is_active)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS jobs_created_at_idx ON jobs (created_at)")
             conn.commit()
             print("✅ SQLite indexes created or already exist")
         except Exception as e:
@@ -1279,12 +1292,6 @@ def requires_database(f):
     return decorated_function
 
 
-# Request timeout configuration (in seconds)
-# This prevents HTTP 499 errors by failing fast when requests take too long
-# Default 30 seconds - should complete login in well under this time
-REQUEST_TIMEOUT_SECONDS = _get_env_int("REQUEST_TIMEOUT_SECONDS", 30, 5, 120)
-
-
 def get_connection_pool_stats():
     """
     Get connection pool statistics for monitoring and debugging.
@@ -1292,8 +1299,14 @@ def get_connection_pool_stats():
     Returns information about pool usage to help diagnose
     connection exhaustion issues that can cause HTTP 499 timeouts.
     
+    Note: This function accesses private attributes of the psycopg2 
+    ThreadedConnectionPool (_used and _pool). This is necessary because
+    psycopg2 doesn't provide public methods for pool introspection.
+    If psycopg2's internal implementation changes, this function will
+    gracefully return an error status instead of crashing.
+    
     Returns:
-        dict with pool statistics, or None if no pool exists
+        dict with pool statistics, or error status if stats unavailable
     """
     if not USE_POSTGRESQL:
         return {"type": "sqlite", "pooled": False}
@@ -1303,8 +1316,10 @@ def get_connection_pool_stats():
         return {"type": "postgresql", "pooled": False, "status": "pool_not_initialized"}
     
     try:
-        # ThreadedConnectionPool has _used dict for connections in use
-        # and _pool list for available connections
+        # ThreadedConnectionPool internal attributes:
+        # - _used: dict of connections currently checked out
+        # - _pool: list of connections available for checkout
+        # These are implementation details that may change in future versions.
         used_count = len(getattr(conn_pool, '_used', {}))
         available_count = len(getattr(conn_pool, '_pool', []))
         
