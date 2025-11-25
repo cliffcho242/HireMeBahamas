@@ -114,7 +114,7 @@ const PostFeed: React.FC = () => {
           
           // Remove successful action
           await postCache.removePendingAction(action.id);
-        } catch (error) {
+        } catch {
           // Update retry count
           if (action.retryCount < 3) {
             await postCache.updatePendingActionRetry(action.id);
@@ -572,9 +572,10 @@ const PostFeed: React.FC = () => {
           url: shareUrl,
         });
         toast.success('Post shared successfully!');
-      } catch (error: any) {
+      } catch (error: unknown) {
         // User cancelled the share or error occurred
-        if (error.name !== 'AbortError') {
+        const shareError = error as { name?: string };
+        if (shareError.name !== 'AbortError') {
           console.error('Error sharing:', error);
           // Fallback to clipboard
           copyToClipboard(shareUrl);
@@ -602,7 +603,7 @@ const PostFeed: React.FC = () => {
       try {
         document.execCommand('copy');
         toast.success('Link copied to clipboard!');
-      } catch (err) {
+      } catch {
         toast.error('Failed to copy link. Please try again.');
       } finally {
         // Ensure cleanup happens regardless of success or failure

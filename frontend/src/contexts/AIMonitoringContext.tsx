@@ -207,7 +207,7 @@ export const AIMonitoringProvider: React.FC<AIMonitoringProviderProps> = ({
             setHealth(prev => ({ ...prev, backend: true }));
             console.log('🤖 AI Recovery: Backend connection restored');
           }
-        } catch (error) {
+        } catch {
           console.log('🤖 AI Recovery: Backend still unreachable');
         }
       }

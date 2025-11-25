@@ -176,7 +176,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
       setShowEmojiPicker(false);
       onPostCreated?.();
       onClose();
-    } catch (error) {
+    } catch {
       toast.error('Failed to create post');
     } finally {
       setIsPosting(false);

@@ -120,7 +120,7 @@ const Stories: React.FC = () => {
         setUploading(true);
         try {
           imagePath = await uploadFile(storyImageFile);
-        } catch (error) {
+        } catch {
           alert('Failed to upload image. Please try again.');
           return;
         } finally {
@@ -133,7 +133,7 @@ const Stories: React.FC = () => {
         setUploading(true);
         try {
           videoPath = await uploadFile(storyVideoFile);
-        } catch (error) {
+        } catch {
           alert('Failed to upload video. Please try again.');
           return;
         } finally {
