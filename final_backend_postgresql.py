@@ -1143,10 +1143,8 @@ def register():
 
     try:
         # Handle invalid JSON or empty body
-        try:
-            data = request.get_json(silent=True)
-        except Exception:
-            data = None
+        # silent=True returns None for invalid JSON instead of raising exception
+        data = request.get_json(silent=True)
         
         if not data:
             return (
@@ -1336,10 +1334,8 @@ def login():
 
     try:
         # Handle invalid JSON or empty body
-        try:
-            data = request.get_json(silent=True)
-        except Exception:
-            data = None
+        # silent=True returns None for invalid JSON instead of raising exception
+        data = request.get_json(silent=True)
         
         if not data:
             return (
@@ -1380,6 +1376,7 @@ def login():
             )
 
         # Check if user has a password (OAuth users may not have one)
+        # Using falsy check to handle both None and empty string cases
         if not user["password_hash"]:
             cursor.close()
             conn.close()
