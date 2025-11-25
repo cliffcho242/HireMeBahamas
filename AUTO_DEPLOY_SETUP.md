@@ -56,6 +56,9 @@ Before setting up auto-deploy, ensure you have:
 6. Set environment variables:
    - `SECRET_KEY`: Generate a secure random key
    - `DATABASE_URL`: (Railway provides PostgreSQL automatically if needed)
+   
+   📖 **[Complete DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Step-by-step instructions for adding PostgreSQL
+   
 7. Deploy and note your Railway URL
 
 #### Step 2.2: Get Railway Token

@@ -49,6 +49,16 @@ Base images include all system dependencies pre-installed:
 
 📖 **[Read Docker Base Images Documentation](./DOCKER_BASE_IMAGES.md)** for technical details.
 
+### 🗄️ Railway Database Setup
+
+For production deployments on Railway, you need to configure PostgreSQL for persistent data storage:
+
+1. **Add PostgreSQL** to your Railway project via the "+ New" button
+2. **DATABASE_URL** is automatically configured
+3. **Add required environment variables** (SECRET_KEY, JWT_SECRET_KEY, ENVIRONMENT)
+
+📖 **[Complete Railway DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Step-by-step instructions with screenshots and troubleshooting.
+
 ## 🌟 Features
 
 ### Core Social Features (Facebook-Style)
