@@ -20,13 +20,20 @@ async def lifespan(app: FastAPI):
     logger.info("Starting HireMeBahamas API...")
     # Initialize database tables
     logger.info("Initializing database tables...")
-    await init_db()
-    logger.info("Database tables initialized successfully")
+    try:
+        await init_db()
+        logger.info("Database tables initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database tables: {e}")
+        raise
     yield
     # Shutdown
     logger.info("Shutting down HireMeBahamas API...")
-    await close_db()
-    logger.info("Database connections closed")
+    try:
+        await close_db()
+        logger.info("Database connections closed")
+    except Exception as e:
+        logger.error(f"Error closing database connections: {e}")
 
 
 # Initialize FastAPI app
