@@ -80,6 +80,8 @@ async def get_async_session():
 # Database utility functions
 async def init_db():
     """Initialize database tables"""
+    # Import models to ensure they are registered with Base.metadata
+    from . import models  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
