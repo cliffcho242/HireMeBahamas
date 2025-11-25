@@ -98,6 +98,16 @@ def uploaded_file(filename):
 DATABASE_URL = os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None
 
+# PostgreSQL extensions to initialize during database setup
+# Pre-defined SQL statements prevent SQL injection by avoiding string formatting
+# Each extension requires server-side configuration (shared_preload_libraries)
+POSTGRESQL_EXTENSIONS = {
+    "pg_stat_statements": {
+        "sql": "CREATE EXTENSION IF NOT EXISTS pg_stat_statements",
+        "description": "Query performance statistics tracking",
+    },
+}
+
 # Check if this is a production environment
 # Detect Railway environment using Railway-specific variables:
 # - RAILWAY_ENVIRONMENT: Set by Railway to indicate the environment (e.g., "production")
@@ -323,6 +333,127 @@ def execute_query(query, params=None, fetch=False, fetchone=False, commit=False)
         raise e
 
 
+def _safe_rollback(conn):
+    """
+    Safely rollback a database connection.
+    Handles connection state issues gracefully.
+    """
+    try:
+        conn.rollback()
+    except psycopg2.InterfaceError as e:
+        # Connection is closed or in a bad state
+        print(f"⚠️  Cannot rollback: connection interface error: {e}")
+    except psycopg2.OperationalError as e:
+        # Connection lost or other operational issue
+        print(f"⚠️  Cannot rollback: operational error: {e}")
+    except Exception as e:
+        # Unexpected error during rollback
+        print(f"⚠️  Rollback failed with unexpected error: {e}")
+
+
+def init_postgresql_extensions(cursor, conn):
+    """
+    Initialize PostgreSQL extensions including pg_stat_statements.
+    
+    pg_stat_statements provides query performance statistics and is useful for:
+    - Monitoring slow queries
+    - Identifying frequently executed queries
+    - Performance tuning
+    
+    Note: pg_stat_statements requires shared_preload_libraries configuration
+    on the PostgreSQL server. On managed services like Railway, this is typically
+    pre-configured, but we still need to CREATE EXTENSION.
+    
+    Returns True if all extensions initialized successfully, False otherwise.
+    Extension failures are non-fatal - the application continues regardless.
+    """
+    success = True
+    
+    for ext_name, ext_config in POSTGRESQL_EXTENSIONS.items():
+        ext_sql = ext_config["sql"]
+        ext_description = ext_config["description"]
+        
+        try:
+            # Check if extension is available in the system
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM pg_available_extensions 
+                    WHERE name = %s
+                )
+                """,
+                (ext_name,)
+            )
+            is_available = cursor.fetchone()[0]
+            
+            if not is_available:
+                print(f"⚠️  Extension '{ext_name}' is not available on this PostgreSQL server")
+                print(f"   This is normal for some managed database providers")
+                continue
+            
+            # Check if extension is already installed
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM pg_extension WHERE extname = %s
+                )
+                """,
+                (ext_name,)
+            )
+            is_installed = cursor.fetchone()[0]
+            
+            if is_installed:
+                print(f"✅ Extension '{ext_name}' is already installed")
+            else:
+                # Execute pre-defined SQL statement from the POSTGRESQL_EXTENSIONS constant
+                # This ensures only validated, pre-defined SQL is executed
+                cursor.execute(ext_sql)
+                conn.commit()
+                print(f"✅ Extension '{ext_name}' installed successfully ({ext_description})")
+                
+        except psycopg2.OperationalError as e:
+            error_msg = str(e).lower()
+            success = False
+            
+            # Handle specific known errors gracefully
+            if "shared_preload_libraries" in error_msg:
+                print(f"⚠️  Extension '{ext_name}' requires server-side configuration")
+                print(f"   The extension must be added to shared_preload_libraries in postgresql.conf")
+                print(f"   On Railway/managed PostgreSQL: Contact your provider to enable this extension")
+            else:
+                print(f"⚠️  Database operation error for extension '{ext_name}': {e}")
+            
+            _safe_rollback(conn)
+            
+        except psycopg2.ProgrammingError as e:
+            error_msg = str(e).lower()
+            success = False
+            
+            if "permission denied" in error_msg:
+                print(f"⚠️  Insufficient permissions to create extension '{ext_name}'")
+                print(f"   This is normal for non-superuser database roles")
+            elif "does not exist" in error_msg:
+                print(f"⚠️  Extension '{ext_name}' is not installed on the PostgreSQL server")
+            else:
+                print(f"⚠️  Programming error for extension '{ext_name}': {e}")
+            
+            _safe_rollback(conn)
+            
+        except psycopg2.Error as e:
+            # Catch other psycopg2 errors
+            print(f"⚠️  Database error initializing extension '{ext_name}': {e}")
+            success = False
+            _safe_rollback(conn)
+            
+        except Exception as e:
+            # Catch any unexpected errors
+            print(f"⚠️  Unexpected error initializing extension '{ext_name}': {e}")
+            success = False
+            _safe_rollback(conn)
+    
+    return success
+
+
 def init_database():
     """Initialize database with all required tables"""
     global _db_initialized
@@ -333,6 +464,18 @@ def init_database():
     cursor = conn.cursor()
 
     try:
+        # Initialize PostgreSQL extensions if using PostgreSQL
+        # Extension initialization is non-fatal - the app continues even if extensions fail
+        if USE_POSTGRESQL:
+            ext_success = init_postgresql_extensions(cursor, conn)
+            if not ext_success:
+                print("⚠️  Some extensions could not be initialized, but this is non-fatal")
+                # Ensure connection is in a clean state before continuing
+                _safe_rollback(conn)
+                # Recreate cursor after rollback to ensure it's in a valid state
+                cursor.close()
+                cursor = conn.cursor()
+        
         # Detect if we need to create tables
         if USE_POSTGRESQL:
             cursor.execute(
