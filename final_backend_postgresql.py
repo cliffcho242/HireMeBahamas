@@ -2603,6 +2603,410 @@ def get_followers_list():
 
 
 # ==========================================
+# JOBS ENDPOINTS
+# ==========================================
+
+
+@app.route("/api/jobs", methods=["GET", "OPTIONS"])
+def get_jobs():
+    """
+    Get all active jobs with optional filtering
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get query parameters
+        search = request.args.get("search", "").strip()
+        category = request.args.get("category", "").strip()
+        location = request.args.get("location", "").strip()
+        
+        # Build query
+        if USE_POSTGRESQL:
+            base_query = """
+                SELECT j.id, j.title, j.company, j.location, j.description, 
+                       j.requirements, j.salary_range, j.job_type, j.category,
+                       j.created_at, j.expires_at, j.is_active,
+                       u.id as employer_id, u.first_name, u.last_name, 
+                       u.email, u.avatar_url, u.company_name
+                FROM jobs j
+                JOIN users u ON j.user_id = u.id
+                WHERE j.is_active = TRUE
+            """
+            params = []
+            
+            if search:
+                base_query += " AND (j.title ILIKE %s OR j.description ILIKE %s OR j.company ILIKE %s)"
+                search_pattern = f"%{search}%"
+                params.extend([search_pattern, search_pattern, search_pattern])
+            
+            if category:
+                base_query += " AND j.category ILIKE %s"
+                params.append(f"%{category}%")
+            
+            if location:
+                base_query += " AND j.location ILIKE %s"
+                params.append(f"%{location}%")
+            
+            base_query += " ORDER BY j.created_at DESC LIMIT 100"
+            
+            if params:
+                cursor.execute(base_query, params)
+            else:
+                cursor.execute(base_query)
+        else:
+            base_query = """
+                SELECT j.id, j.title, j.company, j.location, j.description, 
+                       j.requirements, j.salary_range, j.job_type, j.category,
+                       j.created_at, j.expires_at, j.is_active,
+                       u.id as employer_id, u.first_name, u.last_name, 
+                       u.email, u.avatar_url, u.company_name
+                FROM jobs j
+                JOIN users u ON j.user_id = u.id
+                WHERE j.is_active = 1
+            """
+            params = []
+            
+            if search:
+                base_query += " AND (j.title LIKE ? OR j.description LIKE ? OR j.company LIKE ?)"
+                search_pattern = f"%{search}%"
+                params.extend([search_pattern, search_pattern, search_pattern])
+            
+            if category:
+                base_query += " AND j.category LIKE ?"
+                params.append(f"%{category}%")
+            
+            if location:
+                base_query += " AND j.location LIKE ?"
+                params.append(f"%{location}%")
+            
+            base_query += " ORDER BY j.created_at DESC LIMIT 100"
+            
+            if params:
+                cursor.execute(base_query, params)
+            else:
+                cursor.execute(base_query)
+
+        jobs_data = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        # Format jobs for response
+        jobs = []
+        for job in jobs_data:
+            jobs.append({
+                "id": job["id"],
+                "title": job["title"],
+                "company": job["company"],
+                "location": job["location"],
+                "description": job["description"],
+                "requirements": job["requirements"],
+                "salary_range": job["salary_range"],
+                "job_type": job["job_type"],
+                "category": job["category"],
+                "created_at": job["created_at"],
+                "expires_at": job["expires_at"],
+                "is_active": job["is_active"],
+                "employer": {
+                    "id": job["employer_id"],
+                    "first_name": job["first_name"] or "",
+                    "last_name": job["last_name"] or "",
+                    "email": job["email"],
+                    "avatar_url": job["avatar_url"],
+                    "company_name": job["company_name"],
+                },
+            })
+
+        return jsonify({"success": True, "jobs": jobs, "total": len(jobs)}), 200
+
+    except Exception as e:
+        print(f"Get jobs error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to fetch jobs: {str(e)}"}), 500
+
+
+@app.route("/api/jobs/stats/overview", methods=["GET", "OPTIONS"])
+def get_job_stats():
+    """
+    Get job statistics overview
+    Returns counts of active jobs, companies hiring, and new jobs this week
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get total active jobs count
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM jobs WHERE is_active = TRUE"
+            )
+        else:
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM jobs WHERE is_active = 1"
+            )
+        active_jobs = cursor.fetchone()["count"]
+
+        # Get unique companies/employers count
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "SELECT COUNT(DISTINCT user_id) as count FROM jobs WHERE is_active = TRUE"
+            )
+        else:
+            cursor.execute(
+                "SELECT COUNT(DISTINCT user_id) as count FROM jobs WHERE is_active = 1"
+            )
+        companies_count = cursor.fetchone()["count"]
+
+        # Get jobs created in the last 7 days
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT COUNT(*) as count FROM jobs 
+                WHERE is_active = TRUE 
+                AND created_at >= NOW() - INTERVAL '7 days'
+                """
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT COUNT(*) as count FROM jobs 
+                WHERE is_active = 1 
+                AND created_at >= datetime('now', '-7 days')
+                """
+            )
+        new_this_week = cursor.fetchone()["count"]
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "stats": {
+                "active_jobs": active_jobs,
+                "companies_hiring": companies_count,
+                "new_this_week": new_this_week,
+            },
+        }), 200
+
+    except Exception as e:
+        print(f"Get job stats error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Failed to fetch job stats: {str(e)}",
+            "stats": {
+                "active_jobs": 0,
+                "companies_hiring": 0,
+                "new_this_week": 0,
+            },
+        }), 500
+
+
+@app.route("/api/jobs/<int:job_id>", methods=["GET", "OPTIONS"])
+def get_job(job_id):
+    """
+    Get a specific job by ID
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT j.id, j.title, j.company, j.location, j.description, 
+                       j.requirements, j.salary_range, j.job_type, j.category,
+                       j.created_at, j.expires_at, j.is_active,
+                       u.id as employer_id, u.first_name, u.last_name, 
+                       u.email, u.avatar_url, u.company_name
+                FROM jobs j
+                JOIN users u ON j.user_id = u.id
+                WHERE j.id = %s
+                """,
+                (job_id,)
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT j.id, j.title, j.company, j.location, j.description, 
+                       j.requirements, j.salary_range, j.job_type, j.category,
+                       j.created_at, j.expires_at, j.is_active,
+                       u.id as employer_id, u.first_name, u.last_name, 
+                       u.email, u.avatar_url, u.company_name
+                FROM jobs j
+                JOIN users u ON j.user_id = u.id
+                WHERE j.id = ?
+                """,
+                (job_id,)
+            )
+
+        job = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not job:
+            return jsonify({"success": False, "message": "Job not found"}), 404
+
+        return jsonify({
+            "success": True,
+            "job": {
+                "id": job["id"],
+                "title": job["title"],
+                "company": job["company"],
+                "location": job["location"],
+                "description": job["description"],
+                "requirements": job["requirements"],
+                "salary_range": job["salary_range"],
+                "job_type": job["job_type"],
+                "category": job["category"],
+                "created_at": job["created_at"],
+                "expires_at": job["expires_at"],
+                "is_active": job["is_active"],
+                "employer": {
+                    "id": job["employer_id"],
+                    "first_name": job["first_name"] or "",
+                    "last_name": job["last_name"] or "",
+                    "email": job["email"],
+                    "avatar_url": job["avatar_url"],
+                    "company_name": job["company_name"],
+                },
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"Get job error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to fetch job: {str(e)}"}), 500
+
+
+@app.route("/api/jobs", methods=["POST"])
+def create_job():
+    """
+    Create a new job posting
+    """
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "No token provided"}), 401
+
+        parts = auth_header.split(" ")
+        if len(parts) != 2:
+            return jsonify({"success": False, "message": "Invalid authorization header format"}), 401
+
+        token = parts[1]
+
+        # Decode token to get user_id
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload.get("user_id")
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token has expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        # Get job data
+        data = request.get_json()
+        
+        required_fields = ["title", "company", "location", "description"]
+        for field in required_fields:
+            if not data.get(field, "").strip():
+                return jsonify({
+                    "success": False,
+                    "message": f"{field.replace('_', ' ').title()} is required"
+                }), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Verify user exists
+        if USE_POSTGRESQL:
+            cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+        else:
+            cursor.execute("SELECT id FROM users WHERE id = ?", (user_id,))
+        
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "User not found. Please log in again."}), 401
+
+        # Insert job
+        now = datetime.now(timezone.utc)
+        
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                INSERT INTO jobs (user_id, title, company, location, description, 
+                                  requirements, salary_range, job_type, category, 
+                                  created_at, is_active)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+                RETURNING id
+                """,
+                (
+                    user_id,
+                    data["title"].strip(),
+                    data["company"].strip(),
+                    data["location"].strip(),
+                    data["description"].strip(),
+                    data.get("requirements", "").strip(),
+                    data.get("salary_range", "").strip(),
+                    data.get("job_type", "full-time").strip(),
+                    data.get("category", "").strip(),
+                    now,
+                )
+            )
+            job_id = cursor.fetchone()["id"]
+        else:
+            cursor.execute(
+                """
+                INSERT INTO jobs (user_id, title, company, location, description, 
+                                  requirements, salary_range, job_type, category, 
+                                  created_at, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                """,
+                (
+                    user_id,
+                    data["title"].strip(),
+                    data["company"].strip(),
+                    data["location"].strip(),
+                    data["description"].strip(),
+                    data.get("requirements", "").strip(),
+                    data.get("salary_range", "").strip(),
+                    data.get("job_type", "full-time").strip(),
+                    data.get("category", "").strip(),
+                    now,
+                )
+            )
+            job_id = cursor.lastrowid
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "message": "Job created successfully",
+            "job": {
+                "id": job_id,
+                "title": data["title"].strip(),
+                "company": data["company"].strip(),
+                "location": data["location"].strip(),
+                "created_at": now.isoformat(),
+            }
+        }), 201
+
+    except Exception as e:
+        print(f"Create job error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to create job: {str(e)}"}), 500
+
+
+# ==========================================
 # APPLICATION ENTRY POINT
 # ==========================================
 
