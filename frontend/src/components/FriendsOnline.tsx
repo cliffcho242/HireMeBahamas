@@ -63,7 +63,7 @@ const FriendsOnline: React.FC = () => {
       if (response.data.success) {
         setSuggestions(response.data.suggestions.slice(0, 3));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending friend request:', error);
     }
   };

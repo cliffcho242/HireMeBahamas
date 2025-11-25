@@ -37,6 +37,7 @@ const SimpleAuth = () => {
     handleSubmit,
     formState: { errors },
     reset,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<any>({
     resolver,
   });
@@ -46,6 +47,7 @@ const SimpleAuth = () => {
     reset();
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onSubmit = async (data: any) => {
     try {
       if (isLogin) {

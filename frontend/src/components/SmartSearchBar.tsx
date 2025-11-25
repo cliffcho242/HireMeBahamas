@@ -15,8 +15,14 @@ import {
   BAHAMAS_LOCATIONS
 } from '../utils/searchAlgorithm';
 
+interface SearchFilters {
+  category?: string;
+  location?: string;
+  minRelevance?: number;
+}
+
 interface SmartSearchBarProps {
-  onSearch: (query: string, filters?: any) => void;
+  onSearch: (query: string, filters?: SearchFilters) => void;
   placeholder?: string;
   showPopularSearches?: boolean;
   className?: string;

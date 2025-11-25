@@ -3,6 +3,7 @@ import { profilePicturesAPI } from '../services/api';
 import { PhotoIcon, TrashIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import { ApiError } from '../types';
 
 interface ProfilePicture {
   id: number;
@@ -74,9 +75,10 @@ const ProfilePictureGallery: React.FC = () => {
       
       // Clear the input
       event.target.value = '';
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Error uploading pictures:', error);
-      toast.error(error.response?.data?.detail || 'Failed to upload pictures');
+      toast.error(apiError.response?.data?.detail || 'Failed to upload pictures');
     } finally {
       setUploading(false);
     }
@@ -87,9 +89,10 @@ const ProfilePictureGallery: React.FC = () => {
       await profilePicturesAPI.setCurrentPicture(pictureId);
       toast.success('Profile picture updated!');
       await fetchPictures();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Error setting current picture:', error);
-      toast.error(error.response?.data?.detail || 'Failed to set profile picture');
+      toast.error(apiError.response?.data?.detail || 'Failed to set profile picture');
     }
   };
 
@@ -100,9 +103,10 @@ const ProfilePictureGallery: React.FC = () => {
       await profilePicturesAPI.deletePicture(pictureId);
       toast.success('Picture deleted successfully!');
       await fetchPictures();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Error deleting picture:', error);
-      toast.error(error.response?.data?.detail || 'Failed to delete picture');
+      toast.error(apiError.response?.data?.detail || 'Failed to delete picture');
     }
   };
 
