@@ -1142,7 +1142,19 @@ def register():
         return "", 200
 
     try:
-        data = request.get_json()
+        # Handle invalid JSON or empty body
+        try:
+            data = request.get_json(silent=True)
+        except Exception:
+            data = None
+        
+        if not data:
+            return (
+                jsonify(
+                    {"success": False, "message": "Invalid request body"}
+                ),
+                400,
+            )
 
         required_fields = [
             "email",
@@ -1323,7 +1335,19 @@ def login():
         return "", 200
 
     try:
-        data = request.get_json()
+        # Handle invalid JSON or empty body
+        try:
+            data = request.get_json(silent=True)
+        except Exception:
+            data = None
+        
+        if not data:
+            return (
+                jsonify(
+                    {"success": False, "message": "Invalid request body"}
+                ),
+                400,
+            )
 
         if not data.get("email") or not data.get("password"):
             return (
@@ -1352,6 +1376,18 @@ def login():
             conn.close()
             return (
                 jsonify({"success": False, "message": "Invalid email or password"}),
+                401,
+            )
+
+        # Check if user has a password (OAuth users may not have one)
+        if not user["password_hash"]:
+            cursor.close()
+            conn.close()
+            return (
+                jsonify({
+                    "success": False,
+                    "message": "This account was created with social login. Please use Google or Apple sign-in."
+                }),
                 401,
             )
 
