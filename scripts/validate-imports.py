@@ -6,8 +6,6 @@ This script checks that all critical modules can be imported without errors.
 
 import sys
 import importlib
-import traceback
-import os
 from pathlib import Path
 
 def validate_module(module_name, description):
