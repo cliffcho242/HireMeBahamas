@@ -470,6 +470,24 @@ def _get_psycopg2_error_details(e):
     return " ".join(parts)
 
 
+def _is_psycopg2_exception(e):
+    """
+    Check if an exception is a psycopg2 exception.
+    
+    psycopg2 exceptions have special attributes (pgerror, pgcode) that
+    provide more detailed error information than the standard string
+    representation. This helper is used to detect when we should use
+    _get_psycopg2_error_details() for better error messages.
+    
+    Args:
+        e: Any exception
+        
+    Returns:
+        True if the exception has psycopg2-specific attributes
+    """
+    return hasattr(e, 'pgerror') or hasattr(e, 'pgcode')
+
+
 def _safe_rollback(conn):
     """
     Safely rollback a database connection.
@@ -588,7 +606,7 @@ def init_postgresql_extensions(cursor, conn):
         except Exception as e:
             # Catch any unexpected errors
             # Check if it's a psycopg2 exception that wasn't caught above
-            if hasattr(e, 'pgerror') or hasattr(e, 'pgcode'):
+            if _is_psycopg2_exception(e):
                 error_details = _get_psycopg2_error_details(e)
                 print(f"⚠️  Unexpected error initializing extension '{ext_name}': {error_details}")
             else:
@@ -914,7 +932,7 @@ def init_database():
         raise
     except Exception as e:
         # Check if it's a psycopg2 exception that wasn't caught above
-        if hasattr(e, 'pgerror') or hasattr(e, 'pgcode'):
+        if _is_psycopg2_exception(e):
             error_details = _get_psycopg2_error_details(e)
             print(f"❌ Database initialization error: {error_details}")
         else:
@@ -1018,7 +1036,7 @@ def init_database_background():
             print("⚠️ Database will be initialized on first request")
         except Exception as e:
             # Check if it's a psycopg2 exception that wasn't caught above
-            if hasattr(e, 'pgerror') or hasattr(e, 'pgcode'):
+            if _is_psycopg2_exception(e):
                 error_details = _get_psycopg2_error_details(e)
                 print(f"⚠️ Database initialization warning: {error_details}")
             else:
