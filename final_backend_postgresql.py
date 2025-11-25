@@ -290,6 +290,10 @@ DB_CONNECT_MAX_RETRIES = _get_env_int("DB_CONNECT_MAX_RETRIES", 3, 1, 10)
 DB_CONNECT_BASE_DELAY_MS = _get_env_int("DB_CONNECT_BASE_DELAY_MS", 100, 50, 2000)
 DB_CONNECT_MAX_DELAY_MS = _get_env_int("DB_CONNECT_MAX_DELAY_MS", 2000, 500, 10000)
 
+# Jitter factor for retry delay - adds randomness to prevent thundering herd
+# The actual jitter added is between 0 and (JITTER_FACTOR * delay_ms)
+DB_CONNECT_JITTER_FACTOR = 0.2
+
 
 def _is_transient_connection_error(error: Exception) -> bool:
     """
@@ -563,7 +567,7 @@ def get_db_connection():
                     # Calculate delay with exponential backoff and additive jitter
                     # Additive jitter prevents retries from being too aggressive
                     # while still helping prevent thundering herd
-                    jitter = random.uniform(0, 0.2 * delay_ms)
+                    jitter = random.uniform(0, DB_CONNECT_JITTER_FACTOR * delay_ms)
                     actual_delay_ms = min(delay_ms + jitter, DB_CONNECT_MAX_DELAY_MS)
                     
                     print(f"⚠️ Transient connection error (attempt {attempt + 1}/{DB_CONNECT_MAX_RETRIES}): {last_error}")
