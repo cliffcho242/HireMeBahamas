@@ -587,7 +587,12 @@ def init_postgresql_extensions(cursor, conn):
             
         except Exception as e:
             # Catch any unexpected errors
-            print(f"⚠️  Unexpected error initializing extension '{ext_name}': {e}")
+            # Check if it's a psycopg2 exception that wasn't caught above
+            if hasattr(e, 'pgerror') or hasattr(e, 'pgcode'):
+                error_details = _get_psycopg2_error_details(e)
+                print(f"⚠️  Unexpected error initializing extension '{ext_name}': {error_details}")
+            else:
+                print(f"⚠️  Unexpected error initializing extension '{ext_name}': {e}")
             success = False
             _safe_rollback(conn)
     
@@ -908,7 +913,12 @@ def init_database():
             pass  # Connection might already be closed
         raise
     except Exception as e:
-        print(f"❌ Database initialization error: {e}")
+        # Check if it's a psycopg2 exception that wasn't caught above
+        if hasattr(e, 'pgerror') or hasattr(e, 'pgcode'):
+            error_details = _get_psycopg2_error_details(e)
+            print(f"❌ Database initialization error: {error_details}")
+        else:
+            print(f"❌ Database initialization error: {e}")
         try:
             conn.rollback()
             cursor.close()
@@ -1007,7 +1017,12 @@ def init_database_background():
             print(f"⚠️ Database initialization warning: {error_details}")
             print("⚠️ Database will be initialized on first request")
         except Exception as e:
-            print(f"⚠️ Database initialization warning: {e}")
+            # Check if it's a psycopg2 exception that wasn't caught above
+            if hasattr(e, 'pgerror') or hasattr(e, 'pgcode'):
+                error_details = _get_psycopg2_error_details(e)
+                print(f"⚠️ Database initialization warning: {error_details}")
+            else:
+                print(f"⚠️ Database initialization warning: {e}")
             print("⚠️ Database will be initialized on first request")
 
 # Start database initialization in background thread
