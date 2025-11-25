@@ -558,13 +558,15 @@ def get_db_connection():
                         last_error = fallback_error
                 
                 # Check if this is a transient error worth retrying
-                if _is_transient_connection_error(e) and attempt < DB_CONNECT_MAX_RETRIES - 1:
-                    # Calculate delay with exponential backoff and jitter
-                    # Jitter helps prevent thundering herd when many connections retry
-                    jitter = random.uniform(0.8, 1.2)
-                    actual_delay_ms = min(delay_ms * jitter, DB_CONNECT_MAX_DELAY_MS)
+                # Use last_error to check the most recent error (may be from SSL fallback)
+                if _is_transient_connection_error(last_error) and attempt < DB_CONNECT_MAX_RETRIES - 1:
+                    # Calculate delay with exponential backoff and additive jitter
+                    # Additive jitter prevents retries from being too aggressive
+                    # while still helping prevent thundering herd
+                    jitter = random.uniform(0, 0.2 * delay_ms)
+                    actual_delay_ms = min(delay_ms + jitter, DB_CONNECT_MAX_DELAY_MS)
                     
-                    print(f"⚠️ Transient connection error (attempt {attempt + 1}/{DB_CONNECT_MAX_RETRIES}): {e}")
+                    print(f"⚠️ Transient connection error (attempt {attempt + 1}/{DB_CONNECT_MAX_RETRIES}): {last_error}")
                     print(f"   Retrying in {actual_delay_ms:.0f}ms...")
                     
                     time.sleep(actual_delay_ms / 1000.0)
