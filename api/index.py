@@ -41,7 +41,19 @@ class handler(BaseHTTPRequestHandler):
 
         elif path == "/api/jobs":
             self._set_headers()
-            self.wfile.write(json.dumps(jobs).encode())
+            self.wfile.write(json.dumps({"success": True, "jobs": jobs, "total": len(jobs)}).encode())
+
+        elif path == "/api/jobs/stats/overview":
+            self._set_headers()
+            response = {
+                "success": True,
+                "stats": {
+                    "active_jobs": len(jobs),
+                    "companies_hiring": len(set(job.get("company", "") for job in jobs)),
+                    "new_this_week": len(jobs),  # Simplified for in-memory store
+                },
+            }
+            self.wfile.write(json.dumps(response).encode())
 
         elif path == "/api/posts":
             self._set_headers()
