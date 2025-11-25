@@ -18,9 +18,10 @@ bind = f"0.0.0.0:{os.environ.get('PORT', '8080')}"
 # - Using gthread for thread-based concurrency with I/O waiting
 workers = int(os.environ.get("WEB_CONCURRENCY", "2"))
 worker_class = "gthread"
+# Configurable via WEB_THREADS environment variable (default 8)
 # Increased from 4 to 8 threads per worker for better concurrent handling
 # This helps prevent HTTP 499 errors by allowing more simultaneous requests
-threads = 8
+threads = int(os.environ.get("WEB_THREADS", "8"))
 
 # Timeout configuration
 # - Reduced from 180s to 60s to fail faster and prevent long waits

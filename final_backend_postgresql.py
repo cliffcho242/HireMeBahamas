@@ -245,10 +245,42 @@ _pool_lock = threading.Lock()
 # Reduced from 10s to 5s to fail faster and prevent HTTP 499 timeouts
 POOL_TIMEOUT_SECONDS = 5
 
+
+def _get_env_int(env_var: str, default: int, min_val: int, max_val: int) -> int:
+    """
+    Get an integer value from environment variable with validation.
+    
+    Args:
+        env_var: Name of the environment variable
+        default: Default value if env var is not set or invalid
+        min_val: Minimum allowed value (inclusive)
+        max_val: Maximum allowed value (inclusive)
+    
+    Returns:
+        Validated integer value, or default if validation fails
+    """
+    raw_value = os.getenv(env_var, str(default))
+    try:
+        value = int(raw_value)
+        if value < min_val or value > max_val:
+            print(f"⚠️ {env_var}={value} out of bounds [{min_val}, {max_val}], using default {default}")
+            return default
+        return value
+    except (ValueError, TypeError):
+        print(f"⚠️ Invalid {env_var}='{raw_value}', using default {default}")
+        return default
+
+
 # Statement timeout in milliseconds for PostgreSQL queries
 # This prevents long-running queries from blocking connections
 # Set to 30 seconds to allow complex queries but prevent indefinite blocking
-STATEMENT_TIMEOUT_MS = 30000
+# Configurable via environment variable for different deployment environments
+# PostgreSQL interprets integer values as milliseconds
+STATEMENT_TIMEOUT_MS = _get_env_int("STATEMENT_TIMEOUT_MS", 30000, 1000, 300000)
+
+# Maximum connection pool size
+# Configurable via environment variable for different deployment environments
+DB_POOL_MAX_CONNECTIONS = _get_env_int("DB_POOL_MAX_CONNECTIONS", 20, 5, 100)
 
 
 def _get_connection_pool():
@@ -258,7 +290,7 @@ def _get_connection_pool():
     Pool is created lazily on first request.
     
     Pool configuration optimized for preventing HTTP 499 timeouts:
-    - Increased maxconn from 10 to 20 for better concurrent handling
+    - maxconn configurable via DB_POOL_MAX_CONNECTIONS env var (default 20)
     - Reduced connect_timeout to 10s for faster failure detection
     - Added options for statement timeout on all connections
     """
@@ -273,11 +305,11 @@ def _get_connection_pool():
                 try:
                     # Create a threaded connection pool
                     # minconn=2: Start with 2 connections for faster initial requests
-                    # maxconn=20: Increased from 10 to handle concurrent requests better
+                    # maxconn: Configurable via DB_POOL_MAX_CONNECTIONS env var
                     # This helps prevent pool exhaustion during traffic spikes
                     _connection_pool = pool.ThreadedConnectionPool(
                         minconn=2,
-                        maxconn=20,
+                        maxconn=DB_POOL_MAX_CONNECTIONS,
                         host=DB_CONFIG["host"],
                         port=DB_CONFIG["port"],
                         database=DB_CONFIG["database"],
@@ -289,7 +321,7 @@ def _get_connection_pool():
                         # Set statement_timeout on connection to prevent long-running queries
                         options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
                     )
-                    print("✅ PostgreSQL connection pool created (min=2, max=20)")
+                    print(f"✅ PostgreSQL connection pool created (min=2, max={DB_POOL_MAX_CONNECTIONS})")
                 except Exception as e:
                     print(f"⚠️ Failed to create connection pool: {e}")
                     # Pool creation failed, will fall back to direct connections
