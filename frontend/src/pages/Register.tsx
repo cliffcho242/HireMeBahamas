@@ -46,7 +46,11 @@ const Register: React.FC = () => {
     handleSubmit,
     watch,
     formState: { errors }
-  } = useForm<RegisterForm>();
+  } = useForm<RegisterForm>({
+    defaultValues: {
+      user_type: 'freelancer'
+    }
+  });
 
   const password = watch('password');
 
