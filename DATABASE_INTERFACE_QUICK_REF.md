@@ -6,6 +6,8 @@
 
 ## Login Credentials
 
+**⚠️ Development Only**: These credentials are for local development. Never use default credentials in production.
+
 | Field    | Value                  |
 |----------|------------------------|
 | System   | PostgreSQL             |

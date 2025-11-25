@@ -37,6 +37,8 @@ http://localhost:8081
 
 Use the following credentials (from docker-compose.yml):
 
+**⚠️ Note**: These are default development credentials. For production, use strong, unique passwords and never commit them to version control.
+
 | Field    | Value                    |
 |----------|--------------------------|
 | System   | PostgreSQL               |
