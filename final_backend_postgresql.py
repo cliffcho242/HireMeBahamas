@@ -1,7 +1,9 @@
+import atexit
 import os
 import sqlite3
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import psycopg2
@@ -282,6 +284,61 @@ def _get_connection_pool():
     return _connection_pool
 
 
+# Thread pool executor for connection timeout handling
+# Using a small pool to avoid resource overhead
+_timeout_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="db-conn-timeout")
+
+
+def _shutdown_executor():
+    """
+    Shutdown the connection timeout executor during application exit.
+    
+    Called via atexit to ensure proper cleanup of executor threads.
+    Uses wait=False to avoid blocking on pending tasks during shutdown.
+    """
+    try:
+        # cancel_futures parameter requires Python 3.9+
+        # For Python < 3.9, just use wait=False
+        import sys
+        if sys.version_info >= (3, 9):
+            _timeout_executor.shutdown(wait=False, cancel_futures=True)
+        else:
+            _timeout_executor.shutdown(wait=False)
+    except Exception:
+        pass  # Ignore errors during shutdown
+
+
+# Register executor shutdown on application exit
+atexit.register(_shutdown_executor)
+
+
+def _return_orphaned_connection(future, conn_pool):
+    """
+    Callback to return an orphaned connection to the pool.
+    
+    Called when a getconn() future completes after the timeout has expired.
+    This prevents connection leaks when pool exhaustion causes timeouts.
+    """
+    try:
+        # Check if the future completed successfully (not cancelled and no exception)
+        if not future.cancelled() and future.exception() is None:
+            # The future is already done, so result() will return immediately
+            # Using no timeout since we've verified the future is complete
+            conn = future.result()
+            if conn:
+                try:
+                    conn_pool.putconn(conn)
+                except Exception:
+                    # If putconn fails, close the connection directly
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+    except Exception:
+        # Ignore any errors during cleanup
+        pass
+
+
 def _get_pooled_connection_with_timeout(conn_pool, timeout_seconds):
     """
     Attempt to get a connection from the pool with a timeout.
@@ -290,35 +347,39 @@ def _get_pooled_connection_with_timeout(conn_pool, timeout_seconds):
     when the pool is exhausted. This wrapper adds a timeout to prevent
     requests from hanging for minutes when under heavy load.
     
+    Uses ThreadPoolExecutor for proper thread management and cleanup.
+    If timeout occurs, registers a callback to return any orphaned
+    connection to the pool when getconn() eventually completes.
+    
     Args:
         conn_pool: The ThreadedConnectionPool instance
         timeout_seconds: Maximum seconds to wait for a connection
         
     Returns:
         A database connection, or None if timeout is reached
+        
+    Raises:
+        Exception: Re-raises any exception from getconn() except timeout
     """
-    result = {"conn": None, "error": None}
+    # Submit the getconn call to the executor with timeout
+    future = _timeout_executor.submit(conn_pool.getconn)
     
-    def get_conn():
-        try:
-            result["conn"] = conn_pool.getconn()
-        except Exception as e:
-            result["error"] = e
-    
-    # Start connection retrieval in a thread
-    thread = threading.Thread(target=get_conn, daemon=True)
-    thread.start()
-    thread.join(timeout=timeout_seconds)
-    
-    if thread.is_alive():
-        # Thread is still running, connection pool is exhausted
+    try:
+        conn = future.result(timeout=timeout_seconds)
+        return conn
+    except FuturesTimeoutError:
+        # Timeout waiting for connection - pool is exhausted
         print(f"⚠️ Connection pool exhausted, waited {timeout_seconds}s")
+        
+        # Register callback to return the connection to pool when it becomes available
+        # This prevents connection leaks when getconn() eventually completes
+        future.add_done_callback(
+            lambda f: _return_orphaned_connection(f, conn_pool)
+        )
         return None
-    
-    if result["error"]:
-        raise result["error"]
-    
-    return result["conn"]
+    except Exception as e:
+        # Re-raise any other exceptions (e.g., pool errors)
+        raise
 
 
 def get_db_connection():
@@ -342,7 +403,7 @@ def get_db_connection():
                     return conn
                 # If timeout occurred, fall through to direct connection
                 print("⚠️ Pool timeout, creating direct connection")
-            except pool.PoolError as e:
+            except psycopg2.pool.PoolError as e:
                 print(f"⚠️ Pool error: {e}, falling back to direct connection")
             except Exception as e:
                 print(f"⚠️ Pool connection failed, falling back to direct: {e}")
@@ -403,10 +464,14 @@ def get_db_connection():
 
 
 def return_db_connection(conn):
-    """Return a connection to the pool (PostgreSQL only).
+    """Return a connection to the pool or close it.
     
-    For pooled connections, returns to pool for reuse.
-    For non-pooled connections, closes the connection.
+    Handles both pooled and non-pooled (fallback) connections correctly:
+    - For pooled connections: Returns to pool for reuse
+    - For non-pooled/fallback connections: Closes the connection
+    
+    If putconn() fails (e.g., connection wasn't from pool), falls through
+    to close the connection, ensuring proper cleanup in all cases.
     """
     if conn is None:
         return
@@ -415,12 +480,15 @@ def return_db_connection(conn):
         conn_pool = _get_connection_pool()
         if conn_pool:
             try:
+                # Try to return to pool - will fail for non-pooled connections
                 conn_pool.putconn(conn)
                 return
             except Exception:
-                pass  # If pool return fails, close the connection
+                # Connection wasn't from pool (fallback connection)
+                # Fall through to close it
+                pass
     
-    # Close the connection if not using pool or pool return failed
+    # Close the connection if not using pool, not PostgreSQL, or pool return failed
     try:
         conn.close()
     except Exception:
