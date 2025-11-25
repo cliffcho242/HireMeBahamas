@@ -726,6 +726,29 @@ print("✅ Application ready to serve requests")
 # ==========================================
 
 
+@app.route("/", methods=["GET"])
+def root():
+    """
+    Root endpoint - returns API information
+    Provides a welcome message and basic API status for monitoring tools
+    """
+    return (
+        jsonify(
+            {
+                "name": "HireMeBahamas API",
+                "status": "running",
+                "version": "1.0.0",
+                "message": "Welcome to the HireMeBahamas API",
+                "endpoints": {
+                    "health": "/health",
+                    "health_detailed": "/api/health",
+                },
+            }
+        ),
+        200,
+    )
+
+
 @app.route("/health", methods=["GET"])
 def health_check():
     """
