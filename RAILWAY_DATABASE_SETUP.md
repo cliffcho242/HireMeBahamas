@@ -31,8 +31,6 @@ This guide provides step-by-step instructions for adding and configuring DATABAS
 3. Click **"Add PostgreSQL"**
 4. Wait 1-2 minutes for the database to provision
 
-![Railway Add Database](https://railway.app/brand/logo-dark.svg)
-
 ### Step 3: Verify DATABASE_URL is Set
 
 Railway automatically creates and connects the DATABASE_URL when you add PostgreSQL to your project.
