@@ -236,6 +236,12 @@ else:
 _connection_pool = None
 _pool_lock = threading.Lock()
 
+# Connection pool timeout in seconds
+# This prevents requests from blocking indefinitely waiting for a connection
+# If no connection is available within this time, fall back to direct connection
+POOL_TIMEOUT_SECONDS = 10
+
+
 def _get_connection_pool():
     """
     Get or create the PostgreSQL connection pool.
@@ -252,11 +258,12 @@ def _get_connection_pool():
             if _connection_pool is None:
                 try:
                     # Create a threaded connection pool
-                    # minconn=1: Start with 1 connection
-                    # maxconn=5: Max 5 connections (optimized for 2 workers)
+                    # minconn=2: Start with 2 connections for faster initial requests
+                    # maxconn=10: Increased to handle concurrent requests better
+                    # This helps prevent pool exhaustion during traffic spikes
                     _connection_pool = pool.ThreadedConnectionPool(
-                        minconn=1,
-                        maxconn=5,
+                        minconn=2,
+                        maxconn=10,
                         host=DB_CONFIG["host"],
                         port=DB_CONFIG["port"],
                         database=DB_CONFIG["database"],
@@ -264,9 +271,9 @@ def _get_connection_pool():
                         password=DB_CONFIG["password"],
                         sslmode=DB_CONFIG["sslmode"],
                         cursor_factory=RealDictCursor,
-                        connect_timeout=15,  # Increased timeout for connection pool
+                        connect_timeout=15,  # Timeout for establishing new connections
                     )
-                    print("✅ PostgreSQL connection pool created")
+                    print("✅ PostgreSQL connection pool created (min=2, max=10)")
                 except Exception as e:
                     print(f"⚠️ Failed to create connection pool: {e}")
                     # Pool creation failed, will fall back to direct connections
@@ -275,24 +282,72 @@ def _get_connection_pool():
     return _connection_pool
 
 
+def _get_pooled_connection_with_timeout(conn_pool, timeout_seconds):
+    """
+    Attempt to get a connection from the pool with a timeout.
+    
+    The psycopg2 ThreadedConnectionPool.getconn() blocks indefinitely
+    when the pool is exhausted. This wrapper adds a timeout to prevent
+    requests from hanging for minutes when under heavy load.
+    
+    Args:
+        conn_pool: The ThreadedConnectionPool instance
+        timeout_seconds: Maximum seconds to wait for a connection
+        
+    Returns:
+        A database connection, or None if timeout is reached
+    """
+    result = {"conn": None, "error": None}
+    
+    def get_conn():
+        try:
+            result["conn"] = conn_pool.getconn()
+        except Exception as e:
+            result["error"] = e
+    
+    # Start connection retrieval in a thread
+    thread = threading.Thread(target=get_conn, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout_seconds)
+    
+    if thread.is_alive():
+        # Thread is still running, connection pool is exhausted
+        print(f"⚠️ Connection pool exhausted, waited {timeout_seconds}s")
+        return None
+    
+    if result["error"]:
+        raise result["error"]
+    
+    return result["conn"]
+
+
 def get_db_connection():
     """Get database connection (PostgreSQL on Railway, SQLite locally)
     
     For PostgreSQL, uses connection pool for better performance.
-    Falls back to direct connection if pool is unavailable.
+    Falls back to direct connection if pool is unavailable or exhausted.
+    
+    Includes timeout handling to prevent indefinite blocking when the
+    connection pool is exhausted under heavy load.
     """
     if USE_POSTGRESQL:
-        # Try to get connection from pool first
+        # Try to get connection from pool first with timeout
         conn_pool = _get_connection_pool()
         if conn_pool:
             try:
-                conn = conn_pool.getconn()
+                conn = _get_pooled_connection_with_timeout(
+                    conn_pool, POOL_TIMEOUT_SECONDS
+                )
                 if conn:
                     return conn
+                # If timeout occurred, fall through to direct connection
+                print("⚠️ Pool timeout, creating direct connection")
+            except pool.PoolError as e:
+                print(f"⚠️ Pool error: {e}, falling back to direct connection")
             except Exception as e:
                 print(f"⚠️ Pool connection failed, falling back to direct: {e}")
         
-        # Fallback to direct connection if pool fails
+        # Fallback to direct connection if pool fails or is exhausted
         try:
             conn = psycopg2.connect(
                 host=DB_CONFIG["host"],
@@ -302,7 +357,7 @@ def get_db_connection():
                 password=DB_CONFIG["password"],
                 sslmode=DB_CONFIG["sslmode"],
                 cursor_factory=RealDictCursor,
-                connect_timeout=15,  # Increased timeout
+                connect_timeout=15,  # Timeout for establishing connection
             )
             return conn
         except psycopg2.OperationalError as e:
@@ -1328,10 +1383,19 @@ def register():
 
 @app.route("/api/auth/login", methods=["POST", "OPTIONS"])
 def login():
-    """Login user"""
+    """Login user
+    
+    Performance optimizations to prevent HTTP 499 timeouts:
+    - Uses connection pool with timeout to prevent indefinite blocking
+    - Proper connection cleanup with try/finally pattern
+    - Returns connections to pool instead of closing to improve reuse
+    """
     if request.method == "OPTIONS":
         return "", 200
 
+    conn = None
+    cursor = None
+    
     try:
         # Handle invalid JSON or empty body
         # silent=True returns None for invalid JSON instead of raising exception
@@ -1356,7 +1420,7 @@ def login():
         email = data["email"].strip().lower()
         password = data["password"]
 
-        # Get user from database
+        # Get user from database with connection pool timeout protection
         conn = get_db_connection()
         cursor = conn.cursor()
 
@@ -1368,8 +1432,6 @@ def login():
         user = cursor.fetchone()
 
         if not user:
-            cursor.close()
-            conn.close()
             return (
                 jsonify({"success": False, "message": "Invalid email or password"}),
                 401,
@@ -1378,8 +1440,6 @@ def login():
         # Check if user has a password (OAuth users may not have one)
         # Using falsy check to handle both None and empty string cases
         if not user["password_hash"]:
-            cursor.close()
-            conn.close()
             return (
                 jsonify({
                     "success": False,
@@ -1388,12 +1448,10 @@ def login():
                 401,
             )
 
-        # Verify password
+        # Verify password (bcrypt checkpw is CPU-intensive but shouldn't block long)
         if not bcrypt.checkpw(
             password.encode("utf-8"), user["password_hash"].encode("utf-8")
         ):
-            cursor.close()
-            conn.close()
             return (
                 jsonify({"success": False, "message": "Invalid email or password"}),
                 401,
@@ -1411,8 +1469,6 @@ def login():
             )
 
         conn.commit()
-        cursor.close()
-        conn.close()
 
         # Create JWT token
         token_payload = {
@@ -1453,6 +1509,16 @@ def login():
             jsonify({"success": False, "message": f"Login failed: {str(e)}"}),
             500,
         )
+    finally:
+        # Always cleanup database resources to prevent connection leaks
+        # This ensures connections are returned to pool even if exceptions occur
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
 
 
 @app.route("/api/auth/refresh", methods=["POST", "OPTIONS"])
