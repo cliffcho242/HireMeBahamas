@@ -323,6 +323,24 @@ def execute_query(query, params=None, fetch=False, fetchone=False, commit=False)
         raise e
 
 
+def _safe_rollback(conn):
+    """
+    Safely rollback a database connection.
+    Handles connection state issues gracefully.
+    """
+    try:
+        conn.rollback()
+    except psycopg2.InterfaceError as e:
+        # Connection is closed or in a bad state
+        print(f"⚠️  Cannot rollback: connection interface error: {e}")
+    except psycopg2.OperationalError as e:
+        # Connection lost or other operational issue
+        print(f"⚠️  Cannot rollback: operational error: {e}")
+    except Exception as e:
+        # Unexpected error during rollback
+        print(f"⚠️  Rollback failed with unexpected error: {e}")
+
+
 def init_postgresql_extensions(cursor, conn):
     """
     Initialize PostgreSQL extensions including pg_stat_statements.
@@ -341,23 +359,21 @@ def init_postgresql_extensions(cursor, conn):
     # Pre-defined SQL statements for each allowed extension
     # This approach prevents SQL injection by using a dictionary mapping
     # instead of string formatting with user/config-provided values
-    EXTENSION_SQL = {
-        "pg_stat_statements": "CREATE EXTENSION IF NOT EXISTS pg_stat_statements",
+    # Extensions to initialize and their SQL statements are defined together
+    # to ensure consistency and prevent mismatches
+    EXTENSIONS = {
+        "pg_stat_statements": {
+            "sql": "CREATE EXTENSION IF NOT EXISTS pg_stat_statements",
+            "description": "Query performance statistics tracking",
+        },
     }
-    
-    extensions = [
-        ("pg_stat_statements", "Query performance statistics tracking"),
-    ]
     
     success = True
     
-    for ext_name, ext_description in extensions:
-        # Validate extension name against pre-defined SQL dictionary
-        if ext_name not in EXTENSION_SQL:
-            print(f"⚠️  Extension '{ext_name}' is not in the supported list, skipping")
-            success = False
-            continue
-            
+    for ext_name, ext_config in EXTENSIONS.items():
+        ext_sql = ext_config["sql"]
+        ext_description = ext_config["description"]
+        
         try:
             # Check if extension is available in the system
             cursor.execute(
@@ -390,9 +406,9 @@ def init_postgresql_extensions(cursor, conn):
             if is_installed:
                 print(f"✅ Extension '{ext_name}' is already installed")
             else:
-                # Execute pre-defined SQL statement from the EXTENSION_SQL dictionary
+                # Execute pre-defined SQL statement from the EXTENSIONS dictionary
                 # This ensures only validated, pre-defined SQL is executed
-                cursor.execute(EXTENSION_SQL[ext_name])
+                cursor.execute(ext_sql)
                 conn.commit()
                 print(f"✅ Extension '{ext_name}' installed successfully ({ext_description})")
                 
@@ -439,23 +455,6 @@ def init_postgresql_extensions(cursor, conn):
     return success
 
 
-def _safe_rollback(conn):
-    """
-    Safely rollback a database connection.
-    Handles connection state issues gracefully.
-    """
-    try:
-        conn.rollback()
-    except psycopg2.InterfaceError as e:
-        # Connection is closed or in a bad state
-        print(f"⚠️  Cannot rollback: connection interface error: {e}")
-    except psycopg2.OperationalError as e:
-        # Connection lost or other operational issue
-        print(f"⚠️  Cannot rollback: operational error: {e}")
-    except Exception as e:
-        # Unexpected error during rollback
-        print(f"⚠️  Rollback failed with unexpected error: {e}")
-
 
 def init_database():
     """Initialize database with all required tables"""
@@ -474,10 +473,7 @@ def init_database():
             if not ext_success:
                 print("⚠️  Some extensions could not be initialized, but this is non-fatal")
                 # Ensure connection is in a clean state before continuing
-                try:
-                    conn.rollback()
-                except Exception:
-                    pass
+                _safe_rollback(conn)
         
         # Detect if we need to create tables
         if USE_POSTGRESQL:
