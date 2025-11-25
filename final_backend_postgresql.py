@@ -1,5 +1,6 @@
 import atexit
 import os
+import random
 import sqlite3
 import threading
 import time
@@ -282,6 +283,51 @@ STATEMENT_TIMEOUT_MS = _get_env_int("STATEMENT_TIMEOUT_MS", 30000, 1000, 300000)
 # Configurable via environment variable for different deployment environments
 DB_POOL_MAX_CONNECTIONS = _get_env_int("DB_POOL_MAX_CONNECTIONS", 20, 5, 100)
 
+# Connection retry configuration for database recovery scenarios
+# When PostgreSQL is recovering from improper shutdown, connections may fail temporarily
+# These settings allow the application to retry connections with exponential backoff
+DB_CONNECT_MAX_RETRIES = _get_env_int("DB_CONNECT_MAX_RETRIES", 3, 1, 10)
+DB_CONNECT_BASE_DELAY_MS = _get_env_int("DB_CONNECT_BASE_DELAY_MS", 100, 50, 2000)
+DB_CONNECT_MAX_DELAY_MS = _get_env_int("DB_CONNECT_MAX_DELAY_MS", 2000, 500, 10000)
+
+
+def _is_transient_connection_error(error: Exception) -> bool:
+    """
+    Check if a database connection error is transient and may succeed on retry.
+    
+    Transient errors occur during:
+    - Database recovery after improper shutdown
+    - Temporary network issues
+    - Connection pool exhaustion
+    - Database restarts or failovers
+    
+    Args:
+        error: The exception that occurred during connection attempt
+        
+    Returns:
+        True if the error is likely transient and worth retrying
+    """
+    if not isinstance(error, psycopg2.Error):
+        return False
+    
+    error_msg = str(error).lower()
+    
+    # Transient error patterns
+    transient_patterns = [
+        "connection refused",           # Database not yet accepting connections
+        "could not connect",             # General connection failure
+        "server closed the connection",  # Server restart/recovery
+        "connection reset",              # Network interruption
+        "timeout expired",               # Connection timeout
+        "the database system is starting up",  # Explicit startup message
+        "the database system is in recovery",  # Database recovery mode
+        "too many connections",          # Temporary pool exhaustion
+        "connection is closed",          # Stale connection
+        "terminating connection",        # Server-initiated disconnect
+    ]
+    
+    return any(pattern in error_msg for pattern in transient_patterns)
+
 
 def _get_connection_pool():
     """
@@ -429,14 +475,45 @@ def _get_pooled_connection_with_timeout(conn_pool, timeout_seconds):
         raise
 
 
+def _create_direct_postgresql_connection(sslmode: str = None):
+    """
+    Create a direct PostgreSQL connection with the specified SSL mode.
+    
+    Args:
+        sslmode: SSL mode to use. If None, uses the configured default.
+        
+    Returns:
+        A psycopg2 connection object
+        
+    Raises:
+        psycopg2.Error: If connection fails
+    """
+    return psycopg2.connect(
+        host=DB_CONFIG["host"],
+        port=DB_CONFIG["port"],
+        database=DB_CONFIG["database"],
+        user=DB_CONFIG["user"],
+        password=DB_CONFIG["password"],
+        sslmode=sslmode or DB_CONFIG["sslmode"],
+        cursor_factory=RealDictCursor,
+        connect_timeout=10,
+        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
+    )
+
+
 def get_db_connection():
     """Get database connection (PostgreSQL on Railway, SQLite locally)
     
     For PostgreSQL, uses connection pool for better performance.
     Falls back to direct connection if pool is unavailable or exhausted.
     
-    Includes timeout handling to prevent indefinite blocking when the
-    connection pool is exhausted under heavy load.
+    Includes:
+    - Timeout handling to prevent indefinite blocking when pool is exhausted
+    - Exponential backoff retry for transient connection errors during database recovery
+    - SSL fallback for certificate-related connection issues
+    
+    The retry mechanism handles scenarios where PostgreSQL is recovering from
+    an improper shutdown and temporarily refuses connections.
     """
     if USE_POSTGRESQL:
         # Try to get connection from pool first with timeout
@@ -455,44 +532,55 @@ def get_db_connection():
             except Exception as e:
                 print(f"⚠️ Pool connection failed, falling back to direct: {e}")
         
-        # Fallback to direct connection if pool fails or is exhausted
-        try:
-            conn = psycopg2.connect(
-                host=DB_CONFIG["host"],
-                port=DB_CONFIG["port"],
-                database=DB_CONFIG["database"],
-                user=DB_CONFIG["user"],
-                password=DB_CONFIG["password"],
-                sslmode=DB_CONFIG["sslmode"],
-                cursor_factory=RealDictCursor,
-                connect_timeout=10,  # Reduced from 15s for faster failure detection
-                # Set statement_timeout on connection to prevent long-running queries
-                options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
-            )
-            return conn
-        except psycopg2.OperationalError as e:
-            error_msg = str(e).lower()
-            # Handle SSL-related errors by trying with sslmode=prefer
-            if "ssl" in error_msg or "certificate" in error_msg:
-                print(f"⚠️ SSL connection failed, attempting with sslmode=prefer...")
-                try:
-                    conn = psycopg2.connect(
-                        host=DB_CONFIG["host"],
-                        port=DB_CONFIG["port"],
-                        database=DB_CONFIG["database"],
-                        user=DB_CONFIG["user"],
-                        password=DB_CONFIG["password"],
-                        sslmode="prefer",
-                        cursor_factory=RealDictCursor,
-                        connect_timeout=10,
-                        # Set statement_timeout on connection to prevent long-running queries
-                        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
-                    )
-                    return conn
-                except Exception as fallback_error:
-                    print(f"❌ Fallback connection also failed: {fallback_error}")
-                    raise
-            raise
+        # Fallback to direct connection with retry logic for transient errors
+        # This handles database recovery scenarios after improper shutdown
+        last_error = None
+        delay_ms = DB_CONNECT_BASE_DELAY_MS
+        
+        for attempt in range(DB_CONNECT_MAX_RETRIES):
+            try:
+                conn = _create_direct_postgresql_connection()
+                if attempt > 0:
+                    print(f"✅ Connection succeeded on attempt {attempt + 1}")
+                return conn
+            except psycopg2.OperationalError as e:
+                last_error = e
+                error_msg = str(e).lower()
+                
+                # Handle SSL-related errors by trying with sslmode=prefer
+                if "ssl" in error_msg or "certificate" in error_msg:
+                    print(f"⚠️ SSL connection failed, attempting with sslmode=prefer...")
+                    try:
+                        conn = _create_direct_postgresql_connection(sslmode="prefer")
+                        return conn
+                    except Exception as fallback_error:
+                        print(f"❌ SSL fallback connection also failed: {fallback_error}")
+                        last_error = fallback_error
+                
+                # Check if this is a transient error worth retrying
+                if _is_transient_connection_error(e) and attempt < DB_CONNECT_MAX_RETRIES - 1:
+                    # Calculate delay with exponential backoff and jitter
+                    # Jitter helps prevent thundering herd when many connections retry
+                    jitter = random.uniform(0.8, 1.2)
+                    actual_delay_ms = min(delay_ms * jitter, DB_CONNECT_MAX_DELAY_MS)
+                    
+                    print(f"⚠️ Transient connection error (attempt {attempt + 1}/{DB_CONNECT_MAX_RETRIES}): {e}")
+                    print(f"   Retrying in {actual_delay_ms:.0f}ms...")
+                    
+                    time.sleep(actual_delay_ms / 1000.0)
+                    delay_ms *= 2  # Exponential backoff
+                else:
+                    # Non-transient error or last attempt - don't retry
+                    break
+            except Exception as e:
+                last_error = e
+                # Non-psycopg2 errors are not retried
+                break
+        
+        # All retries exhausted, raise the last error
+        if last_error:
+            raise last_error
+        raise psycopg2.OperationalError("Failed to connect to PostgreSQL after retries")
     else:
         conn = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)
         conn.row_factory = sqlite3.Row
