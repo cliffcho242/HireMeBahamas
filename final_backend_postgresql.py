@@ -1174,6 +1174,18 @@ def register():
     if request.method == "OPTIONS":
         return "", 200
 
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         # Handle invalid JSON or empty body
         # silent=True returns None for invalid JSON instead of raising exception
@@ -1365,6 +1377,18 @@ def login():
     if request.method == "OPTIONS":
         return "", 200
 
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         # Handle invalid JSON or empty body
         # silent=True returns None for invalid JSON instead of raising exception
@@ -1494,6 +1518,18 @@ def refresh_token():
     if request.method == "OPTIONS":
         return "", 200
 
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization", "")
@@ -1588,6 +1624,18 @@ def verify_session():
     if request.method == "OPTIONS":
         return "", 200
 
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization", "")
@@ -1662,6 +1710,18 @@ def get_profile():
     """Get user profile"""
     if request.method == "OPTIONS":
         return "", 200
+
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
 
     try:
         # Get token from Authorization header
@@ -1753,6 +1813,18 @@ def get_posts():
     """
     if request.method == "OPTIONS":
         return "", 200
+
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
 
     try:
         # Get pagination parameters
@@ -1876,6 +1948,18 @@ def get_posts():
 @app.route("/api/posts", methods=["POST"])
 def create_post():
     """Create a new post"""
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization", "")
@@ -2021,6 +2105,18 @@ def like_post(post_id):
     if request.method == "OPTIONS":
         return "", 200
 
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization", "")
@@ -2152,6 +2248,18 @@ def delete_post(post_id):
     if request.method == "OPTIONS":
         return "", 200
 
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization", "")
@@ -2252,6 +2360,18 @@ def get_user(user_id):
     """
     if request.method == "OPTIONS":
         return "", 200
+
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
 
     try:
         # Verify authentication
@@ -2386,6 +2506,18 @@ def get_users_list():
     """
     if request.method == "OPTIONS":
         return "", 200
+
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
 
     try:
         # Verify authentication
@@ -2551,6 +2683,18 @@ def follow_user(user_id):
     if request.method == "OPTIONS":
         return "", 200
 
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         # Verify authentication
         auth_header = request.headers.get("Authorization")
@@ -2632,6 +2776,18 @@ def unfollow_user(user_id):
     if request.method == "OPTIONS":
         return "", 200
 
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         # Verify authentication
         auth_header = request.headers.get("Authorization")
@@ -2695,6 +2851,18 @@ def get_following_list():
     """
     if request.method == "OPTIONS":
         return "", 200
+
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
 
     try:
         # Verify authentication
@@ -2765,6 +2933,18 @@ def get_followers_list():
     """
     if request.method == "OPTIONS":
         return "", 200
+
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
 
     try:
         # Verify authentication
@@ -2840,6 +3020,18 @@ def get_jobs():
     """
     if request.method == "OPTIONS":
         return "", 200
+
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
 
     try:
         conn = get_db_connection()
@@ -2962,6 +3154,18 @@ def get_job_stats():
     if request.method == "OPTIONS":
         return "", 200
 
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -3040,6 +3244,18 @@ def get_job(job_id):
     if request.method == "OPTIONS":
         return "", 200
 
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -3116,6 +3332,18 @@ def create_job():
     """
     Create a new job posting
     """
+    # Ensure database is initialized before processing request
+    if not ensure_database_initialized():
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment.",
+                }
+            ),
+            503,
+        )
+
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization", "")
