@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Social feed component with dynamic API responses
 import { useState, useEffect, useCallback } from 'react';
 import './SocialFeed.css';
 

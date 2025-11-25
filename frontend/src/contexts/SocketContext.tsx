@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+// Context files export both Provider components and custom hooks
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';

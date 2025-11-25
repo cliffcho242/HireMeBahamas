@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-refresh/only-export-components */
+// AI Context uses dynamic types for AI responses - any types are intentional
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 

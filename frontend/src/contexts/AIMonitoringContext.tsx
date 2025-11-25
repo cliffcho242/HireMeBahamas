@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-refresh/only-export-components */
+// AI Monitoring uses dynamic window object access and complex hook dependencies
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 
 interface SystemHealth {

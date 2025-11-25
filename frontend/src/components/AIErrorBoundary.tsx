@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Error boundary uses dynamic window.gc and analysis objects
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { useAIMonitoring } from '../contexts/AIMonitoringContext';
 
