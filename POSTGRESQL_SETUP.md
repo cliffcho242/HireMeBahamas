@@ -1,5 +1,11 @@
 # PostgreSQL Setup Guide for HireMeBahamas
 
+## Supported PostgreSQL Versions
+
+This application is tested and compatible with **PostgreSQL 17.x** (recommended) and PostgreSQL 16.x.
+
+The Docker setup uses PostgreSQL 17 by default. When deploying to Railway, Render, or other platforms, PostgreSQL 17 is recommended for the latest features and security updates.
+
 ## ⚠️ Important: PostgreSQL is REQUIRED for Production
 
 **SQLite is NOT suitable for production use** because:

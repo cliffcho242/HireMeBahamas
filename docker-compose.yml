@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:16
+    image: postgres:17
     environment:
       POSTGRES_DB: hiremebahamas
       POSTGRES_USER: hiremebahamas_user
