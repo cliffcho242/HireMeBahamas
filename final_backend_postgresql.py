@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from psycopg2 import pool
 from urllib.parse import urlparse, parse_qs
 
 import bcrypt
@@ -230,12 +231,68 @@ else:
     DB_PATH = Path(__file__).parent / "hiremebahamas.db"
     print(f"📁 SQLite database path: {DB_PATH}")
 
+# Connection pool for PostgreSQL
+# This reduces connection overhead and improves performance for concurrent requests
+_connection_pool = None
+_pool_lock = threading.Lock()
+
+def _get_connection_pool():
+    """
+    Get or create the PostgreSQL connection pool.
+    Uses ThreadedConnectionPool for thread-safe connection management.
+    Pool is created lazily on first request.
+    """
+    global _connection_pool
+    
+    if not USE_POSTGRESQL:
+        return None
+    
+    if _connection_pool is None:
+        with _pool_lock:
+            if _connection_pool is None:
+                try:
+                    # Create a threaded connection pool
+                    # minconn=1: Start with 1 connection
+                    # maxconn=5: Max 5 connections (optimized for 2 workers)
+                    _connection_pool = pool.ThreadedConnectionPool(
+                        minconn=1,
+                        maxconn=5,
+                        host=DB_CONFIG["host"],
+                        port=DB_CONFIG["port"],
+                        database=DB_CONFIG["database"],
+                        user=DB_CONFIG["user"],
+                        password=DB_CONFIG["password"],
+                        sslmode=DB_CONFIG["sslmode"],
+                        cursor_factory=RealDictCursor,
+                        connect_timeout=15,  # Increased timeout for connection pool
+                    )
+                    print("✅ PostgreSQL connection pool created")
+                except Exception as e:
+                    print(f"⚠️ Failed to create connection pool: {e}")
+                    # Pool creation failed, will fall back to direct connections
+                    return None
+    
+    return _connection_pool
+
 
 def get_db_connection():
-    """Get database connection (PostgreSQL on Railway, SQLite locally)"""
+    """Get database connection (PostgreSQL on Railway, SQLite locally)
+    
+    For PostgreSQL, uses connection pool for better performance.
+    Falls back to direct connection if pool is unavailable.
+    """
     if USE_POSTGRESQL:
-        # Use connection parameters from parsed URL to avoid conflicts
-        # This prevents issues when DATABASE_URL already contains sslmode
+        # Try to get connection from pool first
+        conn_pool = _get_connection_pool()
+        if conn_pool:
+            try:
+                conn = conn_pool.getconn()
+                if conn:
+                    return conn
+            except Exception as e:
+                print(f"⚠️ Pool connection failed, falling back to direct: {e}")
+        
+        # Fallback to direct connection if pool fails
         try:
             conn = psycopg2.connect(
                 host=DB_CONFIG["host"],
@@ -245,7 +302,7 @@ def get_db_connection():
                 password=DB_CONFIG["password"],
                 sslmode=DB_CONFIG["sslmode"],
                 cursor_factory=RealDictCursor,
-                connect_timeout=10,  # 10 second timeout for connection
+                connect_timeout=15,  # Increased timeout
             )
             return conn
         except psycopg2.OperationalError as e:
@@ -262,7 +319,7 @@ def get_db_connection():
                         password=DB_CONFIG["password"],
                         sslmode="prefer",
                         cursor_factory=RealDictCursor,
-                        connect_timeout=10,
+                        connect_timeout=15,
                     )
                     return conn
                 except Exception as fallback_error:
@@ -288,6 +345,31 @@ def get_db_connection():
             print(f"⚠️  Warning: Failed to enable foreign keys, got: {result[0] if result else 'None'}")
         
         return conn
+
+
+def return_db_connection(conn):
+    """Return a connection to the pool (PostgreSQL only).
+    
+    For pooled connections, returns to pool for reuse.
+    For non-pooled connections, closes the connection.
+    """
+    if conn is None:
+        return
+    
+    if USE_POSTGRESQL:
+        conn_pool = _get_connection_pool()
+        if conn_pool:
+            try:
+                conn_pool.putconn(conn)
+                return
+            except Exception:
+                pass  # If pool return fails, close the connection
+    
+    # Close the connection if not using pool or pool return failed
+    try:
+        conn.close()
+    except Exception:
+        pass
 
 
 def execute_query(query, params=None, fetch=False, fetchone=False, commit=False):
@@ -323,13 +405,13 @@ def execute_query(query, params=None, fetch=False, fetchone=False, commit=False)
                     result = cursor.fetchone()
 
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return result
 
     except Exception as e:
         conn.rollback()
-        conn.close()
+        return_db_connection(conn)
         raise e
 
 
