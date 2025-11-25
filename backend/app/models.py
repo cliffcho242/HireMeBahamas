@@ -1,5 +1,5 @@
 from app.database import Base
-from sqlalchemy import Boolean, Column, DateTime, Enum as SQLEnum, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Enum as SQLEnum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -105,6 +105,10 @@ class Job(Base):
     location = Column(String(200), nullable=False)
     salary_min = Column(Integer)
     salary_max = Column(Integer)
+    budget = Column(Float)  # Budget amount for the job
+    budget_type = Column(String(20), default="fixed")  # fixed or hourly
+    is_remote = Column(Boolean, default=False)  # Whether job is remote
+    skills = Column(Text)  # Required skills as comma-separated text
     status = Column(String(20), default="active")
     employer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -124,6 +128,7 @@ class JobApplication(Base):
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
     applicant_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     cover_letter = Column(Text)
+    proposed_budget = Column(Float)  # Proposed budget amount by applicant
     status = Column(String(20), default="pending")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

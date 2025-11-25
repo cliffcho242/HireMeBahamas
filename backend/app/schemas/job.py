@@ -57,10 +57,11 @@ class JobUpdate(BaseModel):
 
 
 class EmployerInfo(BaseModel):
-    id: str
+    id: int
     first_name: str
     last_name: str
     profile_image: Optional[str] = None
+    avatar_url: Optional[str] = None
     average_rating: Optional[float] = None
 
     class Config:
@@ -68,10 +69,11 @@ class EmployerInfo(BaseModel):
 
 
 class ApplicantInfo(BaseModel):
-    id: str
+    id: int
     first_name: str
     last_name: str
     profile_image: Optional[str] = None
+    avatar_url: Optional[str] = None
     skills: Optional[List[str]] = None
     average_rating: Optional[float] = None
 
@@ -91,24 +93,38 @@ class JobApplicationCreate(BaseModel):
 
 
 class JobApplicationResponse(BaseModel):
-    id: str
-    job_id: str
-    applicant_id: str
+    id: int
+    job_id: int
+    applicant_id: int
     applicant: ApplicantInfo
     cover_letter: str
-    proposed_budget: float
-    status: ApplicationStatus
+    proposed_budget: Optional[float] = None
+    status: str = "pending"
     created_at: datetime
 
     class Config:
         from_attributes = True
 
 
-class JobResponse(JobBase):
-    id: str
-    employer_id: str
+class JobResponse(BaseModel):
+    id: int
+    title: str
+    description: str
+    category: str
+    company: Optional[str] = None
+    requirements: Optional[str] = None
+    benefits: Optional[str] = None
+    job_type: str = "full-time"
+    budget: Optional[float] = None
+    budget_type: Optional[str] = None
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    location: str
+    is_remote: bool = False
+    skills: Optional[str] = None
+    employer_id: int
     employer: EmployerInfo
-    status: JobStatus
+    status: str = "active"
     applications: Optional[List[JobApplicationResponse]] = None
     application_count: int = 0
     created_at: datetime

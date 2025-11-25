@@ -1,13 +1,12 @@
 from datetime import datetime
 from typing import Optional
-from uuid import UUID
 
 from pydantic import BaseModel, validator
 
 
 class ReviewCreate(BaseModel):
-    job_id: UUID
-    reviewee_id: UUID
+    job_id: int
+    reviewee_id: int
     rating: int
     comment: Optional[str] = None
 
@@ -30,17 +29,18 @@ class ReviewUpdate(BaseModel):
 
 
 class UserInfo(BaseModel):
-    id: str
+    id: int
     first_name: str
     last_name: str
     profile_image: Optional[str] = None
+    avatar_url: Optional[str] = None
 
     class Config:
         from_attributes = True
 
 
 class JobInfo(BaseModel):
-    id: str
+    id: int
     title: str
 
     class Config:
@@ -48,10 +48,10 @@ class JobInfo(BaseModel):
 
 
 class ReviewResponse(BaseModel):
-    id: str
-    job_id: str
-    reviewer_id: str
-    reviewee_id: str
+    id: int
+    job_id: int
+    reviewer_id: int
+    reviewee_id: int
     rating: int
     comment: Optional[str] = None
     created_at: datetime

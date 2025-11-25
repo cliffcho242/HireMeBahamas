@@ -1,5 +1,4 @@
 from typing import List, Optional
-from uuid import UUID
 
 from app.core.security import get_current_user
 from app.database import get_db
@@ -104,7 +103,7 @@ async def get_conversations(
     "/conversations/{conversation_id}/messages", response_model=List[MessageResponse]
 )
 async def get_conversation_messages(
-    conversation_id: UUID,
+    conversation_id: int,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
@@ -149,7 +148,7 @@ async def get_conversation_messages(
     "/conversations/{conversation_id}/messages", response_model=MessageResponse
 )
 async def send_message(
-    conversation_id: UUID,
+    conversation_id: int,
     message: MessageCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -206,7 +205,7 @@ async def send_message(
 
 @router.put("/messages/{message_id}/read")
 async def mark_message_read(
-    message_id: UUID,
+    message_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

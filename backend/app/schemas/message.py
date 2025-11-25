@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import List, Optional
-from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -10,20 +9,21 @@ class MessageCreate(BaseModel):
 
 
 class UserInfo(BaseModel):
-    id: str
+    id: int
     first_name: str
     last_name: str
     profile_image: Optional[str] = None
+    avatar_url: Optional[str] = None
 
     class Config:
         from_attributes = True
 
 
 class MessageResponse(BaseModel):
-    id: str
-    conversation_id: str
-    sender_id: str
-    receiver_id: str
+    id: int
+    conversation_id: int
+    sender_id: int
+    receiver_id: int
     content: str
     is_read: bool
     created_at: datetime
@@ -35,13 +35,13 @@ class MessageResponse(BaseModel):
 
 
 class ConversationCreate(BaseModel):
-    participant_id: UUID
+    participant_id: int
 
 
 class ConversationResponse(BaseModel):
-    id: str
-    participant_1_id: str
-    participant_2_id: str
+    id: int
+    participant_1_id: int
+    participant_2_id: int
     participant_1: UserInfo
     participant_2: UserInfo
     messages: Optional[List[MessageResponse]] = None
