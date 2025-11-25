@@ -5,6 +5,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import datetime, timedelta, timezone
+from functools import wraps
 from pathlib import Path
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -579,7 +580,8 @@ def _get_psycopg2_error_details(e):
         parts.append(str_repr)
     elif str_repr and is_just_numeric and not pgerror:
         # Only include numeric code if we have no other information
-        parts.append(f"Error code: {str_repr}")
+        # Provide more context about what the code means
+        parts.append(f"Error code: {str_repr} (extension may not be available or requires server configuration)")
     
     # Include the PostgreSQL error code if available
     pgcode = getattr(e, 'pgcode', None)
@@ -1139,6 +1141,37 @@ def ensure_database_initialized():
     return _db_initialized
 
 
+def requires_database(f):
+    """
+    Decorator that ensures database is initialized before endpoint execution.
+    
+    Use this decorator on endpoints that require database access.
+    If the database is not initialized, returns a 503 response asking the user
+    to try again.
+    
+    Example:
+        @app.route("/api/users")
+        @requires_database
+        def get_users():
+            # Database is guaranteed to be initialized here
+            ...
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not ensure_database_initialized():
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Database is initializing. Please try again.",
+                    }
+                ),
+                503,
+            )
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 # Initialize database in background thread to avoid blocking healthcheck
 def init_database_background():
     """Initialize database in background thread to allow app to start quickly"""
@@ -1292,6 +1325,7 @@ def api_health_check():
 
 
 @app.route("/api/auth/register", methods=["POST", "OPTIONS"])
+@requires_database
 def register():
     """Register a new user"""
     if request.method == "OPTIONS":
@@ -1483,6 +1517,7 @@ def register():
 
 
 @app.route("/api/auth/login", methods=["POST", "OPTIONS"])
+@requires_database
 def login():
     """Login user
     
