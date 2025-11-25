@@ -372,7 +372,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       toast.success('Profile updated successfully!');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Profile update failed');
+      toast.error(error.response?.data?.detail || error.response?.data?.message || 'Profile update failed');
       throw error;
     }
   };
