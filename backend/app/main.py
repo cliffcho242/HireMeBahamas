@@ -7,6 +7,7 @@ import socketio
 
 # Import APIs
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
+from .database import init_db, close_db
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,9 +18,22 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting HireMeBahamas API...")
+    # Initialize database tables
+    logger.info("Initializing database tables...")
+    try:
+        await init_db()
+        logger.info("Database tables initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database tables: {e}")
+        raise
     yield
     # Shutdown
     logger.info("Shutting down HireMeBahamas API...")
+    try:
+        await close_db()
+        logger.info("Database connections closed")
+    except Exception as e:
+        logger.error(f"Error closing database connections: {e}")
 
 
 # Initialize FastAPI app
@@ -27,6 +41,7 @@ app = FastAPI(
     title="HireMeBahamas API",
     description="Job platform API for the Bahamas",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Configure CORS - Allow development and production origins
