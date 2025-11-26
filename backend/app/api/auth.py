@@ -103,12 +103,15 @@ async def get_current_user(
 @router.post("/register", response_model=Token)
 async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     """Register a new user"""
+    
+    logger.info(f"Registration attempt for email: {user_data.email}")
 
     # Check if user already exists
     result = await db.execute(select(User).where(User.email == user_data.email))
     existing_user = result.scalar_one_or_none()
 
     if existing_user:
+        logger.warning(f"Registration failed - Email already registered: {user_data.email}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
@@ -132,6 +135,8 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 
     # Create access token
     access_token = create_access_token(data={"sub": str(db_user.id)})
+    
+    logger.info(f"Registration successful for: {user_data.email} (user_id={db_user.id})")
 
     return {
         "access_token": access_token,
@@ -143,24 +148,46 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 @router.post("/login", response_model=Token)
 async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
     """Authenticate user and return token"""
+    
+    logger.info(f"Login attempt for email: {user_data.email}")
 
     # Find user by email
     result = await db.execute(select(User).where(User.email == user_data.email))
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(user_data.password, user.hashed_password):
+    if not user:
+        logger.warning(f"Login failed - User not found: {user_data.email}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+        )
+    
+    # Check if user has a password (OAuth users might not)
+    if not user.hashed_password:
+        logger.warning(f"Login failed - OAuth user attempting password login: {user_data.email}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This account uses social login. Please sign in with Google or Apple.",
+        )
+    
+    # Verify password
+    if not verify_password(user_data.password, user.hashed_password):
+        logger.warning(f"Login failed - Invalid password for user: {user_data.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
 
     if not user.is_active:
+        logger.warning(f"Login failed - Inactive account: {user_data.email}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated"
         )
 
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id)})
+    
+    logger.info(f"Login successful for user: {user_data.email} (user_id={user.id})")
 
     return {
         "access_token": access_token,
@@ -266,11 +293,21 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
     from google.auth.transport import requests
     import os
     
+    logger.info("Google OAuth login attempt")
+    
     try:
         # Get Google Client ID from environment
         google_client_id = os.getenv('GOOGLE_CLIENT_ID')
         
+        if not google_client_id:
+            logger.error("Google OAuth attempted but GOOGLE_CLIENT_ID not configured")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Google OAuth is not configured on the server"
+            )
+        
         # Verify the Google token with audience validation
+        logger.info("Verifying Google OAuth token")
         idinfo = id_token.verify_oauth2_token(
             oauth_data.token,
             requests.Request(),
@@ -285,16 +322,20 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
         picture = idinfo.get('picture')
         
         if not email:
+            logger.error("Google OAuth token missing email claim")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email not provided by Google"
             )
+        
+        logger.info(f"Google OAuth verified for email: {email}")
         
         # Check if user exists
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
         
         if user:
+            logger.info(f"Existing user logging in with Google: {email} (user_id={user.id})")
             # Update OAuth info if this is first time signing in with Google
             if not user.oauth_provider:
                 user.oauth_provider = 'google'
@@ -305,6 +346,7 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
                 await db.commit()
                 await db.refresh(user)
         else:
+            logger.info(f"Creating new user via Google OAuth: {email}")
             # Create new user
             user = User(
                 email=email,
@@ -320,9 +362,12 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
             db.add(user)
             await db.commit()
             await db.refresh(user)
+            logger.info(f"New user created via Google OAuth: {email} (user_id={user.id})")
         
         # Create access token
         access_token = create_access_token(data={"sub": str(user.id)})
+        
+        logger.info(f"Google OAuth login successful for: {email} (user_id={user.id})")
         
         return {
             "access_token": access_token,
@@ -336,8 +381,10 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Google token"
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Google OAuth error: {e}")
+        logger.error(f"Google OAuth error: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OAuth authentication failed"
@@ -350,12 +397,15 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
     import jwt
     from jwt import PyJWKClient
     
+    logger.info("Apple OAuth login attempt")
+    
     try:
         # Apple's public keys endpoint
         jwks_url = 'https://appleid.apple.com/auth/keys'
         jwks_client = PyJWKClient(jwks_url)
         
         # Get signing key from token
+        logger.info("Verifying Apple OAuth token")
         signing_key = jwks_client.get_signing_key_from_jwt(oauth_data.token)
         
         # Decode and verify the token
@@ -371,16 +421,20 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
         apple_id = decoded_token.get('sub')
         
         if not email:
+            logger.error("Apple OAuth token missing email claim")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email not provided by Apple"
             )
+        
+        logger.info(f"Apple OAuth verified for email: {email}")
         
         # Check if user exists
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
         
         if user:
+            logger.info(f"Existing user logging in with Apple: {email} (user_id={user.id})")
             # Update OAuth info if this is first time signing in with Apple
             if not user.oauth_provider:
                 user.oauth_provider = 'apple'
@@ -389,6 +443,7 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
                 await db.commit()
                 await db.refresh(user)
         else:
+            logger.info(f"Creating new user via Apple OAuth: {email}")
             # Create new user - Apple doesn't always provide name
             # The name should be sent from the frontend on first sign in
             user = User(
@@ -404,9 +459,12 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
             db.add(user)
             await db.commit()
             await db.refresh(user)
+            logger.info(f"New user created via Apple OAuth: {email} (user_id={user.id})")
         
         # Create access token
         access_token = create_access_token(data={"sub": str(user.id)})
+        
+        logger.info(f"Apple OAuth login successful for: {email} (user_id={user.id})")
         
         return {
             "access_token": access_token,
@@ -420,8 +478,10 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Apple token"
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Apple OAuth error: {e}")
+        logger.error(f"Apple OAuth error: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OAuth authentication failed"
