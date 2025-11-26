@@ -2,6 +2,9 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 import logging
+import re
+import hashlib
+from threading import Lock
 
 from app.core.security import (
     create_access_token,
@@ -21,7 +24,7 @@ from app.schemas.auth import (
     UserResponse,
     UserUpdate,
 )
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +32,71 @@ from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter()
 security = HTTPBearer()
 logger = logging.getLogger(__name__)
+
+
+# Simple rate limiting using in-memory storage
+# NOTE: For production with multiple instances, use Redis or similar distributed cache
+# This in-memory implementation is suitable for single-instance deployments
+# Example with Redis: from redis import asyncio as aioredis; redis = await aioredis.from_url(...)
+login_attempts = {}
+login_attempts_lock = Lock()  # Thread safety for concurrent requests
+MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_DURATION = timedelta(minutes=15)
+
+
+def check_rate_limit(identifier: str) -> bool:
+    """Check if the identifier (IP or email) has exceeded rate limit
+    
+    Args:
+        identifier: IP address or email to check
+        
+    Returns:
+        True if within rate limit, False if rate limit exceeded
+    """
+    with login_attempts_lock:
+        current_time = datetime.utcnow()
+        
+        if identifier in login_attempts:
+            attempts, lockout_until = login_attempts[identifier]
+            
+            # Check if still locked out
+            if lockout_until and current_time < lockout_until:
+                return False
+            
+            # Check if we should reset the counter (been more than 15 minutes since last attempt)
+            if lockout_until and current_time >= lockout_until:
+                login_attempts[identifier] = (0, None)
+                return True
+            
+            # Increment attempt counter
+            if attempts >= MAX_LOGIN_ATTEMPTS:
+                login_attempts[identifier] = (attempts, current_time + LOCKOUT_DURATION)
+                logger.warning(f"Rate limit exceeded for {identifier}, locked out for {LOCKOUT_DURATION}")
+                return False
+        
+        return True
+
+
+def record_login_attempt(identifier: str, success: bool):
+    """Record a login attempt
+    
+    Args:
+        identifier: IP address or email
+        success: Whether the login was successful
+    """
+    with login_attempts_lock:
+        if success:
+            # Reset on successful login
+            if identifier in login_attempts:
+                del login_attempts[identifier]
+        else:
+            # Increment failed attempts
+            current_time = datetime.utcnow()
+            if identifier in login_attempts:
+                attempts, lockout_until = login_attempts[identifier]
+                login_attempts[identifier] = (attempts + 1, lockout_until)
+            else:
+                login_attempts[identifier] = (1, None)
 
 
 # Helper function to get current user
@@ -103,12 +171,15 @@ async def get_current_user(
 @router.post("/register", response_model=Token)
 async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     """Register a new user"""
+    
+    logger.info(f"Registration attempt for email: {user_data.email}")
 
     # Check if user already exists
     result = await db.execute(select(User).where(User.email == user_data.email))
     existing_user = result.scalar_one_or_none()
 
     if existing_user:
+        logger.warning(f"Registration failed - Email already registered: {user_data.email}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
@@ -132,6 +203,8 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 
     # Create access token
     access_token = create_access_token(data={"sub": str(db_user.id)})
+    
+    logger.info(f"Registration successful for: {user_data.email} (user_id={db_user.id})")
 
     return {
         "access_token": access_token,
@@ -141,26 +214,92 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
-    """Authenticate user and return token"""
+async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depends(get_db)):
+    """Authenticate user and return token
+    
+    Supports login with email address or phone number.
+    Includes rate limiting to prevent brute force attacks.
+    """
+    
+    # Get client IP for rate limiting
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Check rate limit by IP
+    if not check_rate_limit(client_ip):
+        logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again in 15 minutes.",
+        )
+    
+    logger.info(f"Login attempt for: {user_data.email} from IP: {client_ip}")
 
-    # Find user by email
+    # Try to find user by email first, then by phone number
     result = await db.execute(select(User).where(User.email == user_data.email))
     user = result.scalar_one_or_none()
+    
+    # If not found by email, try phone number
+    if not user:
+        # Check if input looks like a phone number (contains digits and phone formatting chars)
+        # Must have at least one digit and reasonable length for a phone number
+        if re.match(r'^\+?[\d\s\-\(\)]+$', user_data.email) and any(c.isdigit() for c in user_data.email) and len(user_data.email) >= 7:
+            logger.info(f"Email not found, trying as phone number")
+            result = await db.execute(select(User).where(User.phone == user_data.email))
+            user = result.scalar_one_or_none()
 
-    if not user or not verify_password(user_data.password, user.hashed_password):
+    if not user:
+        logger.warning(f"Login failed - User not found: {user_data.email}")
+        record_login_attempt(client_ip, False)
+        record_login_attempt(user_data.email, False)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+        )
+    
+    # Check rate limit by email as well
+    if not check_rate_limit(user_data.email):
+        logger.warning(f"Rate limit exceeded for email: {user_data.email}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts for this account. Please try again in 15 minutes.",
+        )
+    
+    # Check if user has a password (OAuth users might not)
+    if not user.hashed_password:
+        logger.warning(f"Login failed - OAuth user attempting password login: {user_data.email} (user_id={user.id})")
+        record_login_attempt(client_ip, False)
+        record_login_attempt(user_data.email, False)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This account uses social login. Please sign in with Google or Apple.",
+        )
+    
+    # Verify password
+    if not verify_password(user_data.password, user.hashed_password):
+        logger.warning(f"Login failed - Invalid password for user: {user_data.email} (user_id={user.id})")
+        record_login_attempt(client_ip, False)
+        record_login_attempt(user_data.email, False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
 
     if not user.is_active:
+        logger.warning(f"Login failed - Inactive account: {user_data.email} (user_id={user.id})")
+        record_login_attempt(client_ip, False)
+        record_login_attempt(user_data.email, False)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated"
         )
 
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id)})
+    
+    # Reset rate limit counters on successful login
+    record_login_attempt(client_ip, True)
+    record_login_attempt(user_data.email, True)
+    
+    logger.info(f"Login successful for user: {user.email} (user_id={user.id})")
 
     return {
         "access_token": access_token,
@@ -259,6 +398,58 @@ async def delete_account(
     return {"message": "Account deactivated successfully"}
 
 
+@router.get("/login-stats")
+async def get_login_stats(current_user: User = Depends(get_current_user)):
+    """Get login attempt statistics (for monitoring)
+    
+    Returns statistics about login attempts and rate limiting.
+    This is useful for detecting brute force attacks.
+    Requires admin authentication.
+    """
+    # Restrict to admin users only
+    if not current_user.is_admin:
+        logger.warning(f"Unauthorized access to login stats by user_id={current_user.id}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    
+    with login_attempts_lock:
+        current_time = datetime.utcnow()
+        
+        stats = {
+            "total_tracked_identifiers": len(login_attempts),
+            "locked_out": 0,
+            "high_attempts": 0,
+            "details": []
+        }
+        
+        for identifier, (attempts, lockout_until) in login_attempts.items():
+            is_locked = lockout_until and current_time < lockout_until
+            
+            if is_locked:
+                stats["locked_out"] += 1
+            elif attempts >= 3:
+                stats["high_attempts"] += 1
+            
+            # Only include identifiers with high attempts or locked out
+            # Anonymize identifiers for security
+            if attempts >= 3 or is_locked:
+                # Hash the identifier to anonymize it
+                hashed = hashlib.sha256(identifier.encode()).hexdigest()[:16]
+                
+                stats["details"].append({
+                    "identifier_hash": hashed,  # Anonymized identifier
+                    "attempts": attempts,
+                    "locked_out": is_locked,
+                    "lockout_until": lockout_until.isoformat() if lockout_until else None
+                })
+    
+    logger.info(f"Login stats requested by admin user_id={current_user.id}: {stats['locked_out']} locked out, {stats['high_attempts']} high attempts")
+    
+    return stats
+
+
 @router.post("/oauth/google", response_model=Token)
 async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)):
     """Authenticate or register user via Google OAuth"""
@@ -266,11 +457,21 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
     from google.auth.transport import requests
     import os
     
+    logger.info("Google OAuth login attempt")
+    
     try:
         # Get Google Client ID from environment
         google_client_id = os.getenv('GOOGLE_CLIENT_ID')
         
+        if not google_client_id:
+            logger.error("Google OAuth attempted but GOOGLE_CLIENT_ID not configured")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Google OAuth is not configured on the server"
+            )
+        
         # Verify the Google token with audience validation
+        logger.info("Verifying Google OAuth token")
         idinfo = id_token.verify_oauth2_token(
             oauth_data.token,
             requests.Request(),
@@ -285,16 +486,20 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
         picture = idinfo.get('picture')
         
         if not email:
+            logger.error("Google OAuth token missing email claim")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email not provided by Google"
             )
+        
+        logger.info(f"Google OAuth verified for email: {email}")
         
         # Check if user exists
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
         
         if user:
+            logger.info(f"Existing user logging in with Google: {email} (user_id={user.id})")
             # Update OAuth info if this is first time signing in with Google
             if not user.oauth_provider:
                 user.oauth_provider = 'google'
@@ -305,6 +510,7 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
                 await db.commit()
                 await db.refresh(user)
         else:
+            logger.info(f"Creating new user via Google OAuth: {email}")
             # Create new user
             user = User(
                 email=email,
@@ -320,9 +526,12 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
             db.add(user)
             await db.commit()
             await db.refresh(user)
+            logger.info(f"New user created via Google OAuth: {email} (user_id={user.id})")
         
         # Create access token
         access_token = create_access_token(data={"sub": str(user.id)})
+        
+        logger.info(f"Google OAuth login successful for: {email} (user_id={user.id})")
         
         return {
             "access_token": access_token,
@@ -336,8 +545,10 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Google token"
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Google OAuth error: {e}")
+        logger.error(f"Google OAuth error: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OAuth authentication failed"
@@ -350,12 +561,15 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
     import jwt
     from jwt import PyJWKClient
     
+    logger.info("Apple OAuth login attempt")
+    
     try:
         # Apple's public keys endpoint
         jwks_url = 'https://appleid.apple.com/auth/keys'
         jwks_client = PyJWKClient(jwks_url)
         
         # Get signing key from token
+        logger.info("Verifying Apple OAuth token")
         signing_key = jwks_client.get_signing_key_from_jwt(oauth_data.token)
         
         # Decode and verify the token
@@ -371,16 +585,20 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
         apple_id = decoded_token.get('sub')
         
         if not email:
+            logger.error("Apple OAuth token missing email claim")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email not provided by Apple"
             )
+        
+        logger.info(f"Apple OAuth verified for email: {email}")
         
         # Check if user exists
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
         
         if user:
+            logger.info(f"Existing user logging in with Apple: {email} (user_id={user.id})")
             # Update OAuth info if this is first time signing in with Apple
             if not user.oauth_provider:
                 user.oauth_provider = 'apple'
@@ -389,6 +607,7 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
                 await db.commit()
                 await db.refresh(user)
         else:
+            logger.info(f"Creating new user via Apple OAuth: {email}")
             # Create new user - Apple doesn't always provide name
             # The name should be sent from the frontend on first sign in
             user = User(
@@ -404,9 +623,12 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
             db.add(user)
             await db.commit()
             await db.refresh(user)
+            logger.info(f"New user created via Apple OAuth: {email} (user_id={user.id})")
         
         # Create access token
         access_token = create_access_token(data={"sub": str(user.id)})
+        
+        logger.info(f"Apple OAuth login successful for: {email} (user_id={user.id})")
         
         return {
             "access_token": access_token,
@@ -420,8 +642,10 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Apple token"
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Apple OAuth error: {e}")
+        logger.error(f"Apple OAuth error: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OAuth authentication failed"

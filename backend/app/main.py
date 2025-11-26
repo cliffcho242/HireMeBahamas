@@ -1,7 +1,9 @@
 import logging
+import time
+import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import socketio
 
@@ -9,8 +11,11 @@ import socketio
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
 from .database import init_db, close_db
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging with more detail
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
@@ -60,6 +65,43 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
+
+
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log all requests with timing and status information"""
+    request_id = str(uuid.uuid4())[:8]
+    start_time = time.time()
+    
+    # Log incoming request
+    logger.info(f"[{request_id}] {request.method} {request.url.path} - Client: {request.client.host if request.client else 'unknown'}")
+    
+    # Process request
+    try:
+        response = await call_next(request)
+        duration_ms = int((time.time() - start_time) * 1000)
+        
+        # Log response
+        log_level = logging.INFO if response.status_code < 400 else logging.WARNING
+        logger.log(
+            log_level,
+            f"[{request_id}] {request.method} {request.url.path} - "
+            f"Status: {response.status_code} - "
+            f"Duration: {duration_ms}ms - "
+            f"Client: {request.client.host if request.client else 'unknown'}"
+        )
+        
+        return response
+    except Exception as e:
+        duration_ms = int((time.time() - start_time) * 1000)
+        logger.error(
+            f"[{request_id}] {request.method} {request.url.path} - "
+            f"ERROR: {str(e)} - "
+            f"Duration: {duration_ms}ms - "
+            f"Client: {request.client.host if request.client else 'unknown'}"
+        )
+        raise
 
 
 # Health check endpoint
