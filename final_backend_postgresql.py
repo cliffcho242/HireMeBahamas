@@ -1674,8 +1674,15 @@ print("✅ Application ready to serve requests")
 
 # Database keepalive configuration
 # Prevents Railway PostgreSQL from sleeping after 15 minutes of inactivity
-# Only runs in production with PostgreSQL configured
-DB_KEEPALIVE_ENABLED = IS_PRODUCTION and USE_POSTGRESQL
+# Enabled when:
+# - Running on Railway (IS_RAILWAY=True, detected via RAILWAY_PROJECT_ID), OR
+# - Running in production environment (IS_PRODUCTION=True)
+# AND PostgreSQL is configured (USE_POSTGRESQL=True)
+#
+# This ensures keepalive runs on Railway even if RAILWAY_ENVIRONMENT is not explicitly
+# set to "production", since Railway is inherently a production platform and database
+# sleeping is a Railway-specific issue.
+DB_KEEPALIVE_ENABLED = (IS_PRODUCTION or IS_RAILWAY) and USE_POSTGRESQL
 DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "600"))  # 10 minutes
 DB_KEEPALIVE_FAILURE_THRESHOLD = 3  # Number of consecutive failures before warning
 DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS = 60  # Delay before retrying after unexpected error
@@ -1773,8 +1780,9 @@ def start_database_keepalive():
     Start the database keepalive background thread.
     
     Only starts if:
-    - Running in production environment (IS_PRODUCTION=True)
-    - PostgreSQL is configured (USE_POSTGRESQL=True)
+    - Running in production environment (IS_PRODUCTION=True), OR
+    - Running on Railway (IS_RAILWAY=True)
+    - AND PostgreSQL is configured (USE_POSTGRESQL=True)
     - Keepalive is not already running
     
     The keepalive prevents Railway PostgreSQL databases from sleeping
@@ -1783,8 +1791,8 @@ def start_database_keepalive():
     global _keepalive_thread, _keepalive_running
     
     if not DB_KEEPALIVE_ENABLED:
-        if not IS_PRODUCTION:
-            print("ℹ️ Database keepalive disabled (not in production environment)")
+        if not IS_PRODUCTION and not IS_RAILWAY:
+            print("ℹ️ Database keepalive disabled (not in production or Railway environment)")
         elif not USE_POSTGRESQL:
             print("ℹ️ Database keepalive disabled (PostgreSQL not configured)")
         return
