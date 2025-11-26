@@ -1761,6 +1761,48 @@ def get_database_recovery_status():
         }
 
 
+def _log_startup_recovery_status():
+    """
+    Log database recovery status during startup.
+    
+    This function checks if the PostgreSQL database is in or recently was in
+    recovery mode and logs appropriate messages. This helps operators understand
+    when they see PostgreSQL recovery logs like:
+    - "database system was interrupted"
+    - "database system was not properly shut down; automatic recovery in progress"
+    
+    These logs are normal and expected after container restarts or deployments
+    on platforms like Railway where the database container may be stopped
+    without a graceful shutdown signal.
+    """
+    if not USE_POSTGRESQL:
+        return  # SQLite doesn't have recovery mode
+    
+    try:
+        recovery_status = get_database_recovery_status()
+        in_recovery = recovery_status.get("in_recovery")
+        
+        if in_recovery is True:
+            print("📊 Database Recovery Status: RECOVERING")
+            print("   └─ PostgreSQL is replaying WAL logs after improper shutdown")
+            print("   └─ This is normal on Railway/Docker after container restarts")
+            print("   └─ Database will be fully operational once recovery completes")
+        elif in_recovery is False:
+            print("📊 Database Recovery Status: NORMAL")
+            print("   └─ PostgreSQL is running in normal operation mode")
+        else:
+            # Could not determine recovery status
+            status = recovery_status.get("status", "unknown")
+            if status == "connection_error":
+                print("📊 Database Recovery Status: CONNECTION_ERROR")
+                print("   └─ Could not connect to check recovery status")
+            else:
+                print(f"📊 Database Recovery Status: {status.upper()}")
+    except Exception as e:
+        # Non-fatal: just log and continue
+        print(f"📊 Database Recovery Status: UNKNOWN (check failed: {e})")
+
+
 # Initialize database in background thread to avoid blocking healthcheck
 def init_database_background():
     """Initialize database in background thread to allow app to start quickly"""
@@ -1774,6 +1816,10 @@ def init_database_background():
 
         try:
             init_database()
+            # After successful initialization, check and log database recovery status
+            # This helps operators understand if the database recently recovered
+            # from an improper shutdown (which would explain recovery logs)
+            _log_startup_recovery_status()
         except psycopg2.Error as e:
             error_details = _get_psycopg2_error_details(e)
             print(f"⚠️ Database initialization warning: {error_details}")

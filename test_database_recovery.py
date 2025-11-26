@@ -188,5 +188,24 @@ class TestConnectionPoolStats:
             assert stats["pooled"] == False
 
 
+class TestStartupRecoveryLogging:
+    """Tests for startup recovery status logging"""
+    
+    def test_log_startup_recovery_status_exists(self, app):
+        """Test that the startup recovery logging function exists"""
+        assert hasattr(final_backend_postgresql, '_log_startup_recovery_status')
+        assert callable(final_backend_postgresql._log_startup_recovery_status)
+    
+    def test_log_startup_recovery_status_sqlite_no_error(self, app, capsys):
+        """Test that startup recovery logging works in SQLite mode without error"""
+        with app.app_context():
+            # Should not raise an exception
+            final_backend_postgresql._log_startup_recovery_status()
+            # In SQLite mode, the function should exit early and not print anything
+            captured = capsys.readouterr()
+            # SQLite mode returns early without logging
+            assert "Database Recovery Status" not in captured.out
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
