@@ -125,8 +125,10 @@ def test_keepalive_railway_config():
     # Note: We can't actually verify DB_KEEPALIVE_ENABLED here due to module
     # reload issues, but we've tested the logic manually above
     
-    # Clean up
+    # Clean up all modified environment variables to avoid affecting subsequent tests
     os.environ.pop('RAILWAY_PROJECT_ID', None)
+    os.environ.pop('ENVIRONMENT', None)
+    os.environ.pop('DATABASE_URL', None)
     
     print("\n✅ Railway configuration test passed!")
     return True
