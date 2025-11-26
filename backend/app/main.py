@@ -4,14 +4,15 @@ import uuid
 import json
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 import socketio
 
 # Import APIs
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
-from .database import init_db, close_db
+from .database import init_db, close_db, get_db
 
 # Configure logging with more detail
 logging.basicConfig(
@@ -162,8 +163,54 @@ async def log_requests(request: Request, call_next):
 
 # Health check endpoint
 @app.get("/health")
-async def health_check():
-    return {"status": "healthy", "message": "HireMeBahamas API is running"}
+async def health_check(db: AsyncSession = Depends(get_db)):
+    """Health check endpoint with database connectivity check
+    
+    Returns the health status of the API and database connection.
+    Useful for monitoring and debugging production issues.
+    """
+    from .core.db_health import check_database_health
+    
+    # Check API health
+    api_status = {
+        "status": "healthy",
+        "message": "HireMeBahamas API is running",
+        "version": "1.0.0"
+    }
+    
+    # Check database health
+    db_health = await check_database_health(db)
+    
+    # Determine overall health status
+    overall_status = "healthy" if db_health["status"] == "healthy" else "degraded"
+    
+    return {
+        "status": overall_status,
+        "api": api_status,
+        "database": db_health
+    }
+
+
+# Detailed health check endpoint for monitoring
+@app.get("/health/detailed")
+async def detailed_health_check(db: AsyncSession = Depends(get_db)):
+    """Detailed health check with database statistics
+    
+    Provides additional database statistics for monitoring.
+    May require admin permissions in production environments.
+    """
+    from .core.db_health import check_database_health, get_database_stats
+    
+    # Basic health check
+    health_response = await health_check(db)
+    
+    # Get database statistics
+    db_stats = await get_database_stats(db)
+    
+    if db_stats:
+        health_response["database"]["statistics"] = db_stats
+    
+    return health_response
 
 
 # Include routers with /api prefix to match frontend expectations
