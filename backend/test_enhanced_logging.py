@@ -73,7 +73,9 @@ async def test_enhanced_logging():
     for _ in range(5):
         request_id = str(uuid.uuid4())[:8]
         assert len(request_id) == 8, f"Request ID should be 8 chars, got {len(request_id)}"
-        assert all(c in '0123456789abcdef-' for c in request_id), "Request ID should be hex"
+        # First 8 chars of UUID can be any hex digit or hyphen at position 8 (but we only take first 8)
+        # So only positions 0-7, which are hex digits
+        assert all(c in '0123456789abcdef' for c in request_id.lower()), "Request ID should be hex digits"
     print("   ✓ Request ID generation works correctly")
     
     # Test 6: Test logger configuration

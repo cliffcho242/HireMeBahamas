@@ -7,12 +7,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response as StarletteResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import socketio
 
 # Import APIs
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
 from .database import init_db, close_db, get_db
+
+# Configuration constants
+AUTH_ENDPOINTS_PREFIX = '/api/auth/'
+SLOW_REQUEST_THRESHOLD_MS = 3000  # 3 seconds
+MAX_ERROR_BODY_SIZE = 10240  # 10KB - prevent reading large response bodies
 
 # Configure logging with more detail
 logging.basicConfig(
@@ -111,30 +117,36 @@ async def log_requests(request: Request, call_next):
             log_level = logging.WARNING if response.status_code < 500 else logging.ERROR
             
             # For authentication endpoints, capture the error body to help debug login issues
+            # Only read body for JSON responses to avoid processing large files
             error_detail = ""
-            if request.url.path.startswith('/api/auth/'):
+            if (request.url.path.startswith(AUTH_ENDPOINTS_PREFIX) and 
+                response.media_type == 'application/json'):
                 try:
-                    # Try to read and parse the response body
-                    # Note: This reads the response body, so we need to handle it carefully
+                    # Read response body with size limit to prevent memory issues
                     body = b""
+                    body_size = 0
                     async for chunk in response.body_iterator:
+                        body_size += len(chunk)
+                        if body_size > MAX_ERROR_BODY_SIZE:
+                            error_detail = f" | Error: Response body too large (>{MAX_ERROR_BODY_SIZE} bytes)"
+                            break
                         body += chunk
                     
-                    # Try to parse as JSON to extract error detail
-                    try:
-                        error_data = json.loads(body.decode())
-                        error_detail = f" | Error: {error_data.get('detail', 'Unknown error')}"
-                    except (json.JSONDecodeError, UnicodeDecodeError):
-                        error_detail = " | Error: Unable to parse response body"
-                    
-                    # Reconstruct response with the body we read
-                    from starlette.responses import Response as StarletteResponse
-                    response = StarletteResponse(
-                        content=body,
-                        status_code=response.status_code,
-                        headers=dict(response.headers),
-                        media_type=response.media_type
-                    )
+                    # Try to parse as JSON to extract error detail if we read the full body
+                    if body_size <= MAX_ERROR_BODY_SIZE:
+                        try:
+                            error_data = json.loads(body.decode())
+                            error_detail = f" | Error: {error_data.get('detail', 'Unknown error')}"
+                        except (json.JSONDecodeError, UnicodeDecodeError):
+                            error_detail = " | Error: Unable to parse response body"
+                        
+                        # Reconstruct response with the body we read
+                        response = StarletteResponse(
+                            content=body,
+                            status_code=response.status_code,
+                            headers=dict(response.headers),
+                            media_type=response.media_type
+                        )
                 except Exception as e:
                     error_detail = f" | Error reading body: {str(e)}"
             
@@ -144,11 +156,11 @@ async def log_requests(request: Request, call_next):
                 f"in {duration_ms}ms from {client_ip}{error_detail}"
             )
             
-            # Log slow requests separately (>3 seconds indicates potential issue)
-            if duration_ms > 3000:
+            # Log slow requests separately
+            if duration_ms > SLOW_REQUEST_THRESHOLD_MS:
                 logger.warning(
                     f"[{request_id}] SLOW REQUEST: {request.method} {request.url.path} "
-                    f"took {duration_ms}ms (>3s threshold)"
+                    f"took {duration_ms}ms (>{SLOW_REQUEST_THRESHOLD_MS}ms threshold)"
                 )
         
         return response
