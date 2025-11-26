@@ -33,7 +33,9 @@ logger = logging.getLogger(__name__)
 
 
 # Simple rate limiting using in-memory storage
-# In production, use Redis or similar
+# NOTE: For production with multiple instances, use Redis or similar distributed cache
+# This in-memory implementation is suitable for single-instance deployments
+# Example with Redis: from redis import asyncio as aioredis; redis = await aioredis.from_url(...)
 login_attempts = {}
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_DURATION = timedelta(minutes=15)
@@ -233,9 +235,10 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     
     # If not found by email, try phone number
     if not user:
-        # Check if input looks like a phone number (contains only digits, spaces, dashes, parentheses, +)
-        if re.match(r'^[\d\s\-\(\)\+]+$', user_data.email):
-            logger.info(f"Email not found, trying as phone number: {user_data.email}")
+        # Check if input looks like a phone number (contains digits and phone formatting chars)
+        # Must have at least one digit and reasonable length for a phone number
+        if re.match(r'^\+?[\d\s\-\(\)]+$', user_data.email) and any(c.isdigit() for c in user_data.email) and len(user_data.email) >= 7:
+            logger.info(f"Email not found, trying as phone number")
             result = await db.execute(select(User).where(User.phone == user_data.email))
             user = result.scalar_one_or_none()
 
@@ -391,12 +394,21 @@ async def delete_account(
 
 
 @router.get("/login-stats")
-async def get_login_stats():
+async def get_login_stats(current_user: User = Depends(get_current_user)):
     """Get login attempt statistics (for monitoring)
     
     Returns statistics about login attempts and rate limiting.
     This is useful for detecting brute force attacks.
+    Requires admin authentication.
     """
+    # Restrict to admin users only
+    if not current_user.is_admin:
+        logger.warning(f"Unauthorized access to login stats by user_id={current_user.id}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    
     current_time = datetime.utcnow()
     
     stats = {
@@ -415,15 +427,20 @@ async def get_login_stats():
             stats["high_attempts"] += 1
         
         # Only include identifiers with high attempts or locked out
+        # Anonymize identifiers for security
         if attempts >= 3 or is_locked:
+            # Hash the identifier to anonymize it
+            import hashlib
+            hashed = hashlib.sha256(identifier.encode()).hexdigest()[:16]
+            
             stats["details"].append({
-                "identifier": identifier[:20] + "..." if len(identifier) > 20 else identifier,
+                "identifier_hash": hashed,  # Anonymized identifier
                 "attempts": attempts,
                 "locked_out": is_locked,
                 "lockout_until": lockout_until.isoformat() if lockout_until else None
             })
     
-    logger.info(f"Login stats requested: {stats['locked_out']} locked out, {stats['high_attempts']} high attempts")
+    logger.info(f"Login stats requested by admin user_id={current_user.id}: {stats['locked_out']} locked out, {stats['high_attempts']} high attempts")
     
     return stats
 
