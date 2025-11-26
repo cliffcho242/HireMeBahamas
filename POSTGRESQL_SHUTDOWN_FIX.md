@@ -158,6 +158,57 @@ After deploying to Railway, you should see clean shutdown logs instead of recove
 ✅ PostgreSQL connection pool closed successfully
 ```
 
+## Monitoring Database Recovery Status
+
+### Recovery Status Endpoint
+
+A dedicated endpoint is available to check if the database is recovering from an improper shutdown:
+
+```
+GET /api/database/recovery-status
+```
+
+**Response when in recovery:**
+```json
+{
+  "timestamp": "2025-11-26T05:30:00.000Z",
+  "recovery": {
+    "type": "postgresql",
+    "in_recovery": true,
+    "status": "recovering",
+    "message": "Database is recovering from improper shutdown..."
+  }
+}
+```
+
+**Response during normal operation:**
+```json
+{
+  "timestamp": "2025-11-26T05:30:00.000Z",
+  "recovery": {
+    "type": "postgresql",
+    "in_recovery": false,
+    "status": "normal"
+  }
+}
+```
+
+### Health Check Integration
+
+The detailed health check endpoint (`/api/health`) now includes database recovery status when using PostgreSQL:
+
+```json
+{
+  "status": "degraded",
+  "database": "connected",
+  "database_recovery": {
+    "in_recovery": true,
+    "status": "recovering"
+  },
+  "recovery_message": "Database is in recovery mode after improper shutdown..."
+}
+```
+
 ## Compatibility
 
 - **Python**: 3.8+ (with fallback for signal name lookup)
@@ -174,6 +225,7 @@ After deploying to Railway, you should see clean shutdown logs instead of recove
 
 ## Related Files
 
-- `final_backend_postgresql.py`: Main backend application with signal handlers and cleanup
+- `final_backend_postgresql.py`: Main backend application with signal handlers, cleanup, and recovery monitoring
 - `gunicorn.conf.py`: Gunicorn configuration with shutdown hooks
 - `docker-compose.yml`: Already had proper `stop_signal: SIGTERM` and `stop_grace_period: 30s`
+- `test_database_recovery.py`: Test suite for database recovery status functionality
