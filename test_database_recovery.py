@@ -155,7 +155,7 @@ class TestTransientErrorDetection:
         with app.app_context():
             mock_error = MockPsycopg2Error("the database system is in recovery")
             result = final_backend_postgresql._is_transient_connection_error(mock_error)
-            assert result == True
+            assert result is True
     
     def test_is_transient_connection_error_startup_message(self, app):
         """Test that startup messages are detected as transient"""
@@ -165,7 +165,7 @@ class TestTransientErrorDetection:
         with app.app_context():
             mock_error = MockPsycopg2Error("the database system is starting up")
             result = final_backend_postgresql._is_transient_connection_error(mock_error)
-            assert result == True
+            assert result is True
     
     def test_is_transient_connection_error_non_transient(self, app):
         """Test that non-transient errors are not detected as transient"""
@@ -173,7 +173,7 @@ class TestTransientErrorDetection:
             # Regular exception should not be transient
             regular_error = Exception("Some regular error")
             result = final_backend_postgresql._is_transient_connection_error(regular_error)
-            assert result == False
+            assert result is False
 
 
 class TestConnectionPoolStats:

@@ -2075,11 +2075,11 @@ def api_health_check():
         # This helps diagnose database recovery issues in production
         if USE_POSTGRESQL:
             try:
-                cursor.execute("SELECT pg_is_in_recovery()")
+                cursor.execute("SELECT pg_is_in_recovery() as in_recovery")
                 is_in_recovery = cursor.fetchone()
                 if is_in_recovery:
-                    # Use helper function for consistent result handling
-                    recovery_value = _get_cursor_value(is_in_recovery, "pg_is_in_recovery", False)
+                    # Use helper function with correct key (matching query alias)
+                    recovery_value = _get_cursor_value(is_in_recovery, "in_recovery", False)
                     response["database_recovery"] = {
                         "in_recovery": recovery_value,
                         "status": "recovering" if recovery_value else "normal"
