@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 import logging
+import re
 
 from app.core.security import (
     create_access_token,
@@ -21,7 +22,7 @@ from app.schemas.auth import (
     UserResponse,
     UserUpdate,
 )
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +30,66 @@ from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter()
 security = HTTPBearer()
 logger = logging.getLogger(__name__)
+
+
+# Simple rate limiting using in-memory storage
+# In production, use Redis or similar
+login_attempts = {}
+MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_DURATION = timedelta(minutes=15)
+
+
+def check_rate_limit(identifier: str) -> bool:
+    """Check if the identifier (IP or email) has exceeded rate limit
+    
+    Args:
+        identifier: IP address or email to check
+        
+    Returns:
+        True if within rate limit, False if rate limit exceeded
+    """
+    current_time = datetime.utcnow()
+    
+    if identifier in login_attempts:
+        attempts, lockout_until = login_attempts[identifier]
+        
+        # Check if still locked out
+        if lockout_until and current_time < lockout_until:
+            return False
+        
+        # Check if we should reset the counter (been more than 15 minutes since last attempt)
+        if lockout_until and current_time >= lockout_until:
+            login_attempts[identifier] = (0, None)
+            return True
+        
+        # Increment attempt counter
+        if attempts >= MAX_LOGIN_ATTEMPTS:
+            login_attempts[identifier] = (attempts, current_time + LOCKOUT_DURATION)
+            logger.warning(f"Rate limit exceeded for {identifier}, locked out for {LOCKOUT_DURATION}")
+            return False
+    
+    return True
+
+
+def record_login_attempt(identifier: str, success: bool):
+    """Record a login attempt
+    
+    Args:
+        identifier: IP address or email
+        success: Whether the login was successful
+    """
+    if success:
+        # Reset on successful login
+        if identifier in login_attempts:
+            del login_attempts[identifier]
+    else:
+        # Increment failed attempts
+        current_time = datetime.utcnow()
+        if identifier in login_attempts:
+            attempts, lockout_until = login_attempts[identifier]
+            login_attempts[identifier] = (attempts + 1, lockout_until)
+        else:
+            login_attempts[identifier] = (1, None)
 
 
 # Helper function to get current user
@@ -146,25 +207,60 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
-    """Authenticate user and return token"""
+async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depends(get_db)):
+    """Authenticate user and return token
     
-    logger.info(f"Login attempt for email: {user_data.email}")
+    Supports login with email address or phone number.
+    Includes rate limiting to prevent brute force attacks.
+    """
+    
+    # Get client IP for rate limiting
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Check rate limit by IP
+    if not check_rate_limit(client_ip):
+        logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again in 15 minutes.",
+        )
+    
+    logger.info(f"Login attempt for: {user_data.email} from IP: {client_ip}")
 
-    # Find user by email
+    # Try to find user by email first, then by phone number
     result = await db.execute(select(User).where(User.email == user_data.email))
     user = result.scalar_one_or_none()
+    
+    # If not found by email, try phone number
+    if not user:
+        # Check if input looks like a phone number (contains only digits, spaces, dashes, parentheses, +)
+        if re.match(r'^[\d\s\-\(\)\+]+$', user_data.email):
+            logger.info(f"Email not found, trying as phone number: {user_data.email}")
+            result = await db.execute(select(User).where(User.phone == user_data.email))
+            user = result.scalar_one_or_none()
 
     if not user:
         logger.warning(f"Login failed - User not found: {user_data.email}")
+        record_login_attempt(client_ip, False)
+        record_login_attempt(user_data.email, False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
     
+    # Check rate limit by email as well
+    if not check_rate_limit(user_data.email):
+        logger.warning(f"Rate limit exceeded for email: {user_data.email}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts for this account. Please try again in 15 minutes.",
+        )
+    
     # Check if user has a password (OAuth users might not)
     if not user.hashed_password:
-        logger.warning(f"Login failed - OAuth user attempting password login: {user_data.email}")
+        logger.warning(f"Login failed - OAuth user attempting password login: {user_data.email} (user_id={user.id})")
+        record_login_attempt(client_ip, False)
+        record_login_attempt(user_data.email, False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="This account uses social login. Please sign in with Google or Apple.",
@@ -172,14 +268,18 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
     
     # Verify password
     if not verify_password(user_data.password, user.hashed_password):
-        logger.warning(f"Login failed - Invalid password for user: {user_data.email}")
+        logger.warning(f"Login failed - Invalid password for user: {user_data.email} (user_id={user.id})")
+        record_login_attempt(client_ip, False)
+        record_login_attempt(user_data.email, False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
 
     if not user.is_active:
-        logger.warning(f"Login failed - Inactive account: {user_data.email}")
+        logger.warning(f"Login failed - Inactive account: {user_data.email} (user_id={user.id})")
+        record_login_attempt(client_ip, False)
+        record_login_attempt(user_data.email, False)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated"
         )
@@ -187,7 +287,11 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
     # Create access token
     access_token = create_access_token(data={"sub": str(user.id)})
     
-    logger.info(f"Login successful for user: {user_data.email} (user_id={user.id})")
+    # Reset rate limit counters on successful login
+    record_login_attempt(client_ip, True)
+    record_login_attempt(user_data.email, True)
+    
+    logger.info(f"Login successful for user: {user.email} (user_id={user.id})")
 
     return {
         "access_token": access_token,
@@ -284,6 +388,44 @@ async def delete_account(
     await db.commit()
 
     return {"message": "Account deactivated successfully"}
+
+
+@router.get("/login-stats")
+async def get_login_stats():
+    """Get login attempt statistics (for monitoring)
+    
+    Returns statistics about login attempts and rate limiting.
+    This is useful for detecting brute force attacks.
+    """
+    current_time = datetime.utcnow()
+    
+    stats = {
+        "total_tracked_identifiers": len(login_attempts),
+        "locked_out": 0,
+        "high_attempts": 0,
+        "details": []
+    }
+    
+    for identifier, (attempts, lockout_until) in login_attempts.items():
+        is_locked = lockout_until and current_time < lockout_until
+        
+        if is_locked:
+            stats["locked_out"] += 1
+        elif attempts >= 3:
+            stats["high_attempts"] += 1
+        
+        # Only include identifiers with high attempts or locked out
+        if attempts >= 3 or is_locked:
+            stats["details"].append({
+                "identifier": identifier[:20] + "..." if len(identifier) > 20 else identifier,
+                "attempts": attempts,
+                "locked_out": is_locked,
+                "lockout_until": lockout_until.isoformat() if lockout_until else None
+            })
+    
+    logger.info(f"Login stats requested: {stats['locked_out']} locked out, {stats['high_attempts']} high attempts")
+    
+    return stats
 
 
 @router.post("/oauth/google", response_model=Token)
