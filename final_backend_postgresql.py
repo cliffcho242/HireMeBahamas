@@ -6,6 +6,7 @@ import sqlite3
 import sys
 import threading
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -18,7 +19,7 @@ from urllib.parse import urlparse, parse_qs
 import bcrypt
 import jwt
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, g
 from flask_caching import Cache
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -95,6 +96,118 @@ def allowed_file(filename):
 @cache.cached(timeout=3600)
 def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
+
+# ==========================================
+# REQUEST LOGGING MIDDLEWARE
+# ==========================================
+
+# Logging configuration constants
+AUTH_ENDPOINTS_PREFIX = '/api/auth/'
+SLOW_REQUEST_THRESHOLD_MS = 3000  # 3 seconds
+VERY_SLOW_REQUEST_THRESHOLD_MS = 10000  # 10 seconds
+
+
+@app.before_request
+def log_request_start():
+    """
+    Log incoming requests and track timing information.
+    
+    This middleware captures detailed information about each request to help diagnose
+    performance issues like HTTP 499 (Client Closed Request) errors that occur when
+    requests take too long to complete.
+    
+    Captures:
+    - Request ID for tracking through logs
+    - Start time for duration calculation
+    - Client IP and User-Agent for debugging
+    """
+    # Generate unique request ID
+    g.request_id = str(uuid.uuid4())[:8]
+    g.start_time = time.time()
+    
+    # Get client information
+    client_ip = request.remote_addr or 'unknown'
+    user_agent = request.headers.get('User-Agent', 'unknown')
+    
+    # Log incoming request with context (truncate long user agents)
+    user_agent_display = user_agent if len(user_agent) <= 100 else f"{user_agent[:100]}..."
+    print(
+        f"[{g.request_id}] --> {request.method} {request.path} "
+        f"clientIP=\"{client_ip}\" userAgent=\"{user_agent_display}\""
+    )
+
+
+@app.after_request
+def log_request_end(response):
+    """
+    Log completed requests with timing and status information.
+    
+    This middleware logs response status and duration to help identify slow requests
+    that may cause timeout issues. For authentication endpoints, it provides additional
+    context to help diagnose login failures.
+    
+    Logs:
+    - Response status code
+    - Request duration in milliseconds
+    - Warnings for slow requests (> 3 seconds)
+    - Critical warnings for very slow requests (> 10 seconds)
+    - Error details for authentication failures
+    """
+    if not hasattr(g, 'request_id') or not hasattr(g, 'start_time'):
+        # Request logging was bypassed (e.g., for static files or middleware chain broken)
+        # Log a warning to help identify when middleware chain is interrupted
+        if request.path and not request.path.startswith('/static/'):
+            print(f"⚠️ Warning: Request logging bypassed for {request.method} {request.path}")
+        return response
+    
+    duration_ms = int((time.time() - g.start_time) * 1000)
+    client_ip = request.remote_addr or 'unknown'
+    
+    # Determine log level based on status code
+    if response.status_code < 400:
+        # Success - log at INFO level
+        print(
+            f"[{g.request_id}] <-- {response.status_code} {request.method} {request.path} "
+            f"responseTimeMS={duration_ms} responseBytes={response.content_length or 0} "
+            f"clientIP=\"{client_ip}\""
+        )
+    else:
+        # Client/Server error - log with more detail
+        error_detail = ""
+        
+        # For authentication endpoints, try to extract error message
+        if request.path.startswith(AUTH_ENDPOINTS_PREFIX):
+            try:
+                # Try to get error detail from response JSON (parse once)
+                if response.is_json:
+                    error_data = response.get_json(silent=True)
+                    if isinstance(error_data, dict) and 'message' in error_data:
+                        error_detail = f" errorDetail=\"{error_data['message']}\""
+            except Exception:
+                pass
+        
+        print(
+            f"[{g.request_id}] <-- {response.status_code} {request.method} {request.path} "
+            f"responseTimeMS={duration_ms} clientIP=\"{client_ip}\"{error_detail}"
+        )
+    
+    # Warn about slow requests with appropriate severity level
+    is_slow = duration_ms > SLOW_REQUEST_THRESHOLD_MS
+    is_very_slow = duration_ms > VERY_SLOW_REQUEST_THRESHOLD_MS
+    
+    if is_slow:
+        severity = "VERY SLOW REQUEST" if is_very_slow else "SLOW REQUEST"
+        threshold_note = f">{SLOW_REQUEST_THRESHOLD_MS}ms threshold"
+        
+        print(
+            f"[{g.request_id}] ⚠️ {severity}: {request.method} {request.path} "
+            f"took {duration_ms}ms ({threshold_note}). "
+            f"This may cause HTTP 499 (Client Closed Request) errors. "
+            f"Check database connection pool, bcrypt rounds, and query performance."
+        )
+    
+    return response
 
 
 # ==========================================
@@ -2086,12 +2199,14 @@ def login():
     - Returns connections to pool instead of closing to improve reuse
     - All database operations have timeout protection
     - Email lookup uses LOWER(email) index for fast queries
+    - Detailed timing logs for performance monitoring
     """
     if request.method == "OPTIONS":
         return "", 200
 
     conn = None
     cursor = None
+    request_id = getattr(g, 'request_id', 'unknown')
     
     try:
         # Handle invalid JSON or empty body
@@ -2118,10 +2233,14 @@ def login():
         password = data["password"]
 
         # Get user from database with connection pool timeout protection
+        db_start = time.time()
         conn = get_db_connection()
         
         if conn is None:
             # Connection pool exhausted - return 503 to indicate temporary unavailability
+            print(
+                f"[{request_id}] ⚠️ Connection pool exhausted for login attempt: {email}"
+            )
             return (
                 jsonify({
                     "success": False,
@@ -2138,8 +2257,16 @@ def login():
             cursor.execute("SELECT * FROM users WHERE LOWER(email) = ?", (email,))
 
         user = cursor.fetchone()
+        db_query_ms = int((time.time() - db_start) * 1000)
+        
+        print(
+            f"[{request_id}] Database query (email lookup) completed in {db_query_ms}ms for {email}"
+        )
 
         if not user:
+            print(
+                f"[{request_id}] Login failed - User not found: {email}"
+            )
             return (
                 jsonify({"success": False, "message": "Invalid email or password"}),
                 401,
@@ -2148,6 +2275,9 @@ def login():
         # Check if user has a password (OAuth users may not have one)
         # Using falsy check to handle both None and empty string cases
         if not user["password_hash"]:
+            print(
+                f"[{request_id}] Login failed - OAuth user attempting password login: {email}"
+            )
             return (
                 jsonify({
                     "success": False,
@@ -2157,9 +2287,20 @@ def login():
             )
 
         # Verify password (bcrypt checkpw is CPU-intensive but shouldn't block long)
-        if not bcrypt.checkpw(
+        password_start = time.time()
+        password_valid = bcrypt.checkpw(
             password.encode("utf-8"), user["password_hash"].encode("utf-8")
-        ):
+        )
+        password_verify_ms = int((time.time() - password_start) * 1000)
+        
+        print(
+            f"[{request_id}] Password verification completed in {password_verify_ms}ms"
+        )
+        
+        if not password_valid:
+            print(
+                f"[{request_id}] Login failed - Invalid password for user: {email}"
+            )
             return (
                 jsonify({"success": False, "message": "Invalid email or password"}),
                 401,
@@ -2179,6 +2320,7 @@ def login():
         conn.commit()
 
         # Create JWT token
+        token_start = time.time()
         token_payload = {
             "user_id": user["id"],
             "email": user["email"],
@@ -2186,6 +2328,31 @@ def login():
         }
 
         token = jwt.encode(token_payload, app.config["SECRET_KEY"], algorithm="HS256")
+        token_create_ms = int((time.time() - token_start) * 1000)
+        
+        print(
+            f"[{request_id}] Token creation completed in {token_create_ms}ms"
+        )
+        
+        # Calculate total login time from start of endpoint (captured by middleware)
+        if hasattr(g, 'start_time'):
+            total_login_ms = int((time.time() - g.start_time) * 1000)
+            
+            print(
+                f"[{request_id}] Login successful - user: {user['email']}, user_id: {user['id']}, "
+                f"user_type: {user['user_type']}, total_time: {total_login_ms}ms "
+                f"(db: {db_query_ms}ms, password_verify: {password_verify_ms}ms, "
+                f"token_create: {token_create_ms}ms)"
+            )
+            
+            # Warn about slow login operations
+            if total_login_ms > 1000:  # Over 1 second
+                print(
+                    f"[{request_id}] ⚠️ SLOW LOGIN: Total time {total_login_ms}ms - "
+                    f"Breakdown: DB={db_query_ms}ms, Password={password_verify_ms}ms, "
+                    f"Token={token_create_ms}ms. Consider checking connection pool, "
+                    f"database performance, or bcrypt configuration."
+                )
 
         return (
             jsonify(
@@ -2212,7 +2379,7 @@ def login():
         )
 
     except Exception as e:
-        print(f"Login error: {str(e)}")
+        print(f"[{request_id}] Login error: {type(e).__name__}: {str(e)}")
         return (
             jsonify({"success": False, "message": f"Login failed: {str(e)}"}),
             500,
