@@ -1,15 +1,24 @@
 import logging
 import time
 import uuid
+import json
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response as StarletteResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 import socketio
 
 # Import APIs
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
-from .database import init_db, close_db
+from .database import init_db, close_db, get_db
+
+# Configuration constants
+AUTH_ENDPOINTS_PREFIX = '/api/auth/'
+SLOW_REQUEST_THRESHOLD_MS = 3000  # 3 seconds
+MAX_ERROR_BODY_SIZE = 10240  # 10KB - prevent reading large response bodies
 
 # Configure logging with more detail
 logging.basicConfig(
@@ -70,44 +79,150 @@ app.add_middleware(
 # Add request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log all requests with timing and status information"""
+    """Log all requests with timing and status information
+    
+    Captures detailed information for failed requests (4xx, 5xx) to aid in debugging.
+    For authentication endpoints, logs the error detail to help diagnose login issues.
+    """
     request_id = str(uuid.uuid4())[:8]
     start_time = time.time()
     
-    # Log incoming request
-    logger.info(f"[{request_id}] {request.method} {request.url.path} - Client: {request.client.host if request.client else 'unknown'}")
+    # Store request_id in request state for potential use by endpoints
+    request.state.request_id = request_id
+    
+    # Get client info
+    client_ip = request.client.host if request.client else 'unknown'
+    user_agent = request.headers.get('user-agent', 'unknown')
+    
+    # Log incoming request with more context
+    logger.info(
+        f"[{request_id}] --> {request.method} {request.url.path} "
+        f"from {client_ip} | UA: {user_agent[:50]}..."
+    )
     
     # Process request
     try:
         response = await call_next(request)
         duration_ms = int((time.time() - start_time) * 1000)
         
-        # Log response
-        log_level = logging.INFO if response.status_code < 400 else logging.WARNING
-        logger.log(
-            log_level,
-            f"[{request_id}] {request.method} {request.url.path} - "
-            f"Status: {response.status_code} - "
-            f"Duration: {duration_ms}ms - "
-            f"Client: {request.client.host if request.client else 'unknown'}"
-        )
+        # Determine log level and capture error details for failed requests
+        if response.status_code < 400:
+            # Success - log at INFO level
+            logger.info(
+                f"[{request_id}] <-- {response.status_code} {request.method} {request.url.path} "
+                f"in {duration_ms}ms"
+            )
+        else:
+            # Client/Server error - log at WARNING/ERROR level with more detail
+            log_level = logging.WARNING if response.status_code < 500 else logging.ERROR
+            
+            # For authentication endpoints, capture the error body to help debug login issues
+            # Only read body for JSON responses to avoid processing large files
+            error_detail = ""
+            if (request.url.path.startswith(AUTH_ENDPOINTS_PREFIX) and 
+                response.media_type == 'application/json'):
+                try:
+                    # Read response body with size limit to prevent memory issues
+                    body = b""
+                    body_size = 0
+                    async for chunk in response.body_iterator:
+                        body_size += len(chunk)
+                        if body_size > MAX_ERROR_BODY_SIZE:
+                            error_detail = f" | Error: Response body too large (>{MAX_ERROR_BODY_SIZE} bytes)"
+                            break
+                        body += chunk
+                    
+                    # Try to parse as JSON to extract error detail if we read the full body
+                    if body_size <= MAX_ERROR_BODY_SIZE:
+                        try:
+                            error_data = json.loads(body.decode())
+                            error_detail = f" | Error: {error_data.get('detail', 'Unknown error')}"
+                        except (json.JSONDecodeError, UnicodeDecodeError):
+                            error_detail = " | Error: Unable to parse response body"
+                        
+                        # Reconstruct response with the body we read
+                        response = StarletteResponse(
+                            content=body,
+                            status_code=response.status_code,
+                            headers=dict(response.headers),
+                            media_type=response.media_type
+                        )
+                except Exception as e:
+                    error_detail = f" | Error reading body: {str(e)}"
+            
+            logger.log(
+                log_level,
+                f"[{request_id}] <-- {response.status_code} {request.method} {request.url.path} "
+                f"in {duration_ms}ms from {client_ip}{error_detail}"
+            )
+            
+            # Log slow requests separately
+            if duration_ms > SLOW_REQUEST_THRESHOLD_MS:
+                logger.warning(
+                    f"[{request_id}] SLOW REQUEST: {request.method} {request.url.path} "
+                    f"took {duration_ms}ms (>{SLOW_REQUEST_THRESHOLD_MS}ms threshold)"
+                )
         
         return response
     except Exception as e:
         duration_ms = int((time.time() - start_time) * 1000)
         logger.error(
-            f"[{request_id}] {request.method} {request.url.path} - "
-            f"ERROR: {str(e)} - "
-            f"Duration: {duration_ms}ms - "
-            f"Client: {request.client.host if request.client else 'unknown'}"
+            f"[{request_id}] <-- EXCEPTION {request.method} {request.url.path} "
+            f"in {duration_ms}ms from {client_ip} | {type(e).__name__}: {str(e)}"
         )
         raise
 
 
 # Health check endpoint
 @app.get("/health")
-async def health_check():
-    return {"status": "healthy", "message": "HireMeBahamas API is running"}
+async def health_check(db: AsyncSession = Depends(get_db)):
+    """Health check endpoint with database connectivity check
+    
+    Returns the health status of the API and database connection.
+    Useful for monitoring and debugging production issues.
+    """
+    from .core.db_health import check_database_health
+    
+    # Check API health
+    api_status = {
+        "status": "healthy",
+        "message": "HireMeBahamas API is running",
+        "version": "1.0.0"
+    }
+    
+    # Check database health
+    db_health = await check_database_health(db)
+    
+    # Determine overall health status
+    overall_status = "healthy" if db_health["status"] == "healthy" else "degraded"
+    
+    return {
+        "status": overall_status,
+        "api": api_status,
+        "database": db_health
+    }
+
+
+# Detailed health check endpoint for monitoring
+@app.get("/health/detailed")
+async def detailed_health_check(db: AsyncSession = Depends(get_db)):
+    """Detailed health check with database statistics
+    
+    Provides additional database statistics for monitoring.
+    May require admin permissions in production environments.
+    """
+    from .core.db_health import check_database_health, get_database_stats
+    
+    # Basic health check
+    health_response = await health_check(db)
+    
+    # Get database statistics
+    db_stats = await get_database_stats(db)
+    
+    if db_stats:
+        health_response["database"]["statistics"] = db_stats
+    
+    return health_response
 
 
 # Include routers with /api prefix to match frontend expectations
