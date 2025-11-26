@@ -1628,6 +1628,105 @@ def get_connection_pool_stats():
         }
 
 
+def get_database_recovery_status():
+    """
+    Check if PostgreSQL database is in recovery mode.
+    
+    After an improper shutdown (e.g., container killed without SIGTERM,
+    power failure, or crash), PostgreSQL performs automatic recovery by
+    replaying Write-Ahead Log (WAL) records.
+    
+    During recovery:
+    - The database may be slower as it replays transactions
+    - Some connections might be temporarily refused
+    - Normal operation resumes after recovery completes
+    
+    This function queries pg_is_in_recovery() which returns:
+    - True: Database is in recovery mode (read-only on standby, or recovering)
+    - False: Database is in normal operation mode
+    
+    Returns:
+        dict with recovery status information
+    """
+    if not USE_POSTGRESQL:
+        return {
+            "type": "sqlite",
+            "in_recovery": False,
+            "status": "not_applicable",
+            "message": "SQLite does not have a recovery mode like PostgreSQL"
+        }
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if in recovery mode
+        cursor.execute("SELECT pg_is_in_recovery() as in_recovery")
+        result = cursor.fetchone()
+        in_recovery = result["in_recovery"] if result else None
+        
+        # Get additional recovery information if available
+        recovery_info = {
+            "type": "postgresql",
+            "in_recovery": in_recovery,
+            "status": "recovering" if in_recovery else "normal",
+        }
+        
+        if in_recovery:
+            # Try to get more recovery details (may not be available on all versions)
+            try:
+                cursor.execute("""
+                    SELECT 
+                        pg_last_wal_receive_lsn() as last_receive_lsn,
+                        pg_last_wal_replay_lsn() as last_replay_lsn
+                """)
+                wal_info = cursor.fetchone()
+                if wal_info:
+                    recovery_info["wal_receive_lsn"] = str(wal_info.get("last_receive_lsn", "unknown"))
+                    recovery_info["wal_replay_lsn"] = str(wal_info.get("last_replay_lsn", "unknown"))
+            except Exception:
+                # WAL functions may not be available in all configurations
+                pass
+            
+            recovery_info["message"] = (
+                "Database is recovering from improper shutdown. "
+                "This is normal and the database will return to full operation "
+                "once WAL replay is complete."
+            )
+        
+        cursor.close()
+        return_db_connection(conn)
+        
+        return recovery_info
+        
+    except psycopg2.OperationalError as e:
+        error_msg = str(e).lower()
+        
+        # Check if error indicates database is still starting up or recovering
+        if "starting up" in error_msg or "recovery" in error_msg:
+            return {
+                "type": "postgresql",
+                "in_recovery": True,
+                "status": "startup_or_recovery",
+                "message": "Database is starting up or recovering. Connections may be temporarily unavailable."
+            }
+        
+        return {
+            "type": "postgresql",
+            "in_recovery": None,
+            "status": "connection_error",
+            "error": str(e)[:200]
+        }
+        
+    except Exception as e:
+        return {
+            "type": "postgresql",
+            "in_recovery": None,
+            "status": "error",
+            "error": str(e)[:200]
+        }
+
+
 # Initialize database in background thread to avoid blocking healthcheck
 def init_database_background():
     """Initialize database in background thread to allow app to start quickly"""
@@ -1937,6 +2036,34 @@ def api_health_check():
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT 1")
+        
+        # Check if PostgreSQL is in recovery mode (after improper shutdown)
+        # This helps diagnose database recovery issues in production
+        if USE_POSTGRESQL:
+            try:
+                cursor.execute("SELECT pg_is_in_recovery()")
+                is_in_recovery = cursor.fetchone()
+                if is_in_recovery:
+                    # Handle both dict (RealDictCursor) and tuple results
+                    recovery_value = is_in_recovery.get("pg_is_in_recovery") if hasattr(is_in_recovery, 'get') else is_in_recovery[0]
+                    response["database_recovery"] = {
+                        "in_recovery": recovery_value,
+                        "status": "recovering" if recovery_value else "normal"
+                    }
+                    if recovery_value:
+                        response["status"] = "degraded"
+                        response["recovery_message"] = (
+                            "Database is in recovery mode after improper shutdown. "
+                            "Requests may be slower until recovery completes."
+                        )
+            except Exception as recovery_check_error:
+                # Non-fatal: recovery check failed but database is still connected
+                response["database_recovery"] = {
+                    "in_recovery": None,
+                    "status": "unknown",
+                    "error": str(recovery_check_error)[:100]
+                }
+        
         cursor.close()
         return_db_connection(conn)
         response["database"] = "connected"
@@ -1975,6 +2102,44 @@ def api_health_check():
             response["error"] = error_msg[: (MAX_ERROR_MESSAGE_LENGTH - 3)] + "..."
 
     return jsonify(response), http_status
+
+
+@app.route("/api/database/recovery-status", methods=["GET"])
+@limiter.exempt
+def database_recovery_status():
+    """
+    Check PostgreSQL database recovery status.
+    
+    This endpoint provides detailed information about whether the database
+    is in recovery mode after an improper shutdown. Useful for:
+    - Monitoring dashboards to track database health
+    - Debugging slow responses during recovery
+    - Understanding WAL replay progress
+    
+    Returns:
+        JSON with recovery status:
+        - in_recovery: bool or None (if check failed)
+        - status: "normal", "recovering", "startup_or_recovery", "error"
+        - message: Human-readable explanation
+        - wal_receive_lsn: WAL receive position (if in recovery)
+        - wal_replay_lsn: WAL replay position (if in recovery)
+    
+    Exempt from rate limiting to allow monitoring services to check frequently.
+    """
+    recovery_status = get_database_recovery_status()
+    
+    # Determine HTTP status based on recovery state
+    if recovery_status.get("status") == "error" or recovery_status.get("status") == "connection_error":
+        http_status = 503  # Service unavailable
+    elif recovery_status.get("in_recovery"):
+        http_status = 200  # OK, but degraded - service is still functional
+    else:
+        http_status = 200  # Normal operation
+    
+    return jsonify({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "recovery": recovery_status,
+    }), http_status
 
 
 # ==========================================
