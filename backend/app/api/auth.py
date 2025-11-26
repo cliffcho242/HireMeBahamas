@@ -12,6 +12,7 @@ from app.core.security import (
     decode_access_token,
     get_password_hash,
     verify_password,
+    BCRYPT_ROUNDS,
 )
 from app.core.upload import upload_image
 from app.database import get_db
@@ -373,7 +374,7 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
         logger.warning(
             f"[{request_id}] SLOW LOGIN: Total time {total_login_ms}ms - "
             f"Breakdown: DB={total_db_ms}ms, Password={password_verify_ms}ms, "
-            f"Token={token_create_ms}ms. Consider checking bcrypt rounds (current: BCRYPT_ROUNDS env var) "
+            f"Token={token_create_ms}ms. Consider checking bcrypt rounds (current: {BCRYPT_ROUNDS}) "
             f"or database performance."
         )
 
