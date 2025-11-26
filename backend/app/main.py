@@ -1,10 +1,12 @@
 import logging
 import time
 import uuid
+import json
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 import socketio
 
 # Import APIs
@@ -70,36 +72,90 @@ app.add_middleware(
 # Add request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log all requests with timing and status information"""
+    """Log all requests with timing and status information
+    
+    Captures detailed information for failed requests (4xx, 5xx) to aid in debugging.
+    For authentication endpoints, logs the error detail to help diagnose login issues.
+    """
     request_id = str(uuid.uuid4())[:8]
     start_time = time.time()
     
-    # Log incoming request
-    logger.info(f"[{request_id}] {request.method} {request.url.path} - Client: {request.client.host if request.client else 'unknown'}")
+    # Store request_id in request state for potential use by endpoints
+    request.state.request_id = request_id
+    
+    # Get client info
+    client_ip = request.client.host if request.client else 'unknown'
+    user_agent = request.headers.get('user-agent', 'unknown')
+    
+    # Log incoming request with more context
+    logger.info(
+        f"[{request_id}] --> {request.method} {request.url.path} "
+        f"from {client_ip} | UA: {user_agent[:50]}..."
+    )
     
     # Process request
     try:
         response = await call_next(request)
         duration_ms = int((time.time() - start_time) * 1000)
         
-        # Log response
-        log_level = logging.INFO if response.status_code < 400 else logging.WARNING
-        logger.log(
-            log_level,
-            f"[{request_id}] {request.method} {request.url.path} - "
-            f"Status: {response.status_code} - "
-            f"Duration: {duration_ms}ms - "
-            f"Client: {request.client.host if request.client else 'unknown'}"
-        )
+        # Determine log level and capture error details for failed requests
+        if response.status_code < 400:
+            # Success - log at INFO level
+            logger.info(
+                f"[{request_id}] <-- {response.status_code} {request.method} {request.url.path} "
+                f"in {duration_ms}ms"
+            )
+        else:
+            # Client/Server error - log at WARNING/ERROR level with more detail
+            log_level = logging.WARNING if response.status_code < 500 else logging.ERROR
+            
+            # For authentication endpoints, capture the error body to help debug login issues
+            error_detail = ""
+            if request.url.path.startswith('/api/auth/'):
+                try:
+                    # Try to read and parse the response body
+                    # Note: This reads the response body, so we need to handle it carefully
+                    body = b""
+                    async for chunk in response.body_iterator:
+                        body += chunk
+                    
+                    # Try to parse as JSON to extract error detail
+                    try:
+                        error_data = json.loads(body.decode())
+                        error_detail = f" | Error: {error_data.get('detail', 'Unknown error')}"
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        error_detail = " | Error: Unable to parse response body"
+                    
+                    # Reconstruct response with the body we read
+                    from starlette.responses import Response as StarletteResponse
+                    response = StarletteResponse(
+                        content=body,
+                        status_code=response.status_code,
+                        headers=dict(response.headers),
+                        media_type=response.media_type
+                    )
+                except Exception as e:
+                    error_detail = f" | Error reading body: {str(e)}"
+            
+            logger.log(
+                log_level,
+                f"[{request_id}] <-- {response.status_code} {request.method} {request.url.path} "
+                f"in {duration_ms}ms from {client_ip}{error_detail}"
+            )
+            
+            # Log slow requests separately (>3 seconds indicates potential issue)
+            if duration_ms > 3000:
+                logger.warning(
+                    f"[{request_id}] SLOW REQUEST: {request.method} {request.url.path} "
+                    f"took {duration_ms}ms (>3s threshold)"
+                )
         
         return response
     except Exception as e:
         duration_ms = int((time.time() - start_time) * 1000)
         logger.error(
-            f"[{request_id}] {request.method} {request.url.path} - "
-            f"ERROR: {str(e)} - "
-            f"Duration: {duration_ms}ms - "
-            f"Client: {request.client.host if request.client else 'unknown'}"
+            f"[{request_id}] <-- EXCEPTION {request.method} {request.url.path} "
+            f"in {duration_ms}ms from {client_ip} | {type(e).__name__}: {str(e)}"
         )
         raise
 

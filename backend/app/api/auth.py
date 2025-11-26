@@ -1,4 +1,5 @@
 import uuid
+import time
 from datetime import datetime, timedelta
 from typing import Optional
 import logging
@@ -223,32 +224,55 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     
     # Get client IP for rate limiting
     client_ip = request.client.host if request.client else "unknown"
+    request_id = getattr(request.state, 'request_id', 'unknown')
     
     # Check rate limit by IP
     if not check_rate_limit(client_ip):
-        logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+        logger.warning(
+            f"[{request_id}] Rate limit exceeded for IP: {client_ip}, "
+            f"login attempt for: {user_data.email}"
+        )
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many login attempts. Please try again in 15 minutes.",
         )
     
-    logger.info(f"Login attempt for: {user_data.email} from IP: {client_ip}")
+    logger.info(
+        f"[{request_id}] Login attempt - email/phone: {user_data.email}, "
+        f"client_ip: {client_ip}"
+    )
 
     # Try to find user by email first, then by phone number
+    db_query_start = time.time()
     result = await db.execute(select(User).where(User.email == user_data.email))
     user = result.scalar_one_or_none()
+    db_query_ms = int((time.time() - db_query_start) * 1000)
+    
+    logger.info(
+        f"[{request_id}] Database query (email lookup) completed in {db_query_ms}ms"
+    )
     
     # If not found by email, try phone number
     if not user:
         # Check if input looks like a phone number (contains digits and phone formatting chars)
         # Must have at least one digit and reasonable length for a phone number
         if re.match(r'^\+?[\d\s\-\(\)]+$', user_data.email) and any(c.isdigit() for c in user_data.email) and len(user_data.email) >= 7:
-            logger.info(f"Email not found, trying as phone number")
+            logger.info(
+                f"[{request_id}] Email not found, attempting phone number lookup"
+            )
+            db_query_start = time.time()
             result = await db.execute(select(User).where(User.phone == user_data.email))
             user = result.scalar_one_or_none()
+            db_query_ms = int((time.time() - db_query_start) * 1000)
+            logger.info(
+                f"[{request_id}] Database query (phone lookup) completed in {db_query_ms}ms"
+            )
 
     if not user:
-        logger.warning(f"Login failed - User not found: {user_data.email}")
+        logger.warning(
+            f"[{request_id}] Login failed - User not found: {user_data.email}, "
+            f"client_ip: {client_ip}"
+        )
         record_login_attempt(client_ip, False)
         record_login_attempt(user_data.email, False)
         raise HTTPException(
@@ -258,7 +282,10 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     
     # Check rate limit by email as well
     if not check_rate_limit(user_data.email):
-        logger.warning(f"Rate limit exceeded for email: {user_data.email}")
+        logger.warning(
+            f"[{request_id}] Rate limit exceeded for email: {user_data.email}, "
+            f"user_id: {user.id}, client_ip: {client_ip}"
+        )
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many login attempts for this account. Please try again in 15 minutes.",
@@ -266,7 +293,11 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     
     # Check if user has a password (OAuth users might not)
     if not user.hashed_password:
-        logger.warning(f"Login failed - OAuth user attempting password login: {user_data.email} (user_id={user.id})")
+        logger.warning(
+            f"[{request_id}] Login failed - OAuth user attempting password login: "
+            f"{user_data.email}, user_id: {user.id}, oauth_provider: {user.oauth_provider}, "
+            f"client_ip: {client_ip}"
+        )
         record_login_attempt(client_ip, False)
         record_login_attempt(user_data.email, False)
         raise HTTPException(
@@ -275,8 +306,19 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
         )
     
     # Verify password
-    if not verify_password(user_data.password, user.hashed_password):
-        logger.warning(f"Login failed - Invalid password for user: {user_data.email} (user_id={user.id})")
+    password_verify_start = time.time()
+    password_valid = verify_password(user_data.password, user.hashed_password)
+    password_verify_ms = int((time.time() - password_verify_start) * 1000)
+    
+    logger.info(
+        f"[{request_id}] Password verification completed in {password_verify_ms}ms"
+    )
+    
+    if not password_valid:
+        logger.warning(
+            f"[{request_id}] Login failed - Invalid password for user: {user_data.email}, "
+            f"user_id: {user.id}, client_ip: {client_ip}"
+        )
         record_login_attempt(client_ip, False)
         record_login_attempt(user_data.email, False)
         raise HTTPException(
@@ -285,7 +327,10 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
         )
 
     if not user.is_active:
-        logger.warning(f"Login failed - Inactive account: {user_data.email} (user_id={user.id})")
+        logger.warning(
+            f"[{request_id}] Login failed - Inactive account: {user_data.email}, "
+            f"user_id: {user.id}, client_ip: {client_ip}"
+        )
         record_login_attempt(client_ip, False)
         record_login_attempt(user_data.email, False)
         raise HTTPException(
@@ -293,13 +338,22 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
         )
 
     # Create access token
+    token_create_start = time.time()
     access_token = create_access_token(data={"sub": str(user.id)})
+    token_create_ms = int((time.time() - token_create_start) * 1000)
+    
+    logger.info(
+        f"[{request_id}] Token creation completed in {token_create_ms}ms"
+    )
     
     # Reset rate limit counters on successful login
     record_login_attempt(client_ip, True)
     record_login_attempt(user_data.email, True)
     
-    logger.info(f"Login successful for user: {user.email} (user_id={user.id})")
+    logger.info(
+        f"[{request_id}] Login successful - user: {user.email}, user_id: {user.id}, "
+        f"role: {user.role}, client_ip: {client_ip}"
+    )
 
     return {
         "access_token": access_token,
