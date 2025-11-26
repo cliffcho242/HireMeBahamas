@@ -130,10 +130,11 @@ def log_request_start():
     client_ip = request.remote_addr or 'unknown'
     user_agent = request.headers.get('User-Agent', 'unknown')
     
-    # Log incoming request with context
+    # Log incoming request with context (truncate long user agents)
+    user_agent_display = user_agent if len(user_agent) <= 100 else f"{user_agent[:100]}..."
     print(
         f"[{g.request_id}] --> {request.method} {request.path} "
-        f"clientIP=\"{client_ip}\" userAgent=\"{user_agent[:100]}...\""
+        f"clientIP=\"{client_ip}\" userAgent=\"{user_agent_display}\""
     )
 
 
@@ -154,7 +155,10 @@ def log_request_end(response):
     - Error details for authentication failures
     """
     if not hasattr(g, 'request_id') or not hasattr(g, 'start_time'):
-        # Request logging was bypassed (e.g., for static files)
+        # Request logging was bypassed (e.g., for static files or middleware chain broken)
+        # Log a warning to help identify when middleware chain is interrupted
+        if request.path and not request.path.startswith('/static/'):
+            print(f"⚠️ Warning: Request logging bypassed for {request.method} {request.path}")
         return response
     
     duration_ms = int((time.time() - g.start_time) * 1000)
@@ -175,9 +179,9 @@ def log_request_end(response):
         # For authentication endpoints, try to extract error message
         if request.path.startswith(AUTH_ENDPOINTS_PREFIX):
             try:
-                # Try to get error detail from response JSON
-                if response.is_json and response.get_json(silent=True):
-                    error_data = response.get_json()
+                # Try to get error detail from response JSON (parse once)
+                if response.is_json:
+                    error_data = response.get_json(silent=True)
                     if isinstance(error_data, dict) and 'message' in error_data:
                         error_detail = f" errorDetail=\"{error_data['message']}\""
             except Exception:
@@ -188,12 +192,17 @@ def log_request_end(response):
             f"responseTimeMS={duration_ms} clientIP=\"{client_ip}\"{error_detail}"
         )
     
-    # Warn about slow requests
-    if duration_ms > SLOW_REQUEST_THRESHOLD_MS:
-        severity = "SLOW REQUEST" if duration_ms < VERY_SLOW_REQUEST_THRESHOLD_MS else "VERY SLOW REQUEST"
+    # Warn about slow requests with appropriate severity level
+    is_slow = duration_ms > SLOW_REQUEST_THRESHOLD_MS
+    is_very_slow = duration_ms > VERY_SLOW_REQUEST_THRESHOLD_MS
+    
+    if is_slow:
+        severity = "VERY SLOW REQUEST" if is_very_slow else "SLOW REQUEST"
+        threshold_note = f">{SLOW_REQUEST_THRESHOLD_MS}ms threshold"
+        
         print(
             f"[{g.request_id}] ⚠️ {severity}: {request.method} {request.path} "
-            f"took {duration_ms}ms (>{SLOW_REQUEST_THRESHOLD_MS}ms threshold). "
+            f"took {duration_ms}ms ({threshold_note}). "
             f"This may cause HTTP 499 (Client Closed Request) errors. "
             f"Check database connection pool, bcrypt rounds, and query performance."
         )
