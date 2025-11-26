@@ -1564,6 +1564,9 @@ print("✅ Application ready to serve requests")
 # Only runs in production with PostgreSQL configured
 DB_KEEPALIVE_ENABLED = IS_PRODUCTION and USE_POSTGRESQL
 DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "600"))  # 10 minutes
+DB_KEEPALIVE_FAILURE_THRESHOLD = 3  # Number of consecutive failures before warning
+DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS = 60  # Delay before retrying after unexpected error
+DB_KEEPALIVE_SHUTDOWN_TIMEOUT_SECONDS = 5  # Max time to wait for graceful shutdown
 
 # Track keepalive thread and status
 _keepalive_thread = None
@@ -1590,9 +1593,24 @@ def database_keepalive_worker():
     _keepalive_running = True
     print(f"🔄 Database keepalive started (interval: {DB_KEEPALIVE_INTERVAL_SECONDS}s)")
     
+    # Perform initial ping immediately to verify connection on startup
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
+        cursor.close()
+        return_db_connection(conn)
+        _keepalive_last_ping = datetime.now(timezone.utc)
+        print(f"✅ Initial database keepalive ping successful")
+    except Exception as e:
+        error_msg = str(e)[:100]
+        print(f"⚠️ Initial database keepalive ping failed: {error_msg}")
+        _keepalive_consecutive_failures += 1
+    
     while _keepalive_running:
         try:
-            # Wait for the interval before pinging
+            # Wait for the interval before next ping
             time.sleep(DB_KEEPALIVE_INTERVAL_SECONDS)
             
             if not _keepalive_running:
@@ -1625,14 +1643,14 @@ def database_keepalive_worker():
                     except Exception:
                         pass
                 
-                # If we have multiple consecutive failures, try to recreate connection pool
-                if _keepalive_consecutive_failures >= 3:
+                # If we have multiple consecutive failures, log warning
+                if _keepalive_consecutive_failures >= DB_KEEPALIVE_FAILURE_THRESHOLD:
                     print("⚠️ Multiple keepalive failures, connection pool may need refresh")
                     # Don't crash the keepalive thread - it will keep trying
                     
         except Exception as e:
             print(f"⚠️ Unexpected error in database keepalive worker: {e}")
-            time.sleep(60)  # Wait 1 minute before retrying on unexpected errors
+            time.sleep(DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS)  # Wait before retrying on unexpected errors
     
     print("🛑 Database keepalive stopped")
 
@@ -1688,8 +1706,8 @@ def stop_database_keepalive():
     print("🛑 Stopping database keepalive...")
     _keepalive_running = False
     
-    # Wait up to 5 seconds for the thread to stop
-    _keepalive_thread.join(timeout=5)
+    # Wait for the thread to stop gracefully
+    _keepalive_thread.join(timeout=DB_KEEPALIVE_SHUTDOWN_TIMEOUT_SECONDS)
     
     if _keepalive_thread.is_alive():
         print("⚠️ Database keepalive thread did not stop gracefully")
