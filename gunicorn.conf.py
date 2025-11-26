@@ -58,20 +58,20 @@ def on_exit(server):
     """
     Called when gunicorn server is shutting down.
     
-    This ensures proper cleanup of database connections and other resources
-    before the server terminates. This is critical for PostgreSQL to avoid
-    "database system was not properly shut down" messages.
+    Logs the shutdown event. The actual cleanup of database connections
+    and other resources is handled by atexit handlers in each worker process,
+    not by this server-level hook.
     """
-    print("🛑 Gunicorn server shutting down, cleaning up resources...")
+    print("🛑 Gunicorn server shutting down...")
 
 
 def worker_exit(server, worker):
     """
     Called when a worker is exiting.
     
-    Each worker may have its own database connections, so we need to ensure
-    cleanup happens per worker. The atexit handlers in the worker process
-    will handle the actual cleanup.
+    Logs the worker exit event. The actual cleanup of database connections
+    is handled by atexit handlers registered in final_backend_postgresql.py
+    within each worker process.
     """
-    print(f"👷 Worker {worker.pid} exiting, cleanup will be handled by atexit handlers")
+    print(f"👷 Worker {worker.pid} exiting...")
 
