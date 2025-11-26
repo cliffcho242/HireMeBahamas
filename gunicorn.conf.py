@@ -51,3 +51,27 @@ pidfile = None  # Don't create pidfile in Railway
 user = None
 group = None
 tmp_upload_dir = None
+
+
+# Gunicorn server hooks for graceful shutdown
+def on_exit(server):
+    """
+    Called when gunicorn server is shutting down.
+    
+    Logs the shutdown event. The actual cleanup of database connections
+    and other resources is handled by atexit handlers in each worker process,
+    not by this server-level hook.
+    """
+    print("🛑 Gunicorn server shutting down...")
+
+
+def worker_exit(server, worker):
+    """
+    Called when a worker is exiting.
+    
+    Logs the worker exit event. The actual cleanup of database connections
+    is handled by atexit handlers registered in final_backend_postgresql.py
+    within each worker process.
+    """
+    print(f"👷 Worker {worker.pid} exiting...")
+

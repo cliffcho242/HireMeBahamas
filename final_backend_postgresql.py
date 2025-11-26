@@ -1,7 +1,9 @@
 import atexit
 import os
 import random
+import signal
 import sqlite3
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
@@ -407,6 +409,69 @@ def _shutdown_executor():
 
 # Register executor shutdown on application exit
 atexit.register(_shutdown_executor)
+
+
+def _shutdown_connection_pool():
+    """
+    Shutdown the PostgreSQL connection pool during application exit.
+    
+    This ensures all connections are properly closed before the application exits,
+    preventing PostgreSQL from reporting "database system was not properly shut down"
+    and requiring automatic recovery on next startup.
+    
+    Called via atexit and signal handlers to ensure cleanup happens for:
+    - Normal application termination (atexit)
+    - SIGTERM from container orchestrators (Railway, Docker)
+    - SIGINT from Ctrl+C during development
+    """
+    global _connection_pool
+    
+    try:
+        with _pool_lock:
+            if _connection_pool is not None:
+                print("🔌 Closing PostgreSQL connection pool...")
+                _connection_pool.closeall()
+                _connection_pool = None
+                print("✅ PostgreSQL connection pool closed successfully")
+    except Exception as e:
+        print(f"⚠️ Error closing connection pool: {e}")
+
+
+# Register connection pool shutdown on application exit
+atexit.register(_shutdown_connection_pool)
+
+
+def _signal_handler(signum, frame):
+    """
+    Handle termination signals to ensure graceful shutdown.
+    
+    This handler is called when the application receives SIGTERM or SIGINT.
+    It performs cleanup and then exits the application.
+    
+    Args:
+        signum: Signal number (e.g., signal.SIGTERM)
+        frame: Current stack frame (not used)
+    """
+    # Get signal name with fallback for compatibility
+    try:
+        signal_name = signal.Signals(signum).name
+    except (ValueError, AttributeError):
+        # Fallback for unsupported signals or older Python versions
+        signal_names = {signal.SIGTERM: "SIGTERM", signal.SIGINT: "SIGINT"}
+        signal_name = signal_names.get(signum, f"Signal {signum}")
+    
+    print(f"\n🛑 Received {signal_name}, shutting down gracefully...")
+    
+    # Cleanup will happen via atexit handlers
+    # Exit with status 0 for graceful shutdown
+    sys.exit(0)
+
+
+# Register signal handlers for graceful shutdown
+# SIGTERM: Sent by container orchestrators (Railway, Docker) to stop the container
+# SIGINT: Sent by Ctrl+C during development
+signal.signal(signal.SIGTERM, _signal_handler)
+signal.signal(signal.SIGINT, _signal_handler)
 
 
 def _return_orphaned_connection(future, conn_pool):
