@@ -1628,6 +1628,37 @@ def get_connection_pool_stats():
         }
 
 
+def _get_cursor_value(result, key_or_index, default=None):
+    """
+    Extract a value from a cursor result, handling both dict and tuple types.
+    
+    PostgreSQL with RealDictCursor returns dict-like objects, while other
+    cursors may return tuples. This helper provides consistent access.
+    
+    Args:
+        result: The cursor fetchone() result (dict-like or tuple)
+        key_or_index: The key (for dict) or index (for tuple) to access
+        default: Default value if key/index doesn't exist
+        
+    Returns:
+        The extracted value or default if not found
+    """
+    if result is None:
+        return default
+    
+    if hasattr(result, 'get'):
+        # Dict-like object (RealDictCursor result)
+        return result.get(key_or_index, default)
+    else:
+        # Tuple-like object
+        try:
+            # key_or_index should be an integer for tuple access
+            idx = key_or_index if isinstance(key_or_index, int) else 0
+            return result[idx] if len(result) > idx else default
+        except (TypeError, IndexError):
+            return default
+
+
 def get_database_recovery_status():
     """
     Check if PostgreSQL database is in recovery mode.
@@ -1663,7 +1694,7 @@ def get_database_recovery_status():
         # Check if in recovery mode
         cursor.execute("SELECT pg_is_in_recovery() as in_recovery")
         result = cursor.fetchone()
-        in_recovery = result["in_recovery"] if result else None
+        in_recovery = _get_cursor_value(result, "in_recovery", None)
         
         # Get additional recovery information if available
         recovery_info = {
@@ -1682,8 +1713,11 @@ def get_database_recovery_status():
                 """)
                 wal_info = cursor.fetchone()
                 if wal_info:
-                    recovery_info["wal_receive_lsn"] = str(wal_info.get("last_receive_lsn", "unknown"))
-                    recovery_info["wal_replay_lsn"] = str(wal_info.get("last_replay_lsn", "unknown"))
+                    # Use helper function for consistent result handling
+                    receive_lsn = _get_cursor_value(wal_info, "last_receive_lsn", "unknown")
+                    replay_lsn = _get_cursor_value(wal_info, "last_replay_lsn", "unknown")
+                    recovery_info["wal_receive_lsn"] = str(receive_lsn)
+                    recovery_info["wal_replay_lsn"] = str(replay_lsn)
             except Exception:
                 # WAL functions may not be available in all configurations
                 pass
@@ -2044,8 +2078,8 @@ def api_health_check():
                 cursor.execute("SELECT pg_is_in_recovery()")
                 is_in_recovery = cursor.fetchone()
                 if is_in_recovery:
-                    # Handle both dict (RealDictCursor) and tuple results
-                    recovery_value = is_in_recovery.get("pg_is_in_recovery") if hasattr(is_in_recovery, 'get') else is_in_recovery[0]
+                    # Use helper function for consistent result handling
+                    recovery_value = _get_cursor_value(is_in_recovery, "pg_is_in_recovery", False)
                     response["database_recovery"] = {
                         "in_recovery": recovery_value,
                         "status": "recovering" if recovery_value else "normal"

@@ -133,42 +133,39 @@ class TestDatabaseRecoveryStatus:
         assert "db_type" in data
 
 
+# Define MockPsycopg2Error once at module level to avoid duplication
+try:
+    import psycopg2
+    
+    class MockPsycopg2Error(psycopg2.Error):
+        """Mock psycopg2 error for testing transient error detection"""
+        pass
+except ImportError:
+    MockPsycopg2Error = None
+
+
 class TestTransientErrorDetection:
     """Tests for transient error detection logic"""
     
     def test_is_transient_connection_error_recovery_message(self, app):
         """Test that recovery messages are detected as transient"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
         with app.app_context():
-            # Create a mock psycopg2 error
-            try:
-                import psycopg2
-                
-                # Create a mock error with recovery message
-                class MockPsycopg2Error(psycopg2.Error):
-                    pass
-                
-                mock_error = MockPsycopg2Error("the database system is in recovery")
-                
-                result = final_backend_postgresql._is_transient_connection_error(mock_error)
-                assert result == True
-            except ImportError:
-                pytest.skip("psycopg2 not available for this test")
+            mock_error = MockPsycopg2Error("the database system is in recovery")
+            result = final_backend_postgresql._is_transient_connection_error(mock_error)
+            assert result == True
     
     def test_is_transient_connection_error_startup_message(self, app):
         """Test that startup messages are detected as transient"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
         with app.app_context():
-            try:
-                import psycopg2
-                
-                class MockPsycopg2Error(psycopg2.Error):
-                    pass
-                
-                mock_error = MockPsycopg2Error("the database system is starting up")
-                
-                result = final_backend_postgresql._is_transient_connection_error(mock_error)
-                assert result == True
-            except ImportError:
-                pytest.skip("psycopg2 not available for this test")
+            mock_error = MockPsycopg2Error("the database system is starting up")
+            result = final_backend_postgresql._is_transient_connection_error(mock_error)
+            assert result == True
     
     def test_is_transient_connection_error_non_transient(self, app):
         """Test that non-transient errors are not detected as transient"""
