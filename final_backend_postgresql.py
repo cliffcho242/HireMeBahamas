@@ -1556,6 +1556,173 @@ print("✅ Application ready to serve requests")
 
 
 # ==========================================
+# DATABASE KEEPALIVE
+# ==========================================
+
+# Database keepalive configuration
+# Prevents Railway PostgreSQL from sleeping after 15 minutes of inactivity
+# Only runs in production with PostgreSQL configured
+DB_KEEPALIVE_ENABLED = IS_PRODUCTION and USE_POSTGRESQL
+DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "600"))  # 10 minutes
+DB_KEEPALIVE_FAILURE_THRESHOLD = 3  # Number of consecutive failures before warning
+DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS = 60  # Delay before retrying after unexpected error
+DB_KEEPALIVE_SHUTDOWN_TIMEOUT_SECONDS = 5  # Max time to wait for graceful shutdown
+
+# Track keepalive thread and status
+_keepalive_thread = None
+_keepalive_running = False
+_keepalive_last_ping = None
+_keepalive_consecutive_failures = 0
+
+
+def database_keepalive_worker():
+    """
+    Background worker that periodically pings the database to prevent it from sleeping.
+    
+    Railway databases on free/hobby tiers sleep after 15 minutes of inactivity.
+    This worker pings the database every 10 minutes to keep it active.
+    
+    The keepalive uses a simple SELECT 1 query that:
+    - Wakes up sleeping connections
+    - Verifies connection pool health
+    - Minimal resource overhead
+    - Non-intrusive to production operations
+    """
+    global _keepalive_running, _keepalive_last_ping, _keepalive_consecutive_failures
+    
+    _keepalive_running = True
+    print(f"🔄 Database keepalive started (interval: {DB_KEEPALIVE_INTERVAL_SECONDS}s)")
+    
+    # Perform initial ping immediately to verify connection on startup
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
+        cursor.close()
+        return_db_connection(conn)
+        _keepalive_last_ping = datetime.now(timezone.utc)
+        print(f"✅ Initial database keepalive ping successful")
+    except Exception as e:
+        error_msg = str(e)[:100]
+        print(f"⚠️ Initial database keepalive ping failed: {error_msg}")
+        _keepalive_consecutive_failures += 1
+    
+    while _keepalive_running:
+        try:
+            # Wait for the interval before next ping
+            time.sleep(DB_KEEPALIVE_INTERVAL_SECONDS)
+            
+            if not _keepalive_running:
+                break
+            
+            # Ping the database
+            conn = None
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+                cursor.close()
+                return_db_connection(conn)
+                
+                # Update success status
+                _keepalive_last_ping = datetime.now(timezone.utc)
+                _keepalive_consecutive_failures = 0
+                print(f"✅ Database keepalive ping successful at {_keepalive_last_ping.isoformat()}")
+                
+            except Exception as e:
+                _keepalive_consecutive_failures += 1
+                error_msg = str(e)[:100]  # Truncate long errors
+                print(f"⚠️ Database keepalive ping failed (attempt {_keepalive_consecutive_failures}): {error_msg}")
+                
+                # Return connection to pool even on error
+                if conn:
+                    try:
+                        return_db_connection(conn)
+                    except Exception:
+                        pass
+                
+                # If we have multiple consecutive failures, log warning
+                if _keepalive_consecutive_failures >= DB_KEEPALIVE_FAILURE_THRESHOLD:
+                    print("⚠️ Multiple keepalive failures, connection pool may need refresh")
+                    # Don't crash the keepalive thread - it will keep trying
+                    
+        except Exception as e:
+            print(f"⚠️ Unexpected error in database keepalive worker: {e}")
+            time.sleep(DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS)  # Wait before retrying on unexpected errors
+    
+    print("🛑 Database keepalive stopped")
+
+
+def start_database_keepalive():
+    """
+    Start the database keepalive background thread.
+    
+    Only starts if:
+    - Running in production environment (IS_PRODUCTION=True)
+    - PostgreSQL is configured (USE_POSTGRESQL=True)
+    - Keepalive is not already running
+    
+    The keepalive prevents Railway PostgreSQL databases from sleeping
+    after periods of inactivity.
+    """
+    global _keepalive_thread, _keepalive_running
+    
+    if not DB_KEEPALIVE_ENABLED:
+        if not IS_PRODUCTION:
+            print("ℹ️ Database keepalive disabled (not in production environment)")
+        elif not USE_POSTGRESQL:
+            print("ℹ️ Database keepalive disabled (PostgreSQL not configured)")
+        return
+    
+    if _keepalive_thread is not None and _keepalive_thread.is_alive():
+        print("ℹ️ Database keepalive already running")
+        return
+    
+    try:
+        _keepalive_thread = threading.Thread(
+            target=database_keepalive_worker,
+            daemon=True,
+            name="db-keepalive"
+        )
+        _keepalive_thread.start()
+        print("✅ Database keepalive thread started")
+    except Exception as e:
+        print(f"⚠️ Failed to start database keepalive thread: {e}")
+
+
+def stop_database_keepalive():
+    """
+    Stop the database keepalive background thread.
+    
+    Called during application shutdown to gracefully stop the keepalive worker.
+    """
+    global _keepalive_running, _keepalive_thread
+    
+    if _keepalive_thread is None or not _keepalive_thread.is_alive():
+        return
+    
+    print("🛑 Stopping database keepalive...")
+    _keepalive_running = False
+    
+    # Wait for the thread to stop gracefully
+    _keepalive_thread.join(timeout=DB_KEEPALIVE_SHUTDOWN_TIMEOUT_SECONDS)
+    
+    if _keepalive_thread.is_alive():
+        print("⚠️ Database keepalive thread did not stop gracefully")
+    else:
+        print("✅ Database keepalive stopped")
+
+
+# Register keepalive shutdown on application exit
+atexit.register(stop_database_keepalive)
+
+# Start database keepalive if enabled
+start_database_keepalive()
+
+
+# ==========================================
 # HEALTH CHECK ENDPOINT
 # ==========================================
 
@@ -1658,6 +1825,21 @@ def api_health_check():
         pool_stats = get_connection_pool_stats()
         if pool_stats:
             response["connection_pool"] = pool_stats
+        
+        # Add keepalive status for monitoring
+        if DB_KEEPALIVE_ENABLED:
+            keepalive_status = {
+                "enabled": True,
+                "running": _keepalive_running,
+                "interval_seconds": DB_KEEPALIVE_INTERVAL_SECONDS,
+                "consecutive_failures": _keepalive_consecutive_failures,
+            }
+            if _keepalive_last_ping:
+                keepalive_status["last_ping"] = _keepalive_last_ping.isoformat()
+                keepalive_status["seconds_since_last_ping"] = (
+                    datetime.now(timezone.utc) - _keepalive_last_ping
+                ).total_seconds()
+            response["keepalive"] = keepalive_status
             
     except Exception as e:
         response["database"] = "error"
