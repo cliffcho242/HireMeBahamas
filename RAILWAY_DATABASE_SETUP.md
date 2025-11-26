@@ -1,8 +1,8 @@
-# 🗄️ Railway DATABASE_URL Setup Guide
+# 🗄️ Railway Database Setup Guide
 
-This guide provides step-by-step instructions for adding and configuring DATABASE_URL in Railway for the HireMeBahamas application.
+This guide provides step-by-step instructions for adding and configuring the database connection in Railway for the HireMeBahamas application.
 
-## 📋 Why You Need DATABASE_URL
+## 📋 Why You Need PostgreSQL
 
 **CRITICAL**: SQLite is NOT suitable for production deployment in Railway because:
 - ❌ Data is lost on every deployment or restart
@@ -13,6 +13,14 @@ This guide provides step-by-step instructions for adding and configuring DATABAS
 - ✅ Persistent data storage
 - ✅ Data survives deployments and restarts
 - ✅ Scalable and production-ready
+
+## 💰 Cost Optimization: Using Private Network
+
+**IMPORTANT**: Railway provides two database connection options:
+- **DATABASE_PUBLIC_URL** (uses `RAILWAY_TCP_PROXY_DOMAIN`) - **Incurs egress fees** ❌
+- **DATABASE_PRIVATE_URL** (uses `RAILWAY_PRIVATE_DOMAIN`) - **No egress fees** ✅
+
+Our application is configured to automatically prefer `DATABASE_PRIVATE_URL` over `DATABASE_URL` to minimize costs by using Railway's internal private network instead of the public TCP proxy.
 
 ---
 
@@ -31,18 +39,25 @@ This guide provides step-by-step instructions for adding and configuring DATABAS
 3. Click **"Add PostgreSQL"**
 4. Wait 1-2 minutes for the database to provision
 
-### Step 3: Verify DATABASE_URL is Set
+### Step 3: Verify Database Connection Variables
 
-Railway automatically creates and connects the DATABASE_URL when you add PostgreSQL to your project.
+Railway automatically creates database connection variables when you add PostgreSQL to your project.
 
 1. Click on your **Backend service** (not the PostgreSQL service)
 2. Go to the **"Variables"** tab
-3. Look for `DATABASE_URL` in the list
+3. Look for `DATABASE_PRIVATE_URL` or `DATABASE_URL` in the list
 
-You should see something like:
+**Preferred setup** (uses private network, no egress fees):
+```
+DATABASE_PRIVATE_URL = postgresql://postgres:abc123xyz@postgres.railway.internal:5432/railway
+```
+
+**Fallback** (uses public proxy, incurs egress fees if DATABASE_PRIVATE_URL not available):
 ```
 DATABASE_URL = postgresql://postgres:abc123xyz@containers-us-west-1.railway.app:5432/railway
 ```
+
+The application will automatically use `DATABASE_PRIVATE_URL` if available, otherwise it falls back to `DATABASE_URL`.
 
 ### Step 4: Add Required Environment Variables
 

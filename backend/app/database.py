@@ -7,9 +7,17 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # Database configuration - PostgreSQL for production mode
 # For local development: docker-compose up postgres redis
 # For Railway/Render: DATABASE_URL env var is automatically set
+#
+# Railway Private Network Configuration:
+# To avoid egress fees, Railway provides DATABASE_PRIVATE_URL which uses the internal
+# private network (RAILWAY_PRIVATE_DOMAIN) instead of the public TCP proxy.
+# We prefer DATABASE_PRIVATE_URL > DATABASE_URL to minimize costs.
 DATABASE_URL = config(
-    "DATABASE_URL", 
-    default="postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+    "DATABASE_PRIVATE_URL",
+    default=config(
+        "DATABASE_URL", 
+        default="postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+    )
 )
 
 # For production PostgreSQL deployments, ensure SSL is configured
