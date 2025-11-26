@@ -54,10 +54,16 @@ services:
     envVars:
       - key: FLASK_ENV
         value: production
+      - key: ENVIRONMENT
+        value: production
       - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
         generateValue: true
       - key: PYTHONUNBUFFERED
         value: true
       - key: PYTHON_VERSION
         value: 3.12.0
+      # DATABASE_URL must be set manually in Render dashboard
+      # to connect to your PostgreSQL database
     healthCheckPath: /health
