@@ -10,8 +10,18 @@ SECRET_KEY = config("SECRET_KEY", default="your-secret-key-change-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Bcrypt configuration
+# Default of 12 rounds can be slow (200-300ms per operation)
+# 10 rounds provides good security while being much faster (~60ms per operation)
+# See OWASP recommendations: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+BCRYPT_ROUNDS = config("BCRYPT_ROUNDS", default=10, cast=int)
+
+# Password hashing with optimized bcrypt rounds
+pwd_context = CryptContext(
+    schemes=["bcrypt"], 
+    deprecated="auto",
+    bcrypt__rounds=BCRYPT_ROUNDS
+)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

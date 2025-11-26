@@ -12,6 +12,7 @@ from app.core.security import (
     decode_access_token,
     get_password_hash,
     verify_password,
+    BCRYPT_ROUNDS,
 )
 from app.core.upload import upload_image
 from app.database import get_db
@@ -222,6 +223,9 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     Includes rate limiting to prevent brute force attacks.
     """
     
+    # Track total login time
+    login_start_time = time.time()
+    
     # Get client IP for rate limiting
     client_ip = request.client.host if request.client else "unknown"
     request_id = getattr(request.state, 'request_id', 'unknown')
@@ -246,11 +250,14 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     db_query_start = time.time()
     result = await db.execute(select(User).where(User.email == user_data.email))
     user = result.scalar_one_or_none()
-    db_query_ms = int((time.time() - db_query_start) * 1000)
+    db_email_query_ms = int((time.time() - db_query_start) * 1000)
     
     logger.info(
-        f"[{request_id}] Database query (email lookup) completed in {db_query_ms}ms"
+        f"[{request_id}] Database query (email lookup) completed in {db_email_query_ms}ms"
     )
+    
+    # Track total DB time
+    total_db_ms = db_email_query_ms
     
     # If not found by email, try phone number
     if not user:
@@ -263,9 +270,10 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
             db_query_start = time.time()
             result = await db.execute(select(User).where(User.phone == user_data.email))
             user = result.scalar_one_or_none()
-            db_query_ms = int((time.time() - db_query_start) * 1000)
+            db_phone_query_ms = int((time.time() - db_query_start) * 1000)
+            total_db_ms += db_phone_query_ms
             logger.info(
-                f"[{request_id}] Database query (phone lookup) completed in {db_query_ms}ms"
+                f"[{request_id}] Database query (phone lookup) completed in {db_phone_query_ms}ms"
             )
 
     if not user:
@@ -350,10 +358,25 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     record_login_attempt(client_ip, True)
     record_login_attempt(user_data.email, True)
     
+    # Calculate total login time
+    total_login_ms = int((time.time() - login_start_time) * 1000)
+    
+    # Log performance breakdown for monitoring
     logger.info(
         f"[{request_id}] Login successful - user: {user.email}, user_id: {user.id}, "
-        f"role: {user.role}, client_ip: {client_ip}"
+        f"role: {user.role}, client_ip: {client_ip}, total_time: {total_login_ms}ms "
+        f"(db: {total_db_ms}ms, password_verify: {password_verify_ms}ms, "
+        f"token_create: {token_create_ms}ms)"
     )
+    
+    # Warn about slow login operations
+    if total_login_ms > 1000:  # Over 1 second
+        logger.warning(
+            f"[{request_id}] SLOW LOGIN: Total time {total_login_ms}ms - "
+            f"Breakdown: DB={total_db_ms}ms, Password={password_verify_ms}ms, "
+            f"Token={token_create_ms}ms. Consider checking bcrypt rounds (current: {BCRYPT_ROUNDS}) "
+            f"or database performance."
+        )
 
     return {
         "access_token": access_token,
