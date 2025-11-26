@@ -4,8 +4,7 @@ over DATABASE_URL to avoid Railway egress fees.
 """
 
 import os
-import sys
-from pathlib import Path
+from decouple import config
 
 
 def test_database_url_priority():
@@ -22,9 +21,6 @@ def test_database_url_priority():
         
         os.environ["DATABASE_PRIVATE_URL"] = private_url
         os.environ["DATABASE_URL"] = public_url
-        
-        # Test the configuration logic using python-decouple directly
-        from decouple import config
         
         # Simulate the config logic from database.py
         test_url_1 = config(
@@ -87,7 +83,3 @@ def test_database_url_priority():
             os.environ["DATABASE_URL"] = original_url
         elif "DATABASE_URL" in os.environ:
             del os.environ["DATABASE_URL"]
-
-
-if __name__ == "__main__":
-    test_database_url_priority()
