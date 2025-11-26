@@ -9,7 +9,7 @@ class UserCreate(BaseModel):
     password: str
     first_name: str
     last_name: str
-    user_type: str = "user"  # Default to "user" if not provided
+    user_type: str = "user"  # Maps to 'role' field in User model - intentionally named user_type for frontend clarity
     phone: Optional[str] = None
     location: Optional[str] = None
 
@@ -24,7 +24,7 @@ class UserResponse(BaseModel):
     email: str
     first_name: str
     last_name: str
-    role: str = "user"  # Matches User model default
+    role: str = "user"  # User's role in the system (maps from user_type during registration)
     username: Optional[str] = None
     phone: Optional[str] = None
     location: Optional[str] = None
