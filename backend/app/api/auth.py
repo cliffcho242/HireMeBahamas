@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from typing import Optional
 import logging
 import re
+import hashlib
+from threading import Lock
 
 from app.core.security import (
     create_access_token,
@@ -37,6 +39,7 @@ logger = logging.getLogger(__name__)
 # This in-memory implementation is suitable for single-instance deployments
 # Example with Redis: from redis import asyncio as aioredis; redis = await aioredis.from_url(...)
 login_attempts = {}
+login_attempts_lock = Lock()  # Thread safety for concurrent requests
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_DURATION = timedelta(minutes=15)
 
@@ -50,27 +53,28 @@ def check_rate_limit(identifier: str) -> bool:
     Returns:
         True if within rate limit, False if rate limit exceeded
     """
-    current_time = datetime.utcnow()
-    
-    if identifier in login_attempts:
-        attempts, lockout_until = login_attempts[identifier]
+    with login_attempts_lock:
+        current_time = datetime.utcnow()
         
-        # Check if still locked out
-        if lockout_until and current_time < lockout_until:
-            return False
+        if identifier in login_attempts:
+            attempts, lockout_until = login_attempts[identifier]
+            
+            # Check if still locked out
+            if lockout_until and current_time < lockout_until:
+                return False
+            
+            # Check if we should reset the counter (been more than 15 minutes since last attempt)
+            if lockout_until and current_time >= lockout_until:
+                login_attempts[identifier] = (0, None)
+                return True
+            
+            # Increment attempt counter
+            if attempts >= MAX_LOGIN_ATTEMPTS:
+                login_attempts[identifier] = (attempts, current_time + LOCKOUT_DURATION)
+                logger.warning(f"Rate limit exceeded for {identifier}, locked out for {LOCKOUT_DURATION}")
+                return False
         
-        # Check if we should reset the counter (been more than 15 minutes since last attempt)
-        if lockout_until and current_time >= lockout_until:
-            login_attempts[identifier] = (0, None)
-            return True
-        
-        # Increment attempt counter
-        if attempts >= MAX_LOGIN_ATTEMPTS:
-            login_attempts[identifier] = (attempts, current_time + LOCKOUT_DURATION)
-            logger.warning(f"Rate limit exceeded for {identifier}, locked out for {LOCKOUT_DURATION}")
-            return False
-    
-    return True
+        return True
 
 
 def record_login_attempt(identifier: str, success: bool):
@@ -80,18 +84,19 @@ def record_login_attempt(identifier: str, success: bool):
         identifier: IP address or email
         success: Whether the login was successful
     """
-    if success:
-        # Reset on successful login
-        if identifier in login_attempts:
-            del login_attempts[identifier]
-    else:
-        # Increment failed attempts
-        current_time = datetime.utcnow()
-        if identifier in login_attempts:
-            attempts, lockout_until = login_attempts[identifier]
-            login_attempts[identifier] = (attempts + 1, lockout_until)
+    with login_attempts_lock:
+        if success:
+            # Reset on successful login
+            if identifier in login_attempts:
+                del login_attempts[identifier]
         else:
-            login_attempts[identifier] = (1, None)
+            # Increment failed attempts
+            current_time = datetime.utcnow()
+            if identifier in login_attempts:
+                attempts, lockout_until = login_attempts[identifier]
+                login_attempts[identifier] = (attempts + 1, lockout_until)
+            else:
+                login_attempts[identifier] = (1, None)
 
 
 # Helper function to get current user
@@ -409,36 +414,36 @@ async def get_login_stats(current_user: User = Depends(get_current_user)):
             detail="Admin access required"
         )
     
-    current_time = datetime.utcnow()
-    
-    stats = {
-        "total_tracked_identifiers": len(login_attempts),
-        "locked_out": 0,
-        "high_attempts": 0,
-        "details": []
-    }
-    
-    for identifier, (attempts, lockout_until) in login_attempts.items():
-        is_locked = lockout_until and current_time < lockout_until
+    with login_attempts_lock:
+        current_time = datetime.utcnow()
         
-        if is_locked:
-            stats["locked_out"] += 1
-        elif attempts >= 3:
-            stats["high_attempts"] += 1
+        stats = {
+            "total_tracked_identifiers": len(login_attempts),
+            "locked_out": 0,
+            "high_attempts": 0,
+            "details": []
+        }
         
-        # Only include identifiers with high attempts or locked out
-        # Anonymize identifiers for security
-        if attempts >= 3 or is_locked:
-            # Hash the identifier to anonymize it
-            import hashlib
-            hashed = hashlib.sha256(identifier.encode()).hexdigest()[:16]
+        for identifier, (attempts, lockout_until) in login_attempts.items():
+            is_locked = lockout_until and current_time < lockout_until
             
-            stats["details"].append({
-                "identifier_hash": hashed,  # Anonymized identifier
-                "attempts": attempts,
-                "locked_out": is_locked,
-                "lockout_until": lockout_until.isoformat() if lockout_until else None
-            })
+            if is_locked:
+                stats["locked_out"] += 1
+            elif attempts >= 3:
+                stats["high_attempts"] += 1
+            
+            # Only include identifiers with high attempts or locked out
+            # Anonymize identifiers for security
+            if attempts >= 3 or is_locked:
+                # Hash the identifier to anonymize it
+                hashed = hashlib.sha256(identifier.encode()).hexdigest()[:16]
+                
+                stats["details"].append({
+                    "identifier_hash": hashed,  # Anonymized identifier
+                    "attempts": attempts,
+                    "locked_out": is_locked,
+                    "lockout_until": lockout_until.isoformat() if lockout_until else None
+                })
     
     logger.info(f"Login stats requested by admin user_id={current_user.id}: {stats['locked_out']} locked out, {stats['high_attempts']} high attempts")
     

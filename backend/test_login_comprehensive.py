@@ -13,7 +13,6 @@ async def test_login_comprehensive():
     """Test login functionality comprehensively"""
     
     # Import only the security module to avoid full app dependencies
-    sys.path.insert(0, str(backend_path))
     
     print("=" * 80)
     print("Comprehensive Login Tests")
@@ -79,7 +78,8 @@ async def test_login_comprehensive():
     print("\n2. Testing phone number detection...")
     import re
     
-    phone_pattern = r'^[\d\s\-\(\)\+]+$'
+    # Use the same pattern as production code
+    phone_pattern = r'^\+?[\d\s\-\(\)]+$'
     
     test_cases = [
         ("1234567890", True, "10 digits"),
