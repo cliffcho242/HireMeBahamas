@@ -58,6 +58,8 @@ services:
         value: production
       - key: SECRET_KEY
         generateValue: true
+      - key: FRONTEND_URL
+        value: https://hiremebahamas.vercel.app
       - key: PYTHONUNBUFFERED
         value: true
       - key: PYTHON_VERSION
