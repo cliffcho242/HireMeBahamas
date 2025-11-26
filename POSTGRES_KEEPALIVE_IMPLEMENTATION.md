@@ -84,9 +84,12 @@ Created test suite to verify:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ENVIRONMENT` | `development` | Set to `production` to enable keepalive |
+| `ENVIRONMENT` | `development` | Set to `production` to enable keepalive (OR deploy on Railway) |
+| `RAILWAY_PROJECT_ID` | - | Automatically set by Railway; if present, keepalive is enabled |
 | `DATABASE_URL` | - | PostgreSQL connection string (required) |
 | `DB_KEEPALIVE_INTERVAL_SECONDS` | `600` | Time between pings (in seconds) |
+
+**Note**: When deployed on Railway (detected via `RAILWAY_PROJECT_ID`), the keepalive is automatically enabled even without explicitly setting `ENVIRONMENT=production`. This ensures the database stays active on Railway deployments.
 
 ### Recommended Intervals
 
