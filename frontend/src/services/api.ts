@@ -41,14 +41,15 @@ const api = axios.create({
   withCredentials: false, // Must be false with wildcard CORS
 });
 
-// Retry configuration
-const MAX_RETRIES = 5;
-const RETRY_DELAY = 3000; // 3 seconds base delay for retries
-const BACKEND_WAKE_TIME = 120000; // 120 seconds (2 minutes) for Render.com free tier cold starts
-const MAX_WAKE_RETRIES = 4; // Total number of retry attempts for cold start scenarios
-const INITIAL_WAIT_MS = 5000; // 5 seconds initial wait before first retry
-const BASE_BACKOFF_MS = 10000; // Base for exponential backoff
-const MAX_WAIT_MS = 30000; // Maximum wait time between retries
+// Retry configuration - optimized to prevent excessive timing
+const MAX_RETRIES = 3; // Reduced from 5 to prevent excessive waiting
+const RETRY_DELAY = 2000; // 2 seconds base delay for retries (reduced from 3s)
+const BACKEND_WAKE_TIME = 60000; // 60 seconds (1 minute) for cold starts (reduced from 2 minutes)
+const MAX_WAKE_RETRIES = 3; // Reduced from 4 to prevent excessive waiting
+const INITIAL_WAIT_MS = 3000; // 3 seconds initial wait before first retry (reduced from 5s)
+const BASE_BACKOFF_MS = 5000; // Base for exponential backoff (reduced from 10s)
+const MAX_WAIT_MS = 15000; // Maximum wait time between retries (reduced from 30s)
+const MAX_TOTAL_TIMEOUT = 180000; // 3 minutes maximum total timeout for all retries combined
 
 // Helper to check if backend is sleeping (Render free tier)
 interface ApiErrorType {
@@ -80,8 +81,9 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   
-  // Add retry count
+  // Add retry count and start time for tracking total timeout
   config.headers['X-Retry-Count'] = config.headers['X-Retry-Count'] || 0;
+  config.headers['X-Request-Start'] = config.headers['X-Request-Start'] || Date.now().toString();
   
   console.log('API Request:', config.method?.toUpperCase(), config.url);
   return config;
@@ -104,6 +106,16 @@ api.interceptors.response.use(
       data: error.response?.data
     });
     
+    // Check total elapsed time to prevent excessive waiting
+    const requestStart = parseInt(config?.headers?.['X-Request-Start'] || '0');
+    const elapsedTime = requestStart > 0 ? Date.now() - requestStart : 0;
+    
+    if (elapsedTime > MAX_TOTAL_TIMEOUT) {
+      console.error(`Request timeout: Total time exceeded ${MAX_TOTAL_TIMEOUT / 1000} seconds`);
+      const timeoutError = new Error(`Network request failed after ${Math.round(elapsedTime / 1000)} seconds. Please check your connection and try again.`);
+      return Promise.reject(timeoutError);
+    }
+    
     // Check if backend is sleeping (Render.com free tier)
     if (isBackendSleeping(error)) {
       const retryCount = parseInt(config.headers['X-Retry-Count'] || '0');
@@ -114,7 +126,7 @@ api.interceptors.response.use(
         
         if (isFirstAttempt) {
           console.log('Backend appears to be sleeping or starting up...');
-          console.log('This may take 1-2 minutes on first request (cold start).');
+          console.log('This may take up to 1 minute on first request (cold start).');
           console.log('Status:', error.response?.status || 'No response');
         } else {
           console.log(`Backend still waking up... Attempt ${attemptNumber}/${MAX_WAKE_RETRIES}`);
@@ -124,7 +136,7 @@ api.interceptors.response.use(
         config.timeout = BACKEND_WAKE_TIME;
         config.headers['X-Retry-Count'] = attemptNumber;
         
-        // Backoff delays: 5s (first), then 10s, 20s, 30s for subsequent retries
+        // Backoff delays: 3s (first), then 5s, 10s for subsequent retries
         const waitTime = isFirstAttempt 
           ? INITIAL_WAIT_MS 
           : Math.min(BASE_BACKOFF_MS * Math.pow(2, retryCount - 1), MAX_WAIT_MS);
@@ -182,7 +194,7 @@ export const authAPI = {
     // Use extended timeout for login as backend may need to wake up
     // and password verification can take time
     const response = await api.post('/api/auth/login', credentials, {
-      timeout: BACKEND_WAKE_TIME, // 2 minutes for cold start + password verification
+      timeout: BACKEND_WAKE_TIME, // 1 minute for cold start + password verification
     });
     return response.data;
   },
@@ -199,7 +211,7 @@ export const authAPI = {
     // Use extended timeout for registration as backend may need to wake up
     // and password hashing can take time
     const response = await api.post('/api/auth/register', userData, {
-      timeout: BACKEND_WAKE_TIME, // 2 minutes for cold start + password hashing
+      timeout: BACKEND_WAKE_TIME, // 1 minute for cold start + password hashing
     });
     return response.data;
   },
