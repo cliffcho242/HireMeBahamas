@@ -511,7 +511,7 @@ def _is_transient_connection_error(error: Exception) -> bool:
         "connection is closed",          # Stale connection
         "terminating connection",        # Server-initiated disconnect
         "unexpected eof",                # SSL EOF error from dropped connection
-        "ssl error",                     # General SSL errors (often recoverable)
+        "ssl connection has been closed unexpectedly",  # Specific SSL closure error
     ]
     
     return any(pattern in error_msg for pattern in transient_patterns)
@@ -558,14 +558,15 @@ def _get_connection_pool():
                         cursor_factory=RealDictCursor,
                         connect_timeout=10,  # Reduced from 15s for faster failure detection
                         # TCP keepalive settings to prevent SSL EOF errors on idle connections
-                        keepalives=TCP_KEEPALIVE_ENABLED,
+                        # psycopg2 expects integer (1=enabled, 0=disabled)
+                        keepalives=1 if TCP_KEEPALIVE_ENABLED else 0,
                         keepalives_idle=TCP_KEEPALIVE_IDLE,
                         keepalives_interval=TCP_KEEPALIVE_INTERVAL,
                         keepalives_count=TCP_KEEPALIVE_COUNT,
                         # Set statement_timeout on connection to prevent long-running queries
                         options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
                     )
-                    keepalive_status = "enabled" if TCP_KEEPALIVE_ENABLED else "disabled"
+                    keepalive_status = "enabled" if TCP_KEEPALIVE_ENABLED == 1 else "disabled"
                     print(f"✅ PostgreSQL connection pool created (min=2, max={DB_POOL_MAX_CONNECTIONS}, tcp_keepalive={keepalive_status})")
                 except Exception as e:
                     print(f"⚠️ Failed to create connection pool: {e}")
@@ -764,7 +765,8 @@ def _create_direct_postgresql_connection(sslmode: str = None):
         cursor_factory=RealDictCursor,
         connect_timeout=10,
         # TCP keepalive settings to prevent SSL EOF errors on idle connections
-        keepalives=TCP_KEEPALIVE_ENABLED,
+        # psycopg2 expects integer (1=enabled, 0=disabled)
+        keepalives=1 if TCP_KEEPALIVE_ENABLED else 0,
         keepalives_idle=TCP_KEEPALIVE_IDLE,
         keepalives_interval=TCP_KEEPALIVE_INTERVAL,
         keepalives_count=TCP_KEEPALIVE_COUNT,
