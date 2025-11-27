@@ -161,13 +161,13 @@
 
 /* Dynamic viewport height support (for mobile address bar) */
 .min-h-dvh {
-  min-height: 100dvh;
   min-height: -webkit-fill-available;
+  min-height: 100dvh;
 }
 
 .h-dvh {
-  height: 100dvh;
   height: -webkit-fill-available;
+  height: 100dvh;
 }
 
 /* Orientation-specific utilities */

@@ -262,10 +262,16 @@ const Messages: React.FC = () => {
                 </button>
               )}
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                {selectedConversation && window.innerWidth < 768
-                  ? `${getOtherParticipant(selectedConversation).first_name} ${getOtherParticipant(selectedConversation).last_name}`
-                  : 'Messages'
-                }
+                {selectedConversation ? (
+                  <>
+                    <span className="md:hidden">
+                      {getOtherParticipant(selectedConversation).first_name} {getOtherParticipant(selectedConversation).last_name}
+                    </span>
+                    <span className="hidden md:inline">Messages</span>
+                  </>
+                ) : (
+                  'Messages'
+                )}
               </h1>
             </div>
             <div className="text-sm text-gray-500 hidden sm:block">
@@ -416,7 +422,7 @@ const Messages: React.FC = () => {
                   </div>
 
                   {/* Message Input */}
-                  <form onSubmit={sendMessage} className="p-3 sm:p-4 border-t border-gray-200 bg-white safe-area-inset">
+                  <form onSubmit={sendMessage} className="p-3 sm:p-4 border-t border-gray-200 bg-white safe-area-bottom">
                     <div className="flex space-x-2 sm:space-x-4">
                       <div className="flex-1 relative">
                         <input
