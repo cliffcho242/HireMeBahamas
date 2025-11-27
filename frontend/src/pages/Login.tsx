@@ -21,6 +21,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('admin@hiremebahamas.com');
   const [password, setPassword] = useState('AdminPass123!');
+  const [submitting, setSubmitting] = useState(false);
 
   // Check OAuth configuration using utility function
   const oauthConfig = getOAuthConfig();
@@ -39,13 +40,35 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     try {
       await login(email, password);
       toast.success('Welcome back to HireMeBahamas!');
       navigate('/');
     } catch (error: unknown) {
       const apiError = error as ApiError;
-      toast.error(apiError.message || 'Login failed');
+      
+      // Check for network errors and provide helpful messages
+      const isNetworkError = apiError?.code === 'ERR_NETWORK' || 
+                            apiError?.code === 'ECONNABORTED' ||
+                            apiError?.message?.includes('Network Error') ||
+                            apiError?.message?.includes('timeout');
+      
+      let message: string;
+      if (isNetworkError) {
+        message = 'Connection to server failed. Please check your internet connection and try again. The server may be starting up.';
+      } else if (apiError?.response?.status === 503) {
+        message = 'Server is starting up. Please wait a moment and try again.';
+      } else if (apiError?.response?.status === 429) {
+        message = 'Too many login attempts. Please wait a minute and try again.';
+      } else {
+        message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Login failed. Please try again.';
+      }
+      
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -263,10 +286,10 @@ const Login: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || submitting}
                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                 >
-                  {isLoading ? (
+                  {isLoading || submitting ? (
                     <span className="flex items-center justify-center">
                       <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
