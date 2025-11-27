@@ -247,7 +247,7 @@ docker-compose exec postgres psql -U hiremebahamas_user -d hiremebahamas -c "SEL
 
 ### Q: Is the "invalid record length" message an error?
 
-**No!** This is completely normal PostgreSQL behavior. When PostgreSQL performs WAL recovery, it reads through the Write-Ahead Log records. When it reaches the end of valid records, it logs:
+**No!** This is completely normal PostgreSQL behavior that occurs **during database startup** when recovering from an improper shutdown. When PostgreSQL performs WAL (Write-Ahead Log) recovery, it reads through the log records. When it reaches the end of valid records, it logs:
 
 ```
 LOG:  invalid record length at 0/1FC6FB0: expected at least 24, got 0
@@ -255,17 +255,22 @@ LOG:  redo done at 0/1FC6F78 system usage: CPU: user: 0.00 s, system: 0.00 s, el
 ```
 
 This simply means:
-1. PostgreSQL was reading WAL records for recovery
+1. PostgreSQL was reading WAL records for recovery during startup
 2. It reached the end of the valid log (no more records to read)
 3. The "redo done" confirms recovery completed successfully
 
 ### Q: How can I reduce PostgreSQL log noise?
 
-The docker-compose.yml configuration includes `log_min_messages=warning` to suppress informational LOG messages and only show warnings and errors. If you need to see all messages for debugging:
+The docker-compose.yml configuration includes `log_min_messages=warning` to suppress informational LOG messages and only show warnings and errors. If you need to see all messages for debugging, modify the postgres command section in docker-compose.yml:
 
 ```yaml
--c log_min_messages=info    # Show all INFO and above
--c log_min_messages=debug5  # Maximum verbosity for debugging
+# In docker-compose.yml under postgres service command:
+command: >
+  postgres
+  ... (other settings)
+  -c log_min_messages=info     # Show all INFO and above
+  # OR for maximum verbosity:
+  -c log_min_messages=debug5   # Maximum verbosity for debugging
 ```
 
 ### Q: Should I be concerned if I see these messages?
