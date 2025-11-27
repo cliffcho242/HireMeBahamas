@@ -117,15 +117,16 @@ AUTH_ENDPOINTS_PREFIX = '/api/auth/'
 SLOW_REQUEST_THRESHOLD_MS = 3000  # 3 seconds
 VERY_SLOW_REQUEST_THRESHOLD_MS = 10000  # 10 seconds
 
-# Mobile client detection patterns
+# Generic mobile client detection patterns (used after specific platform checks)
 # These patterns help identify mobile clients that may have shorter timeout settings
-MOBILE_USER_AGENT_PATTERNS = [
-    'iphone',      # iOS iPhone
-    'ipad',        # iOS iPad
-    'android',     # Android devices
-    'mobile',      # Generic mobile
+# Note: iOS and Android are handled separately for more specific detection
+GENERIC_MOBILE_USER_AGENT_PATTERNS = [
+    'mobile',      # Generic mobile indicator
     'webos',       # WebOS devices (legacy)
     'blackberry',  # BlackBerry devices (legacy)
+    'windows phone',  # Windows Phone devices
+    'opera mini',  # Opera Mini browser
+    'opera mobi',  # Opera Mobile browser
 ]
 
 
@@ -133,8 +134,15 @@ def _detect_client_type(user_agent: str) -> str:
     """
     Detect the client type from User-Agent string.
     
+    Args:
+        user_agent: The User-Agent header value from the HTTP request
+    
     Returns:
-        'mobile-ios', 'mobile-android', 'mobile', or 'desktop'
+        - 'mobile-ios': iPhone or iPad devices
+        - 'mobile-android': Android devices  
+        - 'mobile': Other mobile devices (BlackBerry, Windows Phone, etc.)
+        - 'desktop': Desktop browsers
+        - 'unknown': Empty or missing User-Agent
     """
     if not user_agent:
         return 'unknown'
@@ -149,8 +157,8 @@ def _detect_client_type(user_agent: str) -> str:
     if 'android' in ua_lower:
         return 'mobile-android'
     
-    # Generic mobile detection
-    for pattern in MOBILE_USER_AGENT_PATTERNS:
+    # Generic mobile detection for other mobile platforms
+    for pattern in GENERIC_MOBILE_USER_AGENT_PATTERNS:
         if pattern in ua_lower:
             return 'mobile'
     

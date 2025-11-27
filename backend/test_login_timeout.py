@@ -132,8 +132,12 @@ def test_detect_client_type():
         ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0', 'desktop'),
         # Desktop Safari Mac
         ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36', 'desktop'),
-        # Generic mobile
+        # Generic mobile (Mobile keyword)
         ('Mozilla/5.0 (Mobile; rv:109.0) Gecko/109.0 Firefox/109.0', 'mobile'),
+        # Windows Phone
+        ('Mozilla/5.0 (Windows Phone 10.0) AppleWebKit/537.36', 'mobile'),
+        # BlackBerry
+        ('Mozilla/5.0 (BlackBerry; U; BlackBerry 9900)', 'mobile'),
         # Empty string
         ('', 'unknown'),
         # None
