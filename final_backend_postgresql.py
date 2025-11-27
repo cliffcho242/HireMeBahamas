@@ -323,6 +323,11 @@ if USE_POSTGRESQL:
     sslmode_list = query_params.get("sslmode", [])
     sslmode = sslmode_list[0] if sslmode_list and sslmode_list[0] else "require"
     
+    # Application name for PostgreSQL connection identification
+    # This appears in PostgreSQL logs as 'app=...' instead of 'app=[unknown]'
+    # Helps identify the application source in database logs and pg_stat_activity
+    APPLICATION_NAME = os.getenv("APPLICATION_NAME", "hiremebahamas-backend")
+
     DB_CONFIG = {
         "host": parsed.hostname,
         "port": port,
@@ -330,6 +335,7 @@ if USE_POSTGRESQL:
         "user": parsed.username,
         "password": parsed.password,
         "sslmode": sslmode,
+        "application_name": APPLICATION_NAME,
     }
 
     # Validate all required fields are present
@@ -343,7 +349,8 @@ if USE_POSTGRESQL:
         raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
     print(
-        f"✅ Database config parsed: {DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']} (sslmode={sslmode})"
+        f"✅ Database config parsed: {DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']} "
+        f"(sslmode={sslmode}, app={DB_CONFIG['application_name']})"
     )
 else:
     # SQLite for local development
@@ -481,6 +488,7 @@ def _get_connection_pool():
                         user=DB_CONFIG["user"],
                         password=DB_CONFIG["password"],
                         sslmode=DB_CONFIG["sslmode"],
+                        application_name=DB_CONFIG["application_name"],
                         cursor_factory=RealDictCursor,
                         connect_timeout=10,  # Reduced from 15s for faster failure detection
                         # Set statement_timeout on connection to prevent long-running queries
@@ -677,6 +685,7 @@ def _create_direct_postgresql_connection(sslmode: str = None):
         user=DB_CONFIG["user"],
         password=DB_CONFIG["password"],
         sslmode=sslmode or DB_CONFIG["sslmode"],
+        application_name=DB_CONFIG["application_name"],
         cursor_factory=RealDictCursor,
         connect_timeout=10,
         options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
