@@ -6,10 +6,12 @@ Tests the PostgreSQL database recovery detection and monitoring features:
 - get_database_recovery_status() function
 - /api/database/recovery-status endpoint
 - Recovery status reporting in health checks
+- Graceful shutdown signal handlers
 """
 
 import json
 import os
+import signal
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -193,8 +195,6 @@ class TestGracefulShutdown:
     
     def test_signal_handlers_registered(self):
         """Test that signal handlers are registered for SIGTERM and SIGINT"""
-        import signal
-        
         # Verify signal handlers are registered
         sigterm_handler = signal.getsignal(signal.SIGTERM)
         sigint_handler = signal.getsignal(signal.SIGINT)
@@ -238,8 +238,6 @@ class TestGracefulShutdown:
     
     def test_signal_handler_handles_known_signals(self):
         """Test that signal handler works correctly for known signals"""
-        import signal
-        
         # We can't actually call the signal handler because it calls sys.exit()
         # But we can verify the handler is the expected function
         handler = signal.getsignal(signal.SIGTERM)
