@@ -418,7 +418,7 @@ DB_CONNECT_JITTER_FACTOR = 0.2
 LOGIN_REQUEST_TIMEOUT_SECONDS = _get_env_int("LOGIN_REQUEST_TIMEOUT_SECONDS", 25, 5, 60)
 
 
-def _check_request_timeout(start_time: float, timeout_seconds: float, operation: str) -> bool:
+def _check_request_timeout(start_time: float, timeout_seconds: int, operation: str) -> bool:
     """
     Check if a request has exceeded its timeout.
     
@@ -428,14 +428,14 @@ def _check_request_timeout(start_time: float, timeout_seconds: float, operation:
     
     Args:
         start_time: The timestamp when the request started (from time.time())
-        timeout_seconds: Maximum allowed time for the request
+        timeout_seconds: Maximum allowed time for the request (in seconds)
         operation: Name of the operation being checked (for logging)
         
     Returns:
         True if the request has timed out, False otherwise
     """
     elapsed = time.time() - start_time
-    if elapsed > timeout_seconds:
+    if elapsed >= timeout_seconds:
         request_id = getattr(g, 'request_id', 'unknown')
         print(
             f"[{request_id}] ⚠️ REQUEST TIMEOUT: {operation} took {elapsed:.2f}s "

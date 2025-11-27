@@ -47,8 +47,6 @@ def test_check_request_timeout_returns_true_when_timed_out():
         result = _check_request_timeout(start_time, timeout_seconds, "test operation")
         
         assert result is True, "Request that exceeded timeout should return True"
-        
-        assert result is True, "Request that exceeded timeout should return True"
 
 
 def test_login_request_timeout_config():
