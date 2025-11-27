@@ -459,6 +459,14 @@ TCP_KEEPALIVE_COUNT = _get_env_int("TCP_KEEPALIVE_COUNT", 3, 1, 10)
 # Set to 25 seconds (below typical client/proxy timeouts of 30s)
 LOGIN_REQUEST_TIMEOUT_SECONDS = _get_env_int("LOGIN_REQUEST_TIMEOUT_SECONDS", 25, 5, 60)
 
+# Registration request timeout in seconds
+# This prevents registration requests from blocking indefinitely
+# If a registration request takes longer than this, it returns a timeout error
+# This helps prevent HTTP 499 errors by returning a proper response before
+# the client or load balancer times out
+# Set to 25 seconds (below typical client/proxy timeouts of 30s)
+REGISTRATION_REQUEST_TIMEOUT_SECONDS = _get_env_int("REGISTRATION_REQUEST_TIMEOUT_SECONDS", 25, 5, 60)
+
 
 def _check_request_timeout(start_time: float, timeout_seconds: int, operation: str) -> bool:
     """
@@ -2487,12 +2495,16 @@ def register():
     - Uses return_db_connection() for proper pool management
     - Uses RETURNING clause in PostgreSQL to avoid second query
     - Validates all input before acquiring database connection
+    - Request-level timeout check to return proper response before client disconnects
+    - Detailed timing logs for performance monitoring and debugging
     """
     if request.method == "OPTIONS":
         return "", 200
 
     conn = None
     cursor = None
+    request_id = getattr(g, 'request_id', 'unknown')
+    registration_start = time.time()
 
     try:
         # Handle invalid JSON or empty body
@@ -2549,12 +2561,44 @@ def register():
 
         # Hash password before acquiring database connection to avoid holding
         # connection during CPU-intensive operation
+        # bcrypt hashing is CPU-intensive, track timing for performance monitoring
+        password_hash_start = time.time()
         password_hash = bcrypt.hashpw(
             password.encode("utf-8"), bcrypt.gensalt()
         ).decode("utf-8")
+        password_hash_ms = int((time.time() - password_hash_start) * 1000)
+        
+        print(
+            f"[{request_id}] Password hashing completed in {password_hash_ms}ms for registration: {email}"
+        )
+
+        # Check for request timeout after password hashing
+        if _check_request_timeout(registration_start, REGISTRATION_REQUEST_TIMEOUT_SECONDS, "registration (after password hash)"):
+            return (
+                jsonify({
+                    "success": False,
+                    "message": "Registration request timed out. Please try again."
+                }),
+                504,  # Gateway Timeout
+            )
 
         # Get database connection - use single connection for all operations
+        db_start = time.time()
         conn = get_db_connection()
+        
+        if conn is None:
+            # Connection pool exhausted - return 503 to indicate temporary unavailability
+            print(
+                f"[{request_id}] ⚠️ Connection pool exhausted for registration attempt: {email}"
+            )
+            return (
+                jsonify({
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again in a moment."
+                }),
+                503,
+            )
+        
         cursor = conn.cursor()
 
         # Check if user already exists
@@ -2563,12 +2607,30 @@ def register():
         else:
             cursor.execute("SELECT id FROM users WHERE LOWER(email) = ?", (email,))
 
+        db_check_ms = int((time.time() - db_start) * 1000)
+        print(
+            f"[{request_id}] Database query (email check) completed in {db_check_ms}ms for {email}"
+        )
+
         if cursor.fetchone():
+            print(
+                f"[{request_id}] Registration failed - User already exists: {email}"
+            )
             return (
                 jsonify(
                     {"success": False, "message": "User with this email already exists"}
                 ),
                 409,
+            )
+
+        # Check for request timeout after email check
+        if _check_request_timeout(registration_start, REGISTRATION_REQUEST_TIMEOUT_SECONDS, "registration (after email check)"):
+            return (
+                jsonify({
+                    "success": False,
+                    "message": "Registration request timed out. Please try again."
+                }),
+                504,  # Gateway Timeout
             )
 
         # Insert new user and get all fields in one query (PostgreSQL)
@@ -2581,6 +2643,7 @@ def register():
         phone = data.get("phone", "").strip()
         bio = data.get("bio", "").strip()
 
+        insert_start = time.time()
         if USE_POSTGRESQL:
             # Use RETURNING * to get all user data in a single query
             cursor.execute(
@@ -2628,9 +2691,31 @@ def register():
             cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
             user = cursor.fetchone()
 
+        insert_ms = int((time.time() - insert_start) * 1000)
+        print(
+            f"[{request_id}] Database insert completed in {insert_ms}ms for user_id: {user_id}"
+        )
+
+        commit_start = time.time()
         conn.commit()
+        commit_ms = int((time.time() - commit_start) * 1000)
+        
+        print(
+            f"[{request_id}] Database commit completed in {commit_ms}ms"
+        )
+
+        # Check for request timeout after database operations
+        if _check_request_timeout(registration_start, REGISTRATION_REQUEST_TIMEOUT_SECONDS, "registration (after db commit)"):
+            return (
+                jsonify({
+                    "success": False,
+                    "message": "Registration request timed out. Please try again."
+                }),
+                504,  # Gateway Timeout
+            )
 
         # Create JWT token
+        token_start = time.time()
         token_payload = {
             "user_id": user["id"],
             "email": user["email"],
@@ -2638,6 +2723,31 @@ def register():
         }
 
         token = jwt.encode(token_payload, app.config["SECRET_KEY"], algorithm="HS256")
+        token_create_ms = int((time.time() - token_start) * 1000)
+        
+        print(
+            f"[{request_id}] Token creation completed in {token_create_ms}ms"
+        )
+
+        # Calculate total registration time from start of endpoint
+        if hasattr(g, 'start_time'):
+            total_registration_ms = int((time.time() - g.start_time) * 1000)
+            
+            print(
+                f"[{request_id}] Registration successful - user: {user['email']}, user_id: {user['id']}, "
+                f"user_type: {user['user_type']}, total_time: {total_registration_ms}ms "
+                f"(password_hash: {password_hash_ms}ms, db_check: {db_check_ms}ms, "
+                f"db_insert: {insert_ms}ms, db_commit: {commit_ms}ms, token_create: {token_create_ms}ms)"
+            )
+            
+            # Warn about slow registration operations
+            if total_registration_ms > 1000:  # Over 1 second
+                print(
+                    f"[{request_id}] ⚠️ SLOW REGISTRATION: Total time {total_registration_ms}ms - "
+                    f"Breakdown: PasswordHash={password_hash_ms}ms, DBCheck={db_check_ms}ms, "
+                    f"DBInsert={insert_ms}ms, DBCommit={commit_ms}ms, Token={token_create_ms}ms. "
+                    f"Consider checking connection pool, database performance, or bcrypt configuration."
+                )
 
         return (
             jsonify(
@@ -2664,7 +2774,7 @@ def register():
         )
 
     except Exception as e:
-        print(f"Registration error: {str(e)}")
+        print(f"[{request_id}] Registration error: {type(e).__name__}: {str(e)}")
         return (
             jsonify(
                 {
