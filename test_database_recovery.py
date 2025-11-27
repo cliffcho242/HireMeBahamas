@@ -174,6 +174,88 @@ class TestTransientErrorDetection:
             regular_error = Exception("Some regular error")
             result = final_backend_postgresql._is_transient_connection_error(regular_error)
             assert result is False
+    
+    def test_is_transient_connection_error_ssl_decryption_failed(self, app):
+        """Test that SSL decryption failed error is detected as transient"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
+        with app.app_context():
+            mock_error = MockPsycopg2Error("SSL error: decryption failed or bad record mac")
+            result = final_backend_postgresql._is_transient_connection_error(mock_error)
+            assert result is True
+    
+    def test_is_transient_connection_error_bad_record_mac(self, app):
+        """Test that bad record mac error is detected as transient"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
+        with app.app_context():
+            mock_error = MockPsycopg2Error("SSL SYSCALL error: bad record mac")
+            result = final_backend_postgresql._is_transient_connection_error(mock_error)
+            assert result is True
+
+
+class TestStaleSSLConnectionDetection:
+    """Tests for stale SSL connection error detection logic"""
+    
+    def test_is_stale_ssl_connection_error_decryption_failed(self, app):
+        """Test that SSL decryption failed error is detected as stale SSL connection"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
+        with app.app_context():
+            mock_error = MockPsycopg2Error("SSL error: decryption failed or bad record mac")
+            result = final_backend_postgresql._is_stale_ssl_connection_error(mock_error)
+            assert result is True
+    
+    def test_is_stale_ssl_connection_error_bad_record_mac(self, app):
+        """Test that bad record mac error is detected as stale SSL connection"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
+        with app.app_context():
+            mock_error = MockPsycopg2Error("bad record mac")
+            result = final_backend_postgresql._is_stale_ssl_connection_error(mock_error)
+            assert result is True
+    
+    def test_is_stale_ssl_connection_error_unexpected_eof(self, app):
+        """Test that unexpected EOF error is detected as stale SSL connection"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
+        with app.app_context():
+            mock_error = MockPsycopg2Error("SSL error: unexpected eof while reading")
+            result = final_backend_postgresql._is_stale_ssl_connection_error(mock_error)
+            assert result is True
+    
+    def test_is_stale_ssl_connection_error_ssl_closed_unexpectedly(self, app):
+        """Test that SSL connection closed unexpectedly is detected"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
+        with app.app_context():
+            mock_error = MockPsycopg2Error("ssl connection has been closed unexpectedly")
+            result = final_backend_postgresql._is_stale_ssl_connection_error(mock_error)
+            assert result is True
+    
+    def test_is_stale_ssl_connection_error_non_ssl(self, app):
+        """Test that non-SSL errors are not detected as stale SSL connection"""
+        with app.app_context():
+            # Regular exception should not be stale SSL
+            regular_error = Exception("Some regular error")
+            result = final_backend_postgresql._is_stale_ssl_connection_error(regular_error)
+            assert result is False
+    
+    def test_is_stale_ssl_connection_error_syntax_error(self, app):
+        """Test that query syntax errors are not detected as stale SSL connection"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
+        with app.app_context():
+            mock_error = MockPsycopg2Error("syntax error at or near 'SELECT'")
+            result = final_backend_postgresql._is_stale_ssl_connection_error(mock_error)
+            assert result is False
 
 
 class TestConnectionPoolStats:
