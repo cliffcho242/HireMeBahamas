@@ -131,19 +131,22 @@ def log_request_start():
     - Request ID for tracking through logs
     - Start time for duration calculation
     - Client IP and User-Agent for debugging
+    - Host for correlation with infrastructure logs (e.g., Render)
     """
-    # Generate unique request ID
-    g.request_id = str(uuid.uuid4())[:8]
+    # Generate unique request ID (use longer format for better correlation with external logs)
+    g.request_id = str(uuid.uuid4())[:12]
     g.start_time = time.time()
     
     # Get client information
     client_ip = request.remote_addr or 'unknown'
     user_agent = request.headers.get('User-Agent', 'unknown')
+    # Get host for correlation with infrastructure logs (e.g., Render's logs)
+    host = request.host or 'unknown'
     
     # Log incoming request with context (truncate long user agents)
     user_agent_display = user_agent if len(user_agent) <= 100 else f"{user_agent[:100]}..."
     print(
-        f"[{g.request_id}] --> {request.method} {request.path} "
+        f"[{g.request_id}] --> {request.method} {host}{request.path} "
         f"clientIP=\"{client_ip}\" userAgent=\"{user_agent_display}\""
     )
 
@@ -157,12 +160,15 @@ def log_request_end(response):
     that may cause timeout issues. For authentication endpoints, it provides additional
     context to help diagnose login failures.
     
-    Logs:
+    Log format matches Render's infrastructure logs for easier correlation:
+    - Host for identifying the target service
+    - Request ID for tracing across log entries
     - Response status code
     - Request duration in milliseconds
+    - Response size in bytes
+    - Client IP and User-Agent for debugging
     - Warnings for slow requests (> 3 seconds)
     - Critical warnings for very slow requests (> 10 seconds)
-    - Error details for authentication failures
     """
     if not hasattr(g, 'request_id') or not hasattr(g, 'start_time'):
         # Request logging was bypassed (e.g., for static files or middleware chain broken)
@@ -173,14 +179,20 @@ def log_request_end(response):
     
     duration_ms = int((time.time() - g.start_time) * 1000)
     client_ip = request.remote_addr or 'unknown'
+    host = request.host or 'unknown'
+    user_agent = request.headers.get('User-Agent', 'unknown')
+    
+    # Truncate long user agents for log readability
+    user_agent_display = user_agent if len(user_agent) <= 100 else f"{user_agent[:100]}..."
     
     # Determine log level based on status code
     if response.status_code < 400:
-        # Success - log at INFO level
+        # Success - log at INFO level with full context for correlation
         print(
-            f"[{g.request_id}] <-- {response.status_code} {request.method} {request.path} "
+            f"[{request.method}]{response.status_code} {host}{request.path} "
+            f"clientIP=\"{client_ip}\" requestID=\"{g.request_id}\" "
             f"responseTimeMS={duration_ms} responseBytes={response.content_length or 0} "
-            f"clientIP=\"{client_ip}\""
+            f"userAgent=\"{user_agent_display}\""
         )
     else:
         # Client/Server error - log with more detail
@@ -198,8 +210,10 @@ def log_request_end(response):
                 pass
         
         print(
-            f"[{g.request_id}] <-- {response.status_code} {request.method} {request.path} "
-            f"responseTimeMS={duration_ms} clientIP=\"{client_ip}\"{error_detail}"
+            f"[{request.method}]{response.status_code} {host}{request.path} "
+            f"clientIP=\"{client_ip}\" requestID=\"{g.request_id}\" "
+            f"responseTimeMS={duration_ms} responseBytes={response.content_length or 0} "
+            f"userAgent=\"{user_agent_display}\"{error_detail}"
         )
     
     # Warn about slow requests with appropriate severity level
@@ -211,7 +225,7 @@ def log_request_end(response):
         threshold_note = f">{SLOW_REQUEST_THRESHOLD_MS}ms threshold"
         
         print(
-            f"[{g.request_id}] ⚠️ {severity}: {request.method} {request.path} "
+            f"[{g.request_id}] ⚠️ {severity}: {request.method} {host}{request.path} "
             f"took {duration_ms}ms ({threshold_note}). "
             f"This may cause HTTP 499 (Client Closed Request) errors. "
             f"Check database connection pool, bcrypt rounds, and query performance."
