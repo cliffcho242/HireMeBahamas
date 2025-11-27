@@ -156,7 +156,21 @@ After making changes, commit and push to trigger a new analysis.
 - Regenerate the token in SonarCloud if needed
 - Update the GitHub secret with the new token
 
-### Project Not Found
+### Project Not Found / "Could not find a default branch" Error
+
+This error occurs when the project hasn't been imported into SonarCloud yet. The workflow will gracefully skip analysis and show setup instructions when this happens.
+
+**To fix:**
+
+1. Go to [https://sonarcloud.io](https://sonarcloud.io) and log in with GitHub
+2. Click the **+** button in the top right corner
+3. Select "Analyze new project"
+4. Choose your GitHub organization: `cliffcho242`
+5. Select the `HireMeBahamas` repository
+6. Click "Set Up"
+7. Once the project is created, re-run the SonarCloud workflow
+
+**Additional checks:**
 
 - Verify the project key in `sonar-project.properties` matches your SonarCloud project
 - Check that the project is imported in SonarCloud

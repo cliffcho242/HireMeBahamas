@@ -62,8 +62,27 @@ jobs:
             echo "token_set=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Analyze with SonarCloud
+      - name: Check if SonarCloud project exists
+        id: check_project
         if: steps.check_token.outputs.token_set == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          # Check if the SonarCloud project exists by querying the API
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -u "${SONAR_TOKEN}:" \
+            "https://sonarcloud.io/api/components/show?component=cliffcho242_HireMeBahamas")
+          
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "SonarCloud project exists"
+            echo "project_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "SonarCloud project not found (HTTP status: $HTTP_STATUS)"
+            echo "project_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Analyze with SonarCloud
+        if: steps.check_token.outputs.token_set == 'true' && steps.check_project.outputs.project_exists == 'true'
         # You can pin the exact commit or the version.
         # uses: SonarSource/sonarcloud-github-action@v2.2.0
         uses: SonarSource/sonarcloud-github-action@4006f663ecaf1f8093e8e4abb9227f6041f52216
@@ -86,6 +105,18 @@ jobs:
           # When you need the analysis to take place in a directory other than the one from which it was launched, default is .
           projectBaseDir: .
       
+      - name: Project Not Found Instructions
+        if: steps.check_token.outputs.token_set == 'true' && steps.check_project.outputs.project_exists == 'false'
+        run: |
+          echo "::warning::SonarCloud project 'cliffcho242_HireMeBahamas' not found. The project needs to be imported first."
+          echo "::warning::Follow these steps to set up the project:"
+          echo "::warning::1. Go to https://sonarcloud.io and log in with GitHub"
+          echo "::warning::2. Click the '+' button in the top right and select 'Analyze new project'"
+          echo "::warning::3. Select your GitHub organization 'cliffcho242'"
+          echo "::warning::4. Choose the 'HireMeBahamas' repository and click 'Set Up'"
+          echo "::warning::5. Once imported, re-run this workflow"
+          echo "::warning::See SONARCLOUD_SETUP.md for detailed instructions"
+
       - name: Setup Instructions
         if: steps.check_token.outputs.token_set == 'false'
         run: |
