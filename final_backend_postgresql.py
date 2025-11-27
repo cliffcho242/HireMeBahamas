@@ -1172,13 +1172,10 @@ def _execute_query_internal(query, params, fetch, fetchone, commit, conn):
     Returns:
         Query result (dict, list of dicts, or None)
     """
-    if USE_POSTGRESQL:
-        cursor = conn.cursor()
-        # Convert SQLite ? placeholders to PostgreSQL %s
-        executed_query = query.replace("?", "%s")
-    else:
-        cursor = conn.cursor()
-        executed_query = query
+    cursor = conn.cursor()
+    
+    # Convert SQLite ? placeholders to PostgreSQL %s if using PostgreSQL
+    executed_query = query.replace("?", "%s") if USE_POSTGRESQL else query
 
     if params:
         cursor.execute(executed_query, params)
@@ -1193,10 +1190,6 @@ def _execute_query_internal(query, params, fetch, fetchone, commit, conn):
 
     if commit:
         conn.commit()
-        if USE_POSTGRESQL:
-            # Get last inserted ID for PostgreSQL
-            if "INSERT" in query.upper() and "RETURNING" not in query.upper():
-                result = cursor.fetchone()
 
     cursor.close()
     return result
