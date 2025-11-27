@@ -520,16 +520,20 @@ DB_CONNECT_JITTER_FACTOR = 0.2
 # - If no response after keepalives_count probes, the connection is marked dead
 # - This allows the application to detect and recover from stale connections
 #
-# Recommended values for cloud environments like Railway:
-# - keepalives_idle: 60s (start probing after 60 seconds of idle)
-# - keepalives_interval: 30s (probe every 30 seconds)
+# Default values optimized for cloud environments (Railway, Render, AWS, etc.):
+# - keepalives_idle: 30s (start probing after 30 seconds of idle)
+# - keepalives_interval: 10s (probe every 10 seconds)
 # - keepalives_count: 3 (mark dead after 3 failed probes)
 #
-# Total detection time = idle + (interval * count) = 60 + (30 * 3) = 150 seconds
-# This is well under typical cloud load balancer idle timeouts (5-10 minutes)
+# Total detection time = idle + (interval * count) = 30 + (10 * 3) = 60 seconds
+# This is aggressive enough to detect stale connections before most cloud load balancers
+# drop them (typically 60-300 seconds idle timeout).
+#
+# These settings are more aggressive than previous defaults (60/30/3 = 150s total)
+# to prevent SSL EOF errors in cloud environments with shorter idle timeouts.
 TCP_KEEPALIVE_ENABLED = _get_env_int("TCP_KEEPALIVE_ENABLED", 1, 0, 1)
-TCP_KEEPALIVE_IDLE = _get_env_int("TCP_KEEPALIVE_IDLE", 60, 10, 300)
-TCP_KEEPALIVE_INTERVAL = _get_env_int("TCP_KEEPALIVE_INTERVAL", 30, 5, 60)
+TCP_KEEPALIVE_IDLE = _get_env_int("TCP_KEEPALIVE_IDLE", 30, 10, 300)
+TCP_KEEPALIVE_INTERVAL = _get_env_int("TCP_KEEPALIVE_INTERVAL", 10, 5, 60)
 TCP_KEEPALIVE_COUNT = _get_env_int("TCP_KEEPALIVE_COUNT", 3, 1, 10)
 
 # Login request timeout in seconds
