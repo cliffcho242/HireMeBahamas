@@ -238,12 +238,14 @@ IS_RAILWAY = os.getenv("RAILWAY_PROJECT_ID") is not None
 
 # Production is determined by:
 # 1. Explicit ENVIRONMENT=production setting, OR
-# 2. Railway deployment with explicit production environment setting
-# Note: If RAILWAY_ENVIRONMENT is not set or empty, we don't assume production
-# to avoid unexpected behavior - require explicit configuration
+# 2. Running on Railway (Railway is inherently a production platform)
+# Railway deployments automatically enable production mode to ensure:
+# - Database keepalive is active (prevents Railway PostgreSQL from sleeping)
+# - Production-level logging and error handling
+# - Proper data persistence with PostgreSQL
 IS_PRODUCTION = (
     ENVIRONMENT in ["production", "prod"] or 
-    (IS_RAILWAY and RAILWAY_ENVIRONMENT in ["production", "prod"])
+    IS_RAILWAY  # Railway deployments are always considered production
 )
 
 # Track if database configuration is valid for production
@@ -2014,10 +2016,11 @@ def start_database_keepalive():
     global _keepalive_thread, _keepalive_running
     
     if not DB_KEEPALIVE_ENABLED:
-        if not IS_PRODUCTION and not IS_RAILWAY:
+        # Only log keepalive disabled message when PostgreSQL is configured
+        # but environment conditions prevent keepalive from running.
+        # Skip message for SQLite/development since keepalive is not applicable.
+        if USE_POSTGRESQL:
             print("ℹ️ Database keepalive disabled (not in production or Railway environment)")
-        elif not USE_POSTGRESQL:
-            print("ℹ️ Database keepalive disabled (PostgreSQL not configured)")
         return
     
     if _keepalive_thread is not None and _keepalive_thread.is_alive():
