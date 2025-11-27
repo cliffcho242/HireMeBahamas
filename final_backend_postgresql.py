@@ -2275,7 +2275,7 @@ def database_recovery_status():
 
 
 @app.route("/api/auth/register", methods=["POST", "OPTIONS"])
-@limiter.limit("5 per minute")  # Prevent rapid registration attempts
+@limiter.limit("10 per minute")  # Allow reasonable registration attempts
 @requires_database
 def register():
     """Register a new user

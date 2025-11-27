@@ -44,7 +44,7 @@ const api = axios.create({
 // Retry configuration
 const MAX_RETRIES = 5; // Increased from 3
 const RETRY_DELAY = 3000; // 2 seconds (increased from 1s)
-const BACKEND_WAKE_TIME = 90000; // 60 seconds for Render.com free tier (increased from 30s)
+const BACKEND_WAKE_TIME = 90000; // 90 seconds for Render.com free tier cold starts
 
 // Helper to check if backend is sleeping (Render free tier)
 interface ApiErrorType {
@@ -172,7 +172,11 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: async (credentials: { email: string; password: string }) => {
-    const response = await api.post('/api/auth/login', credentials);
+    // Use extended timeout for login as backend may need to wake up
+    // and password verification can take time
+    const response = await api.post('/api/auth/login', credentials, {
+      timeout: BACKEND_WAKE_TIME, // 90 seconds for cold start + password verification
+    });
     return response.data;
   },
 
@@ -185,7 +189,11 @@ export const authAPI = {
     location: string;
     phone?: string;
   }) => {
-    const response = await api.post('/api/auth/register', userData);
+    // Use extended timeout for registration as backend may need to wake up
+    // and password hashing can take time
+    const response = await api.post('/api/auth/register', userData, {
+      timeout: BACKEND_WAKE_TIME, // 90 seconds for cold start + password hashing
+    });
     return response.data;
   },
 
