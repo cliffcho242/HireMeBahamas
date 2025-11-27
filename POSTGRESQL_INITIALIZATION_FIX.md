@@ -9,7 +9,10 @@ PostgreSQL Database directory appears to contain a database; Skipping initializa
 LOG:  database system was interrupted; last known up at 2025-11-25 05:57:26 UTC
 LOG:  database system was not properly shut down; automatic recovery in progress
 LOG:  invalid record length at 0/1FC6DA0: expected at least 24, got 0
+LOG:  redo done at 0/1FC6F78 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
 ```
+
+> **⚠️ IMPORTANT**: The "invalid record length" message is **NOT an error**! It is normal PostgreSQL behavior that indicates WAL recovery completed successfully. PostgreSQL logs this when it reaches the end of valid WAL records. The "redo done" message that follows confirms successful recovery.
 
 ### Root Cause
 
@@ -239,3 +242,40 @@ docker-compose exec postgres psql -U hiremebahamas_user -d hiremebahamas -c "SEL
 # Check for long-running queries
 docker-compose exec postgres psql -U hiremebahamas_user -d hiremebahamas -c "SELECT pid, now() - pg_stat_activity.query_start AS duration, query FROM pg_stat_activity WHERE (now() - pg_stat_activity.query_start) > interval '5 minutes';"
 ```
+
+## Frequently Asked Questions
+
+### Q: Is the "invalid record length" message an error?
+
+**No!** This is completely normal PostgreSQL behavior that occurs **during database startup** when recovering from an improper shutdown. When PostgreSQL performs WAL (Write-Ahead Log) recovery, it reads through the log records. When it reaches the end of valid records, it logs:
+
+```
+LOG:  invalid record length at 0/1FC6FB0: expected at least 24, got 0
+LOG:  redo done at 0/1FC6F78 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+```
+
+This simply means:
+1. PostgreSQL was reading WAL records for recovery during startup
+2. It reached the end of the valid log (no more records to read)
+3. The "redo done" confirms recovery completed successfully
+
+### Q: How can I reduce PostgreSQL log noise?
+
+The docker-compose.yml configuration includes `log_min_messages=warning` to suppress informational LOG messages and only show warnings and errors. If you need to see all messages for debugging, modify the postgres command section in docker-compose.yml:
+
+```yaml
+# In docker-compose.yml under postgres service command:
+command: >
+  postgres
+  ... (other settings)
+  -c log_min_messages=info     # Show all INFO and above
+  # OR for maximum verbosity:
+  -c log_min_messages=debug5   # Maximum verbosity for debugging
+```
+
+### Q: Should I be concerned if I see these messages?
+
+Only if you see them **frequently**. Occasional recovery messages after deployments or container restarts are normal. However, if you see them on every startup, ensure:
+1. Docker containers have `stop_grace_period: 60s` or higher
+2. Applications properly close database connections on shutdown
+3. No forceful container terminations (use `docker stop`, not `docker kill`)
