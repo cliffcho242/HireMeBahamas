@@ -481,6 +481,19 @@ LOGIN_REQUEST_TIMEOUT_SECONDS = _get_env_int("LOGIN_REQUEST_TIMEOUT_SECONDS", 25
 # Set to 25 seconds (below typical client/proxy timeouts of 30s)
 REGISTRATION_REQUEST_TIMEOUT_SECONDS = _get_env_int("REGISTRATION_REQUEST_TIMEOUT_SECONDS", 25, 5, 60)
 
+# Bcrypt password hashing rounds configuration
+# Default of 12 rounds can be slow (~200-300ms per operation) and contribute to HTTP 499 timeouts
+# 10 rounds provides good security while being much faster (~60ms per operation)
+# See OWASP recommendations: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+# Configurable via environment variable for different deployment environments:
+# - 10 rounds: ~60ms per operation, excellent performance, good security (recommended)
+# - 11 rounds: ~120ms per operation, very good security
+# - 12 rounds: ~240ms per operation, excellent security (original default)
+# Note: Existing password hashes continue to work regardless of this setting
+BCRYPT_ROUNDS = _get_env_int("BCRYPT_ROUNDS", 10, 4, 14)
+
+print(f"🔐 Bcrypt rounds configured: {BCRYPT_ROUNDS}")
+
 
 def _check_request_timeout(start_time: float, timeout_seconds: int, operation: str) -> bool:
     """
@@ -2576,14 +2589,16 @@ def register():
         # Hash password before acquiring database connection to avoid holding
         # connection during CPU-intensive operation
         # bcrypt hashing is CPU-intensive, track timing for performance monitoring
+        # Uses BCRYPT_ROUNDS configuration for optimal performance vs security balance
         password_hash_start = time.time()
         password_hash = bcrypt.hashpw(
-            password.encode("utf-8"), bcrypt.gensalt()
+            password.encode("utf-8"), bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
         ).decode("utf-8")
         password_hash_ms = int((time.time() - password_hash_start) * 1000)
         
         print(
-            f"[{request_id}] Password hashing completed in {password_hash_ms}ms for registration: {email}"
+            f"[{request_id}] Password hashing completed in {password_hash_ms}ms "
+            f"(bcrypt rounds: {BCRYPT_ROUNDS}) for registration: {email}"
         )
 
         # Check for request timeout after password hashing
@@ -3003,7 +3018,7 @@ def login():
                     f"[{request_id}] ⚠️ SLOW LOGIN: Total time {total_login_ms}ms - "
                     f"Breakdown: DB={db_query_ms}ms, Password={password_verify_ms}ms, "
                     f"Token={token_create_ms}ms. Consider checking connection pool, "
-                    f"database performance, or bcrypt configuration."
+                    f"database performance, or bcrypt configuration (current rounds: {BCRYPT_ROUNDS})."
                 )
 
         return (
