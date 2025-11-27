@@ -188,5 +188,63 @@ class TestConnectionPoolStats:
             assert stats["pooled"] == False
 
 
+class TestGracefulShutdown:
+    """Tests for graceful shutdown functionality"""
+    
+    def test_signal_handlers_registered(self):
+        """Test that signal handlers are registered for SIGTERM and SIGINT"""
+        import signal
+        
+        # Verify signal handlers are registered
+        sigterm_handler = signal.getsignal(signal.SIGTERM)
+        sigint_handler = signal.getsignal(signal.SIGINT)
+        
+        # Signal handlers should be set (not default)
+        assert sigterm_handler is not signal.SIG_DFL, "SIGTERM handler should be registered"
+        assert sigint_handler is not signal.SIG_DFL, "SIGINT handler should be registered"
+        
+        # Both should point to our custom handler
+        assert callable(sigterm_handler), "SIGTERM handler should be callable"
+        assert callable(sigint_handler), "SIGINT handler should be callable"
+    
+    def test_shutdown_executor_function_exists(self):
+        """Test that _shutdown_executor function exists and is callable"""
+        assert hasattr(final_backend_postgresql, '_shutdown_executor')
+        assert callable(final_backend_postgresql._shutdown_executor)
+    
+    def test_shutdown_connection_pool_function_exists(self):
+        """Test that _shutdown_connection_pool function exists and is callable"""
+        assert hasattr(final_backend_postgresql, '_shutdown_connection_pool')
+        assert callable(final_backend_postgresql._shutdown_connection_pool)
+    
+    def test_executor_shutdown_is_idempotent(self):
+        """Test that calling _shutdown_executor multiple times doesn't raise errors"""
+        # Should be safe to call multiple times (idempotent)
+        final_backend_postgresql._shutdown_executor()
+        final_backend_postgresql._shutdown_executor()
+        # No exception means success
+    
+    def test_connection_pool_shutdown_is_idempotent(self):
+        """Test that calling _shutdown_connection_pool multiple times doesn't raise errors"""
+        # Should be safe to call multiple times (idempotent)
+        final_backend_postgresql._shutdown_connection_pool()
+        final_backend_postgresql._shutdown_connection_pool()
+        # No exception means success
+    
+    def test_signal_handler_function_exists(self):
+        """Test that _signal_handler function exists and is callable"""
+        assert hasattr(final_backend_postgresql, '_signal_handler')
+        assert callable(final_backend_postgresql._signal_handler)
+    
+    def test_signal_handler_handles_known_signals(self):
+        """Test that signal handler works correctly for known signals"""
+        import signal
+        
+        # We can't actually call the signal handler because it calls sys.exit()
+        # But we can verify the handler is the expected function
+        handler = signal.getsignal(signal.SIGTERM)
+        assert handler == final_backend_postgresql._signal_handler
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
