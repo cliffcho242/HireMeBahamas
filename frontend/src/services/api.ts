@@ -34,7 +34,7 @@ if (!ENV_API && typeof window !== 'undefined') {
 // Create axios instance with retry logic
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000, // 45 seconds timeout (increased from 30s)
+  timeout: 60000, // 60 seconds default timeout
   headers: {
     'Content-Type': 'application/json',
   },
@@ -42,9 +42,9 @@ const api = axios.create({
 });
 
 // Retry configuration
-const MAX_RETRIES = 5; // Increased from 3
-const RETRY_DELAY = 3000; // 2 seconds (increased from 1s)
-const BACKEND_WAKE_TIME = 90000; // 90 seconds for Render.com free tier cold starts
+const MAX_RETRIES = 5;
+const RETRY_DELAY = 3000; // 3 seconds base delay for retries
+const BACKEND_WAKE_TIME = 120000; // 120 seconds (2 minutes) for Render.com free tier cold starts
 
 // Helper to check if backend is sleeping (Render free tier)
 interface ApiErrorType {
@@ -103,26 +103,27 @@ api.interceptors.response.use(
     // Check if backend is sleeping (Render.com free tier)
     if (isBackendSleeping(error)) {
       const retryCount = parseInt(config.headers['X-Retry-Count'] || '0');
+      const maxWakeRetries = 4; // More retries for cold start scenarios
       
-      if (retryCount === 0) {
-        console.log('Backend appears to be sleeping or starting up...');
-        console.log('This may take 30-60 seconds on first request.');
-        console.log('Status:', error.response?.status || 'No response');
+      if (retryCount < maxWakeRetries) {
+        const isFirstRetry = retryCount === 0;
+        
+        if (isFirstRetry) {
+          console.log('Backend appears to be sleeping or starting up...');
+          console.log('This may take 1-2 minutes on first request (cold start).');
+          console.log('Status:', error.response?.status || 'No response');
+        } else {
+          console.log(`Backend still waking up... Retry ${retryCount + 1}/${maxWakeRetries}`);
+        }
         
         // Increase timeout for wake-up
         config.timeout = BACKEND_WAKE_TIME;
-        config.headers['X-Retry-Count'] = 1;
-        
-        // Wait longer before retrying
-        await new Promise(resolve => setTimeout(resolve, 10000)); // 10 seconds
-        
-        return api(config);
-      } else if (retryCount < 3) {
-        // Additional retries for backend wake-up
         config.headers['X-Retry-Count'] = retryCount + 1;
-        console.log(`Backend still waking up... Retry ${retryCount + 1}/3`);
         
-        await new Promise(resolve => setTimeout(resolve, 15000)); // 15 seconds between retries
+        // Exponential backoff: 5s, 10s, 20s, 30s
+        const waitTime = isFirstRetry ? 5000 : Math.min(10000 * Math.pow(2, retryCount - 1), 30000);
+        console.log(`Waiting ${waitTime / 1000} seconds before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
         
         return api(config);
       }
@@ -175,7 +176,7 @@ export const authAPI = {
     // Use extended timeout for login as backend may need to wake up
     // and password verification can take time
     const response = await api.post('/api/auth/login', credentials, {
-      timeout: BACKEND_WAKE_TIME, // 90 seconds for cold start + password verification
+      timeout: BACKEND_WAKE_TIME, // 2 minutes for cold start + password verification
     });
     return response.data;
   },
@@ -192,7 +193,7 @@ export const authAPI = {
     // Use extended timeout for registration as backend may need to wake up
     // and password hashing can take time
     const response = await api.post('/api/auth/register', userData, {
-      timeout: BACKEND_WAKE_TIME, // 90 seconds for cold start + password hashing
+      timeout: BACKEND_WAKE_TIME, // 2 minutes for cold start + password hashing
     });
     return response.data;
   },
