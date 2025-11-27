@@ -243,26 +243,51 @@ const Messages: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen min-h-[100dvh] bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-            <div className="text-sm text-gray-500">
+          <div className="flex justify-between items-center h-14 sm:h-16">
+            <div className="flex items-center">
+              {/* Back button for mobile when conversation is selected */}
+              {selectedConversation && (
+                <button
+                  onClick={() => setSelectedConversation(null)}
+                  className="md:hidden mr-3 p-1 -ml-1 rounded-full hover:bg-gray-100"
+                  aria-label="Back to conversations"
+                >
+                  <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                {selectedConversation ? (
+                  <>
+                    <span className="md:hidden">
+                      {getOtherParticipant(selectedConversation).first_name} {getOtherParticipant(selectedConversation).last_name}
+                    </span>
+                    <span className="hidden md:inline">Messages</span>
+                  </>
+                ) : (
+                  'Messages'
+                )}
+              </h1>
+            </div>
+            <div className="text-sm text-gray-500 hidden sm:block">
               {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-6">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm overflow-hidden" style={{ height: 'calc(100dvh - 140px)' }}>
           <div className="flex h-full">
-            {/* Conversations Sidebar */}
-            <div className="w-80 border-r border-gray-200 flex flex-col">
+            {/* Conversations Sidebar - Hidden on mobile when conversation is selected */}
+            <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 border-r border-gray-200 flex-col`}>
               {/* Search */}
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-3 sm:p-4 border-b border-gray-200">
                 <div className="relative">
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
@@ -270,7 +295,7 @@ const Messages: React.FC = () => {
                     placeholder="Search conversations..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 sm:py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base sm:text-sm"
                   />
                 </div>
               </div>
@@ -278,9 +303,9 @@ const Messages: React.FC = () => {
               {/* Conversations List */}
               <div className="flex-1 overflow-y-auto">
                 {filteredConversations.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">
-                    <UserIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg font-medium mb-2">No conversations</p>
+                  <div className="p-6 sm:p-8 text-center text-gray-500">
+                    <UserIcon className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-gray-300" />
+                    <p className="text-base sm:text-lg font-medium mb-2">No conversations</p>
                     <p className="text-sm">Start connecting with professionals!</p>
                   </div>
                 ) : (
@@ -292,31 +317,31 @@ const Messages: React.FC = () => {
                       <motion.div
                         key={conversation.id}
                         onClick={() => setSelectedConversation(conversation)}
-                        className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                        className={`p-3 sm:p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation ${
                           selectedConversation?.id === conversation.id ? 'bg-blue-50 border-blue-200' : ''
                         }`}
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                       >
                         <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                            <span className="text-white font-semibold">
+                          <div className="w-11 h-11 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-semibold text-sm sm:text-base">
                               {otherParticipant.first_name[0]}{otherParticipant.last_name[0]}
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start">
-                              <h3 className="font-semibold text-gray-900 truncate">
+                              <h3 className="font-semibold text-gray-900 truncate text-base sm:text-sm">
                                 {otherParticipant.first_name} {otherParticipant.last_name}
                               </h3>
                               {lastMessage && (
-                                <span className="text-xs text-gray-400 ml-2">
+                                <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
                                   {formatTime(lastMessage.created_at)}
                                 </span>
                               )}
                             </div>
                             {lastMessage && (
-                              <p className="text-sm text-gray-500 truncate mt-1">
+                              <p className="text-sm text-gray-500 truncate mt-0.5 sm:mt-1">
                                 {lastMessage.sender_id === user?.id && 'You: '}
                                 {lastMessage.content}
                               </p>
@@ -330,12 +355,12 @@ const Messages: React.FC = () => {
               </div>
             </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 flex flex-col">
+            {/* Messages Area - Full width on mobile when conversation is selected */}
+            <div className={`${!selectedConversation ? 'hidden md:flex' : 'flex'} flex-1 flex-col`}>
               {selectedConversation ? (
                 <>
-                  {/* Chat Header */}
-                  <div className="p-4 border-b border-gray-200 bg-white">
+                  {/* Chat Header - Hidden on mobile since we show it in main header */}
+                  <div className="hidden md:block p-4 border-b border-gray-200 bg-white">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                         <span className="text-white font-semibold text-sm">
@@ -354,7 +379,7 @@ const Messages: React.FC = () => {
                   </div>
 
                   {/* Messages List */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                  <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50">
                     {selectedConversation.messages.map((message, index) => {
                       const isOwnMessage = message.sender_id === user?.id;
                       const showAvatar = index === 0 || selectedConversation.messages[index - 1].sender_id !== message.sender_id;
@@ -366,17 +391,17 @@ const Messages: React.FC = () => {
                           animate={{ opacity: 1, y: 0 }}
                           className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                         >
-                          <div className={`flex items-end space-x-2 max-w-xs lg:max-w-md ${isOwnMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                          <div className={`flex items-end space-x-2 max-w-[85%] sm:max-w-xs lg:max-w-md ${isOwnMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
                             {showAvatar && !isOwnMessage && (
-                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                                 <span className="text-white font-semibold text-xs">
                                   {message.sender.first_name[0]}{message.sender.last_name[0]}
                                 </span>
                               </div>
                             )}
-                            {!showAvatar && !isOwnMessage && <div className="w-8" />}
+                            {!showAvatar && !isOwnMessage && <div className="w-7 sm:w-8" />}
                             <div
-                              className={`px-4 py-2 rounded-2xl ${
+                              className={`px-3 sm:px-4 py-2 rounded-2xl ${
                                 isOwnMessage
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white text-gray-900 shadow-sm'
@@ -397,22 +422,22 @@ const Messages: React.FC = () => {
                   </div>
 
                   {/* Message Input */}
-                  <form onSubmit={sendMessage} className="p-4 border-t border-gray-200 bg-white">
-                    <div className="flex space-x-4">
+                  <form onSubmit={sendMessage} className="p-3 sm:p-4 border-t border-gray-200 bg-white safe-area-bottom">
+                    <div className="flex space-x-2 sm:space-x-4">
                       <div className="flex-1 relative">
                         <input
                           type="text"
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
                           placeholder="Type a message..."
-                          className="w-full px-4 py-3 border border-gray-200 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base sm:text-sm"
                           disabled={sending}
                         />
                       </div>
                       <button
                         type="submit"
                         disabled={sending || !newMessage.trim()}
-                        className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-w-[48px] min-h-[48px] flex items-center justify-center"
                       >
                         <PaperAirplaneIcon className="w-5 h-5" />
                       </button>
@@ -421,12 +446,12 @@ const Messages: React.FC = () => {
                 </>
               ) : (
                 <div className="flex-1 flex items-center justify-center bg-gray-50">
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <PaperAirplaneIcon className="w-8 h-8 text-gray-400" />
+                  <div className="text-center p-4">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <PaperAirplaneIcon className="w-7 h-7 sm:w-8 sm:h-8 text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a conversation</h3>
-                    <p className="text-gray-600">Choose a conversation to start messaging</p>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Select a conversation</h3>
+                    <p className="text-sm text-gray-600">Choose a conversation to start messaging</p>
                   </div>
                 </div>
               )}
