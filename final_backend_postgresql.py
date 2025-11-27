@@ -1154,60 +1154,117 @@ def return_db_connection(conn, discard=False):
         pass
 
 
+def _execute_query_internal(query, params, fetch, fetchone, commit, conn):
+    """
+    Internal query execution helper.
+    
+    Executes the query using the provided connection and returns the result.
+    Handles PostgreSQL placeholder conversion and result fetching.
+    
+    Args:
+        query: SQL query to execute
+        params: Query parameters
+        fetch: If True, fetch all results
+        fetchone: If True, fetch one result
+        commit: If True, commit the transaction
+        conn: Database connection to use
+        
+    Returns:
+        Query result (dict, list of dicts, or None)
+    """
+    cursor = conn.cursor()
+    
+    # Convert SQLite ? placeholders to PostgreSQL %s if using PostgreSQL
+    executed_query = query.replace("?", "%s") if USE_POSTGRESQL else query
+
+    if params:
+        cursor.execute(executed_query, params)
+    else:
+        cursor.execute(executed_query)
+
+    result = None
+    if fetchone:
+        result = cursor.fetchone()
+    elif fetch:
+        result = cursor.fetchall()
+
+    if commit:
+        conn.commit()
+
+    cursor.close()
+    return result
+
+
 def execute_query(query, params=None, fetch=False, fetchone=False, commit=False):
     """
     Universal query executor for both PostgreSQL and SQLite.
     
-    Handles SSL errors by discarding bad connections and retrying once.
+    Handles SSL errors by discarding bad connections and retrying once with
+    a fresh connection. This prevents transient SSL errors (like 
+    "decryption failed or bad record mac") from causing user-visible failures.
+    
+    The retry behavior:
+    1. First attempt uses a connection from the pool (or creates a new one)
+    2. If an SSL error occurs, the bad connection is discarded
+    3. A second attempt is made with a fresh connection
+    4. If the retry also fails, the error is raised to the caller
+    
+    Note: Only SSL-related errors trigger retry. Other database errors
+    (constraint violations, syntax errors, etc.) are raised immediately.
     """
-    conn = get_db_connection()
-    discard_connection = False
-
-    try:
-        if USE_POSTGRESQL:
-            cursor = conn.cursor()
-            # Convert SQLite ? placeholders to PostgreSQL %s
-            query = query.replace("?", "%s")
-        else:
-            cursor = conn.cursor()
-
-        if params:
-            cursor.execute(query, params)
-        else:
-            cursor.execute(query)
-
-        result = None
-        if fetchone:
-            result = cursor.fetchone()
-        elif fetch:
-            result = cursor.fetchall()
-
-        if commit:
-            conn.commit()
-            if USE_POSTGRESQL:
-                # Get last inserted ID for PostgreSQL
-                if "INSERT" in query.upper() and "RETURNING" not in query.upper():
-                    result = cursor.fetchone()
-
-        cursor.close()
-        return_db_connection(conn, discard=discard_connection)
-
-        return result
-
-    except Exception as e:
-        # Check if this is an SSL error that requires discarding the connection
-        if USE_POSTGRESQL and _is_stale_ssl_connection_error(e):
-            discard_connection = True
-            logger.warning("SSL connection error detected, will discard connection: %s", e)
+    max_attempts = 2 if USE_POSTGRESQL else 1
+    last_error = None
+    
+    for attempt in range(max_attempts):
+        conn = None
+        discard_connection = False
         
         try:
-            conn.rollback()
-        except Exception:
-            # Rollback may fail if connection is already broken
-            discard_connection = True
-        
-        return_db_connection(conn, discard=discard_connection)
-        raise e
+            conn = get_db_connection()
+            result = _execute_query_internal(query, params, fetch, fetchone, commit, conn)
+            return_db_connection(conn, discard=False)
+            return result
+
+        except Exception as e:
+            last_error = e
+            
+            # Check if this is an SSL error that requires discarding the connection
+            if USE_POSTGRESQL and _is_stale_ssl_connection_error(e):
+                discard_connection = True
+                
+                if attempt < max_attempts - 1:
+                    # Log the retry attempt
+                    logger.warning(
+                        "SSL connection error on attempt %d/%d, retrying with fresh connection: %s",
+                        attempt + 1, max_attempts, e
+                    )
+                else:
+                    # Last attempt failed
+                    logger.error(
+                        "SSL connection error on final attempt %d/%d: %s",
+                        attempt + 1, max_attempts, e
+                    )
+            else:
+                # Non-SSL error - don't retry
+                discard_connection = False
+            
+            # Attempt rollback
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    # Rollback may fail if connection is already broken
+                    discard_connection = True
+                
+                return_db_connection(conn, discard=discard_connection)
+            
+            # Only retry for SSL errors
+            if not (USE_POSTGRESQL and _is_stale_ssl_connection_error(e)):
+                raise e
+    
+    # All retry attempts exhausted
+    if last_error:
+        raise last_error
 
 
 def _get_psycopg2_error_details(e):
