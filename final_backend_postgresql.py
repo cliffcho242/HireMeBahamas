@@ -1,4 +1,5 @@
 import atexit
+import logging
 import os
 import random
 import signal
@@ -27,6 +28,15 @@ from flask_limiter.util import get_remote_address
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Configure logging for database connection management
+# Using a named logger allows filtering and configuration at the application level
+# NullHandler is the recommended way to configure logging for library code
+# It allows the application to configure logging appropriately without this module
+# interfering with application-level logging configuration
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
 
 print("Initializing Flask app with PostgreSQL support...")
 app = Flask(__name__)
@@ -512,9 +522,107 @@ def _is_transient_connection_error(error: Exception) -> bool:
         "terminating connection",        # Server-initiated disconnect
         "unexpected eof",                # SSL EOF error from dropped connection
         "ssl connection has been closed unexpectedly",  # Specific SSL closure error
+        "decryption failed or bad record mac",  # SSL error from stale/corrupted connection
+        "bad record mac",                # Shortened form of SSL MAC error
     ]
     
     return any(pattern in error_msg for pattern in transient_patterns)
+
+
+def _is_stale_ssl_connection_error(error: Exception) -> bool:
+    """
+    Check if an error indicates a stale or corrupted SSL connection.
+    
+    These errors occur when:
+    - A TCP connection is silently dropped by network intermediaries but SSL layer doesn't know
+    - The SSL session becomes out of sync with the underlying TCP connection
+    - Connection pool returns a connection that was idle too long and became stale
+    
+    When these errors occur, the connection MUST be discarded (not returned to pool)
+    and a new connection should be created.
+    
+    Args:
+        error: The exception that occurred during query execution
+        
+    Returns:
+        True if the connection should be discarded due to SSL issues
+    """
+    # psycopg2.OperationalError is a subclass of psycopg2.Error, so only check parent
+    if not isinstance(error, psycopg2.Error):
+        return False
+    
+    error_msg = str(error).lower()
+    
+    # SSL error patterns that indicate the connection is corrupted and must be discarded
+    # Note: patterns are specific to avoid false positives from unrelated SSL errors
+    stale_ssl_patterns = [
+        "decryption failed or bad record mac",  # SSL MAC verification failed
+        "bad record mac",                        # Shortened form
+        "ssl error: decryption failed",          # Specific SSL decryption error
+        "ssl error: unexpected eof",             # SSL EOF from dropped connection
+        "unexpected eof while reading",          # Variant of SSL EOF error
+        "ssl connection has been closed unexpectedly",
+        "connection reset by peer",              # Connection was forcibly closed
+        "connection timed out",                  # Connection became unresponsive
+    ]
+    
+    return any(pattern in error_msg for pattern in stale_ssl_patterns)
+
+
+def _validate_connection(conn) -> bool:
+    """
+    Validate that a database connection is still usable.
+    
+    Performs a lightweight query to check if the connection is alive.
+    This helps detect stale connections before they cause SSL errors.
+    
+    Args:
+        conn: A psycopg2 connection object
+        
+    Returns:
+        True if the connection is valid, False otherwise
+    """
+    cursor = None
+    try:
+        # Use a lightweight query to check connection health
+        # This is similar to SQLAlchemy's pool_pre_ping feature
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
+        return True
+    except Exception as e:
+        logger.warning("Connection validation failed: %s", e)
+        return False
+    finally:
+        # Ensure cursor is always closed
+        if cursor is not None:
+            try:
+                cursor.close()
+            except Exception:
+                pass  # Ignore errors closing cursor on bad connection
+
+
+def _discard_connection(conn):
+    """
+    Discard a bad connection instead of returning it to the pool.
+    
+    When an SSL error occurs, the connection is corrupted and cannot be reused.
+    This function ensures the connection is properly closed and not returned to
+    the pool where it could cause errors for subsequent requests.
+    
+    Args:
+        conn: The connection to discard
+    """
+    if conn is None:
+        return
+    
+    try:
+        # First try to close the connection properly
+        conn.close()
+    except Exception:
+        pass  # Connection may already be in a bad state
+    
+    logger.info("Discarded bad connection (will not return to pool)")
 
 
 def _get_connection_pool():
@@ -782,6 +890,7 @@ def get_db_connection():
     
     Includes:
     - Timeout handling to prevent indefinite blocking when pool is exhausted
+    - Connection validation to detect stale connections before use
     - Exponential backoff retry for transient connection errors during database recovery
     - SSL fallback for certificate-related connection issues
     
@@ -797,13 +906,32 @@ def get_db_connection():
                     conn_pool, POOL_TIMEOUT_SECONDS
                 )
                 if conn:
-                    return conn
+                    # Validate the pooled connection before using it
+                    # This prevents "SSL error: decryption failed or bad record mac" errors
+                    # that occur when using stale connections from the pool
+                    if _validate_connection(conn):
+                        return conn
+                    else:
+                        # Connection is stale, discard it and get another
+                        logger.warning("Pooled connection is stale, discarding and getting another")
+                        _discard_connection(conn)
+                        # Try to get another connection from pool
+                        conn = _get_pooled_connection_with_timeout(
+                            conn_pool, POOL_TIMEOUT_SECONDS
+                        )
+                        if conn and _validate_connection(conn):
+                            return conn
+                        elif conn:
+                            _discard_connection(conn)
+                        # Fall through to direct connection
+                        logger.warning("Second pooled connection also stale, creating direct connection")
                 # If timeout occurred, fall through to direct connection
-                print("⚠️ Pool timeout, creating direct connection")
+                if not conn:
+                    logger.warning("Pool timeout, creating direct connection")
             except psycopg2.pool.PoolError as e:
-                print(f"⚠️ Pool error: {e}, falling back to direct connection")
+                logger.warning("Pool error: %s, falling back to direct connection", e)
             except Exception as e:
-                print(f"⚠️ Pool connection failed, falling back to direct: {e}")
+                logger.warning("Pool connection failed, falling back to direct: %s", e)
         
         # Fallback to direct connection with retry logic for transient errors
         # This handles database recovery scenarios after improper shutdown
@@ -814,7 +942,7 @@ def get_db_connection():
             try:
                 conn = _create_direct_postgresql_connection()
                 if attempt > 0:
-                    print(f"✅ Connection succeeded on attempt {attempt + 1}")
+                    logger.info("Connection succeeded on attempt %d", attempt + 1)
                 return conn
             except psycopg2.OperationalError as e:
                 last_error = e
@@ -822,12 +950,12 @@ def get_db_connection():
                 
                 # Handle SSL-related errors by trying with sslmode=prefer
                 if "ssl" in error_msg or "certificate" in error_msg:
-                    print(f"⚠️ SSL connection failed, attempting with sslmode=prefer...")
+                    logger.warning("SSL connection failed, attempting with sslmode=prefer...")
                     try:
                         conn = _create_direct_postgresql_connection(sslmode="prefer")
                         return conn
                     except Exception as fallback_error:
-                        print(f"❌ SSL fallback connection also failed: {fallback_error}")
+                        logger.error("SSL fallback connection also failed: %s", fallback_error)
                         last_error = fallback_error
                 
                 # Check if this is a transient error worth retrying
@@ -839,8 +967,10 @@ def get_db_connection():
                     jitter = random.uniform(0, DB_CONNECT_JITTER_FACTOR * delay_ms)
                     actual_delay_ms = min(delay_ms + jitter, DB_CONNECT_MAX_DELAY_MS)
                     
-                    print(f"⚠️ Transient connection error (attempt {attempt + 1}/{DB_CONNECT_MAX_RETRIES}): {last_error}")
-                    print(f"   Retrying in {actual_delay_ms:.0f}ms...")
+                    logger.warning(
+                        "Transient connection error (attempt %d/%d): %s. Retrying in %.0fms...",
+                        attempt + 1, DB_CONNECT_MAX_RETRIES, last_error, actual_delay_ms
+                    )
                     
                     time.sleep(actual_delay_ms / 1000.0)
                     delay_ms *= 2  # Exponential backoff
@@ -877,22 +1007,32 @@ def get_db_connection():
         return conn
 
 
-def return_db_connection(conn):
+def return_db_connection(conn, discard=False):
     """Return a connection to the pool or close it.
     
     Handles both pooled and non-pooled (fallback) connections correctly:
-    - For pooled connections: Returns to pool for reuse
+    - For pooled connections: Returns to pool for reuse (unless discard=True)
     - For non-pooled/fallback connections: Closes the connection
+    - If discard=True: Always close the connection, never return to pool
+    
+    The discard parameter should be set to True when:
+    - An SSL error occurred (e.g., "decryption failed or bad record mac")
+    - The connection is detected as stale or corrupted
+    - Any error indicates the connection cannot be safely reused
     
     If putconn() fails (e.g., connection wasn't from pool), falls through
     to close the connection, ensuring proper cleanup in all cases.
+    
+    Args:
+        conn: The database connection to return or close
+        discard: If True, discard the connection instead of returning to pool
     """
     if conn is None:
         return
     
     if USE_POSTGRESQL:
         conn_pool = _get_connection_pool()
-        if conn_pool:
+        if conn_pool and not discard:
             try:
                 # Try to return to pool - will fail for non-pooled connections
                 conn_pool.putconn(conn)
@@ -901,8 +1041,11 @@ def return_db_connection(conn):
                 # Connection wasn't from pool (fallback connection)
                 # Fall through to close it
                 pass
+        elif discard:
+            logger.info("Discarding connection due to error (not returning to pool)")
     
-    # Close the connection if not using pool, not PostgreSQL, or pool return failed
+    # Close the connection if not using pool, not PostgreSQL, 
+    # pool return failed, or discard was requested
     try:
         conn.close()
     except Exception:
@@ -911,9 +1054,12 @@ def return_db_connection(conn):
 
 def execute_query(query, params=None, fetch=False, fetchone=False, commit=False):
     """
-    Universal query executor for both PostgreSQL and SQLite
+    Universal query executor for both PostgreSQL and SQLite.
+    
+    Handles SSL errors by discarding bad connections and retrying once.
     """
     conn = get_db_connection()
+    discard_connection = False
 
     try:
         if USE_POSTGRESQL:
@@ -942,13 +1088,23 @@ def execute_query(query, params=None, fetch=False, fetchone=False, commit=False)
                     result = cursor.fetchone()
 
         cursor.close()
-        return_db_connection(conn)
+        return_db_connection(conn, discard=discard_connection)
 
         return result
 
     except Exception as e:
-        conn.rollback()
-        return_db_connection(conn)
+        # Check if this is an SSL error that requires discarding the connection
+        if USE_POSTGRESQL and _is_stale_ssl_connection_error(e):
+            discard_connection = True
+            logger.warning("SSL connection error detected, will discard connection: %s", e)
+        
+        try:
+            conn.rollback()
+        except Exception:
+            # Rollback may fail if connection is already broken
+            discard_connection = True
+        
+        return_db_connection(conn, discard=discard_connection)
         raise e
 
 
