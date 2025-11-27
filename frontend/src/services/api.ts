@@ -44,7 +44,7 @@ const api = axios.create({
 // Retry configuration
 const MAX_RETRIES = 5; // Increased from 3
 const RETRY_DELAY = 3000; // 2 seconds (increased from 1s)
-const BACKEND_WAKE_TIME = 90000; // 60 seconds for Render.com free tier (increased from 30s)
+const BACKEND_WAKE_TIME = 90000; // 90 seconds for Render.com free tier cold starts
 
 // Helper to check if backend is sleeping (Render free tier)
 interface ApiErrorType {
