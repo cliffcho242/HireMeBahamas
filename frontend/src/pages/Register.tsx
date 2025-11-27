@@ -70,7 +70,24 @@ const Register: React.FC = () => {
       navigate('/');
     } catch (error: unknown) {
       const apiError = error as ApiError;
-      const message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Registration failed';
+      
+      // Check for network errors and provide helpful messages
+      const isNetworkError = apiError?.code === 'ERR_NETWORK' || 
+                            apiError?.code === 'ECONNABORTED' ||
+                            apiError?.message?.includes('Network Error') ||
+                            apiError?.message?.includes('timeout');
+      
+      let message: string;
+      if (isNetworkError) {
+        message = 'Connection to server failed. Please check your internet connection and try again. The server may be starting up.';
+      } else if (apiError?.response?.status === 503) {
+        message = 'Server is starting up. Please wait a moment and try again.';
+      } else if (apiError?.response?.status === 429) {
+        message = 'Too many registration attempts. Please wait a minute and try again.';
+      } else {
+        message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Registration failed. Please try again.';
+      }
+      
       toast.error(message);
     } finally {
       setSubmitting(false);
