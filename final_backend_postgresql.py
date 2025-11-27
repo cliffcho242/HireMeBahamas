@@ -418,6 +418,29 @@ DB_CONNECT_MAX_DELAY_MS = _get_env_int("DB_CONNECT_MAX_DELAY_MS", 2000, 500, 100
 # The actual jitter added is between 0 and (JITTER_FACTOR * delay_ms)
 DB_CONNECT_JITTER_FACTOR = 0.2
 
+# TCP Keepalive configuration for PostgreSQL connections
+# These settings prevent "SSL error: unexpected eof while reading" errors that occur
+# when idle TCP connections are silently dropped by network intermediaries (load balancers,
+# firewalls, NAT devices) without properly closing the SSL connection.
+#
+# How it works:
+# - TCP keepalive sends periodic probe packets on idle connections
+# - If the connection is still alive, the remote end responds
+# - If no response after keepalives_count probes, the connection is marked dead
+# - This allows the application to detect and recover from stale connections
+#
+# Recommended values for cloud environments like Railway:
+# - keepalives_idle: 60s (start probing after 60 seconds of idle)
+# - keepalives_interval: 30s (probe every 30 seconds)
+# - keepalives_count: 3 (mark dead after 3 failed probes)
+#
+# Total detection time = idle + (interval * count) = 60 + (30 * 3) = 150 seconds
+# This is well under typical cloud load balancer idle timeouts (5-10 minutes)
+TCP_KEEPALIVE_ENABLED = _get_env_int("TCP_KEEPALIVE_ENABLED", 1, 0, 1)
+TCP_KEEPALIVE_IDLE = _get_env_int("TCP_KEEPALIVE_IDLE", 60, 10, 300)
+TCP_KEEPALIVE_INTERVAL = _get_env_int("TCP_KEEPALIVE_INTERVAL", 30, 5, 60)
+TCP_KEEPALIVE_COUNT = _get_env_int("TCP_KEEPALIVE_COUNT", 3, 1, 10)
+
 # Login request timeout in seconds
 # This prevents login requests from blocking indefinitely
 # If a login request takes longer than this, it returns a timeout error
@@ -487,6 +510,8 @@ def _is_transient_connection_error(error: Exception) -> bool:
         "too many connections",          # Temporary pool exhaustion
         "connection is closed",          # Stale connection
         "terminating connection",        # Server-initiated disconnect
+        "unexpected eof",                # SSL EOF error from dropped connection
+        "ssl error",                     # General SSL errors (often recoverable)
     ]
     
     return any(pattern in error_msg for pattern in transient_patterns)
@@ -502,6 +527,7 @@ def _get_connection_pool():
     - maxconn configurable via DB_POOL_MAX_CONNECTIONS env var (default 20)
     - Reduced connect_timeout to 10s for faster failure detection
     - Added options for statement timeout on all connections
+    - TCP keepalive to prevent SSL EOF errors from stale connections
     """
     global _connection_pool
     
@@ -516,6 +542,9 @@ def _get_connection_pool():
                     # minconn=2: Start with 2 connections for faster initial requests
                     # maxconn: Configurable via DB_POOL_MAX_CONNECTIONS env var
                     # This helps prevent pool exhaustion during traffic spikes
+                    #
+                    # TCP keepalive parameters prevent "SSL error: unexpected eof while reading"
+                    # by detecting and handling stale connections before they cause SSL errors
                     _connection_pool = pool.ThreadedConnectionPool(
                         minconn=2,
                         maxconn=DB_POOL_MAX_CONNECTIONS,
@@ -528,10 +557,16 @@ def _get_connection_pool():
                         application_name=DB_CONFIG["application_name"],
                         cursor_factory=RealDictCursor,
                         connect_timeout=10,  # Reduced from 15s for faster failure detection
+                        # TCP keepalive settings to prevent SSL EOF errors on idle connections
+                        keepalives=TCP_KEEPALIVE_ENABLED,
+                        keepalives_idle=TCP_KEEPALIVE_IDLE,
+                        keepalives_interval=TCP_KEEPALIVE_INTERVAL,
+                        keepalives_count=TCP_KEEPALIVE_COUNT,
                         # Set statement_timeout on connection to prevent long-running queries
                         options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
                     )
-                    print(f"✅ PostgreSQL connection pool created (min=2, max={DB_POOL_MAX_CONNECTIONS})")
+                    keepalive_status = "enabled" if TCP_KEEPALIVE_ENABLED else "disabled"
+                    print(f"✅ PostgreSQL connection pool created (min=2, max={DB_POOL_MAX_CONNECTIONS}, tcp_keepalive={keepalive_status})")
                 except Exception as e:
                     print(f"⚠️ Failed to create connection pool: {e}")
                     # Pool creation failed, will fall back to direct connections
@@ -706,6 +741,9 @@ def _create_direct_postgresql_connection(sslmode: str = None):
     """
     Create a direct PostgreSQL connection with the specified SSL mode.
     
+    Includes TCP keepalive settings to prevent "SSL error: unexpected eof while reading"
+    errors that occur when idle connections are silently dropped by network intermediaries.
+    
     Args:
         sslmode: SSL mode to use. If None, uses the configured default.
         
@@ -725,6 +763,11 @@ def _create_direct_postgresql_connection(sslmode: str = None):
         application_name=DB_CONFIG["application_name"],
         cursor_factory=RealDictCursor,
         connect_timeout=10,
+        # TCP keepalive settings to prevent SSL EOF errors on idle connections
+        keepalives=TCP_KEEPALIVE_ENABLED,
+        keepalives_idle=TCP_KEEPALIVE_IDLE,
+        keepalives_interval=TCP_KEEPALIVE_INTERVAL,
+        keepalives_count=TCP_KEEPALIVE_COUNT,
         options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
     )
 
