@@ -2216,11 +2216,18 @@ DB_KEEPALIVE_FAILURE_THRESHOLD = 3  # Number of consecutive failures before warn
 DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS = 60  # Delay before retrying after unexpected error
 DB_KEEPALIVE_SHUTDOWN_TIMEOUT_SECONDS = 5  # Max time to wait for graceful shutdown
 
+# Aggressive keepalive for the first period after startup
+# This helps ensure the database stays awake right after deployment
+# After this period, switch to normal interval to reduce overhead
+DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS = int(os.getenv("DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS", "3600"))  # 1 hour
+DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS", "120"))  # 2 minutes
+
 # Track keepalive thread and status
 _keepalive_thread = None
 _keepalive_running = False
 _keepalive_last_ping = None
 _keepalive_consecutive_failures = 0
+_keepalive_start_time = None  # Track when keepalive started for aggressive mode
 
 
 def database_keepalive_worker():
@@ -2228,7 +2235,9 @@ def database_keepalive_worker():
     Background worker that periodically pings the database to prevent it from sleeping.
     
     Railway databases on free/hobby tiers sleep after 15 minutes of inactivity.
-    This worker pings the database every 10 minutes to keep it active.
+    This worker uses an adaptive interval strategy:
+    - Aggressive mode (first hour): Ping every 2 minutes to ensure database stays awake
+    - Normal mode (after first hour): Ping every 10 minutes for maintenance
     
     The keepalive uses a simple SELECT 1 query that:
     - Wakes up sleeping connections
@@ -2236,30 +2245,74 @@ def database_keepalive_worker():
     - Minimal resource overhead
     - Non-intrusive to production operations
     """
-    global _keepalive_running, _keepalive_last_ping, _keepalive_consecutive_failures
+    global _keepalive_running, _keepalive_last_ping, _keepalive_consecutive_failures, _keepalive_start_time
     
     _keepalive_running = True
-    print(f"🔄 Database keepalive started (interval: {DB_KEEPALIVE_INTERVAL_SECONDS}s)")
+    _keepalive_start_time = datetime.now(timezone.utc)
     
-    # Perform initial ping immediately to verify connection on startup
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1")
-        cursor.fetchone()
-        cursor.close()
-        return_db_connection(conn)
-        _keepalive_last_ping = datetime.now(timezone.utc)
-        print(f"✅ Initial database keepalive ping successful")
-    except Exception as e:
-        error_msg = str(e)[:100]
-        print(f"⚠️ Initial database keepalive ping failed: {error_msg}")
-        _keepalive_consecutive_failures += 1
+    print(f"🔄 Database keepalive started")
+    print(f"   Aggressive mode: {DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS}s interval for first {DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS}s")
+    print(f"   Normal mode: {DB_KEEPALIVE_INTERVAL_SECONDS}s interval after")
+    
+    # Perform aggressive initial pings to ensure database is fully awake
+    # Railway databases may take multiple queries to fully wake up after sleeping
+    # We perform 3 pings with 2-second intervals for a total wake-up time of ~6 seconds
+    initial_ping_count = 3
+    initial_ping_delay = 2  # seconds between initial pings
+    
+    for i in range(initial_ping_count):
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+            cursor.close()
+            return_db_connection(conn)
+            _keepalive_last_ping = datetime.now(timezone.utc)
+            
+            if i == 0:
+                print(f"✅ Initial database keepalive ping {i + 1}/{initial_ping_count} successful")
+            else:
+                print(f"✅ Database warm-up ping {i + 1}/{initial_ping_count} successful")
+            
+            # Short delay between warm-up pings
+            if i < initial_ping_count - 1:
+                time.sleep(initial_ping_delay)
+                
+        except Exception as e:
+            error_msg = str(e)[:100]
+            print(f"⚠️ Initial database keepalive ping {i + 1}/{initial_ping_count} failed: {error_msg}")
+            _keepalive_consecutive_failures += 1
+            # Wait a bit longer before retry on failure
+            if i < initial_ping_count - 1:
+                time.sleep(initial_ping_delay * 2)
+    
+    print(f"🔥 Database warm-up complete, entering aggressive mode (ping every {DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS}s)")
+    
+    # Flag to track if we've transitioned to normal mode
+    transitioned_to_normal = False
     
     while _keepalive_running:
         try:
+            # Determine current interval based on how long keepalive has been running
+            elapsed_seconds = (datetime.now(timezone.utc) - _keepalive_start_time).total_seconds()
+            
+            if elapsed_seconds < DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS:
+                # Aggressive mode - more frequent pings right after deployment
+                current_interval = DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS
+                mode = "aggressive"
+            else:
+                # Normal mode - standard interval
+                current_interval = DB_KEEPALIVE_INTERVAL_SECONDS
+                mode = "normal"
+                
+                # Log transition to normal mode once
+                if not transitioned_to_normal:
+                    transitioned_to_normal = True
+                    print(f"📊 Transitioning to normal keepalive mode (ping every {DB_KEEPALIVE_INTERVAL_SECONDS}s)")
+            
             # Wait for the interval before next ping
-            time.sleep(DB_KEEPALIVE_INTERVAL_SECONDS)
+            time.sleep(current_interval)
             
             if not _keepalive_running:
                 break
@@ -2277,7 +2330,7 @@ def database_keepalive_worker():
                 # Update success status
                 _keepalive_last_ping = datetime.now(timezone.utc)
                 _keepalive_consecutive_failures = 0
-                print(f"✅ Database keepalive ping successful at {_keepalive_last_ping.isoformat()}")
+                print(f"✅ Database keepalive ping successful [{mode}] at {_keepalive_last_ping.isoformat()}")
                 
             except Exception as e:
                 _keepalive_consecutive_failures += 1
@@ -2506,12 +2559,31 @@ def api_health_check():
         
         # Add keepalive status for monitoring
         if DB_KEEPALIVE_ENABLED:
+            # Determine current mode based on elapsed time
+            if _keepalive_start_time:
+                elapsed_seconds = (datetime.now(timezone.utc) - _keepalive_start_time).total_seconds()
+                is_aggressive_mode = elapsed_seconds < DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS
+                current_interval = DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS if is_aggressive_mode else DB_KEEPALIVE_INTERVAL_SECONDS
+                mode = "aggressive" if is_aggressive_mode else "normal"
+                time_until_normal = max(0, DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS - elapsed_seconds)
+            else:
+                current_interval = DB_KEEPALIVE_INTERVAL_SECONDS
+                mode = "initializing"
+                time_until_normal = None
+            
             keepalive_status = {
                 "enabled": True,
                 "running": _keepalive_running,
-                "interval_seconds": DB_KEEPALIVE_INTERVAL_SECONDS,
+                "mode": mode,
+                "current_interval_seconds": current_interval,
+                "normal_interval_seconds": DB_KEEPALIVE_INTERVAL_SECONDS,
+                "aggressive_interval_seconds": DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS,
                 "consecutive_failures": _keepalive_consecutive_failures,
             }
+            
+            if time_until_normal is not None and time_until_normal > 0:
+                keepalive_status["seconds_until_normal_mode"] = int(time_until_normal)
+            
             if _keepalive_last_ping:
                 keepalive_status["last_ping"] = _keepalive_last_ping.isoformat()
                 keepalive_status["seconds_since_last_ping"] = (

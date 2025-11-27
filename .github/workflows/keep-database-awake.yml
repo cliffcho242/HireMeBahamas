@@ -1,0 +1,161 @@
+name: Keep Database Awake
+
+# This workflow prevents the PostgreSQL database from sleeping by periodically
+# pinging the backend health endpoint. Railway free/hobby tier databases sleep
+# after 15 minutes of inactivity.
+#
+# Schedule: Every 10 minutes (before the 15-minute sleep threshold)
+# This acts as a backup to the in-app keepalive mechanism and ensures
+# the database stays awake even during deployment windows.
+
+on:
+  schedule:
+    # Run every 10 minutes to prevent database sleep
+    # Railway databases sleep after 15 minutes of inactivity
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    # Allow manual trigger for testing
+
+concurrency:
+  group: keep-database-awake
+  cancel-in-progress: true
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Ping Backend Health Endpoint (Railway)
+        id: ping-railway
+        continue-on-error: true
+        env:
+          RAILWAY_BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
+        run: |
+          if [ -z "$RAILWAY_BACKEND_URL" ]; then
+            echo "ℹ️ RAILWAY_BACKEND_URL not configured, skipping Railway ping"
+            echo "skipped=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "🔄 Pinging Railway backend at $RAILWAY_BACKEND_URL/api/health"
+          
+          # First attempt with 30s timeout
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 30 \
+            "$RAILWAY_BACKEND_URL/api/health" 2>/dev/null) || true
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Railway backend is healthy (HTTP $http_code)"
+            echo "$body" | head -20
+            echo "success=true" >> $GITHUB_OUTPUT
+          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
+            echo "⚠️ Railway backend responded with HTTP $http_code"
+            echo "success=false" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Railway backend did not respond (may be waking up)"
+            echo "🔄 Retrying with longer timeout (60s)..."
+            
+            # Second attempt with 60s timeout (for cold starts)
+            response=$(curl -s -w "\n%{http_code}" \
+              --max-time 60 \
+              "$RAILWAY_BACKEND_URL/api/health" 2>/dev/null) || true
+            
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | head -n -1)
+            
+            if [ "$http_code" = "200" ]; then
+              echo "✅ Railway backend is healthy after retry (HTTP $http_code)"
+              echo "$body" | head -20
+              echo "success=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Railway backend failed to respond after retry"
+              echo "success=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+      
+      - name: Ping Backend Health Endpoint (Render)
+        id: ping-render
+        continue-on-error: true
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+        run: |
+          if [ -z "$RENDER_BACKEND_URL" ]; then
+            echo "ℹ️ RENDER_BACKEND_URL not configured, skipping Render ping"
+            echo "skipped=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "🔄 Pinging Render backend at $RENDER_BACKEND_URL/api/health"
+          
+          # First attempt with 30s timeout
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 30 \
+            "$RENDER_BACKEND_URL/api/health" 2>/dev/null) || true
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Render backend is healthy (HTTP $http_code)"
+            echo "$body" | head -20
+            echo "success=true" >> $GITHUB_OUTPUT
+          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
+            echo "⚠️ Render backend responded with HTTP $http_code"
+            echo "success=false" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Render backend did not respond (may be waking up)"
+            echo "🔄 Retrying with longer timeout (60s)..."
+            
+            # Second attempt with 60s timeout (for cold starts)
+            response=$(curl -s -w "\n%{http_code}" \
+              --max-time 60 \
+              "$RENDER_BACKEND_URL/api/health" 2>/dev/null) || true
+            
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | head -n -1)
+            
+            if [ "$http_code" = "200" ]; then
+              echo "✅ Render backend is healthy after retry (HTTP $http_code)"
+              echo "$body" | head -20
+              echo "success=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Render backend failed to respond after retry"
+              echo "success=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Database Keepalive Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          railway_status="${{ steps.ping-railway.outputs.success }}"
+          railway_skipped="${{ steps.ping-railway.outputs.skipped }}"
+          if [ "$railway_skipped" = "true" ]; then
+            echo "| Railway | ⏭️ Skipped (not configured) |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$railway_status" = "true" ]; then
+            echo "| Railway | ✅ Healthy |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Railway | ⚠️ Issues detected |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          render_status="${{ steps.ping-render.outputs.success }}"
+          render_skipped="${{ steps.ping-render.outputs.skipped }}"
+          if [ "$render_skipped" = "true" ]; then
+            echo "| Render | ⏭️ Skipped (not configured) |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$render_status" = "true" ]; then
+            echo "| Render | ✅ Healthy |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Render | ⚠️ Issues detected |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This workflow runs every 10 minutes to prevent the database from sleeping." >> $GITHUB_STEP_SUMMARY

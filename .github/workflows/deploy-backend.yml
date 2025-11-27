@@ -8,6 +8,7 @@ name: Deploy Backend to Railway
       - 'backend/**'
       - 'requirements.txt'
       - 'final_backend.py'
+      - 'final_backend_postgresql.py'
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
 
@@ -40,3 +41,76 @@ jobs:
         run: |
           railway link ${{ secrets.RAILWAY_PROJECT_ID }}
           railway up
+
+      - name: Wait for deployment to complete
+        run: |
+          echo "⏳ Waiting 60 seconds for deployment to complete..."
+          sleep 60
+      
+      - name: Wake up database and verify health
+        env:
+          RAILWAY_BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
+        run: |
+          if [ -z "$RAILWAY_BACKEND_URL" ]; then
+            echo "ℹ️ RAILWAY_BACKEND_URL not configured, skipping health check"
+            echo "💡 Add RAILWAY_BACKEND_URL as a repository variable to enable post-deployment health checks"
+            exit 0
+          fi
+          
+          echo "🔄 Waking up database and verifying backend health..."
+          echo "   URL: $RAILWAY_BACKEND_URL/api/health"
+          
+          # Multiple pings to ensure database is awake and keepalive is running
+          max_attempts=5
+          attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo ""
+            echo "📡 Attempt $attempt of $max_attempts..."
+            
+            response=$(curl -s -w "\n%{http_code}" \
+              --max-time 60 \
+              "$RAILWAY_BACKEND_URL/api/health" 2>/dev/null) || true
+            
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | head -n -1)
+            
+            if [ "$http_code" = "200" ]; then
+              echo "✅ Backend is healthy! (HTTP $http_code)"
+              echo ""
+              echo "Response:"
+              echo "$body" | head -30
+              
+              # Check if keepalive is running
+              if echo "$body" | grep -q '"running": true'; then
+                echo ""
+                echo "✅ Database keepalive is active!"
+              else
+                echo ""
+                echo "⚠️ Keepalive status not confirmed (may still be initializing)"
+              fi
+              
+              echo ""
+              echo "🎉 Deployment verified successfully!"
+              exit 0
+            else
+              echo "⚠️ Backend responded with HTTP $http_code (attempt $attempt)"
+              if [ "$http_code" = "000" ]; then
+                echo "   Backend may still be starting up..."
+              fi
+            fi
+            
+            if [ $attempt -lt $max_attempts ]; then
+              echo "   Waiting 10 seconds before retry..."
+              sleep 10
+            fi
+            
+            attempt=$((attempt + 1))
+          done
+          
+          echo ""
+          echo "⚠️ Backend health check did not succeed after $max_attempts attempts"
+          echo "   This may be normal if the deployment is still in progress"
+          echo "   Check the Railway dashboard for deployment status"
+          # Don't fail the workflow - deployment might still be completing
+          exit 0

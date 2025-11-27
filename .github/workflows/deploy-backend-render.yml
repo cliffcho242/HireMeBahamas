@@ -8,6 +8,7 @@ name: Deploy Backend to Render
       - 'backend/**'
       - 'requirements.txt'
       - 'final_backend.py'
+      - 'final_backend_postgresql.py'
       - 'render.yaml'
       - '.github/workflows/deploy-backend-render.yml'
   workflow_dispatch:
@@ -38,9 +39,78 @@ jobs:
             echo "deployed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Wait for deployment
+      - name: Wait for deployment to complete
         if: steps.deploy.outputs.deployed == 'true'
         run: |
-          echo "Waiting for deployment to complete..."
-          sleep 30
+          echo "⏳ Waiting 90 seconds for deployment to complete..."
           echo "Check deployment status at: https://dashboard.render.com"
+          sleep 90
+
+      - name: Wake up database and verify health
+        if: steps.deploy.outputs.deployed == 'true'
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+        run: |
+          if [ -z "$RENDER_BACKEND_URL" ]; then
+            echo "ℹ️ RENDER_BACKEND_URL not configured, skipping health check"
+            echo "💡 Add RENDER_BACKEND_URL as a repository variable to enable post-deployment health checks"
+            exit 0
+          fi
+          
+          echo "🔄 Waking up database and verifying backend health..."
+          echo "   URL: $RENDER_BACKEND_URL/api/health"
+          
+          # Multiple pings to ensure database is awake and keepalive is running
+          max_attempts=5
+          attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo ""
+            echo "📡 Attempt $attempt of $max_attempts..."
+            
+            response=$(curl -s -w "\n%{http_code}" \
+              --max-time 60 \
+              "$RENDER_BACKEND_URL/api/health" 2>/dev/null) || true
+            
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | head -n -1)
+            
+            if [ "$http_code" = "200" ]; then
+              echo "✅ Backend is healthy! (HTTP $http_code)"
+              echo ""
+              echo "Response:"
+              echo "$body" | head -30
+              
+              # Check if keepalive is running
+              if echo "$body" | grep -q '"running": true'; then
+                echo ""
+                echo "✅ Database keepalive is active!"
+              else
+                echo ""
+                echo "⚠️ Keepalive status not confirmed (may still be initializing)"
+              fi
+              
+              echo ""
+              echo "🎉 Deployment verified successfully!"
+              exit 0
+            else
+              echo "⚠️ Backend responded with HTTP $http_code (attempt $attempt)"
+              if [ "$http_code" = "000" ]; then
+                echo "   Backend may still be starting up..."
+              fi
+            fi
+            
+            if [ $attempt -lt $max_attempts ]; then
+              echo "   Waiting 10 seconds before retry..."
+              sleep 10
+            fi
+            
+            attempt=$((attempt + 1))
+          done
+          
+          echo ""
+          echo "⚠️ Backend health check did not succeed after $max_attempts attempts"
+          echo "   This may be normal if the deployment is still in progress"
+          echo "   Check the Render dashboard for deployment status"
+          # Don't fail the workflow - deployment might still be completing
+          exit 0
