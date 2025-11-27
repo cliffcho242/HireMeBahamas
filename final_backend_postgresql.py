@@ -1975,7 +1975,7 @@ def start_database_keepalive():
         # Only log keepalive disabled message when PostgreSQL is configured
         # but environment conditions prevent keepalive from running.
         # Skip message for SQLite/development since keepalive is not applicable.
-        if USE_POSTGRESQL and not IS_PRODUCTION and not IS_RAILWAY:
+        if USE_POSTGRESQL:
             print("ℹ️ Database keepalive disabled (not in production or Railway environment)")
         return
     
