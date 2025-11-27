@@ -51,6 +51,14 @@ const BASE_BACKOFF_MS = 5000; // Base for exponential backoff (reduced from 10s)
 const MAX_WAIT_MS = 15000; // Maximum wait time between retries (reduced from 30s)
 const MAX_TOTAL_TIMEOUT = 180000; // 3 minutes maximum total timeout for all retries combined
 
+// Extend axios config type to include our custom properties
+declare module 'axios' {
+  export interface InternalAxiosRequestConfig {
+    _retryCount?: number;
+    _requestStartTime?: number;
+  }
+}
+
 // Helper to check if backend is sleeping (Render free tier)
 interface ApiErrorType {
   response?: { status?: number };
@@ -81,9 +89,13 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   
-  // Add retry count and start time for tracking total timeout
-  config.headers['X-Retry-Count'] = config.headers['X-Retry-Count'] || 0;
-  config.headers['X-Request-Start'] = config.headers['X-Request-Start'] || Date.now().toString();
+  // Initialize retry count and start time for tracking total timeout (using custom config properties)
+  if (config._retryCount === undefined) {
+    config._retryCount = 0;
+  }
+  if (config._requestStartTime === undefined) {
+    config._requestStartTime = Date.now();
+  }
   
   console.log('API Request:', config.method?.toUpperCase(), config.url);
   return config;
@@ -107,18 +119,18 @@ api.interceptors.response.use(
     });
     
     // Check total elapsed time to prevent excessive waiting
-    const requestStart = parseInt(config?.headers?.['X-Request-Start'] || '0');
-    const elapsedTime = requestStart > 0 ? Date.now() - requestStart : 0;
+    const requestStartTime = config?._requestStartTime;
+    const elapsedTime = typeof requestStartTime === 'number' ? Date.now() - requestStartTime : 0;
     
     if (elapsedTime > MAX_TOTAL_TIMEOUT) {
       console.error(`Request timeout: Total time exceeded ${MAX_TOTAL_TIMEOUT / 1000} seconds`);
-      const timeoutError = new Error(`Network request failed after ${Math.round(elapsedTime / 1000)} seconds. Please check your connection and try again.`);
+      const timeoutError = new Error(`Request timed out after ${Math.round(elapsedTime / 1000)} seconds. Please try again.`);
       return Promise.reject(timeoutError);
     }
     
     // Check if backend is sleeping (Render.com free tier)
     if (isBackendSleeping(error)) {
-      const retryCount = parseInt(config.headers['X-Retry-Count'] || '0');
+      const retryCount = config._retryCount ?? 0;
       
       if (retryCount < MAX_WAKE_RETRIES) {
         const attemptNumber = retryCount + 1; // Human-readable attempt number (1-based)
@@ -134,7 +146,7 @@ api.interceptors.response.use(
         
         // Increase timeout for wake-up
         config.timeout = BACKEND_WAKE_TIME;
-        config.headers['X-Retry-Count'] = attemptNumber;
+        config._retryCount = attemptNumber;
         
         // Backoff delays: 3s (first), then 5s, 10s for subsequent retries
         const waitTime = isFirstAttempt 
@@ -154,10 +166,10 @@ api.interceptors.response.use(
       error.message.includes('Network Error') ||
       error.message.includes('timeout')
     ) {
-      const retryCount = parseInt(config.headers['X-Retry-Count'] || '0');
+      const retryCount = config._retryCount ?? 0;
       
       if (retryCount < MAX_RETRIES) {
-        config.headers['X-Retry-Count'] = retryCount + 1;
+        config._retryCount = retryCount + 1;
         console.log(`Retrying request (${retryCount + 1}/${MAX_RETRIES})...`);
         
         // Wait before retrying
