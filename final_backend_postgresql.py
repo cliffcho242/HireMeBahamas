@@ -409,6 +409,41 @@ DB_CONNECT_MAX_DELAY_MS = _get_env_int("DB_CONNECT_MAX_DELAY_MS", 2000, 500, 100
 # The actual jitter added is between 0 and (JITTER_FACTOR * delay_ms)
 DB_CONNECT_JITTER_FACTOR = 0.2
 
+# Login request timeout in seconds
+# This prevents login requests from blocking indefinitely
+# If a login request takes longer than this, it returns a timeout error
+# This helps prevent HTTP 499 errors by returning a proper response before
+# the client or load balancer times out
+# Set to 25 seconds (below typical client/proxy timeouts of 30s)
+LOGIN_REQUEST_TIMEOUT_SECONDS = _get_env_int("LOGIN_REQUEST_TIMEOUT_SECONDS", 25, 5, 60)
+
+
+def _check_request_timeout(start_time: float, timeout_seconds: float, operation: str) -> bool:
+    """
+    Check if a request has exceeded its timeout.
+    
+    This function is used to implement early timeout detection in long-running
+    operations like login. By checking elapsed time at key points, we can
+    return a proper timeout response before the client disconnects.
+    
+    Args:
+        start_time: The timestamp when the request started (from time.time())
+        timeout_seconds: Maximum allowed time for the request
+        operation: Name of the operation being checked (for logging)
+        
+    Returns:
+        True if the request has timed out, False otherwise
+    """
+    elapsed = time.time() - start_time
+    if elapsed > timeout_seconds:
+        request_id = getattr(g, 'request_id', 'unknown')
+        print(
+            f"[{request_id}] ⚠️ REQUEST TIMEOUT: {operation} took {elapsed:.2f}s "
+            f"(timeout: {timeout_seconds}s). Returning timeout response to prevent HTTP 499."
+        )
+        return True
+    return False
+
 
 def _is_transient_connection_error(error: Exception) -> bool:
     """
@@ -2453,6 +2488,7 @@ def login():
     - All database operations have timeout protection
     - Email lookup uses LOWER(email) index for fast queries
     - Detailed timing logs for performance monitoring
+    - Request-level timeout check to return proper response before client disconnects
     """
     if request.method == "OPTIONS":
         return "", 200
@@ -2460,6 +2496,7 @@ def login():
     conn = None
     cursor = None
     request_id = getattr(g, 'request_id', 'unknown')
+    login_start = time.time()
     
     try:
         # Handle invalid JSON or empty body
@@ -2484,6 +2521,16 @@ def login():
 
         email = data["email"].strip().lower()
         password = data["password"]
+
+        # Check for request timeout before database operation
+        if _check_request_timeout(login_start, LOGIN_REQUEST_TIMEOUT_SECONDS, "login (before db)"):
+            return (
+                jsonify({
+                    "success": False,
+                    "message": "Login request timed out. Please try again."
+                }),
+                504,  # Gateway Timeout
+            )
 
         # Get user from database with connection pool timeout protection
         db_start = time.time()
@@ -2515,6 +2562,16 @@ def login():
         print(
             f"[{request_id}] Database query (email lookup) completed in {db_query_ms}ms for {email}"
         )
+
+        # Check for request timeout after database query
+        if _check_request_timeout(login_start, LOGIN_REQUEST_TIMEOUT_SECONDS, "login (after db query)"):
+            return (
+                jsonify({
+                    "success": False,
+                    "message": "Login request timed out. Please try again."
+                }),
+                504,  # Gateway Timeout
+            )
 
         if not user:
             print(
@@ -2549,6 +2606,16 @@ def login():
         print(
             f"[{request_id}] Password verification completed in {password_verify_ms}ms"
         )
+
+        # Check for request timeout after password verification
+        if _check_request_timeout(login_start, LOGIN_REQUEST_TIMEOUT_SECONDS, "login (after password verify)"):
+            return (
+                jsonify({
+                    "success": False,
+                    "message": "Login request timed out. Please try again."
+                }),
+                504,  # Gateway Timeout
+            )
         
         if not password_valid:
             print(
