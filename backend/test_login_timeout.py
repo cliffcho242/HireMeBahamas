@@ -116,6 +116,39 @@ def test_get_env_int_validates_bounds():
             del os.environ['TEST_ENV_INT']
 
 
+def test_detect_client_type():
+    """Test that _detect_client_type correctly identifies client types."""
+    from final_backend_postgresql import _detect_client_type
+    
+    # Test cases: (user_agent, expected_type)
+    test_cases = [
+        # iOS iPhone
+        ('Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15', 'mobile-ios'),
+        # iOS iPad
+        ('Mozilla/5.0 (iPad; CPU OS 16_0 like Mac OS X) AppleWebKit/605.1.15', 'mobile-ios'),
+        # Android
+        ('Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36', 'mobile-android'),
+        # Desktop Chrome Windows
+        ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0', 'desktop'),
+        # Desktop Safari Mac
+        ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36', 'desktop'),
+        # Generic mobile (Mobile keyword)
+        ('Mozilla/5.0 (Mobile; rv:109.0) Gecko/109.0 Firefox/109.0', 'mobile'),
+        # Windows Phone
+        ('Mozilla/5.0 (Windows Phone 10.0) AppleWebKit/537.36', 'mobile'),
+        # BlackBerry
+        ('Mozilla/5.0 (BlackBerry; U; BlackBerry 9900)', 'mobile'),
+        # Empty string
+        ('', 'unknown'),
+        # None
+        (None, 'unknown'),
+    ]
+    
+    for user_agent, expected in test_cases:
+        result = _detect_client_type(user_agent)
+        assert result == expected, f"Expected {expected} for {user_agent!r}, got {result}"
+
+
 if __name__ == "__main__":
     # Run tests manually
     print("Running login timeout tests...")
@@ -138,6 +171,10 @@ if __name__ == "__main__":
     
     print("\n5. Testing _get_env_int bounds validation...")
     test_get_env_int_validates_bounds()
+    print("   ✓ Passed")
+    
+    print("\n6. Testing _detect_client_type...")
+    test_detect_client_type()
     print("   ✓ Passed")
     
     print("\n" + "=" * 50)
