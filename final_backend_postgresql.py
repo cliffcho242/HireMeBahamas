@@ -2222,6 +2222,12 @@ DB_KEEPALIVE_SHUTDOWN_TIMEOUT_SECONDS = 5  # Max time to wait for graceful shutd
 DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS = int(os.getenv("DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS", "3600"))  # 1 hour
 DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS", "120"))  # 2 minutes
 
+# Initial warm-up ping configuration
+# Perform multiple pings on startup to ensure database is fully awake
+DB_KEEPALIVE_WARMUP_PING_COUNT = 3  # Number of initial pings
+DB_KEEPALIVE_WARMUP_PING_DELAY_SECONDS = 2  # Delay between warm-up pings
+DB_KEEPALIVE_WARMUP_RETRY_DELAY_MULTIPLIER = 2  # Multiply delay for retry on failure
+
 # Track keepalive thread and status
 _keepalive_thread = None
 _keepalive_running = False
@@ -2256,11 +2262,7 @@ def database_keepalive_worker():
     
     # Perform aggressive initial pings to ensure database is fully awake
     # Railway databases may take multiple queries to fully wake up after sleeping
-    # We perform 3 pings with 2-second intervals for a total wake-up time of ~6 seconds
-    initial_ping_count = 3
-    initial_ping_delay = 2  # seconds between initial pings
-    
-    for i in range(initial_ping_count):
+    for i in range(DB_KEEPALIVE_WARMUP_PING_COUNT):
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -2271,21 +2273,21 @@ def database_keepalive_worker():
             _keepalive_last_ping = datetime.now(timezone.utc)
             
             if i == 0:
-                print(f"✅ Initial database keepalive ping {i + 1}/{initial_ping_count} successful")
+                print(f"✅ Initial database keepalive ping {i + 1}/{DB_KEEPALIVE_WARMUP_PING_COUNT} successful")
             else:
-                print(f"✅ Database warm-up ping {i + 1}/{initial_ping_count} successful")
+                print(f"✅ Database warm-up ping {i + 1}/{DB_KEEPALIVE_WARMUP_PING_COUNT} successful")
             
             # Short delay between warm-up pings
-            if i < initial_ping_count - 1:
-                time.sleep(initial_ping_delay)
+            if i < DB_KEEPALIVE_WARMUP_PING_COUNT - 1:
+                time.sleep(DB_KEEPALIVE_WARMUP_PING_DELAY_SECONDS)
                 
         except Exception as e:
             error_msg = str(e)[:100]
-            print(f"⚠️ Initial database keepalive ping {i + 1}/{initial_ping_count} failed: {error_msg}")
+            print(f"⚠️ Initial database keepalive ping {i + 1}/{DB_KEEPALIVE_WARMUP_PING_COUNT} failed: {error_msg}")
             _keepalive_consecutive_failures += 1
             # Wait a bit longer before retry on failure
-            if i < initial_ping_count - 1:
-                time.sleep(initial_ping_delay * 2)
+            if i < DB_KEEPALIVE_WARMUP_PING_COUNT - 1:
+                time.sleep(DB_KEEPALIVE_WARMUP_PING_DELAY_SECONDS * DB_KEEPALIVE_WARMUP_RETRY_DELAY_MULTIPLIER)
     
     print(f"🔥 Database warm-up complete, entering aggressive mode (ping every {DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS}s)")
     
