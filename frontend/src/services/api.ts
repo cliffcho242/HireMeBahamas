@@ -45,6 +45,10 @@ const api = axios.create({
 const MAX_RETRIES = 5;
 const RETRY_DELAY = 3000; // 3 seconds base delay for retries
 const BACKEND_WAKE_TIME = 120000; // 120 seconds (2 minutes) for Render.com free tier cold starts
+const MAX_WAKE_RETRIES = 4; // Total number of retry attempts for cold start scenarios
+const INITIAL_WAIT_MS = 5000; // 5 seconds initial wait before first retry
+const BASE_BACKOFF_MS = 10000; // Base for exponential backoff
+const MAX_WAIT_MS = 30000; // Maximum wait time between retries
 
 // Helper to check if backend is sleeping (Render free tier)
 interface ApiErrorType {
@@ -103,9 +107,8 @@ api.interceptors.response.use(
     // Check if backend is sleeping (Render.com free tier)
     if (isBackendSleeping(error)) {
       const retryCount = parseInt(config.headers['X-Retry-Count'] || '0');
-      const maxWakeRetries = 4; // Total number of retry attempts for cold start scenarios
       
-      if (retryCount < maxWakeRetries) {
+      if (retryCount < MAX_WAKE_RETRIES) {
         const attemptNumber = retryCount + 1; // Human-readable attempt number (1-based)
         const isFirstAttempt = retryCount === 0;
         
@@ -114,7 +117,7 @@ api.interceptors.response.use(
           console.log('This may take 1-2 minutes on first request (cold start).');
           console.log('Status:', error.response?.status || 'No response');
         } else {
-          console.log(`Backend still waking up... Attempt ${attemptNumber}/${maxWakeRetries}`);
+          console.log(`Backend still waking up... Attempt ${attemptNumber}/${MAX_WAKE_RETRIES}`);
         }
         
         // Increase timeout for wake-up
@@ -122,9 +125,6 @@ api.interceptors.response.use(
         config.headers['X-Retry-Count'] = attemptNumber;
         
         // Backoff delays: 5s (first), then 10s, 20s, 30s for subsequent retries
-        const INITIAL_WAIT_MS = 5000;
-        const BASE_BACKOFF_MS = 10000;
-        const MAX_WAIT_MS = 30000;
         const waitTime = isFirstAttempt 
           ? INITIAL_WAIT_MS 
           : Math.min(BASE_BACKOFF_MS * Math.pow(2, retryCount - 1), MAX_WAIT_MS);
