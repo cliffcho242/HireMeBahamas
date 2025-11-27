@@ -103,25 +103,31 @@ api.interceptors.response.use(
     // Check if backend is sleeping (Render.com free tier)
     if (isBackendSleeping(error)) {
       const retryCount = parseInt(config.headers['X-Retry-Count'] || '0');
-      const maxWakeRetries = 4; // More retries for cold start scenarios
+      const maxWakeRetries = 4; // Total number of retry attempts for cold start scenarios
       
       if (retryCount < maxWakeRetries) {
-        const isFirstRetry = retryCount === 0;
+        const attemptNumber = retryCount + 1; // Human-readable attempt number (1-based)
+        const isFirstAttempt = retryCount === 0;
         
-        if (isFirstRetry) {
+        if (isFirstAttempt) {
           console.log('Backend appears to be sleeping or starting up...');
           console.log('This may take 1-2 minutes on first request (cold start).');
           console.log('Status:', error.response?.status || 'No response');
         } else {
-          console.log(`Backend still waking up... Retry ${retryCount + 1}/${maxWakeRetries}`);
+          console.log(`Backend still waking up... Attempt ${attemptNumber}/${maxWakeRetries}`);
         }
         
         // Increase timeout for wake-up
         config.timeout = BACKEND_WAKE_TIME;
-        config.headers['X-Retry-Count'] = retryCount + 1;
+        config.headers['X-Retry-Count'] = attemptNumber;
         
-        // Exponential backoff: 5s, 10s, 20s, 30s
-        const waitTime = isFirstRetry ? 5000 : Math.min(10000 * Math.pow(2, retryCount - 1), 30000);
+        // Backoff delays: 5s (first), then 10s, 20s, 30s for subsequent retries
+        const INITIAL_WAIT_MS = 5000;
+        const BASE_BACKOFF_MS = 10000;
+        const MAX_WAIT_MS = 30000;
+        const waitTime = isFirstAttempt 
+          ? INITIAL_WAIT_MS 
+          : Math.min(BASE_BACKOFF_MS * Math.pow(2, retryCount - 1), MAX_WAIT_MS);
         console.log(`Waiting ${waitTime / 1000} seconds before retry...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         
