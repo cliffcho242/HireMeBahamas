@@ -117,6 +117,45 @@ AUTH_ENDPOINTS_PREFIX = '/api/auth/'
 SLOW_REQUEST_THRESHOLD_MS = 3000  # 3 seconds
 VERY_SLOW_REQUEST_THRESHOLD_MS = 10000  # 10 seconds
 
+# Mobile client detection patterns
+# These patterns help identify mobile clients that may have shorter timeout settings
+MOBILE_USER_AGENT_PATTERNS = [
+    'iphone',      # iOS iPhone
+    'ipad',        # iOS iPad
+    'android',     # Android devices
+    'mobile',      # Generic mobile
+    'webos',       # WebOS devices (legacy)
+    'blackberry',  # BlackBerry devices (legacy)
+]
+
+
+def _detect_client_type(user_agent: str) -> str:
+    """
+    Detect the client type from User-Agent string.
+    
+    Returns:
+        'mobile-ios', 'mobile-android', 'mobile', or 'desktop'
+    """
+    if not user_agent:
+        return 'unknown'
+    
+    ua_lower = user_agent.lower()
+    
+    # iOS detection (iPhone or iPad)
+    if 'iphone' in ua_lower or 'ipad' in ua_lower:
+        return 'mobile-ios'
+    
+    # Android detection
+    if 'android' in ua_lower:
+        return 'mobile-android'
+    
+    # Generic mobile detection
+    for pattern in MOBILE_USER_AGENT_PATTERNS:
+        if pattern in ua_lower:
+            return 'mobile'
+    
+    return 'desktop'
+
 
 @app.before_request
 def log_request_start():
@@ -132,6 +171,7 @@ def log_request_start():
     - Start time for duration calculation
     - Client IP and User-Agent for debugging
     - Host for correlation with infrastructure logs (e.g., Render)
+    - Client type (mobile-ios, mobile-android, mobile, desktop) for timeout analysis
     """
     # Generate unique request ID (use longer format for better correlation with external logs)
     g.request_id = str(uuid.uuid4())[:12]
@@ -143,11 +183,16 @@ def log_request_start():
     # Get host for correlation with infrastructure logs (e.g., Render's logs)
     host = request.host or 'unknown'
     
+    # Detect client type for timeout analysis
+    # Mobile clients often have shorter timeout settings than desktop browsers
+    g.client_type = _detect_client_type(user_agent)
+    
     # Log incoming request with context (truncate long user agents)
     user_agent_display = user_agent if len(user_agent) <= 100 else f"{user_agent[:100]}..."
     print(
         f"[{g.request_id}] --> {request.method} {host}{request.path} "
-        f"clientIP=\"{client_ip}\" userAgent=\"{user_agent_display}\""
+        f"clientIP=\"{client_ip}\" clientType=\"{g.client_type}\" "
+        f"userAgent=\"{user_agent_display}\""
     )
 
 
@@ -167,6 +212,7 @@ def log_request_end(response):
     - Request duration in milliseconds
     - Response size in bytes
     - Client IP and User-Agent for debugging
+    - Client type for mobile client timeout analysis
     - Warnings for slow requests (> 3 seconds)
     - Critical warnings for very slow requests (> 10 seconds)
     """
@@ -181,6 +227,7 @@ def log_request_end(response):
     client_ip = request.remote_addr or 'unknown'
     host = request.host or 'unknown'
     user_agent = request.headers.get('User-Agent', 'unknown')
+    client_type = getattr(g, 'client_type', 'unknown')
     
     # Truncate long user agents for log readability
     user_agent_display = user_agent if len(user_agent) <= 100 else f"{user_agent[:100]}..."
@@ -190,7 +237,8 @@ def log_request_end(response):
         # Success - log at INFO level with full context for correlation
         print(
             f"[{request.method}]{response.status_code} {host}{request.path} "
-            f"clientIP=\"{client_ip}\" requestID=\"{g.request_id}\" "
+            f"clientIP=\"{client_ip}\" clientType=\"{client_type}\" "
+            f"requestID=\"{g.request_id}\" "
             f"responseTimeMS={duration_ms} responseBytes={response.content_length or 0} "
             f"userAgent=\"{user_agent_display}\""
         )
@@ -211,23 +259,34 @@ def log_request_end(response):
         
         print(
             f"[{request.method}]{response.status_code} {host}{request.path} "
-            f"clientIP=\"{client_ip}\" requestID=\"{g.request_id}\" "
+            f"clientIP=\"{client_ip}\" clientType=\"{client_type}\" "
+            f"requestID=\"{g.request_id}\" "
             f"responseTimeMS={duration_ms} responseBytes={response.content_length or 0} "
             f"userAgent=\"{user_agent_display}\"{error_detail}"
         )
     
     # Warn about slow requests with appropriate severity level
+    # Mobile clients often have shorter timeout settings (typically 30 seconds)
+    # so we add extra warnings for mobile clients
     is_slow = duration_ms > SLOW_REQUEST_THRESHOLD_MS
     is_very_slow = duration_ms > VERY_SLOW_REQUEST_THRESHOLD_MS
+    is_mobile = client_type.startswith('mobile')
     
     if is_slow:
         severity = "VERY SLOW REQUEST" if is_very_slow else "SLOW REQUEST"
         threshold_note = f">{SLOW_REQUEST_THRESHOLD_MS}ms threshold"
         
+        # Add mobile client warning if applicable
+        mobile_warning = ""
+        if is_mobile:
+            mobile_warning = (
+                f" Mobile client ({client_type}) detected - "
+                "these often have 30s timeout limits which may cause HTTP 499 errors."
+            )
+        
         print(
             f"[{g.request_id}] ⚠️ {severity}: {request.method} {host}{request.path} "
-            f"took {duration_ms}ms ({threshold_note}). "
-            f"This may cause HTTP 499 (Client Closed Request) errors. "
+            f"took {duration_ms}ms ({threshold_note}).{mobile_warning} "
             f"Check database connection pool, bcrypt rounds, and query performance."
         )
     
