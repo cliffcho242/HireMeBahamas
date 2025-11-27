@@ -9,14 +9,16 @@ The Railway PostgreSQL database was going to sleep after 15 minutes of inactivit
 
 ## Solution Implemented
 
-Added an **automatic database keepalive mechanism** that:
+Added a **multi-layered database keepalive mechanism** that:
 - ✅ Runs in the background as a daemon thread
-- ✅ Pings the database every 10 minutes (configurable)
-- ✅ Performs an initial ping on startup for immediate verification
+- ✅ Uses **adaptive intervals**: aggressive (2 min) for first hour, then normal (10 min)
+- ✅ Performs multiple warm-up pings on startup (3 pings with 2-second intervals)
 - ✅ Automatically activates in production with PostgreSQL
 - ✅ Tracks success/failure status
 - ✅ Integrates with existing connection pool
 - ✅ Minimal resource overhead
+- ✅ **GitHub Actions scheduled workflow** pings every 10 minutes as backup
+- ✅ **Post-deployment health checks** to wake database after deployment
 
 ## Changes Made
 
@@ -31,23 +33,33 @@ DB_KEEPALIVE_INTERVAL_SECONDS = 600  # 10 minutes (configurable)
 DB_KEEPALIVE_FAILURE_THRESHOLD = 3
 DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS = 60
 DB_KEEPALIVE_SHUTDOWN_TIMEOUT_SECONDS = 5
+# New: Aggressive mode for first hour after deployment
+DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS = 3600  # 1 hour
+DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS = 120  # 2 minutes
 ```
 
-#### Keepalive Worker Thread
+#### Keepalive Worker Thread (Enhanced)
 - Background daemon thread that runs continuously
+- **Adaptive interval strategy**:
+  - First hour (aggressive mode): Ping every 2 minutes
+  - After first hour (normal mode): Ping every 10 minutes
+- **Warm-up sequence**: 3 pings on startup with 2-second intervals
 - Executes `SELECT 1` query to keep database active
 - Tracks last ping time and consecutive failures
 - Graceful error handling and retry logic
-- Performs initial ping on startup
 
-#### Health Monitoring
+#### Health Monitoring (Enhanced)
 Extended `/api/health` endpoint to include:
 ```json
 {
   "keepalive": {
     "enabled": true,
     "running": true,
-    "interval_seconds": 600,
+    "mode": "aggressive",
+    "current_interval_seconds": 120,
+    "normal_interval_seconds": 600,
+    "aggressive_interval_seconds": 120,
+    "seconds_until_normal_mode": 3420,
     "last_ping": "2025-11-26T08:30:00.000Z",
     "seconds_since_last_ping": 45.2,
     "consecutive_failures": 0
@@ -60,7 +72,26 @@ Extended `/api/health` endpoint to include:
 - Stops thread gracefully during application exit
 - Prevents resource leaks
 
-### 2. Documentation (BACKEND_KEEPALIVE_SETUP.md)
+### 2. GitHub Actions Workflows
+
+#### keep-database-awake.yml (NEW)
+Scheduled workflow that runs every 10 minutes to:
+- Ping the health endpoint on Railway and/or Render backends
+- Acts as a backup to the in-app keepalive mechanism
+- Ensures database stays awake even during deployment windows
+- Uses retry logic with longer timeouts for cold starts
+
+#### deploy-backend.yml (ENHANCED)
+Added post-deployment health check that:
+- Waits 60 seconds for deployment to complete
+- Performs up to 5 health check attempts with retries
+- Wakes up the database immediately after deployment
+- Verifies keepalive is running
+
+#### deploy-backend-render.yml (ENHANCED)
+Added post-deployment health check similar to Railway workflow
+
+### 3. Documentation (BACKEND_KEEPALIVE_SETUP.md)
 
 Created comprehensive documentation covering:
 - Problem description and solution
@@ -70,7 +101,7 @@ Created comprehensive documentation covering:
 - Troubleshooting guide
 - FAQs
 
-### 3. Test Suite (test_keepalive.py)
+### 4. Test Suite (test_keepalive.py)
 
 Created test suite to verify:
 - Configuration in development vs production
@@ -87,15 +118,24 @@ Created test suite to verify:
 | `ENVIRONMENT` | `development` | Set to `production` to enable keepalive (OR deploy on Railway) |
 | `RAILWAY_PROJECT_ID` | - | Automatically set by Railway; if present, keepalive is enabled |
 | `DATABASE_URL` | - | PostgreSQL connection string (required) |
-| `DB_KEEPALIVE_INTERVAL_SECONDS` | `600` | Time between pings (in seconds) |
+| `DB_KEEPALIVE_INTERVAL_SECONDS` | `600` | Normal interval between pings (in seconds) |
+| `DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS` | `3600` | Duration of aggressive mode after startup (1 hour) |
+| `DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS` | `120` | Interval during aggressive mode (2 minutes) |
+
+### Repository Variables (for GitHub Actions)
+
+| Variable | Description |
+|----------|-------------|
+| `RAILWAY_BACKEND_URL` | URL of the Railway backend (e.g., `https://your-app.railway.app`) |
+| `RENDER_BACKEND_URL` | URL of the Render backend (e.g., `https://your-app.onrender.com`) |
 
 **Note**: When deployed on Railway (detected via `RAILWAY_PROJECT_ID`), the keepalive is automatically enabled even without explicitly setting `ENVIRONMENT=production`. This ensures the database stays active on Railway deployments.
 
 ### Recommended Intervals
 
-- **300 seconds (5 min)**: More aggressive, better for high-traffic apps
-- **600 seconds (10 min)**: Default, good balance for most apps
-- **900 seconds (15 min)**: Less frequent, but still prevents sleep
+- **120 seconds (2 min)**: Aggressive mode for first hour after deployment
+- **300 seconds (5 min)**: More aggressive normal mode
+- **600 seconds (10 min)**: Default normal mode, good balance for most apps
 
 ⚠️ **Important**: Keep the interval under 15 minutes, as Railway databases sleep after 15 minutes of inactivity.
 
@@ -105,7 +145,9 @@ Created test suite to verify:
 
 1. Application detects production environment with PostgreSQL
 2. Keepalive thread is created as a daemon
-3. Initial database ping is performed immediately
+3. **Warm-up sequence**: 3 pings with 2-second intervals
+4. **Aggressive mode**: Ping every 2 minutes for first hour
+5. **Normal mode**: Ping every 10 minutes after first hour
 4. Thread enters main loop
 
 ### Main Loop
