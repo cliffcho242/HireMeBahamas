@@ -23,6 +23,9 @@ services:
     # - random_page_cost=1.1: Optimized for SSD storage (default is 4.0 for spinning disks)
     # - effective_io_concurrency=200: Higher value for SSD parallel I/O capabilities
     # - min_wal_size/max_wal_size: Prevent frequent WAL creation/deletion, improve recovery
+    # PostgreSQL performance tuning and logging configuration
+    # Note: "invalid record length" messages during WAL recovery are NORMAL
+    # They indicate PostgreSQL reached the end of valid WAL records during recovery
     command: >
       postgres
       -c shared_buffers=256MB
@@ -41,6 +44,7 @@ services:
       -c max_parallel_workers_per_gather=1
       -c max_parallel_workers=2
       -c max_parallel_maintenance_workers=1
+      -c log_min_messages=warning
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hiremebahamas_user -d hiremebahamas"]
       interval: 10s
