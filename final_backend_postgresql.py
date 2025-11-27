@@ -2588,8 +2588,9 @@ def register():
         
         if conn is None:
             # Connection pool exhausted - return 503 to indicate temporary unavailability
+            # Note: Email is not logged to avoid exposing sensitive information
             print(
-                f"[{request_id}] ⚠️ Connection pool exhausted for registration attempt: {email}"
+                f"[{request_id}] ⚠️ Connection pool exhausted for registration attempt"
             )
             return (
                 jsonify({
@@ -2704,15 +2705,9 @@ def register():
             f"[{request_id}] Database commit completed in {commit_ms}ms"
         )
 
-        # Check for request timeout after database operations
-        if _check_request_timeout(registration_start, REGISTRATION_REQUEST_TIMEOUT_SECONDS, "registration (after db commit)"):
-            return (
-                jsonify({
-                    "success": False,
-                    "message": "Registration request timed out. Please try again."
-                }),
-                504,  # Gateway Timeout
-            )
+        # Note: No timeout check after commit since user is already created in database
+        # Returning a timeout error here would leave the user confused - they're registered
+        # but receive an error. Better to proceed and complete the registration response.
 
         # Create JWT token
         token_start = time.time()
@@ -2729,25 +2724,25 @@ def register():
             f"[{request_id}] Token creation completed in {token_create_ms}ms"
         )
 
-        # Calculate total registration time from start of endpoint
-        if hasattr(g, 'start_time'):
-            total_registration_ms = int((time.time() - g.start_time) * 1000)
-            
+        # Calculate total registration time using registration_start for consistency
+        # with timeout checks (which also use registration_start)
+        total_registration_ms = int((time.time() - registration_start) * 1000)
+        
+        print(
+            f"[{request_id}] Registration successful - user: {user['email']}, user_id: {user['id']}, "
+            f"user_type: {user['user_type']}, total_time: {total_registration_ms}ms "
+            f"(password_hash: {password_hash_ms}ms, db_check: {db_check_ms}ms, "
+            f"db_insert: {insert_ms}ms, db_commit: {commit_ms}ms, token_create: {token_create_ms}ms)"
+        )
+        
+        # Warn about slow registration operations
+        if total_registration_ms > 1000:  # Over 1 second
             print(
-                f"[{request_id}] Registration successful - user: {user['email']}, user_id: {user['id']}, "
-                f"user_type: {user['user_type']}, total_time: {total_registration_ms}ms "
-                f"(password_hash: {password_hash_ms}ms, db_check: {db_check_ms}ms, "
-                f"db_insert: {insert_ms}ms, db_commit: {commit_ms}ms, token_create: {token_create_ms}ms)"
+                f"[{request_id}] ⚠️ SLOW REGISTRATION: Total time {total_registration_ms}ms - "
+                f"Breakdown: PasswordHash={password_hash_ms}ms, DBCheck={db_check_ms}ms, "
+                f"DBInsert={insert_ms}ms, DBCommit={commit_ms}ms, Token={token_create_ms}ms. "
+                f"Consider checking connection pool, database performance, or bcrypt configuration."
             )
-            
-            # Warn about slow registration operations
-            if total_registration_ms > 1000:  # Over 1 second
-                print(
-                    f"[{request_id}] ⚠️ SLOW REGISTRATION: Total time {total_registration_ms}ms - "
-                    f"Breakdown: PasswordHash={password_hash_ms}ms, DBCheck={db_check_ms}ms, "
-                    f"DBInsert={insert_ms}ms, DBCommit={commit_ms}ms, Token={token_create_ms}ms. "
-                    f"Consider checking connection pool, database performance, or bcrypt configuration."
-                )
 
         return (
             jsonify(

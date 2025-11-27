@@ -26,7 +26,12 @@ def test_registration_request_timeout_config():
 
 
 def test_registration_request_timeout_env_override():
-    """Test that REGISTRATION_REQUEST_TIMEOUT_SECONDS can be overridden via environment."""
+    """Test that _get_env_int correctly reads REGISTRATION_REQUEST_TIMEOUT_SECONDS from environment.
+    
+    Note: This test verifies the _get_env_int function works correctly with environment variables.
+    The actual REGISTRATION_REQUEST_TIMEOUT_SECONDS module variable is set at import time,
+    but the underlying _get_env_int function is what reads the environment variable.
+    """
     # Save original value
     original_value = os.environ.get('REGISTRATION_REQUEST_TIMEOUT_SECONDS')
     
@@ -34,7 +39,7 @@ def test_registration_request_timeout_env_override():
         # Set a custom value
         os.environ['REGISTRATION_REQUEST_TIMEOUT_SECONDS'] = '15'
         
-        # Re-import to pick up new value
+        # Test that _get_env_int reads the environment variable correctly
         from final_backend_postgresql import _get_env_int
         
         result = _get_env_int("REGISTRATION_REQUEST_TIMEOUT_SECONDS", 25, 5, 60)
