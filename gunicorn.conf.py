@@ -24,12 +24,14 @@ worker_class = "gthread"
 threads = int(os.environ.get("WEB_THREADS", "8"))
 
 # Timeout configuration
-# - Reduced from 180s to 60s to fail faster and prevent long waits
-# - If a request takes >60s, something is wrong - better to fail fast
+# - Reduced from 60s to 55s to ensure worker fails before Render's ~100s timeout
+# - This helps return a proper 502/504 error instead of client disconnect (499)
+# - Render.com free tier has approximately 100-second gateway timeout
+# - Setting worker timeout slightly below this ensures controlled failure
 # - Added graceful timeout to allow clean worker shutdown
-timeout = 60
-graceful_timeout = 30
-keepalive = 5
+timeout = int(os.environ.get("GUNICORN_TIMEOUT", "55"))
+graceful_timeout = int(os.environ.get("GUNICORN_GRACEFUL_TIMEOUT", "30"))
+keepalive = int(os.environ.get("GUNICORN_KEEPALIVE", "5"))
 
 # Memory management
 # - max_requests limits worker memory growth from request processing

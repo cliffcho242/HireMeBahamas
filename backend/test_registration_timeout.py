@@ -65,6 +65,11 @@ def test_check_request_timeout_used_in_registration():
         "Registration endpoint should use _check_request_timeout for timeout handling"
     )
     
+    # Check for early timeout check before password hashing
+    assert 'early check' in source, (
+        "Registration endpoint should have early timeout check before CPU-intensive operations"
+    )
+    
     # Check for detailed timing logs
     assert 'password_hash_ms' in source, (
         "Registration endpoint should track password hashing time"
@@ -77,6 +82,11 @@ def test_check_request_timeout_used_in_registration():
     )
     assert 'token_create_ms' in source, (
         "Registration endpoint should track token creation time"
+    )
+    
+    # Check for client type tracking
+    assert 'client_type' in source, (
+        "Registration endpoint should track client type for mobile timeout analysis"
     )
 
 
@@ -122,8 +132,9 @@ def test_registration_logs_slow_requests():
     assert 'SLOW REGISTRATION' in source, (
         "Registration endpoint should log warnings for slow requests"
     )
-    assert 'total_registration_ms > 1000' in source, (
-        "Registration should warn when total time exceeds 1000ms"
+    # Check for the constant name (now uses SLOW_REGISTRATION_THRESHOLD_MS instead of hardcoded value)
+    assert 'SLOW_REGISTRATION_THRESHOLD_MS' in source, (
+        "Registration should use SLOW_REGISTRATION_THRESHOLD_MS constant for threshold"
     )
 
 
@@ -157,6 +168,31 @@ def test_registration_handles_pool_exhaustion():
             assert 'temporarily unavailable' in data['message'].lower()
 
 
+def test_startup_timing_tracked():
+    """Test that application startup timing is properly tracked."""
+    from final_backend_postgresql import _APP_START_TIME, _APP_IMPORT_COMPLETE_TIME
+    
+    # Verify startup timing variables are set
+    assert _APP_START_TIME is not None, (
+        "_APP_START_TIME should be set at module load time"
+    )
+    
+    assert _APP_IMPORT_COMPLETE_TIME is not None, (
+        "_APP_IMPORT_COMPLETE_TIME should be set after initialization completes"
+    )
+    
+    # Verify timing is reasonable (import should complete after start)
+    assert _APP_IMPORT_COMPLETE_TIME >= _APP_START_TIME, (
+        "_APP_IMPORT_COMPLETE_TIME should be >= _APP_START_TIME"
+    )
+    
+    # Verify startup time is reasonable (less than 60 seconds in test environment)
+    startup_time = _APP_IMPORT_COMPLETE_TIME - _APP_START_TIME
+    assert startup_time < 60, (
+        f"Startup time should be less than 60 seconds, got {startup_time:.2f}s"
+    )
+
+
 if __name__ == "__main__":
     # Run tests manually
     print("Running registration timeout tests...")
@@ -183,6 +219,10 @@ if __name__ == "__main__":
     
     print("\n6. Testing registration handles pool exhaustion...")
     test_registration_handles_pool_exhaustion()
+    print("   ✓ Passed")
+    
+    print("\n7. Testing startup timing tracked...")
+    test_startup_timing_tracked()
     print("   ✓ Passed")
     
     print("\n" + "=" * 50)
