@@ -589,6 +589,19 @@ LOGIN_REQUEST_TIMEOUT_SECONDS = _get_env_int("LOGIN_REQUEST_TIMEOUT_SECONDS", 25
 # Set to 25 seconds (below typical client/proxy timeouts of 30s)
 REGISTRATION_REQUEST_TIMEOUT_SECONDS = _get_env_int("REGISTRATION_REQUEST_TIMEOUT_SECONDS", 25, 5, 60)
 
+# API request timeout in seconds for general API endpoints
+# This prevents API requests from blocking indefinitely
+# If an API request takes longer than this, it returns a timeout error
+# This helps prevent HTTP 499 errors by returning a proper response before
+# the client or load balancer times out
+# Set to 25 seconds (below typical client/proxy timeouts of 30s)
+API_REQUEST_TIMEOUT_SECONDS = _get_env_int("API_REQUEST_TIMEOUT_SECONDS", 25, 5, 60)
+
+# Default pagination limit for list endpoints
+# Limits the number of results returned to prevent slow queries and large payloads
+# This helps prevent HTTP 499 timeout errors by reducing query complexity
+DEFAULT_LIST_LIMIT = _get_env_int("DEFAULT_LIST_LIMIT", 100, 10, 500)
+
 # Bcrypt password hashing rounds configuration
 # Default of 12 rounds can be slow (~200-300ms per operation) and contribute to HTTP 499 timeouts
 # 10 rounds provides good security while being much faster (~60ms per operation)
@@ -2161,6 +2174,10 @@ def create_database_indexes(cursor, conn):
             # Speeds up job searches
             ("jobs_is_active_idx", "CREATE INDEX IF NOT EXISTS jobs_is_active_idx ON jobs (is_active) WHERE is_active = TRUE"),
             ("jobs_created_at_idx", "CREATE INDEX IF NOT EXISTS jobs_created_at_idx ON jobs (created_at DESC)"),
+            # Speeds up followers list queries - prevents HTTP 499 timeouts from slow queries
+            ("follows_follower_id_idx", "CREATE INDEX IF NOT EXISTS follows_follower_id_idx ON follows (follower_id)"),
+            # Speeds up following list queries - prevents HTTP 499 timeouts from slow queries
+            ("follows_followed_id_idx", "CREATE INDEX IF NOT EXISTS follows_followed_id_idx ON follows (followed_id)"),
         ]
         
         for index_name, index_sql in indexes:
@@ -2182,6 +2199,9 @@ def create_database_indexes(cursor, conn):
             cursor.execute("CREATE INDEX IF NOT EXISTS posts_created_at_idx ON posts (created_at)")
             cursor.execute("CREATE INDEX IF NOT EXISTS jobs_is_active_idx ON jobs (is_active)")
             cursor.execute("CREATE INDEX IF NOT EXISTS jobs_created_at_idx ON jobs (created_at)")
+            # Indexes for follows table to speed up followers/following list queries
+            cursor.execute("CREATE INDEX IF NOT EXISTS follows_follower_id_idx ON follows (follower_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS follows_followed_id_idx ON follows (followed_id)")
             conn.commit()
             print("✅ SQLite indexes created or already exist")
         except Exception as e:
@@ -5080,10 +5100,22 @@ def unfollow_user(user_id):
 @app.route("/api/users/following/list", methods=["GET", "OPTIONS"])
 def get_following_list():
     """
-    Get list of users that current user is following
+    Get list of users that current user is following.
+    
+    Performance optimizations to prevent HTTP 499 timeouts:
+    - Query uses LIMIT to prevent returning too many results
+    - Database index on follows.follower_id speeds up the join
+    - Request timeout detection returns error before client disconnects
+    
+    Query Parameters:
+    - limit: Maximum number of following to return (default: DEFAULT_LIST_LIMIT)
+    - offset: Number of following to skip for pagination (default: 0)
     """
     if request.method == "OPTIONS":
         return "", 200
+
+    # Track request timing for timeout detection
+    request_start = time.time()
 
     try:
         # Verify authentication
@@ -5099,10 +5131,31 @@ def get_following_list():
         except jwt.InvalidTokenError:
             return jsonify({"success": False, "message": "Invalid token"}), 401
 
+        # Check for timeout before database query
+        if _check_request_timeout(request_start, API_REQUEST_TIMEOUT_SECONDS, "following list (before db)"):
+            return jsonify({
+                "success": False, 
+                "message": "Request timed out. Please try again.",
+                "error_code": "TIMEOUT"
+            }), 504
+
+        # Get pagination parameters
+        limit = request.args.get('limit', DEFAULT_LIST_LIMIT, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        # Validate pagination parameters
+        if limit < 1:
+            limit = DEFAULT_LIST_LIMIT
+        if limit > 500:
+            limit = 500  # Max 500 results per request
+        if offset < 0:
+            offset = 0
+
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Get users that current user is following
+        # Get users that current user is following with pagination
+        # Query uses index on follows.follower_id for performance
         cursor.execute(
             """
             SELECT u.id, u.email, u.first_name, u.last_name, u.username, 
@@ -5110,17 +5163,29 @@ def get_following_list():
             FROM users u
             INNER JOIN follows f ON u.id = f.followed_id
             WHERE f.follower_id = %s
+            LIMIT %s OFFSET %s
             """ if USE_POSTGRESQL else """
             SELECT u.id, u.email, u.first_name, u.last_name, u.username, 
                    u.avatar_url, u.bio, u.occupation, u.location
             FROM users u
             INNER JOIN follows f ON u.id = f.followed_id
             WHERE f.follower_id = ?
+            LIMIT ? OFFSET ?
             """,
-            (current_user_id,)
+            (current_user_id, limit, offset)
         )
 
         following_users = cursor.fetchall()
+
+        # Check for timeout after database query
+        if _check_request_timeout(request_start, API_REQUEST_TIMEOUT_SECONDS, "following list (after db)"):
+            cursor.close()
+            return_db_connection(conn)
+            return jsonify({
+                "success": False, 
+                "message": "Request timed out. Please try again.",
+                "error_code": "TIMEOUT"
+            }), 504
         
         following_data = [
             {
@@ -5150,10 +5215,22 @@ def get_following_list():
 @app.route("/api/users/followers/list", methods=["GET", "OPTIONS"])
 def get_followers_list():
     """
-    Get list of users that follow current user
+    Get list of users that follow current user.
+    
+    Performance optimizations to prevent HTTP 499 timeouts:
+    - Query uses LIMIT to prevent returning too many results
+    - Database index on follows.followed_id speeds up the join
+    - Request timeout detection returns error before client disconnects
+    
+    Query Parameters:
+    - limit: Maximum number of followers to return (default: DEFAULT_LIST_LIMIT)
+    - offset: Number of followers to skip for pagination (default: 0)
     """
     if request.method == "OPTIONS":
         return "", 200
+
+    # Track request timing for timeout detection
+    request_start = time.time()
 
     try:
         # Verify authentication
@@ -5169,10 +5246,31 @@ def get_followers_list():
         except jwt.InvalidTokenError:
             return jsonify({"success": False, "message": "Invalid token"}), 401
 
+        # Check for timeout before database query
+        if _check_request_timeout(request_start, API_REQUEST_TIMEOUT_SECONDS, "followers list (before db)"):
+            return jsonify({
+                "success": False, 
+                "message": "Request timed out. Please try again.",
+                "error_code": "TIMEOUT"
+            }), 504
+
+        # Get pagination parameters
+        limit = request.args.get('limit', DEFAULT_LIST_LIMIT, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        # Validate pagination parameters
+        if limit < 1:
+            limit = DEFAULT_LIST_LIMIT
+        if limit > 500:
+            limit = 500  # Max 500 results per request
+        if offset < 0:
+            offset = 0
+
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Get users that follow current user
+        # Get users that follow current user with pagination
+        # Query uses index on follows.followed_id for performance
         cursor.execute(
             """
             SELECT u.id, u.email, u.first_name, u.last_name, u.username, 
@@ -5180,17 +5278,29 @@ def get_followers_list():
             FROM users u
             INNER JOIN follows f ON u.id = f.follower_id
             WHERE f.followed_id = %s
+            LIMIT %s OFFSET %s
             """ if USE_POSTGRESQL else """
             SELECT u.id, u.email, u.first_name, u.last_name, u.username, 
                    u.avatar_url, u.bio, u.occupation, u.location
             FROM users u
             INNER JOIN follows f ON u.id = f.follower_id
             WHERE f.followed_id = ?
+            LIMIT ? OFFSET ?
             """,
-            (current_user_id,)
+            (current_user_id, limit, offset)
         )
 
         followers = cursor.fetchall()
+
+        # Check for timeout after database query
+        if _check_request_timeout(request_start, API_REQUEST_TIMEOUT_SECONDS, "followers list (after db)"):
+            cursor.close()
+            return_db_connection(conn)
+            return jsonify({
+                "success": False, 
+                "message": "Request timed out. Please try again.",
+                "error_code": "TIMEOUT"
+            }), 504
         
         followers_data = [
             {
