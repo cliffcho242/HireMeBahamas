@@ -1710,6 +1710,10 @@ def cleanup_orphaned_extensions(cursor, conn):
                 cursor.execute(drop_sql)
                 conn.commit()
                 print(f"✅ Extension '{ext_name}' removed successfully")
+            else:
+                # Extension not installed - this is the expected state after first cleanup
+                # Log this for debugging to confirm cleanup has already occurred
+                print(f"✓ Extension '{ext_name}' is not installed (already cleaned up or never installed)")
             
         except psycopg2.Error as e:
             # Log the error but don't fail - this is a best-effort cleanup

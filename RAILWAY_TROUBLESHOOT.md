@@ -44,6 +44,20 @@ For managed PostgreSQL providers (Railway, Render, Heroku, etc.):
 ### Note About External Monitoring Errors
 If you see `pg_stat_statements` errors in your Railway logs, these are from Railway's monitoring system, not from your application. Once the application drops the extension during startup, these errors should stop. If they persist after a deployment, Railway may be reinstalling the extension - contact Railway support in that case.
 
+### Railway Data Explorer Error
+If you see an error like this in Railway's Data Explorer or Query interface:
+```
+Failed to parse count from query result. Received: {"success":false,"error":"ERROR: pg_stat_statements must be loaded via \"shared_preload_libraries\"","rows":[],"rowCount":0}
+```
+
+This error comes from Railway's web dashboard attempting to query `pg_stat_statements` for query performance statistics. This is **not** an application error - it's Railway's own monitoring trying to access an extension that can't function without server-side configuration.
+
+**What to do:**
+1. **Deploy your application** - The cleanup function will drop the extension during startup
+2. **Wait for the application to fully start** - Check logs for "Extension 'pg_stat_statements' removed successfully" or "Extension 'pg_stat_statements' is not installed"
+3. **Refresh Railway's Data Explorer** - The error should no longer appear once the extension is dropped
+4. If the error persists after multiple deployments, the extension may be automatically recreated by Railway - contact Railway support
+
 ## Possible Remaining Issues
 
 ### 1. Database Dependency
