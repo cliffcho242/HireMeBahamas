@@ -4,13 +4,45 @@
 
 **Problem:** Your domain `hiremebahamas.com` is not pointing to Vercel's servers.
 
-**Solution:** Configure DNS records at your domain registrar.
+**Solution:** Update your nameservers to let Vercel manage your DNS records.
 
 ---
 
-## 🎯 QUICK FIX (Recommended - Option A)
+## 🎯 RECOMMENDED: Switch to Vercel Nameservers (Option A)
 
-Add this **A Record** at your domain registrar:
+**Benefits:**
+- ✅ Better performance with Vercel's global CDN
+- ✅ Automatic SSL certificate management
+- ✅ Easier DNS management from Vercel dashboard
+- ✅ Seamless integration with Vercel features
+- ✅ No manual DNS record configuration needed
+
+**Update your domain's nameservers to:**
+
+```
+ns1.vercel-dns.com
+ns2.vercel-dns.com
+```
+
+### Steps to Update Nameservers:
+
+1. **Log in to your domain registrar** (where you purchased hiremebahamas.com)
+2. **Find "Nameservers" or "DNS Settings"**
+3. **Select "Custom Nameservers"**
+4. **Replace existing nameservers with:**
+   - `ns1.vercel-dns.com`
+   - `ns2.vercel-dns.com`
+5. **Save changes**
+
+⚠️ **Note:** Nameserver changes take 24-48 hours to propagate fully. [Learn more about Vercel DNS](https://vercel.com/docs/concepts/projects/domains#vercel-nameservers)
+
+---
+
+## 🔄 ALTERNATIVE: Manual DNS Records (Option B)
+
+If you cannot change nameservers, add these DNS records at your registrar:
+
+**A Record (for root domain):**
 
 ```
 Type: A
@@ -19,7 +51,7 @@ Value: 76.76.21.21
 TTL: 3600 (or Auto)
 ```
 
-For www subdomain, add:
+**CNAME Record (for www subdomain):**
 
 ```
 Type: CNAME
@@ -105,31 +137,6 @@ TTL: 3600 (or Auto)
 
 ---
 
-## 🔄 ALTERNATIVE: Use Vercel Nameservers (Option B)
-
-**Better for performance, automatic SSL, easier management**
-
-Change your domain's nameservers to:
-
-```
-ns1.vercel-dns.com
-ns2.vercel-dns.com
-```
-
-### Steps:
-
-1. Log in to your domain registrar
-2. Find **"Nameservers"** or **"DNS Settings"**
-3. Select **"Custom Nameservers"**
-4. Replace existing nameservers with:
-   - `ns1.vercel-dns.com`
-   - `ns2.vercel-dns.com`
-5. Save changes
-
-⚠️ **Note:** Nameserver changes take 24-48 hours to propagate fully.
-
----
-
 ## ⏱️ HOW LONG DOES IT TAKE?
 
 | Change Type | Time to Propagate |
@@ -199,10 +206,9 @@ Contact your domain registrar's support - they can help you add the A record.
 
 **Domain:** hiremebahamas.com
 **Status:** ⚠️ Not configured
-**Vercel IP:** 76.76.21.21
-**Vercel CNAME:** cname.vercel-dns.com
-**Current Nameservers:** None detected
-**Intended Nameservers:** ns1.vercel-dns.com, ns2.vercel-dns.com
+**Recommended Nameservers:** ns1.vercel-dns.com, ns2.vercel-dns.com
+**Alternative - Vercel IP:** 76.76.21.21
+**Alternative - Vercel CNAME:** cname.vercel-dns.com
 
 ---
 
@@ -221,14 +227,16 @@ Your URLs will be:
 
 1. **Check registrar**: Where did you buy hiremebahamas.com?
 2. **Login to registrar**: Go to their DNS/Domain management
-3. **Add the A record**: Point @ to 76.76.21.21
-4. **Add the CNAME**: Point www to cname.vercel-dns.com
-5. **Wait 10 minutes**: Then test
+3. **Update nameservers to**: ns1.vercel-dns.com and ns2.vercel-dns.com (recommended)
+4. **Or add DNS records manually**: A record to 76.76.21.21 and CNAME to cname.vercel-dns.com
+5. **Wait for propagation**: Nameservers take 24-48 hours, DNS records take 5-30 minutes
 
 **Temporary URL (works now):**
 https://frontend-8hx9eshko-cliffs-projects-a84c76c9.vercel.app
 
+**Learn more:** https://vercel.com/docs/concepts/projects/domains#vercel-nameservers
+
 ---
 
-**Last Updated:** October 26, 2025
+**Last Updated:** November 28, 2025
 **Vercel Project:** frontend (cliffs-projects-a84c76c9)
