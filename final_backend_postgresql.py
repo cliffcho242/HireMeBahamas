@@ -1676,6 +1676,9 @@ def cleanup_orphaned_extensions(cursor, conn):
     when Railway's monitoring dashboard tries to query it, but the extension
     isn't loaded in shared_preload_libraries.
     
+    Also cleans up orphaned tables/views left behind in the public schema
+    that may cause errors when monitoring tools try to query them.
+    
     Returns True if all cleanup operations succeeded, False if any failed.
     Cleanup failures are non-fatal - the application continues regardless.
     """
@@ -1720,6 +1723,56 @@ def cleanup_orphaned_extensions(cursor, conn):
         except Exception as e:
             # Log unexpected errors but continue
             print(f"⚠️  Unexpected error cleaning up extension '{ext_name}': {e}")
+            _safe_rollback(conn)
+            all_succeeded = False
+    
+    # Also clean up orphaned tables/views in the public schema that may have been
+    # left behind by extensions or previous installations. These cause errors when
+    # Railway's monitoring dashboard tries to query them (e.g., pg_stat_statements).
+    orphaned_relations = ["pg_stat_statements"]
+    
+    # Mapping of PostgreSQL relkind codes to human-readable names and DROP statements
+    # relkind: 'r' = table, 'v' = view, 'm' = materialized view
+    relkind_info = {
+        'r': ('TABLE', 'DROP TABLE IF EXISTS public.{} CASCADE'),
+        'v': ('VIEW', 'DROP VIEW IF EXISTS public.{} CASCADE'),
+        'm': ('MATERIALIZED VIEW', 'DROP MATERIALIZED VIEW IF EXISTS public.{} CASCADE'),
+    }
+    
+    for rel_name in orphaned_relations:
+        try:
+            # Check if there's a table or view with this name in the public schema
+            cursor.execute(
+                """
+                SELECT relkind FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND c.relname = %s
+                """,
+                (rel_name,)
+            )
+            result = cursor.fetchone()
+            
+            if result:
+                relkind = result["relkind"]
+                if relkind in relkind_info:
+                    kind_name, drop_template = relkind_info[relkind]
+                    # Drop the orphaned relation
+                    # SQL injection safe: rel_name comes from hardcoded orphaned_relations list
+                    drop_sql = sql.SQL(drop_template).format(sql.Identifier(rel_name))
+                    print(f"🧹 Removing orphaned {kind_name} 'public.{rel_name}' (causes monitoring errors)")
+                    cursor.execute(drop_sql)
+                    conn.commit()
+                    print(f"✅ Orphaned {kind_name} 'public.{rel_name}' removed successfully")
+                    
+        except psycopg2.Error as e:
+            # Log the error but don't fail - this is a best-effort cleanup
+            error_details = _get_psycopg2_error_details(e)
+            print(f"⚠️  Could not remove orphaned relation 'public.{rel_name}': {error_details}")
+            _safe_rollback(conn)
+            all_succeeded = False
+        except Exception as e:
+            # Log unexpected errors but continue
+            print(f"⚠️  Unexpected error cleaning up orphaned relation 'public.{rel_name}': {e}")
             _safe_rollback(conn)
             all_succeeded = False
     
