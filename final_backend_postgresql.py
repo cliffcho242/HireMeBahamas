@@ -6213,7 +6213,7 @@ def get_friends_list():
                     "last_name": row["last_name"] or "",
                     "email": row["email"],
                     "avatar_url": row["avatar_url"] or "",
-                    "is_available_for_hire": bool(row["is_available_for_hire"]) if row["is_available_for_hire"] is not None else False,
+                    "is_available_for_hire": bool(row["is_available_for_hire"] or False),
                 }
             )
 
