@@ -324,18 +324,28 @@ async def get_comments(
     )
     comments = result.scalars().all()
 
-    comments_data = [
-        CommentResponse(
-            id=comment.id,
-            post_id=comment.post_id,
-            user_id=comment.user_id,
-            user=CommentUser.model_validate(comment.user),
-            content=comment.content,
-            created_at=comment.created_at,
-            updated_at=comment.updated_at,
-        ).model_dump()
-        for comment in comments
-    ]
+    comments_data = []
+    for comment in comments:
+        # Defensive check: ensure comment has a valid user relationship
+        # This handles edge cases where user might be deleted but comment remains
+        if not comment.user:
+            logger.warning(
+                f"Comment {comment.id} has no associated user relationship - "
+                f"possible data integrity issue. Skipping comment."
+            )
+            continue
+
+        comments_data.append(
+            CommentResponse(
+                id=comment.id,
+                post_id=comment.post_id,
+                user_id=comment.user_id,
+                user=CommentUser.model_validate(comment.user),
+                content=comment.content,
+                created_at=comment.created_at,
+                updated_at=comment.updated_at,
+            ).model_dump()
+        )
 
     return {"success": True, "comments": comments_data}
 
