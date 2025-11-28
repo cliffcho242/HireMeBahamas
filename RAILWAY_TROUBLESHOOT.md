@@ -28,21 +28,47 @@ This error typically occurs when:
 3. The extension is not loaded in `shared_preload_libraries` (server-side config)
 
 ### Solution
-The application now automatically **removes** the `pg_stat_statements` extension during database startup:
+The application now automatically **removes** the `pg_stat_statements` extension and any orphaned database objects during startup:
 
 1. **Checks if extension is installed** on the PostgreSQL server
 2. **Drops the extension with CASCADE** if it exists but cannot function
-3. **Logs the cleanup** for visibility
+3. **Drops orphaned tables/views** named `pg_stat_statements` in the public schema
+4. **Logs the cleanup** for visibility
 
-This cleanup is performed in the `cleanup_orphaned_extensions()` function which runs during database initialization. The error messages from Railway's monitoring dashboard are **external queries** that our application cannot control - they should stop appearing after the extension is dropped.
+This cleanup is performed in the `cleanup_orphaned_extensions()` function which runs during database initialization.
 
 For managed PostgreSQL providers (Railway, Render, Heroku, etc.):
 - The `pg_stat_statements` extension cannot be properly configured
 - The application automatically removes orphaned extensions that require `shared_preload_libraries`
+- The application also removes orphaned tables/views that cause monitoring errors
 - The application will continue to work normally without this extension
 
 ### Note About External Monitoring Errors
-If you see `pg_stat_statements` errors in your Railway logs, these are from Railway's monitoring system, not from your application. Once the application drops the extension during startup, these errors should stop. If they persist after a deployment, Railway may be reinstalling the extension - contact Railway support in that case.
+If you see `pg_stat_statements` errors in your Railway logs like:
+```
+ERROR: pg_stat_statements must be loaded via "shared_preload_libraries"
+STATEMENT: SET statement_timeout = '30s'; SELECT * FROM public."pg_stat_statements" LIMIT 10
+```
+
+**These errors come from Railway's internal monitoring system, NOT from your application code.**
+
+Railway's monitoring dashboard periodically queries `pg_stat_statements` to collect query performance metrics. This is a Railway platform feature that runs independently of your application.
+
+**Why the errors occur:**
+1. Railway creates PostgreSQL databases without `pg_stat_statements` in `shared_preload_libraries`
+2. Railway's monitoring still tries to query the `pg_stat_statements` view
+3. PostgreSQL returns an error because the extension cannot function without the library preloaded
+
+**What our application does:**
+- Automatically cleans up any orphaned `pg_stat_statements` tables/views during startup
+- Does NOT use `pg_stat_statements` in any application queries
+
+**What you can do:**
+- These errors are harmless to your application and data
+- They do not affect application functionality
+- If the errors are excessive, contact Railway support to either:
+  - Add `pg_stat_statements` to `shared_preload_libraries` (requires server config access)
+  - Disable the monitoring queries for your database
 
 ## Possible Remaining Issues
 
