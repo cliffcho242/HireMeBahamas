@@ -143,7 +143,7 @@ TTL: 3600 (or Auto)
 |------------|-------------------|
 | A Record | 5 minutes - 1 hour |
 | CNAME Record | 5 minutes - 1 hour |
-| Nameservers | 24-48 hours |
+| Nameservers | 1-2 hours (typical), up to 48 hours (maximum) |
 
 ---
 

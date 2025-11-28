@@ -52,7 +52,7 @@ Steps:
    ns1.vercel-dns.com
    ns2.vercel-dns.com
 
-3. Wait 24-48 hours for propagation
+3. Wait 1-2 hours (typical) or up to 48 hours (maximum) for propagation
 4. Manage all DNS in Vercel dashboard
 
 ALTERNATIVE: Keep Current Setup
