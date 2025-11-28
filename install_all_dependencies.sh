@@ -107,6 +107,11 @@ elif [ "$OS" = "macos" ]; then
     # Install other dependencies
     echo "Installing additional dependencies..."
     brew install jpeg libpng freetype libtiff webp pkg-config
+
+    # Install Render CLI for deployment
+    echo "Installing Render CLI..."
+    brew update
+    brew install render
 fi
 
 echo ""

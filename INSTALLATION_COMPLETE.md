@@ -229,6 +229,7 @@ docker-compose up -d --build
 - `redis` - Caching
 - `node` - JavaScript runtime
 - `openssl`, `libffi`, `pkg-config` - Libraries
+- `render` - Render CLI for deployment
 
 ### Python Packages
 

@@ -357,6 +357,8 @@ install_system_deps() {
         "libxslt"
         # Nginx
         "nginx"
+        # Deployment CLI
+        "render"
         # Utilities
         "curl"
         "wget"
