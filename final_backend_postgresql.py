@@ -1024,7 +1024,7 @@ def _get_connection_pool():
                         options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
                     )
                     keepalive_status = "enabled" if TCP_KEEPALIVE_ENABLED == 1 else "disabled"
-                    user_timeout_sec = TCP_USER_TIMEOUT_MS / 1000
+                    user_timeout_sec = TCP_USER_TIMEOUT_MS // 1000
                     print(f"✅ PostgreSQL connection pool created (min=2, max={DB_POOL_MAX_CONNECTIONS}, tcp_keepalive={keepalive_status}, tcp_user_timeout={user_timeout_sec}s)")
                 except Exception as e:
                     print(f"⚠️ Failed to create connection pool: {e}")
