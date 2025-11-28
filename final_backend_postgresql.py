@@ -563,7 +563,123 @@ REGISTRATION_REQUEST_TIMEOUT_SECONDS = _get_env_int("REGISTRATION_REQUEST_TIMEOU
 # Note: Existing password hashes continue to work regardless of this setting
 BCRYPT_ROUNDS = _get_env_int("BCRYPT_ROUNDS", 10, 4, 14)
 
+# Enable automatic password hash migration for faster future logins
+# When a user logs in with an old high-round hash, it will be upgraded
+# to the current BCRYPT_ROUNDS setting in the background
+# This reduces login latency for users with old hashes over time
+PASSWORD_HASH_MIGRATION_ENABLED = os.getenv("PASSWORD_HASH_MIGRATION_ENABLED", "true").lower() == "true"
+
 print(f"🔐 Bcrypt rounds configured: {BCRYPT_ROUNDS}")
+if PASSWORD_HASH_MIGRATION_ENABLED:
+    print(f"🔄 Password hash migration: enabled (will upgrade old hashes on login)")
+
+
+def _get_bcrypt_rounds_from_hash(password_hash: str) -> int:
+    """
+    Extract the bcrypt rounds from a password hash.
+    
+    Bcrypt hashes have the format: $2b$<rounds>$<salt><hash>
+    For example: $2b$12$... means 12 rounds
+    
+    Args:
+        password_hash: The bcrypt password hash string
+        
+    Returns:
+        The number of rounds used, or 0 if unable to parse
+    """
+    try:
+        if password_hash.startswith('$2'):
+            # Split by $ to get parts: ['', '2b', '12', 'salt+hash']
+            parts = password_hash.split('$')
+            if len(parts) >= 3:
+                return int(parts[2])
+    except (ValueError, IndexError):
+        pass
+    return 0
+
+
+def _should_upgrade_password_hash(password_hash: str) -> bool:
+    """
+    Determine if a password hash should be upgraded to current bcrypt rounds.
+    
+    Upgrading old high-round hashes (e.g., 12 rounds) to the current setting
+    (e.g., 10 rounds) reduces login latency from ~240ms to ~60ms per login.
+    
+    Args:
+        password_hash: The current bcrypt password hash
+        
+    Returns:
+        True if the hash uses more rounds than currently configured
+    """
+    if not PASSWORD_HASH_MIGRATION_ENABLED:
+        return False
+    
+    current_rounds = _get_bcrypt_rounds_from_hash(password_hash)
+    # Only upgrade if current hash uses more rounds than configured
+    # This ensures we're reducing latency, not increasing it
+    return current_rounds > BCRYPT_ROUNDS
+
+
+def _upgrade_password_hash_async(user_id: int, password: str, request_id: str):
+    """
+    Upgrade a user's password hash to current bcrypt rounds in the background.
+    
+    This function runs asynchronously to avoid blocking the login response.
+    It creates a new hash with the current BCRYPT_ROUNDS setting and updates
+    the database.
+    
+    Security note: The password parameter is only used for hashing and is not
+    stored. The background thread processes it immediately and the string
+    becomes eligible for garbage collection after the thread completes.
+    
+    Args:
+        user_id: The user ID to update
+        password: The plain text password (already verified)
+        request_id: Request ID for logging correlation
+    """
+    def _do_upgrade():
+        conn = None
+        cursor = None
+        try:
+            # Create new hash with current rounds
+            new_hash = bcrypt.hashpw(
+                password.encode("utf-8"),
+                bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
+            ).decode("utf-8")
+            
+            # Update database
+            conn = get_db_connection()
+            if conn is None:
+                logger.warning("Cannot upgrade password hash: connection unavailable")
+                return
+            
+            cursor = conn.cursor()
+            if USE_POSTGRESQL:
+                cursor.execute(
+                    "UPDATE users SET password_hash = %s WHERE id = %s",
+                    (new_hash, user_id)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE users SET password_hash = ? WHERE id = ?",
+                    (new_hash, user_id)
+                )
+            conn.commit()
+            
+            print(f"[{request_id}] ✅ Password hash upgraded to {BCRYPT_ROUNDS} rounds for user {user_id}")
+        except Exception as e:
+            logger.warning("Password hash upgrade failed for user %s: %s", user_id, e)
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass  # Ignore errors closing cursor on failed connection
+            if conn:
+                return_db_connection(conn)
+    
+    # Run in background thread
+    threading.Thread(target=_do_upgrade, daemon=True).start()
 
 # Transient database error patterns
 # These patterns indicate temporary connection issues that may resolve on retry
@@ -812,6 +928,66 @@ def _get_connection_pool():
                     return None
     
     return _connection_pool
+
+
+def _warmup_connection_pool():
+    """
+    Pre-warm the database connection pool to reduce cold-start latency.
+    
+    This function is called during application startup to establish
+    initial database connections before user requests arrive. This
+    prevents the first login request from being slow due to connection
+    establishment overhead.
+    
+    Benefits:
+    - Reduces first-request latency by ~500-1000ms
+    - Validates database connectivity on startup
+    - Pre-populates connection pool for immediate availability
+    
+    Called asynchronously to avoid blocking app startup.
+    """
+    if not USE_POSTGRESQL:
+        return
+    
+    try:
+        # Get connection pool (creates it if not exists)
+        conn_pool = _get_connection_pool()
+        if not conn_pool:
+            logger.warning("Connection pool warmup skipped: pool not available")
+            return
+        
+        # Get and immediately return a few connections to warm up the pool
+        # This establishes TCP connections and completes SSL handshakes
+        warmup_count = min(3, DB_POOL_MAX_CONNECTIONS)
+        warmed_conns = []
+        
+        warmup_start = time.time()
+        for _ in range(warmup_count):
+            try:
+                conn = conn_pool.getconn()
+                if conn:
+                    # Run a simple query to fully establish the connection
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT 1")
+                    cursor.fetchone()
+                    cursor.close()
+                    warmed_conns.append(conn)
+            except Exception as e:
+                logger.warning("Connection warmup failed for one connection: %s", e)
+        
+        # Return connections to pool
+        for conn in warmed_conns:
+            try:
+                conn_pool.putconn(conn)
+            except Exception as e:
+                # Log connection return failures - may indicate pool corruption
+                logger.debug("Failed to return warmed connection to pool: %s", e)
+        
+        warmup_ms = int((time.time() - warmup_start) * 1000)
+        print(f"✅ Connection pool warmed up: {len(warmed_conns)} connections in {warmup_ms}ms")
+        
+    except Exception as e:
+        logger.warning("Connection pool warmup failed: %s", e)
 
 
 # Thread pool executor for connection timeout handling
@@ -2273,6 +2449,9 @@ def init_database_background():
             # This helps operators understand if the database recently recovered
             # from an improper shutdown (which would explain recovery logs)
             _log_startup_recovery_status()
+            # Warm up the connection pool to reduce first-request latency
+            # This is especially important for mobile clients with short timeouts
+            _warmup_connection_pool()
         except psycopg2.Error as e:
             error_details = _get_psycopg2_error_details(e)
             print(f"⚠️ Database initialization warning: {error_details}")
@@ -3239,6 +3418,15 @@ def login():
                 jsonify({"success": False, "message": "Invalid email or password"}),
                 401,
             )
+
+        # Check if password hash should be upgraded to current bcrypt rounds
+        # This improves future login performance for users with old high-round hashes
+        if _should_upgrade_password_hash(user["password_hash"]):
+            old_rounds = _get_bcrypt_rounds_from_hash(user["password_hash"])
+            print(
+                f"[{request_id}] Password hash upgrade needed: {old_rounds} -> {BCRYPT_ROUNDS} rounds for user {user['id']}"
+            )
+            _upgrade_password_hash_async(user["id"], password, request_id)
 
         # Update last login
         now = datetime.now(timezone.utc)
