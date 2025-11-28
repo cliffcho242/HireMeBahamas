@@ -1737,6 +1737,9 @@ def cleanup_orphaned_extensions(cursor, conn):
                 cursor.execute(drop_sql)
                 conn.commit()
                 print(f"✅ Extension '{ext_name}' removed successfully")
+            else:
+                # Log when extension is not installed (expected state after cleanup)
+                print(f"✅ Extension '{ext_name}' not installed (clean state)")
             
         except psycopg2.Error as e:
             # Log the error but don't fail - this is a best-effort cleanup
@@ -1787,7 +1790,10 @@ def cleanup_orphaned_extensions(cursor, conn):
                     cursor.execute(drop_sql)
                     conn.commit()
                     print(f"✅ Orphaned {kind_name} 'public.{rel_name}' removed successfully")
-                    
+            else:
+                # Log when relation is not found (expected state after cleanup)
+                print(f"✅ No orphaned relation 'public.{rel_name}' found (clean state)")
+
         except psycopg2.Error as e:
             # Log the error but don't fail - this is a best-effort cleanup
             error_details = _get_psycopg2_error_details(e)
