@@ -565,6 +565,46 @@ BCRYPT_ROUNDS = _get_env_int("BCRYPT_ROUNDS", 10, 4, 14)
 
 print(f"🔐 Bcrypt rounds configured: {BCRYPT_ROUNDS}")
 
+# Transient database error patterns
+# These patterns indicate temporary connection issues that may resolve on retry
+# Shared across multiple functions to ensure consistent error detection
+# Used by _is_transient_connection_error(), get_database_recovery_status(), and api_health_check()
+TRANSIENT_ERROR_PATTERNS = [
+    "connection refused",           # Database not yet accepting connections
+    "could not connect",             # General connection failure
+    "server closed the connection",  # Server restart/recovery
+    "connection reset",              # Network interruption
+    "timeout expired",               # Connection timeout
+    "the database system is starting up",  # Explicit startup message
+    "the database system is in recovery",  # Database recovery mode
+    "too many connections",          # Temporary pool exhaustion
+    "connection is closed",          # Stale connection
+    "terminating connection",        # Server-initiated disconnect
+    "unexpected eof",                # SSL EOF error from dropped connection
+    "ssl connection has been closed unexpectedly",  # Specific SSL closure error
+    "decryption failed or bad record mac",  # SSL error from stale/corrupted connection
+    "bad record mac",                # Shortened form of SSL MAC error
+    "name or service not known",     # DNS resolution failure during container startup
+    "no route to host",              # Network not ready during container startup
+]
+
+# Container transitioning patterns - more specific than general "container" keyword
+# These indicate the database container is starting up or transitioning
+CONTAINER_TRANSITIONING_PATTERNS = [
+    "container is transitioning",    # Explicit container transitioning message
+    "container transitioning",       # Shorter form
+    "container is starting",         # Container starting up
+    "container starting",            # Shorter form
+]
+
+# Combined patterns for detecting container transitioning state
+# Used in get_database_recovery_status() and api_health_check()
+# Includes transient error patterns and container-specific patterns
+ALL_TRANSITIONING_PATTERNS = (
+    TRANSIENT_ERROR_PATTERNS +
+    CONTAINER_TRANSITIONING_PATTERNS
+)
+
 
 def _check_request_timeout(start_time: float, timeout_seconds: int, operation: str) -> bool:
     """
@@ -602,6 +642,7 @@ def _is_transient_connection_error(error: Exception) -> bool:
     - Temporary network issues
     - Connection pool exhaustion
     - Database restarts or failovers
+    - Container transitions (Railway/Docker)
     
     Args:
         error: The exception that occurred during connection attempt
@@ -614,29 +655,10 @@ def _is_transient_connection_error(error: Exception) -> bool:
     
     error_msg = str(error).lower()
     
-    # Transient error patterns
-    transient_patterns = [
-        "connection refused",           # Database not yet accepting connections
-        "could not connect",             # General connection failure
-        "server closed the connection",  # Server restart/recovery
-        "connection reset",              # Network interruption
-        "timeout expired",               # Connection timeout
-        "the database system is starting up",  # Explicit startup message
-        "the database system is in recovery",  # Database recovery mode
-        "too many connections",          # Temporary pool exhaustion
-        "connection is closed",          # Stale connection
-        "terminating connection",        # Server-initiated disconnect
-        "unexpected eof",                # SSL EOF error from dropped connection
-        "ssl connection has been closed unexpectedly",  # Specific SSL closure error
-        "decryption failed or bad record mac",  # SSL error from stale/corrupted connection
-        "bad record mac",                # Shortened form of SSL MAC error
-        "container",                     # Container transitioning/starting (Railway/Docker)
-        "transitioning",                 # Database service transitioning
-        "name or service not known",     # DNS resolution failure during container startup
-        "no route to host",              # Network not ready during container startup
-    ]
+    # Use shared constant for transient error patterns, plus container transitioning patterns
+    all_patterns = TRANSIENT_ERROR_PATTERNS + CONTAINER_TRANSITIONING_PATTERNS
     
-    return any(pattern in error_msg for pattern in transient_patterns)
+    return any(pattern in error_msg for pattern in all_patterns)
 
 
 def _is_stale_ssl_connection_error(error: Exception) -> bool:
@@ -2150,8 +2172,12 @@ def get_database_recovery_status():
     except psycopg2.OperationalError as e:
         error_msg = str(e).lower()
         
-        # Check if error indicates database is still starting up or recovering
-        if "starting up" in error_msg or "recovery" in error_msg:
+        # Check if error indicates database is in recovery mode (explicit PostgreSQL startup/recovery)
+        # These patterns indicate PostgreSQL is actively recovering from improper shutdown
+        recovery_patterns = ["the database system is starting up", "the database system is in recovery"]
+        is_recovery = any(pattern in error_msg for pattern in recovery_patterns)
+        
+        if is_recovery:
             return {
                 "type": "postgresql",
                 "in_recovery": True,
@@ -2160,7 +2186,8 @@ def get_database_recovery_status():
             }
         
         # Check if error indicates container transitioning or not yet available
-        if any(pattern in error_msg for pattern in ["container", "transitioning", "connection refused", "no route to host", "name or service not known"]):
+        # Use the shared ALL_TRANSITIONING_PATTERNS constant for consistency
+        if any(pattern in error_msg for pattern in ALL_TRANSITIONING_PATTERNS):
             return {
                 "type": "postgresql",
                 "in_recovery": None,
@@ -2682,11 +2709,8 @@ def api_health_check():
         error_msg_lower = error_msg.lower()
         
         # Check for container transitioning or startup errors
-        transitioning_patterns = [
-            "container", "transitioning", "starting up", "recovery",
-            "connection refused", "no route to host", "name or service not known"
-        ]
-        is_transitioning = any(pattern in error_msg_lower for pattern in transitioning_patterns)
+        # Use shared ALL_TRANSITIONING_PATTERNS constant for consistency
+        is_transitioning = any(pattern in error_msg_lower for pattern in ALL_TRANSITIONING_PATTERNS)
         
         if is_transitioning:
             response["database_status"] = "transitioning"
