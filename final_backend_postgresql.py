@@ -345,12 +345,14 @@ USE_POSTGRESQL = DATABASE_URL is not None
 
 # PostgreSQL extensions to initialize during database setup
 # Pre-defined SQL statements prevent SQL injection by avoiding string formatting
-# Each extension requires server-side configuration (shared_preload_libraries)
+# Note: Extensions like pg_stat_statements require server-side configuration
+# (shared_preload_libraries) which is not available on managed database services
+# like Railway. Only add extensions that don't require server-side configuration.
 POSTGRESQL_EXTENSIONS = {
-    "pg_stat_statements": {
-        "sql": "CREATE EXTENSION IF NOT EXISTS pg_stat_statements",
-        "description": "Query performance statistics tracking",
-    },
+    # Empty - all previously listed extensions required shared_preload_libraries
+    # configuration which is not available on Railway and similar managed services.
+    # The pg_stat_statements extension was removed because it causes:
+    # "ERROR: pg_stat_statements must be loaded via shared_preload_libraries"
 }
 
 # Check if this is a production environment
@@ -1614,16 +1616,14 @@ def _safe_rollback(conn):
 
 def init_postgresql_extensions(cursor, conn):
     """
-    Initialize PostgreSQL extensions including pg_stat_statements.
+    Initialize PostgreSQL extensions that don't require server-side configuration.
     
-    pg_stat_statements provides query performance statistics and is useful for:
-    - Monitoring slow queries
-    - Identifying frequently executed queries
-    - Performance tuning
+    Note: Extensions like pg_stat_statements have been removed because they require
+    shared_preload_libraries configuration on the PostgreSQL server, which is not
+    available on managed database services like Railway.
     
-    Note: pg_stat_statements requires shared_preload_libraries configuration
-    on the PostgreSQL server. On managed services like Railway, this is typically
-    pre-configured, but we still need to CREATE EXTENSION.
+    Currently, no extensions are configured because all previously listed extensions
+    required server-side configuration that is unavailable on Railway.
     
     Returns True if all extensions initialized successfully, False otherwise.
     Extension failures are non-fatal - the application continues regardless.
