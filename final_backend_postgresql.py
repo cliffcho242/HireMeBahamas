@@ -1731,6 +1731,14 @@ def cleanup_orphaned_extensions(cursor, conn):
     # Railway's monitoring dashboard tries to query them (e.g., pg_stat_statements).
     orphaned_relations = ["pg_stat_statements"]
     
+    # Mapping of PostgreSQL relkind codes to human-readable names and DROP statements
+    # relkind: 'r' = table, 'v' = view, 'm' = materialized view
+    relkind_info = {
+        'r': ('TABLE', 'DROP TABLE IF EXISTS public.{} CASCADE'),
+        'v': ('VIEW', 'DROP VIEW IF EXISTS public.{} CASCADE'),
+        'm': ('MATERIALIZED VIEW', 'DROP MATERIALIZED VIEW IF EXISTS public.{} CASCADE'),
+    }
+    
     for rel_name in orphaned_relations:
         try:
             # Check if there's a table or view with this name in the public schema
@@ -1746,23 +1754,11 @@ def cleanup_orphaned_extensions(cursor, conn):
             
             if result:
                 relkind = result["relkind"]
-                # relkind: 'r' = table, 'v' = view, 'm' = materialized view
-                if relkind in ('r', 'v', 'm'):
-                    kind_name = {'r': 'TABLE', 'v': 'VIEW', 'm': 'MATERIALIZED VIEW'}.get(relkind, 'RELATION')
+                if relkind in relkind_info:
+                    kind_name, drop_template = relkind_info[relkind]
                     # Drop the orphaned relation
                     # SQL injection safe: rel_name comes from hardcoded orphaned_relations list
-                    if relkind == 'm':
-                        drop_sql = sql.SQL("DROP MATERIALIZED VIEW IF EXISTS public.{} CASCADE").format(
-                            sql.Identifier(rel_name)
-                        )
-                    elif relkind == 'v':
-                        drop_sql = sql.SQL("DROP VIEW IF EXISTS public.{} CASCADE").format(
-                            sql.Identifier(rel_name)
-                        )
-                    else:
-                        drop_sql = sql.SQL("DROP TABLE IF EXISTS public.{} CASCADE").format(
-                            sql.Identifier(rel_name)
-                        )
+                    drop_sql = sql.SQL(drop_template).format(sql.Identifier(rel_name))
                     print(f"🧹 Removing orphaned {kind_name} 'public.{rel_name}' (causes monitoring errors)")
                     cursor.execute(drop_sql)
                     conn.commit()
