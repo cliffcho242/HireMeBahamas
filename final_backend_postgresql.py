@@ -3069,6 +3069,12 @@ DB_KEEPALIVE_WARMUP_RETRY_DELAY_MULTIPLIER = 2  # Multiply delay for retry on fa
 DB_KEEPALIVE_HEALTH_CHECK_INTERVAL_SECONDS = 60  # Check thread health every minute
 DB_KEEPALIVE_MAX_PING_AGE_SECONDS = 300  # Consider thread dead if no ping for 5 minutes
 
+# Periodic cleanup of pg_stat_statements extension
+# This prevents Railway's monitoring dashboard from getting errors when it tries
+# to query pg_stat_statements (which requires shared_preload_libraries configuration)
+# Cleanup runs every hour (3600 seconds) to catch any newly created extensions
+DB_EXTENSION_CLEANUP_INTERVAL_SECONDS = int(os.getenv("DB_EXTENSION_CLEANUP_INTERVAL_SECONDS", "3600"))
+
 # Track keepalive thread and status
 _keepalive_thread = None
 _keepalive_running = False
@@ -3076,6 +3082,90 @@ _keepalive_last_ping = None
 _keepalive_consecutive_failures = 0
 _keepalive_start_time = None  # Track when keepalive started for aggressive mode
 _keepalive_total_pings = 0  # Track total successful pings for monitoring
+_last_extension_cleanup = None  # Track when we last cleaned up orphaned extensions
+
+
+def should_run_extension_cleanup():
+    """
+    Determine if extension cleanup should run based on elapsed time.
+    
+    This function checks the global `_last_extension_cleanup` variable to decide
+    whether to run the cleanup:
+    - Returns True on the first call (when `_last_extension_cleanup` is None)
+    - Returns True if `DB_EXTENSION_CLEANUP_INTERVAL_SECONDS` has passed since last cleanup
+    - Returns False otherwise
+    
+    Returns:
+        True if cleanup should run, False otherwise
+    """
+    global _last_extension_cleanup
+    
+    if _last_extension_cleanup is None:
+        # First cleanup after startup
+        return True
+    
+    seconds_since_cleanup = (datetime.now(timezone.utc) - _last_extension_cleanup).total_seconds()
+    return seconds_since_cleanup >= DB_EXTENSION_CLEANUP_INTERVAL_SECONDS
+
+
+def periodic_extension_cleanup():
+    """
+    Perform periodic cleanup of orphaned PostgreSQL extensions.
+    
+    This function is called periodically by the keepalive worker to remove
+    orphaned extensions that require shared_preload_libraries configuration
+    (which is not available on Railway's managed PostgreSQL).
+    
+    Currently cleans up:
+    - pg_stat_statements extension and any related orphaned tables/views
+    
+    The cleanup prevents errors from Railway's monitoring dashboard which tries
+    to query pg_stat_statements. Without this cleanup, queries fail with:
+    "ERROR: pg_stat_statements must be loaded via shared_preload_libraries"
+    
+    The cleanup is non-blocking and failures are logged but don't affect other operations.
+    Updates `_last_extension_cleanup` timestamp after each cleanup attempt.
+    
+    Returns:
+        True if cleanup was successful or not needed, False if cleanup failed
+    """
+    global _last_extension_cleanup
+    
+    conn = None
+    cursor = None
+    
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return False
+        
+        cursor = conn.cursor()
+        
+        # Call the existing cleanup function
+        success = cleanup_orphaned_extensions(cursor, conn)
+        
+        _last_extension_cleanup = datetime.now(timezone.utc)
+        
+        if success:
+            print(f"✅ Periodic extension cleanup completed at {_last_extension_cleanup.isoformat()}")
+        else:
+            print(f"⚠️ Periodic extension cleanup had some issues at {_last_extension_cleanup.isoformat()}")
+        
+        return success
+        
+    except Exception as e:
+        error_msg = str(e)[:100]
+        print(f"⚠️ Periodic extension cleanup failed: {error_msg}")
+        _last_extension_cleanup = datetime.now(timezone.utc)  # Update time even on failure
+        return False
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
 
 
 def database_keepalive_worker():
@@ -3092,9 +3182,12 @@ def database_keepalive_worker():
     - Verifies connection pool health
     - Minimal resource overhead
     - Non-intrusive to production operations
+    
+    Additionally, the worker periodically cleans up orphaned PostgreSQL extensions
+    (like pg_stat_statements) that cause errors in Railway's monitoring dashboard.
     """
     global _keepalive_running, _keepalive_last_ping, _keepalive_consecutive_failures
-    global _keepalive_start_time, _keepalive_total_pings
+    global _keepalive_start_time, _keepalive_total_pings, _last_extension_cleanup
     
     _keepalive_running = True
     _keepalive_start_time = datetime.now(timezone.utc)
@@ -3135,6 +3228,11 @@ def database_keepalive_worker():
                 time.sleep(DB_KEEPALIVE_WARMUP_PING_DELAY_SECONDS * DB_KEEPALIVE_WARMUP_RETRY_DELAY_MULTIPLIER)
     
     print(f"🔥 Database warm-up complete, entering aggressive mode (ping every {DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS}s)")
+    
+    # Perform initial extension cleanup immediately after warm-up
+    # This ensures pg_stat_statements is removed as soon as the keepalive starts
+    print("🧹 Performing initial extension cleanup...")
+    periodic_extension_cleanup()
     
     # Flag to track if we've transitioned to normal mode
     transitioned_to_normal = False
@@ -3182,6 +3280,11 @@ def database_keepalive_worker():
                 # Log every ping to ensure visibility
                 elapsed_hours = elapsed_seconds / 3600
                 print(f"✅ Database keepalive ping #{_keepalive_total_pings} [{mode}] at {_keepalive_last_ping.isoformat()} (uptime: {elapsed_hours:.1f}h)")
+                
+                # Perform periodic extension cleanup to remove pg_stat_statements
+                # This prevents errors in Railway's monitoring dashboard
+                if should_run_extension_cleanup():
+                    periodic_extension_cleanup()
                 
             except Exception as e:
                 _keepalive_consecutive_failures += 1
