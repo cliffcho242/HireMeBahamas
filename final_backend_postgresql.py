@@ -3078,8 +3078,14 @@ def should_run_extension_cleanup():
     """
     Determine if extension cleanup should run based on elapsed time.
     
+    This function checks the global `_last_extension_cleanup` variable to decide
+    whether to run the cleanup:
+    - Returns True on the first call (when `_last_extension_cleanup` is None)
+    - Returns True if `DB_EXTENSION_CLEANUP_INTERVAL_SECONDS` has passed since last cleanup
+    - Returns False otherwise
+    
     Returns:
-        True if cleanup should run (first time or interval has passed), False otherwise
+        True if cleanup should run, False otherwise
     """
     global _last_extension_cleanup
     
@@ -3093,18 +3099,21 @@ def should_run_extension_cleanup():
 
 def periodic_extension_cleanup():
     """
-    Perform periodic cleanup of the pg_stat_statements extension.
+    Perform periodic cleanup of orphaned PostgreSQL extensions.
     
-    This function is called periodically by the keepalive worker to ensure that
-    the pg_stat_statements extension (which causes errors in Railway's monitoring
-    dashboard) is removed even if it gets recreated by external database tools.
+    This function is called periodically by the keepalive worker to remove
+    orphaned extensions that require shared_preload_libraries configuration
+    (which is not available on Railway's managed PostgreSQL).
     
-    The pg_stat_statements extension requires shared_preload_libraries configuration
-    which is not available on Railway's managed PostgreSQL. When Railway's monitoring
-    dashboard tries to query this extension, it fails with an error. This cleanup
-    function removes the extension to prevent these errors.
+    Currently cleans up:
+    - pg_stat_statements extension and any related orphaned tables/views
+    
+    The cleanup prevents errors from Railway's monitoring dashboard which tries
+    to query pg_stat_statements. Without this cleanup, queries fail with:
+    "ERROR: pg_stat_statements must be loaded via shared_preload_libraries"
     
     The cleanup is non-blocking and failures are logged but don't affect other operations.
+    Updates `_last_extension_cleanup` timestamp after each cleanup attempt.
     
     Returns:
         True if cleanup was successful or not needed, False if cleanup failed
