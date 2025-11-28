@@ -655,10 +655,8 @@ def _is_transient_connection_error(error: Exception) -> bool:
     
     error_msg = str(error).lower()
     
-    # Use shared constant for transient error patterns, plus container transitioning patterns
-    all_patterns = TRANSIENT_ERROR_PATTERNS + CONTAINER_TRANSITIONING_PATTERNS
-    
-    return any(pattern in error_msg for pattern in all_patterns)
+    # Use the shared ALL_TRANSITIONING_PATTERNS constant for consistency
+    return any(pattern in error_msg for pattern in ALL_TRANSITIONING_PATTERNS)
 
 
 def _is_stale_ssl_connection_error(error: Exception) -> bool:
