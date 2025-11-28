@@ -8,45 +8,41 @@ Nixpacks build failed with TOML syntax error, which has been fixed, but deployme
 ✅ Verified local backend imports successfully
 ✅ Confirmed Procfile is correct
 ✅ Requirements.txt has all dependencies
-✅ Added pg_stat_statements extension initialization
+✅ Removed pg_stat_statements extension (requires server-side configuration unavailable on Railway)
 
 ## PostgreSQL Extensions (pg_stat_statements)
 
 ### About pg_stat_statements
-The `pg_stat_statements` extension provides query performance statistics tracking. It's useful for:
-- Monitoring slow queries
-- Identifying frequently executed queries
-- Performance tuning and optimization
+The `pg_stat_statements` extension provides query performance statistics tracking. However, it **cannot be used on managed PostgreSQL services like Railway** because it requires server-side configuration (`shared_preload_libraries`) that is not available to users.
 
 ### Common Error
 If you see an error like:
 ```
 ERROR: pg_stat_statements must be loaded via "shared_preload_libraries"
+STATEMENT: SET statement_timeout = '30s'; SELECT * FROM public."pg_stat_statements" LIMIT 10
 ```
 
-This means the extension requires server-side configuration.
+This error typically occurs when:
+1. The `pg_stat_statements` extension was previously installed but cannot function
+2. Railway's monitoring dashboard attempts to query the extension's statistics
+3. The extension is not loaded in `shared_preload_libraries` (server-side config)
 
 ### Solution
-The application now automatically attempts to initialize the `pg_stat_statements` extension during database startup:
+The application now automatically **removes** the `pg_stat_statements` extension during database startup:
 
-1. **Checks if extension is available** on the PostgreSQL server
-2. **Creates the extension** if available and not already installed
-3. **Gracefully handles errors** if the extension cannot be loaded
+1. **Checks if extension is installed** on the PostgreSQL server
+2. **Drops the extension with CASCADE** if it exists but cannot function
+3. **Logs the cleanup** for visibility
+
+This cleanup is performed in the `cleanup_orphaned_extensions()` function which runs during database initialization. The error messages from Railway's monitoring dashboard are **external queries** that our application cannot control - they should stop appearing after the extension is dropped.
 
 For managed PostgreSQL providers (Railway, Render, Heroku, etc.):
-- The extension may or may not be available depending on your plan
-- Contact your provider to enable `shared_preload_libraries` if needed
-- The application will continue to work even if the extension is unavailable
+- The `pg_stat_statements` extension cannot be properly configured
+- The application automatically removes orphaned extensions that require `shared_preload_libraries`
+- The application will continue to work normally without this extension
 
-### Manual Extension Setup (if you have admin access)
-If you have PostgreSQL admin access, add to `postgresql.conf`:
-```
-shared_preload_libraries = 'pg_stat_statements'
-```
-Then restart PostgreSQL and run:
-```sql
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-```
+### Note About External Monitoring Errors
+If you see `pg_stat_statements` errors in your Railway logs, these are from Railway's monitoring system, not from your application. Once the application drops the extension during startup, these errors should stop. If they persist after a deployment, Railway may be reinstalling the extension - contact Railway support in that case.
 
 ## Possible Remaining Issues
 
