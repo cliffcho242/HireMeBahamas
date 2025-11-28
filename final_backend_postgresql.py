@@ -3074,13 +3074,35 @@ _keepalive_total_pings = 0  # Track total successful pings for monitoring
 _last_extension_cleanup = None  # Track when we last cleaned up orphaned extensions
 
 
+def should_run_extension_cleanup():
+    """
+    Determine if extension cleanup should run based on elapsed time.
+    
+    Returns:
+        True if cleanup should run (first time or interval has passed), False otherwise
+    """
+    global _last_extension_cleanup
+    
+    if _last_extension_cleanup is None:
+        # First cleanup after startup
+        return True
+    
+    seconds_since_cleanup = (datetime.now(timezone.utc) - _last_extension_cleanup).total_seconds()
+    return seconds_since_cleanup >= DB_EXTENSION_CLEANUP_INTERVAL_SECONDS
+
+
 def periodic_extension_cleanup():
     """
-    Perform periodic cleanup of pg_stat_statements and other orphaned extensions.
+    Perform periodic cleanup of the pg_stat_statements extension.
     
     This function is called periodically by the keepalive worker to ensure that
     the pg_stat_statements extension (which causes errors in Railway's monitoring
-    dashboard) is removed even if it gets recreated.
+    dashboard) is removed even if it gets recreated by external database tools.
+    
+    The pg_stat_statements extension requires shared_preload_libraries configuration
+    which is not available on Railway's managed PostgreSQL. When Railway's monitoring
+    dashboard tries to query this extension, it fails with an error. This cleanup
+    function removes the extension to prevent these errors.
     
     The cleanup is non-blocking and failures are logged but don't affect other operations.
     
@@ -3241,16 +3263,7 @@ def database_keepalive_worker():
                 
                 # Perform periodic extension cleanup to remove pg_stat_statements
                 # This prevents errors in Railway's monitoring dashboard
-                should_cleanup = False
-                if _last_extension_cleanup is None:
-                    # First cleanup after startup
-                    should_cleanup = True
-                else:
-                    seconds_since_cleanup = (datetime.now(timezone.utc) - _last_extension_cleanup).total_seconds()
-                    if seconds_since_cleanup >= DB_EXTENSION_CLEANUP_INTERVAL_SECONDS:
-                        should_cleanup = True
-                
-                if should_cleanup:
+                if should_run_extension_cleanup():
                     periodic_extension_cleanup()
                 
             except Exception as e:
