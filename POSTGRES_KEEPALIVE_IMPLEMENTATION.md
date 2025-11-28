@@ -118,8 +118,8 @@ Created test suite to verify:
 | `ENVIRONMENT` | `development` | Set to `production` to enable keepalive (OR deploy on Railway) |
 | `RAILWAY_PROJECT_ID` | - | Automatically set by Railway; if present, keepalive is enabled |
 | `DATABASE_URL` | - | PostgreSQL connection string (required) |
-| `DB_KEEPALIVE_INTERVAL_SECONDS` | `600` | Normal interval between pings (in seconds) |
-| `DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS` | `3600` | Duration of aggressive mode after startup (1 hour) |
+| `DB_KEEPALIVE_INTERVAL_SECONDS` | `300` | Normal interval between pings (5 minutes) |
+| `DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS` | `7200` | Duration of aggressive mode after startup (2 hours) |
 | `DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS` | `120` | Interval during aggressive mode (2 minutes) |
 
 ### Repository Variables (for GitHub Actions)
@@ -133,11 +133,11 @@ Created test suite to verify:
 
 ### Recommended Intervals
 
-- **120 seconds (2 min)**: Aggressive mode for first hour after deployment
-- **300 seconds (5 min)**: More aggressive normal mode
-- **600 seconds (10 min)**: Default normal mode, good balance for most apps
+- **120 seconds (2 min)**: Aggressive mode for first 2 hours after deployment
+- **180 seconds (3 min)**: Most aggressive normal mode for maximum reliability
+- **300 seconds (5 min)**: Default normal mode (recommended for Railway)
 
-⚠️ **Important**: Keep the interval under 15 minutes, as Railway databases sleep after 15 minutes of inactivity.
+⚠️ **Important**: Keep the interval well under 15 minutes, as Railway databases sleep after 15 minutes of inactivity. The default of 5 minutes provides a good safety margin.
 
 ## How It Works
 
@@ -146,8 +146,8 @@ Created test suite to verify:
 1. Application detects production environment with PostgreSQL
 2. Keepalive thread is created as a daemon
 3. **Warm-up sequence**: 3 pings with 2-second intervals
-4. **Aggressive mode**: Ping every 2 minutes for first hour
-5. **Normal mode**: Ping every 10 minutes after first hour
+4. **Aggressive mode**: Ping every 2 minutes for first 2 hours
+5. **Normal mode**: Ping every 5 minutes after first 2 hours
 4. Thread enters main loop
 
 ### Main Loop

@@ -32,10 +32,10 @@ def test_keepalive_configuration():
     assert backend.DB_KEEPALIVE_ENABLED == False, "Keepalive should be disabled in development"
     print("   ✅ Keepalive correctly disabled in development")
     
-    # Test 2: Verify default interval
+    # Test 2: Verify default interval (now 300 seconds / 5 minutes)
     print("\n2. Testing default keepalive interval...")
-    assert backend.DB_KEEPALIVE_INTERVAL_SECONDS == 600, "Default interval should be 600 seconds"
-    print("   ✅ Default interval is 600 seconds (10 minutes)")
+    assert backend.DB_KEEPALIVE_INTERVAL_SECONDS == 300, "Default interval should be 300 seconds"
+    print("   ✅ Default interval is 300 seconds (5 minutes)")
     
     print("\n✅ All configuration tests passed!")
     return True

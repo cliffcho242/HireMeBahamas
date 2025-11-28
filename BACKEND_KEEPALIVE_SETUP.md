@@ -14,7 +14,8 @@ Railway databases on free/hobby tiers automatically sleep after **15 minutes of 
 ## Solution
 
 The application now includes an **automatic database keepalive** mechanism that:
-- ✅ Pings the database every 10 minutes
+- ✅ Pings the database every 5 minutes (default)
+- ✅ Uses aggressive 2-minute intervals for the first 2 hours after startup
 - ✅ Keeps the database connection active
 - ✅ Prevents the database from sleeping
 - ✅ Runs only in production environments
@@ -25,7 +26,8 @@ The application now includes an **automatic database keepalive** mechanism that:
 ### 1. Background Thread
 
 A daemon thread runs in the background that:
-- Executes every 10 minutes (configurable)
+- Executes every 5 minutes (configurable)
+- Uses aggressive 2-minute intervals for first 2 hours after startup
 - Performs a simple `SELECT 1` query
 - Uses the connection pool for efficiency
 - Tracks success/failure status
@@ -53,7 +55,8 @@ Response includes:
   "keepalive": {
     "enabled": true,
     "running": true,
-    "interval_seconds": 600,
+    "mode": "normal",
+    "current_interval_seconds": 300,
     "last_ping": "2025-11-26T08:30:00.000Z",
     "seconds_since_last_ping": 45.2,
     "consecutive_failures": 0
@@ -67,7 +70,9 @@ Response includes:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DB_KEEPALIVE_INTERVAL_SECONDS` | `600` | Time between keepalive pings (in seconds) |
+| `DB_KEEPALIVE_INTERVAL_SECONDS` | `300` | Time between keepalive pings in normal mode (in seconds) |
+| `DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS` | `7200` | Duration of aggressive mode after startup (2 hours) |
+| `DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS` | `120` | Time between pings in aggressive mode (2 minutes) |
 | `ENVIRONMENT` | `development` | Set to `production` to enable keepalive |
 | `DATABASE_URL` | - | PostgreSQL connection string (required) |
 
@@ -76,15 +81,15 @@ Response includes:
 To change the ping interval, set the environment variable in Railway:
 
 ```bash
-DB_KEEPALIVE_INTERVAL_SECONDS=300  # Ping every 5 minutes
+DB_KEEPALIVE_INTERVAL_SECONDS=300  # Ping every 5 minutes (default)
 ```
 
 **Recommended values:**
-- `300` (5 minutes) - More aggressive, better for high-traffic apps
-- `600` (10 minutes) - Default, good balance
-- `900` (15 minutes) - Less frequent, but still prevents sleep
+- `180` (3 minutes) - Most aggressive, maximum reliability
+- `300` (5 minutes) - Default, recommended for Railway
+- `600` (10 minutes) - Less frequent, may be too close to sleep threshold
 
-**Note:** Railway sleeps after 15 minutes, so keep the interval under 15 minutes.
+**Note:** Railway sleeps after 15 minutes, so keep the interval well under 15 minutes (5 minutes recommended).
 
 ## Benefits
 

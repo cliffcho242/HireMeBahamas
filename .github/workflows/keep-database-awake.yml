@@ -4,15 +4,17 @@ name: Keep Database Awake
 # pinging the backend health endpoint. Railway free/hobby tier databases sleep
 # after 15 minutes of inactivity.
 #
-# Schedule: Every 10 minutes (before the 15-minute sleep threshold)
+# Schedule: Every 5 minutes (well before the 15-minute sleep threshold)
 # This acts as a backup to the in-app keepalive mechanism and ensures
 # the database stays awake even during deployment windows.
+# Using 5 minutes instead of 10 provides a larger safety margin.
 
 on:
   schedule:
-    # Run every 10 minutes to prevent database sleep
+    # Run every 5 minutes to prevent database sleep
     # Railway databases sleep after 15 minutes of inactivity
-    - cron: '*/10 * * * *'
+    # 5-minute interval provides better reliability than 10 minutes
+    - cron: '*/5 * * * *'
   workflow_dispatch:
     # Allow manual trigger for testing
 
@@ -158,4 +160,4 @@ jobs:
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "This workflow runs every 10 minutes to prevent the database from sleeping." >> $GITHUB_STEP_SUMMARY
+          echo "This workflow runs every 5 minutes to prevent the database from sleeping." >> $GITHUB_STEP_SUMMARY

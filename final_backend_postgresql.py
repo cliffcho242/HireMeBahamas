@@ -2531,15 +2531,19 @@ print(f"✅ Application ready to serve requests (startup time: {_startup_time_ms
 # set to "production", since Railway is inherently a production platform and database
 # sleeping is a Railway-specific issue.
 DB_KEEPALIVE_ENABLED = (IS_PRODUCTION or IS_RAILWAY) and USE_POSTGRESQL
-DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "600"))  # 10 minutes
+# Railway databases sleep after 15 minutes of inactivity. Using 5 minutes (300s)
+# provides a safety margin to prevent database from sleeping.
+# Previous value of 10 minutes was too close to the 15-minute threshold.
+DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "300"))  # 5 minutes
 DB_KEEPALIVE_FAILURE_THRESHOLD = 3  # Number of consecutive failures before warning
 DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS = 60  # Delay before retrying after unexpected error
 DB_KEEPALIVE_SHUTDOWN_TIMEOUT_SECONDS = 5  # Max time to wait for graceful shutdown
 
 # Aggressive keepalive for the first period after startup
 # This helps ensure the database stays awake right after deployment
-# After this period, switch to normal interval to reduce overhead
-DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS = int(os.getenv("DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS", "3600"))  # 1 hour
+# Extended to 2 hours (7200s) from 1 hour to provide longer protection during
+# initial usage patterns when database sleep is most likely to cause issues.
+DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS = int(os.getenv("DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS", "7200"))  # 2 hours
 DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS", "120"))  # 2 minutes
 
 # Initial warm-up ping configuration
