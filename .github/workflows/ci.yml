@@ -45,6 +45,32 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    
+    # PostgreSQL service for database integration testing
+    # This ensures tests run against a real PostgreSQL database
+    # and helps catch connection/recovery issues early
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: hiremebahamas_test
+          POSTGRES_USER: hiremebahamas_user
+          POSTGRES_PASSWORD: hiremebahamas_password
+        ports:
+          - 5432:5432
+        # Health check to ensure PostgreSQL is ready before tests run
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Database URL for PostgreSQL integration tests
+      DATABASE_URL: postgresql://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas_test
+      # Set test environment
+      ENVIRONMENT: test
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -69,6 +95,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-flask
           pip install -r requirements.txt
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U hiremebahamas_user; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting for PostgreSQL... attempt $i"
+            sleep 1
+          done
+
+      - name: Run database recovery tests
+        run: |
+          python -m pytest test_database_recovery.py -v --tb=short
 
       - name: Run backend tests
         run: |
