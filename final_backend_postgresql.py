@@ -5700,15 +5700,15 @@ def get_notifications_unread_count():
                 (user_id, interaction_types)
             )
         else:
-            placeholders = ",".join(["?" for _ in interaction_types])
-            cursor.execute(
-                f"""
-                SELECT COUNT(*) as count FROM notifications
-                WHERE user_id = ? AND is_read = 0
-                AND notification_type IN ({placeholders})
-                """,
-                (user_id,) + interaction_types
+            # Build query with explicit placeholders for SQLite
+            # This is safe as placeholders contains only "?" characters
+            placeholders = ",".join(["?"] * len(interaction_types))
+            query = (
+                "SELECT COUNT(*) as count FROM notifications "
+                "WHERE user_id = ? AND is_read = 0 "
+                "AND notification_type IN (" + placeholders + ")"
             )
+            cursor.execute(query, (user_id,) + interaction_types)
 
         result = cursor.fetchone()
         count = result["count"] if result else 0
@@ -5879,7 +5879,11 @@ def get_notifications_list():
                 "type": n["notification_type"],
                 "content": n["content"],
                 "is_read": bool(n["is_read"]),
-                "created_at": n["created_at"].isoformat() if n["created_at"] else None,
+                "created_at": (
+                    n["created_at"].isoformat() 
+                    if n["created_at"] and hasattr(n["created_at"], 'isoformat') 
+                    else str(n["created_at"]) if n["created_at"] else None
+                ),
                 "related_id": n["related_id"],
                 "actor": actor_data,
             })
