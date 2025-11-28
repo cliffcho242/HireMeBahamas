@@ -211,6 +211,47 @@ def test_discard_connection_function():
     print("\n✅ Connection discard tests passed!")
 
 
+def test_tcp_keepalive_configuration():
+    """Test that TCP keepalive settings are properly configured."""
+    from final_backend_postgresql import (
+        TCP_KEEPALIVE_ENABLED, TCP_KEEPALIVE_IDLE, TCP_KEEPALIVE_INTERVAL,
+        TCP_KEEPALIVE_COUNT, TCP_USER_TIMEOUT_MS
+    )
+    
+    # Verify keepalive is enabled by default
+    assert TCP_KEEPALIVE_ENABLED == 1, \
+        f"TCP keepalive should be enabled by default, got {TCP_KEEPALIVE_ENABLED}"
+    print("✓ TCP keepalive is enabled by default")
+    
+    # Verify keepalive idle time is aggressive (20 seconds)
+    assert TCP_KEEPALIVE_IDLE == 20, \
+        f"TCP keepalive idle should be 20s, got {TCP_KEEPALIVE_IDLE}s"
+    print("✓ TCP keepalive idle is 20 seconds")
+    
+    # Verify keepalive interval is aggressive (5 seconds)
+    assert TCP_KEEPALIVE_INTERVAL == 5, \
+        f"TCP keepalive interval should be 5s, got {TCP_KEEPALIVE_INTERVAL}s"
+    print("✓ TCP keepalive interval is 5 seconds")
+    
+    # Verify keepalive count is 3
+    assert TCP_KEEPALIVE_COUNT == 3, \
+        f"TCP keepalive count should be 3, got {TCP_KEEPALIVE_COUNT}"
+    print("✓ TCP keepalive count is 3")
+    
+    # Verify tcp_user_timeout is configured (20000ms = 20 seconds)
+    assert TCP_USER_TIMEOUT_MS == 20000, \
+        f"TCP user timeout should be 20000ms, got {TCP_USER_TIMEOUT_MS}ms"
+    print("✓ TCP user timeout is 20000ms (20 seconds)")
+    
+    # Verify total detection time is reasonable (35 seconds)
+    total_detection = TCP_KEEPALIVE_IDLE + (TCP_KEEPALIVE_INTERVAL * TCP_KEEPALIVE_COUNT)
+    assert total_detection == 35, \
+        f"Total detection time should be 35s, got {total_detection}s"
+    print(f"✓ Total keepalive detection time is {total_detection} seconds")
+    
+    print("\n✅ TCP keepalive configuration tests passed!")
+
+
 def run_all_tests():
     """Run all SSL connection retry tests."""
     print("=" * 70)
@@ -224,6 +265,7 @@ def run_all_tests():
         test_execute_query_retry_logic_structure,
         test_validate_connection_function,
         test_discard_connection_function,
+        test_tcp_keepalive_configuration,
     ]
     
     passed = 0
