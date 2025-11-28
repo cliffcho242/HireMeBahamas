@@ -1693,7 +1693,9 @@ def init_postgresql_extensions(cursor, conn):
     # First, clean up any orphaned extensions that require shared_preload_libraries
     # This prevents errors from Railway's monitoring dashboard trying to query
     # extensions like pg_stat_statements that can't function without server-side config
-    cleanup_orphaned_extensions(cursor, conn)
+    cleanup_success = cleanup_orphaned_extensions(cursor, conn)
+    if not cleanup_success:
+        print("⚠️  Some orphaned extensions could not be cleaned up, but this is non-fatal")
     
     for ext_name, ext_config in POSTGRESQL_EXTENSIONS.items():
         ext_sql = ext_config["sql"]
