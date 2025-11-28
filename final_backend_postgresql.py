@@ -1957,6 +1957,23 @@ def init_database():
                 """
                 )
 
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS notifications (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        actor_id INTEGER,
+                        notification_type VARCHAR(50) NOT NULL,
+                        content TEXT NOT NULL,
+                        related_id INTEGER,
+                        is_read BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (actor_id) REFERENCES users (id) ON DELETE SET NULL
+                    )
+                """
+                )
+
             else:
                 # SQLite syntax (original)
                 cursor.execute(
@@ -2073,6 +2090,23 @@ def init_database():
                         UNIQUE(follower_id, followed_id),
                         FOREIGN KEY (follower_id) REFERENCES users (id) ON DELETE CASCADE,
                         FOREIGN KEY (followed_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS notifications (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        actor_id INTEGER,
+                        notification_type TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        related_id INTEGER,
+                        is_read BOOLEAN DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (actor_id) REFERENCES users (id) ON DELETE SET NULL
                     )
                 """
                 )
@@ -5619,6 +5653,376 @@ def create_job():
     except Exception as e:
         print(f"Create job error: {str(e)}")
         return jsonify({"success": False, "message": f"Failed to create job: {str(e)}"}), 500
+
+
+# ==========================================
+# NOTIFICATIONS ENDPOINTS
+# ==========================================
+
+
+@app.route("/api/notifications/unread-count", methods=["GET", "OPTIONS"])
+def get_notifications_unread_count():
+    """
+    Get count of unread notifications for the current user.
+    Only counts interaction-type notifications (like, comment, mention).
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Count unread notifications for interaction types only
+        # Interaction types: like, comment, mention
+        interaction_types = ('like', 'comment', 'mention')
+
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT COUNT(*) as count FROM notifications
+                WHERE user_id = %s AND is_read = FALSE
+                AND notification_type IN %s
+                """,
+                (user_id, interaction_types)
+            )
+        else:
+            placeholders = ",".join(["?" for _ in interaction_types])
+            cursor.execute(
+                f"""
+                SELECT COUNT(*) as count FROM notifications
+                WHERE user_id = ? AND is_read = 0
+                AND notification_type IN ({placeholders})
+                """,
+                (user_id,) + interaction_types
+            )
+
+        result = cursor.fetchone()
+        count = result["count"] if result else 0
+
+        cursor.close()
+        return_db_connection(conn)
+
+        return jsonify({"success": True, "unread_count": count}), 200
+
+    except Exception as e:
+        print(f"Get unread notifications count error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to get unread count: {str(e)}"}), 500
+
+
+@app.route("/api/notifications/list", methods=["GET", "OPTIONS"])
+def get_notifications_list():
+    """
+    Get list of notifications for the current user.
+    Supports pagination with skip and limit parameters.
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        # Get pagination parameters
+        skip = request.args.get("skip", 0, type=int)
+        limit = request.args.get("limit", 20, type=int)
+        unread_only = request.args.get("unread_only", "false").lower() == "true"
+
+        # Validate pagination
+        if skip < 0:
+            skip = 0
+        if limit < 1:
+            limit = 20
+        if limit > 100:
+            limit = 100
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get total count
+        if USE_POSTGRESQL:
+            if unread_only:
+                cursor.execute(
+                    "SELECT COUNT(*) as count FROM notifications WHERE user_id = %s AND is_read = FALSE",
+                    (user_id,)
+                )
+            else:
+                cursor.execute(
+                    "SELECT COUNT(*) as count FROM notifications WHERE user_id = %s",
+                    (user_id,)
+                )
+        else:
+            if unread_only:
+                cursor.execute(
+                    "SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0",
+                    (user_id,)
+                )
+            else:
+                cursor.execute(
+                    "SELECT COUNT(*) as count FROM notifications WHERE user_id = ?",
+                    (user_id,)
+                )
+
+        total = cursor.fetchone()["count"]
+
+        # Get notifications with actor information
+        if USE_POSTGRESQL:
+            if unread_only:
+                cursor.execute(
+                    """
+                    SELECT n.id, n.notification_type, n.content, n.is_read, n.created_at,
+                           n.related_id, n.actor_id,
+                           u.id as actor_user_id, u.first_name as actor_first_name,
+                           u.last_name as actor_last_name, u.username as actor_username,
+                           u.avatar_url as actor_avatar_url
+                    FROM notifications n
+                    LEFT JOIN users u ON n.actor_id = u.id
+                    WHERE n.user_id = %s AND n.is_read = FALSE
+                    ORDER BY n.created_at DESC
+                    LIMIT %s OFFSET %s
+                    """,
+                    (user_id, limit, skip)
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT n.id, n.notification_type, n.content, n.is_read, n.created_at,
+                           n.related_id, n.actor_id,
+                           u.id as actor_user_id, u.first_name as actor_first_name,
+                           u.last_name as actor_last_name, u.username as actor_username,
+                           u.avatar_url as actor_avatar_url
+                    FROM notifications n
+                    LEFT JOIN users u ON n.actor_id = u.id
+                    WHERE n.user_id = %s
+                    ORDER BY n.created_at DESC
+                    LIMIT %s OFFSET %s
+                    """,
+                    (user_id, limit, skip)
+                )
+        else:
+            if unread_only:
+                cursor.execute(
+                    """
+                    SELECT n.id, n.notification_type, n.content, n.is_read, n.created_at,
+                           n.related_id, n.actor_id,
+                           u.id as actor_user_id, u.first_name as actor_first_name,
+                           u.last_name as actor_last_name, u.username as actor_username,
+                           u.avatar_url as actor_avatar_url
+                    FROM notifications n
+                    LEFT JOIN users u ON n.actor_id = u.id
+                    WHERE n.user_id = ? AND n.is_read = 0
+                    ORDER BY n.created_at DESC
+                    LIMIT ? OFFSET ?
+                    """,
+                    (user_id, limit, skip)
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT n.id, n.notification_type, n.content, n.is_read, n.created_at,
+                           n.related_id, n.actor_id,
+                           u.id as actor_user_id, u.first_name as actor_first_name,
+                           u.last_name as actor_last_name, u.username as actor_username,
+                           u.avatar_url as actor_avatar_url
+                    FROM notifications n
+                    LEFT JOIN users u ON n.actor_id = u.id
+                    WHERE n.user_id = ?
+                    ORDER BY n.created_at DESC
+                    LIMIT ? OFFSET ?
+                    """,
+                    (user_id, limit, skip)
+                )
+
+        notifications_data = cursor.fetchall()
+
+        cursor.close()
+        return_db_connection(conn)
+
+        # Format notifications
+        notifications = []
+        for n in notifications_data:
+            actor_data = None
+            if n["actor_id"]:
+                actor_data = {
+                    "id": n["actor_user_id"],
+                    "first_name": n["actor_first_name"] or "",
+                    "last_name": n["actor_last_name"] or "",
+                    "username": n["actor_username"],
+                    "avatar_url": n["actor_avatar_url"],
+                }
+
+            notifications.append({
+                "id": n["id"],
+                "type": n["notification_type"],
+                "content": n["content"],
+                "is_read": bool(n["is_read"]),
+                "created_at": n["created_at"].isoformat() if n["created_at"] else None,
+                "related_id": n["related_id"],
+                "actor": actor_data,
+            })
+
+        return jsonify({
+            "success": True,
+            "notifications": notifications,
+            "total": total,
+        }), 200
+
+    except Exception as e:
+        print(f"Get notifications list error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to get notifications: {str(e)}"}), 500
+
+
+@app.route("/api/notifications/<int:notification_id>/read", methods=["PUT", "OPTIONS"])
+def mark_notification_read(notification_id):
+    """
+    Mark a specific notification as read.
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if notification exists and belongs to user
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "SELECT id FROM notifications WHERE id = %s AND user_id = %s",
+                (notification_id, user_id)
+            )
+        else:
+            cursor.execute(
+                "SELECT id FROM notifications WHERE id = ? AND user_id = ?",
+                (notification_id, user_id)
+            )
+
+        if not cursor.fetchone():
+            cursor.close()
+            return_db_connection(conn)
+            return jsonify({"success": False, "message": "Notification not found"}), 404
+
+        # Mark as read
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "UPDATE notifications SET is_read = TRUE WHERE id = %s",
+                (notification_id,)
+            )
+        else:
+            cursor.execute(
+                "UPDATE notifications SET is_read = 1 WHERE id = ?",
+                (notification_id,)
+            )
+
+        conn.commit()
+        cursor.close()
+        return_db_connection(conn)
+
+        return jsonify({"success": True, "message": "Notification marked as read"}), 200
+
+    except Exception as e:
+        print(f"Mark notification read error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to mark notification as read: {str(e)}"}), 500
+
+
+@app.route("/api/notifications/mark-all-read", methods=["PUT", "OPTIONS"])
+def mark_all_notifications_read():
+    """
+    Mark all notifications as read for the current user.
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "Authentication required"}), 401
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Count unread before marking
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM notifications WHERE user_id = %s AND is_read = FALSE",
+                (user_id,)
+            )
+        else:
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0",
+                (user_id,)
+            )
+
+        unread_count = cursor.fetchone()["count"]
+
+        # Mark all as read
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "UPDATE notifications SET is_read = TRUE WHERE user_id = %s AND is_read = FALSE",
+                (user_id,)
+            )
+        else:
+            cursor.execute(
+                "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0",
+                (user_id,)
+            )
+
+        conn.commit()
+        cursor.close()
+        return_db_connection(conn)
+
+        return jsonify({
+            "success": True,
+            "message": f"Marked {unread_count} notifications as read"
+        }), 200
+
+    except Exception as e:
+        print(f"Mark all notifications read error: {str(e)}")
+        return jsonify({"success": False, "message": f"Failed to mark all notifications as read: {str(e)}"}), 500
 
 
 # ==========================================
