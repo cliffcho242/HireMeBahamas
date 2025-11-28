@@ -132,8 +132,9 @@ def test_registration_logs_slow_requests():
     assert 'SLOW REGISTRATION' in source, (
         "Registration endpoint should log warnings for slow requests"
     )
-    assert 'total_registration_ms > 1000' in source, (
-        "Registration should warn when total time exceeds 1000ms"
+    # Check for the constant name (now uses SLOW_REGISTRATION_THRESHOLD_MS instead of hardcoded value)
+    assert 'SLOW_REGISTRATION_THRESHOLD_MS' in source, (
+        "Registration should use SLOW_REGISTRATION_THRESHOLD_MS constant for threshold"
     )
 
 

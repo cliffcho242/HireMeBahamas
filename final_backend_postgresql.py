@@ -121,6 +121,14 @@ def uploaded_file(filename):
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
 SLOW_REQUEST_THRESHOLD_MS = 3000  # 3 seconds
 VERY_SLOW_REQUEST_THRESHOLD_MS = 10000  # 10 seconds
+SLOW_REGISTRATION_THRESHOLD_MS = 1000  # 1 second - trigger warning for slow registrations
+
+# User agent display configuration
+USER_AGENT_MAX_DISPLAY_LENGTH = 100  # Maximum characters to display in logs
+
+# Cold start detection configuration
+# Requests arriving within this time after app startup are considered cold start requests
+COLD_START_THRESHOLD_SECONDS = 5
 
 # Generic mobile client detection patterns (used after specific platform checks)
 # These patterns help identify mobile clients that may have shorter timeout settings
@@ -203,20 +211,28 @@ def log_request_start():
     
     # Check if this is a cold start request (first request after application startup)
     # Cold start requests are more likely to timeout due to database initialization
-    cold_start_indicator = ""
+    is_cold_start = False
     if _APP_IMPORT_COMPLETE_TIME is not None:
         time_since_startup = g.start_time - _APP_IMPORT_COMPLETE_TIME
-        if time_since_startup < 5:  # Within 5 seconds of app startup
-            cold_start_indicator = " coldStart=\"true\""
+        if time_since_startup < COLD_START_THRESHOLD_SECONDS:
+            is_cold_start = True
     
     # Log incoming request with context (truncate long user agents)
-    user_agent_display = user_agent if len(user_agent) <= 100 else f"{user_agent[:100]}..."
-    print(
-        f"[{g.request_id}] --> {request.method} {host}{request.path} "
-        f"clientIP=\"{client_ip}\" clientType=\"{g.client_type}\""
-        f"{cold_start_indicator} "
-        f"userAgent=\"{user_agent_display}\""
+    user_agent_display = (
+        user_agent if len(user_agent) <= USER_AGENT_MAX_DISPLAY_LENGTH 
+        else f"{user_agent[:USER_AGENT_MAX_DISPLAY_LENGTH]}..."
     )
+    
+    # Build log parts and join to avoid extra spaces with optional fields
+    log_parts = [
+        f"[{g.request_id}] --> {request.method} {host}{request.path}",
+        f"clientIP=\"{client_ip}\"",
+        f"clientType=\"{g.client_type}\"",
+    ]
+    if is_cold_start:
+        log_parts.append("coldStart=\"true\"")
+    log_parts.append(f"userAgent=\"{user_agent_display}\"")
+    print(" ".join(log_parts))
 
 
 @app.after_request
@@ -253,7 +269,10 @@ def log_request_end(response):
     client_type = getattr(g, 'client_type', 'unknown')
     
     # Truncate long user agents for log readability
-    user_agent_display = user_agent if len(user_agent) <= 100 else f"{user_agent[:100]}..."
+    user_agent_display = (
+        user_agent if len(user_agent) <= USER_AGENT_MAX_DISPLAY_LENGTH 
+        else f"{user_agent[:USER_AGENT_MAX_DISPLAY_LENGTH]}..."
+    )
     
     # Determine log level based on status code
     if response.status_code < 400:
@@ -2996,13 +3015,19 @@ def register():
     conn = None
     cursor = None
     request_id = getattr(g, 'request_id', 'unknown')
-    registration_start = time.time()
     client_type = getattr(g, 'client_type', 'unknown')
+    
+    # Use the actual request arrival time from middleware for accurate timeout detection
+    # g.start_time is set by log_request_start() before_request middleware
+    # This catches requests that were queued or delayed before reaching the endpoint
+    request_arrival_time = getattr(g, 'start_time', None) or time.time()
+    registration_start = time.time()
 
     try:
         # Early timeout check - useful when request arrives during cold start
-        # The request might have already been queued for significant time
-        if _check_request_timeout(registration_start, REGISTRATION_REQUEST_TIMEOUT_SECONDS, "registration (early check)"):
+        # Uses request_arrival_time to detect requests that have been waiting in queue
+        # This is more accurate than using registration_start which is set just now
+        if _check_request_timeout(request_arrival_time, REGISTRATION_REQUEST_TIMEOUT_SECONDS, "registration (early check)"):
             return (
                 jsonify({
                     "success": False,
@@ -3243,16 +3268,17 @@ def register():
         
         # Warn about slow registration operations
         # Mobile clients are more sensitive to slow responses due to shorter timeout limits
-        if total_registration_ms > 1000:  # Over 1 second
-            mobile_warning = ""
+        if total_registration_ms > SLOW_REGISTRATION_THRESHOLD_MS:
+            # Build warning message parts
+            warning_parts = [
+                f"[{request_id}] ⚠️ SLOW REGISTRATION: Total time {total_registration_ms}ms -",
+                f"Breakdown: PasswordHash={password_hash_ms}ms, DBCheck={db_check_ms}ms,",
+                f"DBInsert={insert_ms}ms, DBCommit={commit_ms}ms, Token={token_create_ms}ms.",
+            ]
             if client_type.startswith('mobile'):
-                mobile_warning = f" ⚠️ Mobile client ({client_type}) - may cause timeout issues."
-            print(
-                f"[{request_id}] ⚠️ SLOW REGISTRATION: Total time {total_registration_ms}ms - "
-                f"Breakdown: PasswordHash={password_hash_ms}ms, DBCheck={db_check_ms}ms, "
-                f"DBInsert={insert_ms}ms, DBCommit={commit_ms}ms, Token={token_create_ms}ms.{mobile_warning} "
-                f"Consider checking connection pool, database performance, or bcrypt configuration."
-            )
+                warning_parts.append(f"⚠️ Mobile client ({client_type}) - may cause timeout issues.")
+            warning_parts.append("Consider checking connection pool, database performance, or bcrypt configuration.")
+            print(" ".join(warning_parts))
 
         return (
             jsonify(
