@@ -2537,7 +2537,7 @@ DB_KEEPALIVE_ENABLED = (IS_PRODUCTION or IS_RAILWAY) and USE_POSTGRESQL
 # Previous value of 5 minutes (300s) was still allowing database to sleep.
 DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "120"))  # 2 minutes
 DB_KEEPALIVE_FAILURE_THRESHOLD = 3  # Number of consecutive failures before warning
-DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS = 30  # Reduced from 60s for faster recovery
+DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS = 60  # Delay before retrying after unexpected error
 DB_KEEPALIVE_SHUTDOWN_TIMEOUT_SECONDS = 5  # Max time to wait for graceful shutdown
 
 # Aggressive keepalive for the first period after startup
@@ -2842,14 +2842,28 @@ def perform_database_ping():
         
         ping_ms = int((time.time() - ping_start) * 1000)
         
-        # Update global ping tracking
-        global _keepalive_last_ping
-        _keepalive_last_ping = datetime.now(timezone.utc)
+        # Extract server_time from result (RealDictCursor returns dict-like objects)
+        # Use safe access pattern to handle both dict and non-dict results
+        server_time = None
+        if result:
+            try:
+                # Try dict-style access first (for RealDictCursor)
+                server_time = str(result["server_time"])
+            except (KeyError, TypeError):
+                # Fallback to index access if needed
+                try:
+                    server_time = str(result[1]) if len(result) > 1 else None
+                except (IndexError, TypeError):
+                    pass
+        
+        # Note: We intentionally don't update _keepalive_last_ping here to avoid
+        # interfering with the keepalive worker thread's state tracking.
+        # The keepalive thread maintains its own timing for interval calculations.
         
         return {
             "success": True,
             "ping_ms": ping_ms,
-            "server_time": str(result.get("server_time")) if result else None,
+            "server_time": server_time,
             "message": "Database is awake and responding"
         }
     except Exception as e:
