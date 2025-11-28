@@ -70,6 +70,36 @@ Railway's monitoring dashboard periodically queries `pg_stat_statements` to coll
   - Add `pg_stat_statements` to `shared_preload_libraries` (requires server config access)
   - Disable the monitoring queries for your database
 
+### Railway Data Tab "Failed to parse count" Error
+
+If you see an error like this in Railway's Data Tab (database admin interface):
+```
+Failed to parse count from query result. Received: {"success":false,"error":"ERROR: pg_stat_statements must be loaded via \"shared_preload_libraries\"","rows":[],"rowCount":0}
+```
+
+**This is a Railway platform limitation, NOT an application bug.**
+
+This error appears in Railway's Data Tab when their admin interface attempts to count rows in the `pg_stat_statements` view for display purposes. Since the extension cannot function without `shared_preload_libraries`, the query fails.
+
+**Key points:**
+- ✅ Your application is **NOT affected** by this error
+- ✅ Your data is **safe and accessible**
+- ✅ All application queries work correctly
+- ⚠️ Only Railway's Data Tab UI shows this error
+
+**Why this happens:**
+1. Railway's Data Tab tries to display table row counts
+2. It queries `pg_stat_statements` which exists as an empty/orphaned view
+3. The query fails because the extension isn't loaded in `shared_preload_libraries`
+4. Railway's UI can't parse the error response and displays this message
+
+**Workarounds:**
+1. **Ignore the error** - It does not affect your application or data
+2. **Use psql directly** - Connect via `railway run psql` for full database access
+3. **Use external DB tools** - pgAdmin, DBeaver, or TablePlus work without this issue
+
+**Note:** This is a known limitation of Railway's managed PostgreSQL service. The application code already handles cleanup of orphaned `pg_stat_statements` objects during startup to minimize these errors.
+
 ## Possible Remaining Issues
 
 ### 1. Database Dependency
