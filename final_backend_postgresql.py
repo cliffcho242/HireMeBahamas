@@ -2531,26 +2531,31 @@ print(f"✅ Application ready to serve requests (startup time: {_startup_time_ms
 # set to "production", since Railway is inherently a production platform and database
 # sleeping is a Railway-specific issue.
 DB_KEEPALIVE_ENABLED = (IS_PRODUCTION or IS_RAILWAY) and USE_POSTGRESQL
-# Railway databases sleep after 15 minutes of inactivity. Using 5 minutes (300s)
-# provides a safety margin to prevent database from sleeping.
-# Previous value of 10 minutes was too close to the 15-minute threshold.
-DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "300"))  # 5 minutes
+# Railway databases sleep after 15 minutes of inactivity. Using 2 minutes (120s)
+# provides a very aggressive safety margin to prevent database from sleeping.
+# This is the same as aggressive mode to ensure maximum reliability.
+# Previous value of 5 minutes (300s) was still allowing database to sleep.
+DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "120"))  # 2 minutes
 DB_KEEPALIVE_FAILURE_THRESHOLD = 3  # Number of consecutive failures before warning
 DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS = 60  # Delay before retrying after unexpected error
 DB_KEEPALIVE_SHUTDOWN_TIMEOUT_SECONDS = 5  # Max time to wait for graceful shutdown
 
 # Aggressive keepalive for the first period after startup
 # This helps ensure the database stays awake right after deployment
-# Extended to 2 hours (7200s) from 1 hour to provide longer protection during
+# Extended to 4 hours (14400s) to provide longer protection during
 # initial usage patterns when database sleep is most likely to cause issues.
-DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS = int(os.getenv("DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS", "7200"))  # 2 hours
-DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS", "120"))  # 2 minutes
+DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS = int(os.getenv("DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS", "14400"))  # 4 hours
+DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS", "60"))  # 1 minute
 
 # Initial warm-up ping configuration
 # Perform multiple pings on startup to ensure database is fully awake
-DB_KEEPALIVE_WARMUP_PING_COUNT = 3  # Number of initial pings
+DB_KEEPALIVE_WARMUP_PING_COUNT = 5  # Increased from 3 for more thorough warm-up
 DB_KEEPALIVE_WARMUP_PING_DELAY_SECONDS = 2  # Delay between warm-up pings
 DB_KEEPALIVE_WARMUP_RETRY_DELAY_MULTIPLIER = 2  # Multiply delay for retry on failure
+
+# Thread health monitoring - restart keepalive if thread dies
+DB_KEEPALIVE_HEALTH_CHECK_INTERVAL_SECONDS = 60  # Check thread health every minute
+DB_KEEPALIVE_MAX_PING_AGE_SECONDS = 300  # Consider thread dead if no ping for 5 minutes
 
 # Track keepalive thread and status
 _keepalive_thread = None
@@ -2558,6 +2563,7 @@ _keepalive_running = False
 _keepalive_last_ping = None
 _keepalive_consecutive_failures = 0
 _keepalive_start_time = None  # Track when keepalive started for aggressive mode
+_keepalive_total_pings = 0  # Track total successful pings for monitoring
 
 
 def database_keepalive_worker():
@@ -2566,8 +2572,8 @@ def database_keepalive_worker():
     
     Railway databases on free/hobby tiers sleep after 15 minutes of inactivity.
     This worker uses an adaptive interval strategy:
-    - Aggressive mode (first hour): Ping every 2 minutes to ensure database stays awake
-    - Normal mode (after first hour): Ping every 10 minutes for maintenance
+    - Aggressive mode (first 4 hours): Ping every 1 minute to ensure database stays awake
+    - Normal mode (after 4 hours): Ping every 2 minutes for maintenance
     
     The keepalive uses a simple SELECT 1 query that:
     - Wakes up sleeping connections
@@ -2575,13 +2581,15 @@ def database_keepalive_worker():
     - Minimal resource overhead
     - Non-intrusive to production operations
     """
-    global _keepalive_running, _keepalive_last_ping, _keepalive_consecutive_failures, _keepalive_start_time
+    global _keepalive_running, _keepalive_last_ping, _keepalive_consecutive_failures
+    global _keepalive_start_time, _keepalive_total_pings
     
     _keepalive_running = True
     _keepalive_start_time = datetime.now(timezone.utc)
+    _keepalive_total_pings = 0
     
-    print(f"🔄 Database keepalive started")
-    print(f"   Aggressive mode: {DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS}s interval for first {DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS}s")
+    print(f"🔄 Database keepalive started (AGGRESSIVE MODE)")
+    print(f"   Aggressive mode: {DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS}s interval for first {DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS}s ({DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS // 3600}h)")
     print(f"   Normal mode: {DB_KEEPALIVE_INTERVAL_SECONDS}s interval after")
     
     # Perform aggressive initial pings to ensure database is fully awake
@@ -2595,6 +2603,7 @@ def database_keepalive_worker():
             cursor.close()
             return_db_connection(conn)
             _keepalive_last_ping = datetime.now(timezone.utc)
+            _keepalive_total_pings += 1
             
             if i == 0:
                 print(f"✅ Initial database keepalive ping {i + 1}/{DB_KEEPALIVE_WARMUP_PING_COUNT} successful")
@@ -2628,7 +2637,7 @@ def database_keepalive_worker():
                 current_interval = DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS
                 mode = "aggressive"
             else:
-                # Normal mode - standard interval
+                # Normal mode - standard interval (still aggressive at 2 min)
                 current_interval = DB_KEEPALIVE_INTERVAL_SECONDS
                 mode = "normal"
                 
@@ -2656,7 +2665,11 @@ def database_keepalive_worker():
                 # Update success status
                 _keepalive_last_ping = datetime.now(timezone.utc)
                 _keepalive_consecutive_failures = 0
-                print(f"✅ Database keepalive ping successful [{mode}] at {_keepalive_last_ping.isoformat()}")
+                _keepalive_total_pings += 1
+                
+                # Log every ping to ensure visibility
+                elapsed_hours = elapsed_seconds / 3600
+                print(f"✅ Database keepalive ping #{_keepalive_total_pings} [{mode}] at {_keepalive_last_ping.isoformat()} (uptime: {elapsed_hours:.1f}h)")
                 
             except Exception as e:
                 _keepalive_consecutive_failures += 1
@@ -2742,6 +2755,133 @@ def stop_database_keepalive():
         print("⚠️ Database keepalive thread did not stop gracefully")
     else:
         print("✅ Database keepalive stopped")
+
+
+def ensure_keepalive_running():
+    """
+    Check if the keepalive thread is running and restart if necessary.
+    
+    This function provides automatic recovery if the keepalive thread crashes.
+    Called from the health check endpoint to ensure continuous operation.
+    
+    Returns:
+        dict: Status of the keepalive thread with recovery information
+    """
+    global _keepalive_thread, _keepalive_running, _keepalive_last_ping
+    
+    if not DB_KEEPALIVE_ENABLED:
+        return {"status": "disabled", "reason": "Not in production or Railway environment"}
+    
+    thread_alive = _keepalive_thread is not None and _keepalive_thread.is_alive()
+    
+    # Check if thread is alive
+    if thread_alive:
+        # Check if last ping is too old (thread might be stuck)
+        if _keepalive_last_ping:
+            seconds_since_ping = (datetime.now(timezone.utc) - _keepalive_last_ping).total_seconds()
+            if seconds_since_ping > DB_KEEPALIVE_MAX_PING_AGE_SECONDS:
+                print(f"⚠️ Keepalive thread appears stuck (no ping for {seconds_since_ping:.0f}s), restarting...")
+                _keepalive_running = False
+                _keepalive_thread.join(timeout=2)
+                thread_alive = False
+        
+        if thread_alive:
+            return {
+                "status": "running",
+                "thread_alive": True,
+                "total_pings": _keepalive_total_pings,
+            }
+    
+    # Thread is not alive, try to restart
+    print("⚠️ Keepalive thread not running, attempting restart...")
+    _keepalive_running = False  # Reset flag
+    
+    try:
+        _keepalive_thread = threading.Thread(
+            target=database_keepalive_worker,
+            daemon=True,
+            name="db-keepalive"
+        )
+        _keepalive_thread.start()
+        print("✅ Database keepalive thread restarted successfully")
+        return {
+            "status": "restarted",
+            "thread_alive": True,
+            "message": "Keepalive thread was dead and has been restarted"
+        }
+    except Exception as e:
+        print(f"❌ Failed to restart keepalive thread: {e}")
+        return {
+            "status": "failed",
+            "thread_alive": False,
+            "error": str(e)[:100]
+        }
+
+
+def perform_database_ping():
+    """
+    Perform a direct database ping to keep the connection alive.
+    
+    This function can be called from external sources (like GitHub Actions)
+    to ensure the database stays awake, even if the keepalive thread
+    is having issues.
+    
+    Returns:
+        dict: Result of the ping attempt with timing information
+    """
+    ping_start = time.time()
+    conn = None
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 as ping, NOW() as server_time")
+        result = cursor.fetchone()
+        cursor.close()
+        return_db_connection(conn)
+        
+        ping_ms = int((time.time() - ping_start) * 1000)
+        
+        # Extract server_time from result (RealDictCursor returns dict-like objects)
+        # Use safe access pattern to handle both dict and non-dict results
+        server_time = None
+        if result:
+            try:
+                # Try dict-style access first (for RealDictCursor)
+                server_time = str(result["server_time"])
+            except (KeyError, TypeError):
+                # Fallback to index access if needed
+                try:
+                    server_time = str(result[1]) if len(result) > 1 else None
+                except (IndexError, TypeError):
+                    pass
+        
+        # Note: We intentionally don't update _keepalive_last_ping here to avoid
+        # interfering with the keepalive worker thread's state tracking.
+        # The keepalive thread maintains its own timing for interval calculations.
+        
+        return {
+            "success": True,
+            "ping_ms": ping_ms,
+            "server_time": server_time,
+            "message": "Database is awake and responding"
+        }
+    except Exception as e:
+        ping_ms = int((time.time() - ping_start) * 1000)
+        error_msg = str(e)[:200]
+        
+        if conn:
+            try:
+                return_db_connection(conn, discard=True)
+            except Exception:
+                pass
+        
+        return {
+            "success": False,
+            "ping_ms": ping_ms,
+            "error": error_msg,
+            "message": "Database ping failed"
+        }
 
 
 # Register keepalive shutdown on application exit
@@ -2897,14 +3037,19 @@ def api_health_check():
                 mode = "initializing"
                 time_until_normal = None
             
+            # Check if keepalive thread is actually running
+            thread_alive = _keepalive_thread is not None and _keepalive_thread.is_alive()
+            
             keepalive_status = {
                 "enabled": True,
                 "running": _keepalive_running,
+                "thread_alive": thread_alive,
                 "mode": mode,
                 "current_interval_seconds": current_interval,
                 "normal_interval_seconds": DB_KEEPALIVE_INTERVAL_SECONDS,
                 "aggressive_interval_seconds": DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS,
                 "consecutive_failures": _keepalive_consecutive_failures,
+                "total_pings": _keepalive_total_pings,
             }
             
             if time_until_normal is not None and time_until_normal > 0:
@@ -2915,7 +3060,16 @@ def api_health_check():
                 keepalive_status["seconds_since_last_ping"] = (
                     datetime.now(timezone.utc) - _keepalive_last_ping
                 ).total_seconds()
+            
+            if _keepalive_start_time:
+                keepalive_status["uptime_hours"] = round(elapsed_seconds / 3600, 2)
+            
             response["keepalive"] = keepalive_status
+            
+            # If thread is not alive, try to restart it
+            if not thread_alive and _keepalive_running:
+                print("⚠️ Health check detected dead keepalive thread, attempting restart...")
+                ensure_keepalive_running()
             
     except Exception as e:
         response["database"] = "error"
@@ -2990,6 +3144,79 @@ def database_recovery_status():
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "recovery": recovery_status,
     }), http_status
+
+
+@app.route("/api/database/ping", methods=["GET", "POST"])
+@limiter.exempt
+def database_ping_endpoint():
+    """
+    Dedicated database ping endpoint to keep PostgreSQL awake.
+    
+    This endpoint is specifically designed for external services (like GitHub Actions)
+    to call periodically to ensure the Railway PostgreSQL database does not go to sleep.
+    
+    The endpoint:
+    - Performs a direct database ping (SELECT 1)
+    - Checks and restarts the keepalive thread if necessary
+    - Returns detailed status about the database and keepalive health
+    
+    This acts as a backup mechanism in case the internal keepalive thread
+    stops working for any reason.
+    
+    Returns:
+        JSON with:
+        - ping_result: Result of the database ping
+        - keepalive_status: Status of the background keepalive thread
+        - timestamp: Current server time
+    
+    Exempt from rate limiting to allow monitoring services to call frequently.
+    """
+    timestamp = datetime.now(timezone.utc).isoformat()
+    
+    # Perform database ping
+    ping_result = perform_database_ping()
+    
+    # Check and potentially restart keepalive thread
+    keepalive_status = ensure_keepalive_running()
+    
+    # Add keepalive thread stats
+    if DB_KEEPALIVE_ENABLED:
+        keepalive_status["total_pings"] = _keepalive_total_pings
+        keepalive_status["consecutive_failures"] = _keepalive_consecutive_failures
+        if _keepalive_last_ping:
+            keepalive_status["last_ping"] = _keepalive_last_ping.isoformat()
+            keepalive_status["seconds_since_last_ping"] = (
+                datetime.now(timezone.utc) - _keepalive_last_ping
+            ).total_seconds()
+        if _keepalive_start_time:
+            uptime_seconds = (datetime.now(timezone.utc) - _keepalive_start_time).total_seconds()
+            keepalive_status["uptime_seconds"] = uptime_seconds
+            keepalive_status["uptime_hours"] = round(uptime_seconds / 3600, 2)
+    
+    # Determine HTTP status
+    http_status = 200 if ping_result["success"] else 503
+    
+    response = {
+        "timestamp": timestamp,
+        "database": {
+            "type": "PostgreSQL" if USE_POSTGRESQL else "SQLite",
+            "ping": ping_result,
+        },
+        "keepalive": keepalive_status,
+        "config": {
+            "aggressive_interval_seconds": DB_KEEPALIVE_AGGRESSIVE_INTERVAL_SECONDS,
+            "normal_interval_seconds": DB_KEEPALIVE_INTERVAL_SECONDS,
+            "aggressive_period_seconds": DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS,
+        }
+    }
+    
+    # Log the ping for visibility
+    if ping_result["success"]:
+        print(f"🏓 External database ping successful (ping_ms={ping_result['ping_ms']})")
+    else:
+        print(f"⚠️ External database ping failed: {ping_result.get('error', 'unknown error')}")
+    
+    return jsonify(response), http_status
 
 
 # ==========================================

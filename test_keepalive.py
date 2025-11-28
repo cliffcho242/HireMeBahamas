@@ -32,10 +32,10 @@ def test_keepalive_configuration():
     assert backend.DB_KEEPALIVE_ENABLED == False, "Keepalive should be disabled in development"
     print("   ✅ Keepalive correctly disabled in development")
     
-    # Test 2: Verify default interval (now 300 seconds / 5 minutes)
+    # Test 2: Verify default interval (now 120 seconds / 2 minutes for aggressive mode)
     print("\n2. Testing default keepalive interval...")
-    assert backend.DB_KEEPALIVE_INTERVAL_SECONDS == 300, "Default interval should be 300 seconds"
-    print("   ✅ Default interval is 300 seconds (5 minutes)")
+    assert backend.DB_KEEPALIVE_INTERVAL_SECONDS == 120, "Default interval should be 120 seconds"
+    print("   ✅ Default interval is 120 seconds (2 minutes)")
     
     print("\n✅ All configuration tests passed!")
     return True
@@ -180,16 +180,16 @@ def test_keepalive_interval_configuration():
     print("=" * 70)
     
     test_cases = [
-        ("300", 300, "5 minutes"),
-        ("600", 600, "10 minutes (default)"),
-        ("900", 900, "15 minutes"),
+        ("60", 60, "1 minute (aggressive)"),
+        ("120", 120, "2 minutes (default normal)"),
+        ("180", 180, "3 minutes"),
     ]
     
     for env_value, expected, description in test_cases:
         os.environ['DB_KEEPALIVE_INTERVAL_SECONDS'] = env_value
         
         # In actual implementation, this would be read on startup
-        actual = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "600"))
+        actual = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "120"))
         
         print(f"\n   Testing interval: {description}")
         print(f"   - Environment value: {env_value}")
