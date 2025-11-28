@@ -45,6 +45,41 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    
+    # PostgreSQL service for database integration testing
+    # This ensures tests run against a real PostgreSQL database
+    # and helps catch connection/recovery issues early
+    #
+    # Note: These are test-only credentials for an ephemeral database container
+    # that is created fresh for each CI run and destroyed after. Using hardcoded
+    # values here is acceptable because:
+    # 1. The database is ephemeral and contains no real data
+    # 2. It's only accessible within the CI runner environment
+    # 3. Using secrets would add complexity without security benefit
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: hiremebahamas_test
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        # Health check ensures PostgreSQL is ready before job steps run
+        # This eliminates the need for a separate "wait for postgres" step
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Database URL for PostgreSQL integration tests
+      # Uses ephemeral test credentials (see note above)
+      DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/hiremebahamas_test
+      # Set test environment
+      ENVIRONMENT: test
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -69,6 +104,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-flask
           pip install -r requirements.txt
+
+      - name: Run database recovery tests
+        run: |
+          python -m pytest test_database_recovery.py -v --tb=short
 
       - name: Run backend tests
         run: |
