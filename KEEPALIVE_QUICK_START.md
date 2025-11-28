@@ -6,7 +6,7 @@ Railway PostgreSQL databases on free/hobby tiers sleep after 15 minutes of inact
 
 ## How It Works
 
-The application now automatically pings the PostgreSQL database every 10 minutes to keep it awake. This happens automatically in production - no configuration needed!
+The application now automatically pings the PostgreSQL database every 5 minutes to keep it awake. For the first 2 hours after startup, it uses a more aggressive 2-minute interval. This happens automatically in production - no configuration needed!
 
 ## Verify It's Working
 
@@ -45,13 +45,13 @@ The keepalive works perfectly with default settings. If you want to customize:
 
 In Railway Dashboard → Environment Variables:
 ```
-DB_KEEPALIVE_INTERVAL_SECONDS=300  # 5 minutes (more aggressive)
+DB_KEEPALIVE_INTERVAL_SECONDS=180  # 3 minutes (more aggressive)
 ```
 
 **Recommended values:**
-- `300` = 5 minutes (for busy apps)
-- `600` = 10 minutes (default, recommended)
-- `900` = 15 minutes (maximum safe value)
+- `180` = 3 minutes (most aggressive, maximum reliability)
+- `300` = 5 minutes (default, recommended)
+- `600` = 10 minutes (less frequent, may be too close to sleep threshold)
 
 ## Troubleshooting
 
