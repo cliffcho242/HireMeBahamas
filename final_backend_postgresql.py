@@ -5795,6 +5795,8 @@ def send_friend_request(user_id):
     if request.method == "OPTIONS":
         return "", 200
 
+    conn = None
+    cursor = None
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization")
@@ -5835,8 +5837,6 @@ def send_friend_request(user_id):
             cursor.execute("SELECT id FROM users WHERE id IN (?, ?)", (sender_id, user_id))
         users = cursor.fetchall()
         if len(users) != 2:
-            cursor.close()
-            return_db_connection(conn)
             return jsonify({"success": False, "message": "User not found"}), 404
 
         # Check if friendship already exists
@@ -5861,12 +5861,8 @@ def send_friend_request(user_id):
         if existing:
             status = existing["status"]
             if status == "accepted":
-                cursor.close()
-                return_db_connection(conn)
                 return jsonify({"success": False, "message": "Already friends"}), 400
             elif status == "pending":
-                cursor.close()
-                return_db_connection(conn)
                 return (
                     jsonify(
                         {"success": False, "message": "Friend request already sent"}
@@ -5902,8 +5898,6 @@ def send_friend_request(user_id):
             )
 
         conn.commit()
-        cursor.close()
-        return_db_connection(conn)
 
         return (
             jsonify({"success": True, "message": "Friend request sent successfully"}),
@@ -5916,6 +5910,15 @@ def send_friend_request(user_id):
             jsonify({"success": False, "message": "Failed to send friend request"}),
             500,
         )
+    finally:
+        # Always clean up database resources to prevent connection leaks
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
 
 
 @app.route("/api/friends/requests", methods=["GET", "OPTIONS"])
@@ -5924,6 +5927,8 @@ def get_friend_requests():
     if request.method == "OPTIONS":
         return "", 200
 
+    conn = None
+    cursor = None
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization")
@@ -5990,9 +5995,6 @@ def get_friend_requests():
                 }
             )
 
-        cursor.close()
-        return_db_connection(conn)
-
         return jsonify({"success": True, "requests": requests_list}), 200
 
     except Exception as e:
@@ -6001,6 +6003,15 @@ def get_friend_requests():
             jsonify({"success": False, "message": "Failed to get friend requests"}),
             500,
         )
+    finally:
+        # Always clean up database resources to prevent connection leaks
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
 
 
 @app.route("/api/friends/respond/<int:request_id>", methods=["POST", "OPTIONS"])
@@ -6009,6 +6020,8 @@ def respond_to_friend_request(request_id):
     if request.method == "OPTIONS":
         return "", 200
 
+    conn = None
+    cursor = None
     try:
         data = request.get_json()
         action = data.get("action")  # 'accept' or 'decline'
@@ -6057,8 +6070,6 @@ def respond_to_friend_request(request_id):
 
         result = cursor.fetchone()
         if not result:
-            cursor.close()
-            return_db_connection(conn)
             return (
                 jsonify({"success": False, "message": "Friend request not found"}),
                 404,
@@ -6090,8 +6101,6 @@ def respond_to_friend_request(request_id):
                 cursor.execute("DELETE FROM friendships WHERE id = ?", (request_id,))
 
         conn.commit()
-        cursor.close()
-        return_db_connection(conn)
 
         return (
             jsonify(
@@ -6108,6 +6117,15 @@ def respond_to_friend_request(request_id):
             ),
             500,
         )
+    finally:
+        # Always clean up database resources to prevent connection leaks
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
 
 
 @app.route("/api/friends/list", methods=["GET", "OPTIONS"])
@@ -6116,6 +6134,8 @@ def get_friends_list():
     if request.method == "OPTIONS":
         return "", 200
 
+    conn = None
+    cursor = None
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization")
@@ -6181,9 +6201,6 @@ def get_friends_list():
                 }
             )
 
-        cursor.close()
-        return_db_connection(conn)
-
         return (
             jsonify({"success": True, "friends": friends, "count": len(friends)}),
             200,
@@ -6192,6 +6209,15 @@ def get_friends_list():
     except Exception as e:
         print(f"Error getting friends list: {str(e)}")
         return jsonify({"success": False, "message": "Failed to get friends list"}), 500
+    finally:
+        # Always clean up database resources to prevent connection leaks
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
 
 
 @app.route("/api/friends/suggestions", methods=["GET", "OPTIONS"])
@@ -6200,6 +6226,8 @@ def get_friend_suggestions():
     if request.method == "OPTIONS":
         return "", 200
 
+    conn = None
+    cursor = None
     try:
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization")
@@ -6276,9 +6304,6 @@ def get_friend_suggestions():
                 }
             )
 
-        cursor.close()
-        return_db_connection(conn)
-
         return jsonify({"success": True, "suggestions": suggestions}), 200
 
     except Exception as e:
@@ -6287,6 +6312,15 @@ def get_friend_suggestions():
             jsonify({"success": False, "message": "Failed to get friend suggestions"}),
             500,
         )
+    finally:
+        # Always clean up database resources to prevent connection leaks
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
 
 
 # ==========================================
