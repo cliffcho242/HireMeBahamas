@@ -558,20 +558,28 @@ DB_CONNECT_JITTER_FACTOR = 0.2
 # - This allows the application to detect and recover from stale connections
 #
 # Default values optimized for cloud environments (Railway, Render, AWS, etc.):
-# - keepalives_idle: 30s (start probing after 30 seconds of idle)
-# - keepalives_interval: 10s (probe every 10 seconds)
+# - keepalives_idle: 20s (start probing after 20 seconds of idle)
+# - keepalives_interval: 5s (probe every 5 seconds)
 # - keepalives_count: 3 (mark dead after 3 failed probes)
 #
-# Total detection time = idle + (interval * count) = 30 + (10 * 3) = 60 seconds
-# This is aggressive enough to detect stale connections before most cloud load balancers
-# drop them (typically 60-300 seconds idle timeout).
+# Total detection time = idle + (interval * count) = 20 + (5 * 3) = 35 seconds
+# This is very aggressive to detect stale connections quickly in cloud environments
+# where load balancers may drop idle connections after 60 seconds.
 #
-# These settings are more aggressive than previous defaults (60/30/3 = 150s total)
+# tcp_user_timeout: 20s - Abort TCP connection if data isn't acknowledged within 20s
+# This helps detect broken connections faster than relying solely on keepalives.
+#
+# These settings are more aggressive than previous defaults (30/10/3 = 60s total)
 # to prevent SSL EOF errors in cloud environments with shorter idle timeouts.
 TCP_KEEPALIVE_ENABLED = _get_env_int("TCP_KEEPALIVE_ENABLED", 1, 0, 1)
-TCP_KEEPALIVE_IDLE = _get_env_int("TCP_KEEPALIVE_IDLE", 30, 10, 300)
-TCP_KEEPALIVE_INTERVAL = _get_env_int("TCP_KEEPALIVE_INTERVAL", 10, 5, 60)
+TCP_KEEPALIVE_IDLE = _get_env_int("TCP_KEEPALIVE_IDLE", 20, 10, 300)
+TCP_KEEPALIVE_INTERVAL = _get_env_int("TCP_KEEPALIVE_INTERVAL", 5, 5, 60)
 TCP_KEEPALIVE_COUNT = _get_env_int("TCP_KEEPALIVE_COUNT", 3, 1, 10)
+# TCP user timeout in milliseconds - abort if data isn't acknowledged within this time
+# This provides a hard limit on how long we wait for network acknowledgment
+# Works in conjunction with keepalives for faster detection of broken connections
+# Set to 20000ms (20 seconds) to match the aggressive keepalive settings
+TCP_USER_TIMEOUT_MS = _get_env_int("TCP_USER_TIMEOUT_MS", 20000, 5000, 60000)
 
 # Login request timeout in seconds
 # This prevents login requests from blocking indefinitely
@@ -988,6 +996,9 @@ def _get_connection_pool():
                     #
                     # TCP keepalive parameters prevent "SSL error: unexpected eof while reading"
                     # by detecting and handling stale connections before they cause SSL errors
+                    #
+                    # tcp_user_timeout: Provides a hard limit on unacknowledged data
+                    # This helps detect broken connections faster than keepalives alone
                     _connection_pool = pool.ThreadedConnectionPool(
                         minconn=2,
                         maxconn=DB_POOL_MAX_CONNECTIONS,
@@ -1006,11 +1017,15 @@ def _get_connection_pool():
                         keepalives_idle=TCP_KEEPALIVE_IDLE,
                         keepalives_interval=TCP_KEEPALIVE_INTERVAL,
                         keepalives_count=TCP_KEEPALIVE_COUNT,
+                        # tcp_user_timeout: abort if data isn't acknowledged within this time
+                        # Works with keepalives for faster detection of broken connections
+                        tcp_user_timeout=TCP_USER_TIMEOUT_MS,
                         # Set statement_timeout on connection to prevent long-running queries
                         options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
                     )
                     keepalive_status = "enabled" if TCP_KEEPALIVE_ENABLED == 1 else "disabled"
-                    print(f"✅ PostgreSQL connection pool created (min=2, max={DB_POOL_MAX_CONNECTIONS}, tcp_keepalive={keepalive_status})")
+                    user_timeout_sec = TCP_USER_TIMEOUT_MS / 1000
+                    print(f"✅ PostgreSQL connection pool created (min=2, max={DB_POOL_MAX_CONNECTIONS}, tcp_keepalive={keepalive_status}, tcp_user_timeout={user_timeout_sec}s)")
                 except Exception as e:
                     print(f"⚠️ Failed to create connection pool: {e}")
                     # Pool creation failed, will fall back to direct connections
@@ -1245,8 +1260,9 @@ def _create_direct_postgresql_connection(sslmode: str = None):
     """
     Create a direct PostgreSQL connection with the specified SSL mode.
     
-    Includes TCP keepalive settings to prevent "SSL error: unexpected eof while reading"
-    errors that occur when idle connections are silently dropped by network intermediaries.
+    Includes TCP keepalive and tcp_user_timeout settings to prevent 
+    "SSL error: unexpected eof while reading" errors that occur when idle 
+    connections are silently dropped by network intermediaries.
     
     Args:
         sslmode: SSL mode to use. If None, uses the configured default.
@@ -1273,6 +1289,9 @@ def _create_direct_postgresql_connection(sslmode: str = None):
         keepalives_idle=TCP_KEEPALIVE_IDLE,
         keepalives_interval=TCP_KEEPALIVE_INTERVAL,
         keepalives_count=TCP_KEEPALIVE_COUNT,
+        # tcp_user_timeout: abort if data isn't acknowledged within this time
+        # Works with keepalives for faster detection of broken connections
+        tcp_user_timeout=TCP_USER_TIMEOUT_MS,
         options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
     )
 
