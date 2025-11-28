@@ -341,7 +341,12 @@ def log_request_end(response):
 # ==========================================
 
 # Check if running on Railway with PostgreSQL
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Railway Private Network Configuration:
+# To avoid egress fees, Railway provides DATABASE_PRIVATE_URL which uses the internal
+# private network (RAILWAY_PRIVATE_DOMAIN) instead of the public TCP proxy
+# (RAILWAY_TCP_PROXY_DOMAIN used by DATABASE_PUBLIC_URL).
+# We prefer DATABASE_PRIVATE_URL > DATABASE_URL to minimize costs.
+DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None
 
 # PostgreSQL extensions to initialize during database setup
