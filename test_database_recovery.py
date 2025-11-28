@@ -194,6 +194,36 @@ class TestTransientErrorDetection:
             mock_error = MockPsycopg2Error("SSL SYSCALL error: bad record mac")
             result = final_backend_postgresql._is_transient_connection_error(mock_error)
             assert result is True
+    
+    def test_is_transient_connection_error_container_transitioning(self, app):
+        """Test that container transitioning errors are detected as transient"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
+        with app.app_context():
+            mock_error = MockPsycopg2Error("container is transitioning")
+            result = final_backend_postgresql._is_transient_connection_error(mock_error)
+            assert result is True
+    
+    def test_is_transient_connection_error_name_or_service_not_known(self, app):
+        """Test that DNS resolution errors are detected as transient during startup"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
+        with app.app_context():
+            mock_error = MockPsycopg2Error("could not translate host name: name or service not known")
+            result = final_backend_postgresql._is_transient_connection_error(mock_error)
+            assert result is True
+    
+    def test_is_transient_connection_error_no_route_to_host(self, app):
+        """Test that network errors during startup are detected as transient"""
+        if MockPsycopg2Error is None:
+            pytest.skip("psycopg2 not available for this test")
+        
+        with app.app_context():
+            mock_error = MockPsycopg2Error("could not connect: no route to host")
+            result = final_backend_postgresql._is_transient_connection_error(mock_error)
+            assert result is True
 
 
 class TestStaleSSLConnectionDetection:

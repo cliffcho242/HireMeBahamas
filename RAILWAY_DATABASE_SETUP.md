@@ -174,6 +174,38 @@ DATABASE_URL=postgresql://myuser:mypassword@db.supabase.co:5432/mydb
 
 ## 🔧 Troubleshooting
 
+### "Unable to connect to the database via SSH" Error
+
+**Cause**: The PostgreSQL database container is starting up or transitioning
+
+**Symptoms**:
+- Railway Dashboard shows: "Unable to connect to the database via SSH"
+- Message: "The database container is starting up or transitioning"
+
+**Solution**:
+1. **Wait 30-60 seconds** - This is normal during:
+   - Cold starts (first access after inactivity)
+   - Database restarts
+   - Railway infrastructure updates
+   - Container migrations
+
+2. **Refresh the page** after waiting
+
+3. **Check database status**:
+   - In Railway dashboard, verify PostgreSQL shows "Active"
+   - If it shows "Deploying" or "Starting", wait for it to complete
+
+4. **Access via API instead**:
+   - The application handles container transitions automatically
+   - Users can continue using the app normally
+   - API endpoints at `/api/health` and `/api/database/recovery-status` show current status
+
+5. **If issue persists**:
+   - Try restarting the PostgreSQL service in Railway
+   - Check Railway status page for any ongoing incidents
+
+**Note**: This error only affects direct database access from Railway's Data tab. The application itself handles container transitions gracefully and will retry connections automatically.
+
 ### DATABASE_URL Not Appearing
 
 **Cause**: PostgreSQL service not linked to backend
