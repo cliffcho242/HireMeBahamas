@@ -602,6 +602,9 @@ API_REQUEST_TIMEOUT_SECONDS = _get_env_int("API_REQUEST_TIMEOUT_SECONDS", 25, 5,
 # This helps prevent HTTP 499 timeout errors by reducing query complexity
 DEFAULT_LIST_LIMIT = _get_env_int("DEFAULT_LIST_LIMIT", 100, 10, 500)
 
+# Maximum allowed limit for list endpoints to prevent excessive queries
+MAX_LIST_LIMIT = _get_env_int("MAX_LIST_LIMIT", 500, 100, 1000)
+
 # Bcrypt password hashing rounds configuration
 # Default of 12 rounds can be slow (~200-300ms per operation) and contribute to HTTP 499 timeouts
 # 10 rounds provides good security while being much faster (~60ms per operation)
@@ -797,6 +800,42 @@ def _check_request_timeout(start_time: float, timeout_seconds: int, operation: s
         )
         return True
     return False
+
+
+def _get_pagination_params(default_limit: int = None, max_limit: int = None):
+    """
+    Extract and validate pagination parameters from the request.
+    
+    This helper function standardizes pagination handling across list endpoints
+    to prevent slow queries from causing HTTP 499 timeout errors.
+    
+    Args:
+        default_limit: Default number of results if not specified (uses DEFAULT_LIST_LIMIT)
+        max_limit: Maximum allowed limit (uses MAX_LIST_LIMIT)
+        
+    Returns:
+        Tuple of (limit, offset) validated pagination parameters
+    """
+    if default_limit is None:
+        default_limit = DEFAULT_LIST_LIMIT
+    if max_limit is None:
+        max_limit = MAX_LIST_LIMIT
+    
+    # Get pagination parameters with defaults
+    # request.args.get with type=int returns None for invalid values
+    limit = request.args.get('limit', type=int)
+    offset = request.args.get('offset', type=int)
+    
+    # Apply defaults for None or invalid values
+    if limit is None or limit < 1:
+        limit = default_limit
+    if limit > max_limit:
+        limit = max_limit
+    
+    if offset is None or offset < 0:
+        offset = 0
+    
+    return limit, offset
 
 
 def _is_transient_connection_error(error: Exception) -> bool:
@@ -5139,17 +5178,8 @@ def get_following_list():
                 "error_code": "TIMEOUT"
             }), 504
 
-        # Get pagination parameters
-        limit = request.args.get('limit', DEFAULT_LIST_LIMIT, type=int)
-        offset = request.args.get('offset', 0, type=int)
-        
-        # Validate pagination parameters
-        if limit < 1:
-            limit = DEFAULT_LIST_LIMIT
-        if limit > 500:
-            limit = 500  # Max 500 results per request
-        if offset < 0:
-            offset = 0
+        # Get and validate pagination parameters
+        limit, offset = _get_pagination_params()
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -5254,17 +5284,8 @@ def get_followers_list():
                 "error_code": "TIMEOUT"
             }), 504
 
-        # Get pagination parameters
-        limit = request.args.get('limit', DEFAULT_LIST_LIMIT, type=int)
-        offset = request.args.get('offset', 0, type=int)
-        
-        # Validate pagination parameters
-        if limit < 1:
-            limit = DEFAULT_LIST_LIMIT
-        if limit > 500:
-            limit = 500  # Max 500 results per request
-        if offset < 0:
-            offset = 0
+        # Get and validate pagination parameters
+        limit, offset = _get_pagination_params()
 
         conn = get_db_connection()
         cursor = conn.cursor()
