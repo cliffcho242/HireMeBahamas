@@ -2173,6 +2173,9 @@ def init_database():
             # Run migrations to add missing columns
             migrate_user_columns(cursor, conn)
             
+            # Run migrations to create missing tables
+            migrate_missing_tables(cursor, conn)
+            
             # Ensure indexes exist (idempotent)
             create_database_indexes(cursor, conn)
 
@@ -2320,6 +2323,274 @@ def migrate_user_columns(cursor, conn):
 
     except Exception as e:
         print(f"⚠️ Migration warning: {e}")
+
+
+def migrate_missing_tables(cursor, conn):
+    """Create missing tables if they don't exist (for database migrations)"""
+    try:
+        if USE_POSTGRESQL:
+            # Check and create follows table
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'follows'
+                ) as table_exists
+            """
+            )
+            if not cursor.fetchone()["table_exists"]:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS follows (
+                        id SERIAL PRIMARY KEY,
+                        follower_id INTEGER NOT NULL,
+                        followed_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(follower_id, followed_id),
+                        FOREIGN KEY (follower_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (followed_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'follows' table")
+
+            # Check and create friendships table
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'friendships'
+                ) as table_exists
+            """
+            )
+            if not cursor.fetchone()["table_exists"]:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS friendships (
+                        id SERIAL PRIMARY KEY,
+                        sender_id INTEGER NOT NULL,
+                        receiver_id INTEGER NOT NULL,
+                        status VARCHAR(20) DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(sender_id, receiver_id),
+                        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'friendships' table")
+
+            # Check and create stories table
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'stories'
+                ) as table_exists
+            """
+            )
+            if not cursor.fetchone()["table_exists"]:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS stories (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        media_url TEXT NOT NULL,
+                        media_type VARCHAR(50) NOT NULL,
+                        caption TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL,
+                        views INTEGER DEFAULT 0,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'stories' table")
+
+            # Check and create comments table
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'comments'
+                ) as table_exists
+            """
+            )
+            if not cursor.fetchone()["table_exists"]:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS comments (
+                        id SERIAL PRIMARY KEY,
+                        post_id INTEGER NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        content TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'comments' table")
+
+            # Check and create likes table
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'likes'
+                ) as table_exists
+            """
+            )
+            if not cursor.fetchone()["table_exists"]:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS likes (
+                        id SERIAL PRIMARY KEY,
+                        post_id INTEGER NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(post_id, user_id),
+                        FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'likes' table")
+
+        else:
+            # SQLite version
+            # Check and create follows table
+            cursor.execute(
+                """
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='follows'
+            """
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS follows (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        follower_id INTEGER NOT NULL,
+                        followed_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(follower_id, followed_id),
+                        FOREIGN KEY (follower_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (followed_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'follows' table")
+
+            # Check and create friendships table
+            cursor.execute(
+                """
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='friendships'
+            """
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS friendships (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        sender_id INTEGER NOT NULL,
+                        receiver_id INTEGER NOT NULL,
+                        status TEXT DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(sender_id, receiver_id),
+                        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'friendships' table")
+
+            # Check and create stories table
+            cursor.execute(
+                """
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='stories'
+            """
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS stories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        media_url TEXT NOT NULL,
+                        media_type TEXT NOT NULL,
+                        caption TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL,
+                        views INTEGER DEFAULT 0,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'stories' table")
+
+            # Check and create comments table
+            cursor.execute(
+                """
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='comments'
+            """
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS comments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        post_id INTEGER NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        content TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'comments' table")
+
+            # Check and create likes table
+            cursor.execute(
+                """
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='likes'
+            """
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS likes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        post_id INTEGER NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(post_id, user_id),
+                        FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'likes' table")
+
+    except Exception as e:
+        print(f"⚠️ Table migration warning: {e}")
 
 
 def ensure_database_initialized():
