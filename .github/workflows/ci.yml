@@ -49,16 +49,24 @@ jobs:
     # PostgreSQL service for database integration testing
     # This ensures tests run against a real PostgreSQL database
     # and helps catch connection/recovery issues early
+    #
+    # Note: These are test-only credentials for an ephemeral database container
+    # that is created fresh for each CI run and destroyed after. Using hardcoded
+    # values here is acceptable because:
+    # 1. The database is ephemeral and contains no real data
+    # 2. It's only accessible within the CI runner environment
+    # 3. Using secrets would add complexity without security benefit
     services:
       postgres:
         image: postgres:17
         env:
           POSTGRES_DB: hiremebahamas_test
-          POSTGRES_USER: hiremebahamas_user
-          POSTGRES_PASSWORD: hiremebahamas_password
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
         ports:
           - 5432:5432
-        # Health check to ensure PostgreSQL is ready before tests run
+        # Health check ensures PostgreSQL is ready before job steps run
+        # This eliminates the need for a separate "wait for postgres" step
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -67,7 +75,8 @@ jobs:
 
     env:
       # Database URL for PostgreSQL integration tests
-      DATABASE_URL: postgresql://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas_test
+      # Uses ephemeral test credentials (see note above)
+      DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/hiremebahamas_test
       # Set test environment
       ENVIRONMENT: test
 
@@ -95,18 +104,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-flask
           pip install -r requirements.txt
-
-      - name: Wait for PostgreSQL to be ready
-        run: |
-          echo "Waiting for PostgreSQL to be ready..."
-          for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U hiremebahamas_user; then
-              echo "PostgreSQL is ready!"
-              break
-            fi
-            echo "Waiting for PostgreSQL... attempt $i"
-            sleep 1
-          done
 
       - name: Run database recovery tests
         run: |
