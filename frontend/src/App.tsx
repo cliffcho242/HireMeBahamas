@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { AIMonitoringProvider } from './contexts/AIMonitoringContext';
@@ -42,19 +43,22 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <AIMonitoringProvider>
-      <AIErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <Router>
-            <AuthProvider>
-              <SocketProvider>
-                <AppContent />
-              </SocketProvider>
-            </AuthProvider>
-          </Router>
-        </QueryClientProvider>
-      </AIErrorBoundary>
-    </AIMonitoringProvider>
+    <>
+      <AIMonitoringProvider>
+        <AIErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <Router>
+              <AuthProvider>
+                <SocketProvider>
+                  <AppContent />
+                </SocketProvider>
+              </AuthProvider>
+            </Router>
+          </QueryClientProvider>
+        </AIErrorBoundary>
+      </AIMonitoringProvider>
+      <Analytics />
+    </>
   );
 }
 
