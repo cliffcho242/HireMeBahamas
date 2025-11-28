@@ -628,6 +628,10 @@ def _upgrade_password_hash_async(user_id: int, password: str, request_id: str):
     It creates a new hash with the current BCRYPT_ROUNDS setting and updates
     the database.
     
+    Security note: The password parameter is only used for hashing and is not
+    stored. The background thread processes it immediately and the string
+    becomes eligible for garbage collection after the thread completes.
+    
     Args:
         user_id: The user ID to update
         password: The plain text password (already verified)
@@ -635,6 +639,7 @@ def _upgrade_password_hash_async(user_id: int, password: str, request_id: str):
     """
     def _do_upgrade():
         conn = None
+        cursor = None
         try:
             # Create new hash with current rounds
             new_hash = bcrypt.hashpw(
@@ -660,12 +665,16 @@ def _upgrade_password_hash_async(user_id: int, password: str, request_id: str):
                     (new_hash, user_id)
                 )
             conn.commit()
-            cursor.close()
             
             print(f"[{request_id}] ✅ Password hash upgraded to {BCRYPT_ROUNDS} rounds for user {user_id}")
         except Exception as e:
             logger.warning("Password hash upgrade failed for user %s: %s", user_id, e)
         finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass  # Ignore errors closing cursor on failed connection
             if conn:
                 return_db_connection(conn)
     
@@ -946,8 +955,9 @@ def _warmup_connection_pool():
         for conn in warmed_conns:
             try:
                 conn_pool.putconn(conn)
-            except Exception:
-                pass
+            except Exception as e:
+                # Log connection return failures - may indicate pool corruption
+                logger.debug("Failed to return warmed connection to pool: %s", e)
         
         warmup_ms = int((time.time() - warmup_start) * 1000)
         print(f"✅ Connection pool warmed up: {len(warmed_conns)} connections in {warmup_ms}ms")
