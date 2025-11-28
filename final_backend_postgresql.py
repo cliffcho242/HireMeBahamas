@@ -1992,7 +1992,7 @@ def init_database():
             create_database_indexes(cursor, conn)
 
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         # Mark database as successfully initialized
         _db_initialized = True
@@ -2005,7 +2005,7 @@ def init_database():
         try:
             conn.rollback()
             cursor.close()
-            conn.close()
+            return_db_connection(conn, discard=True)
         except Exception:
             pass  # Connection might already be closed
         raise
@@ -2020,7 +2020,7 @@ def init_database():
         try:
             conn.rollback()
             cursor.close()
-            conn.close()
+            return_db_connection(conn, discard=True)
         except Exception:
             pass  # Connection might already be closed
         raise
@@ -3561,7 +3561,7 @@ def refresh_token():
 
         user = cursor.fetchone()
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         if not user:
             return (
@@ -3645,7 +3645,7 @@ def verify_session():
 
             user = cursor.fetchone()
             cursor.close()
-            conn.close()
+            return_db_connection(conn)
 
             if not user:
                 return (
@@ -3730,7 +3730,7 @@ def get_profile():
 
         user = cursor.fetchone()
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         if not user:
             return (
@@ -3852,7 +3852,7 @@ def get_posts():
 
         posts_data = cursor.fetchall()
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         # Format posts for response
         posts = []
@@ -3963,7 +3963,7 @@ def create_post():
         
         if not cursor.fetchone():
             cursor.close()
-            conn.close()
+            return_db_connection(conn)
             return (
                 jsonify({"success": False, "message": "User not found. Please log in again."}),
                 401,
@@ -4010,7 +4010,7 @@ def create_post():
         user = cursor.fetchone()
         conn.commit()
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return (
             jsonify(
@@ -4144,7 +4144,7 @@ def like_post(post_id):
 
         conn.commit()
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return (
             jsonify(
@@ -4232,7 +4232,7 @@ def delete_post(post_id):
 
         if not post:
             cursor.close()
-            conn.close()
+            return_db_connection(conn)
             return (
                 jsonify({"success": False, "message": "Post not found"}),
                 404,
@@ -4240,7 +4240,7 @@ def delete_post(post_id):
 
         if post["user_id"] != user_id:
             cursor.close()
-            conn.close()
+            return_db_connection(conn)
             return (
                 jsonify(
                     {"success": False, "message": "You can only delete your own posts"}
@@ -4256,7 +4256,7 @@ def delete_post(post_id):
 
         conn.commit()
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return (
             jsonify({"success": True, "message": "Post deleted successfully"}),
@@ -4322,7 +4322,7 @@ def get_user(user_id):
         
         if not user:
             cursor.close()
-            conn.close()
+            return_db_connection(conn)
             return jsonify({"success": False, "message": "User not found"}), 404
 
         # Check if current user follows this user
@@ -4378,7 +4378,7 @@ def get_user(user_id):
         posts_count = cursor.fetchone()["count"]
 
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return jsonify({
             "success": True,
@@ -4564,7 +4564,7 @@ def get_users_list():
             })
 
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return jsonify({"success": True, "users": users_data, "total": len(users_data)}), 200
 
@@ -4612,7 +4612,7 @@ def follow_user(user_id):
         )
         if not cursor.fetchone():
             cursor.close()
-            conn.close()
+            return_db_connection(conn)
             return jsonify({"success": False, "message": "User not found"}), 404
 
         # Check if already following
@@ -4628,7 +4628,7 @@ def follow_user(user_id):
         )
         if cursor.fetchone():
             cursor.close()
-            conn.close()
+            return_db_connection(conn)
             return jsonify({"success": False, "message": "Already following this user"}), 400
 
         # Create follow relationship
@@ -4645,7 +4645,7 @@ def follow_user(user_id):
         
         conn.commit()
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return jsonify({"success": True, "message": "User followed successfully"}), 200
 
@@ -4692,7 +4692,7 @@ def unfollow_user(user_id):
         )
         if not cursor.fetchone():
             cursor.close()
-            conn.close()
+            return_db_connection(conn)
             return jsonify({"success": False, "message": "Not following this user"}), 400
 
         # Delete follow relationship
@@ -4709,7 +4709,7 @@ def unfollow_user(user_id):
         
         conn.commit()
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return jsonify({"success": True, "message": "User unfollowed successfully"}), 200
 
@@ -4779,7 +4779,7 @@ def get_following_list():
         ]
 
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return jsonify({"success": True, "following": following_data}), 200
 
@@ -4849,7 +4849,7 @@ def get_followers_list():
         ]
 
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return jsonify({"success": True, "followers": followers_data}), 200
 
@@ -4948,7 +4948,7 @@ def get_jobs():
 
         jobs_data = cursor.fetchall()
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         # Format jobs for response
         jobs = []
@@ -5038,7 +5038,7 @@ def get_job_stats():
         new_this_week = cursor.fetchone()["count"]
 
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return jsonify({
             "success": True,
@@ -5105,7 +5105,7 @@ def get_job(job_id):
 
         job = cursor.fetchone()
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         if not job:
             return jsonify({"success": False, "message": "Job not found"}), 404
@@ -5189,7 +5189,7 @@ def create_job():
         
         if not cursor.fetchone():
             cursor.close()
-            conn.close()
+            return_db_connection(conn)
             return jsonify({"success": False, "message": "User not found. Please log in again."}), 401
 
         # Insert job
@@ -5243,7 +5243,7 @@ def create_job():
 
         conn.commit()
         cursor.close()
-        conn.close()
+        return_db_connection(conn)
 
         return jsonify({
             "success": True,
