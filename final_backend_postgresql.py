@@ -1614,6 +1614,62 @@ def _safe_rollback(conn):
         print(f"⚠️  Rollback failed with unexpected error: {e}")
 
 
+def cleanup_orphaned_extensions(cursor, conn):
+    """
+    Remove orphaned PostgreSQL extensions that require shared_preload_libraries
+    but cannot function without server-side configuration.
+    
+    This is particularly important for pg_stat_statements which causes errors
+    when Railway's monitoring dashboard tries to query it, but the extension
+    isn't loaded in shared_preload_libraries.
+    
+    Returns True if cleanup was successful, False otherwise.
+    """
+    # List of extensions that require shared_preload_libraries and should be removed
+    # if they exist but cannot function properly
+    orphaned_extensions = ["pg_stat_statements"]
+    
+    for ext_name in orphaned_extensions:
+        try:
+            # Check if the extension is installed
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM pg_extension WHERE extname = %s
+                ) as is_installed
+                """,
+                (ext_name,)
+            )
+            result = cursor.fetchone()
+            is_installed = result["is_installed"] if result else False
+            
+            if is_installed:
+                # Drop the extension to prevent errors from monitoring tools
+                # Note: Using CASCADE to remove any dependent objects
+                # SQL injection safe: ext_name comes from hardcoded orphaned_extensions list
+                # Using psycopg2.sql module for safe identifier handling
+                from psycopg2 import sql
+                drop_sql = sql.SQL("DROP EXTENSION IF EXISTS {} CASCADE").format(
+                    sql.Identifier(ext_name)
+                )
+                print(f"🧹 Removing orphaned extension '{ext_name}' (requires shared_preload_libraries)")
+                cursor.execute(drop_sql)
+                conn.commit()
+                print(f"✅ Extension '{ext_name}' removed successfully")
+            
+        except psycopg2.Error as e:
+            # Log the error but don't fail - this is a best-effort cleanup
+            error_details = _get_psycopg2_error_details(e)
+            print(f"⚠️  Could not remove extension '{ext_name}': {error_details}")
+            _safe_rollback(conn)
+        except Exception as e:
+            # Log unexpected errors but continue
+            print(f"⚠️  Unexpected error cleaning up extension '{ext_name}': {e}")
+            _safe_rollback(conn)
+    
+    return True
+
+
 def init_postgresql_extensions(cursor, conn):
     """
     Initialize PostgreSQL extensions that don't require server-side configuration.
@@ -1629,6 +1685,11 @@ def init_postgresql_extensions(cursor, conn):
     Extension failures are non-fatal - the application continues regardless.
     """
     success = True
+    
+    # First, clean up any orphaned extensions that require shared_preload_libraries
+    # This prevents errors from Railway's monitoring dashboard trying to query
+    # extensions like pg_stat_statements that can't function without server-side config
+    cleanup_orphaned_extensions(cursor, conn)
     
     for ext_name, ext_config in POSTGRESQL_EXTENSIONS.items():
         ext_sql = ext_config["sql"]
