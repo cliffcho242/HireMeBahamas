@@ -5754,10 +5754,18 @@ def send_friend_request(user_id):
                 (sender_id, user_id),
             )
         else:
+            # For SQLite, use INSERT OR IGNORE followed by UPDATE to preserve created_at
             cursor.execute(
                 """
-                INSERT OR REPLACE INTO friendships (sender_id, receiver_id, status, updated_at)
-                VALUES (?, ?, 'pending', CURRENT_TIMESTAMP)
+                INSERT OR IGNORE INTO friendships (sender_id, receiver_id, status, created_at, updated_at)
+                VALUES (?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """,
+                (sender_id, user_id),
+            )
+            cursor.execute(
+                """
+                UPDATE friendships SET status = 'pending', updated_at = CURRENT_TIMESTAMP
+                WHERE sender_id = ? AND receiver_id = ?
             """,
                 (sender_id, user_id),
             )
