@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 import psycopg2
+from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
 from psycopg2 import pool
 from urllib.parse import urlparse, parse_qs
@@ -1623,11 +1624,13 @@ def cleanup_orphaned_extensions(cursor, conn):
     when Railway's monitoring dashboard tries to query it, but the extension
     isn't loaded in shared_preload_libraries.
     
-    Returns True if cleanup was successful, False otherwise.
+    Returns True if all cleanup operations succeeded, False if any failed.
+    Cleanup failures are non-fatal - the application continues regardless.
     """
     # List of extensions that require shared_preload_libraries and should be removed
     # if they exist but cannot function properly
     orphaned_extensions = ["pg_stat_statements"]
+    all_succeeded = True
     
     for ext_name in orphaned_extensions:
         try:
@@ -1648,7 +1651,6 @@ def cleanup_orphaned_extensions(cursor, conn):
                 # Note: Using CASCADE to remove any dependent objects
                 # SQL injection safe: ext_name comes from hardcoded orphaned_extensions list
                 # Using psycopg2.sql module for safe identifier handling
-                from psycopg2 import sql
                 drop_sql = sql.SQL("DROP EXTENSION IF EXISTS {} CASCADE").format(
                     sql.Identifier(ext_name)
                 )
@@ -1662,12 +1664,14 @@ def cleanup_orphaned_extensions(cursor, conn):
             error_details = _get_psycopg2_error_details(e)
             print(f"⚠️  Could not remove extension '{ext_name}': {error_details}")
             _safe_rollback(conn)
+            all_succeeded = False
         except Exception as e:
             # Log unexpected errors but continue
             print(f"⚠️  Unexpected error cleaning up extension '{ext_name}': {e}")
             _safe_rollback(conn)
+            all_succeeded = False
     
-    return True
+    return all_succeeded
 
 
 def init_postgresql_extensions(cursor, conn):
