@@ -2009,6 +2009,22 @@ def init_database():
                 """
                 )
 
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS friendships (
+                        id SERIAL PRIMARY KEY,
+                        sender_id INTEGER NOT NULL,
+                        receiver_id INTEGER NOT NULL,
+                        status VARCHAR(20) DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(sender_id, receiver_id),
+                        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+
             else:
                 # SQLite syntax (original)
                 cursor.execute(
@@ -2125,6 +2141,22 @@ def init_database():
                         UNIQUE(follower_id, followed_id),
                         FOREIGN KEY (follower_id) REFERENCES users (id) ON DELETE CASCADE,
                         FOREIGN KEY (followed_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS friendships (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        sender_id INTEGER NOT NULL,
+                        receiver_id INTEGER NOT NULL,
+                        status TEXT DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(sender_id, receiver_id),
+                        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
                     )
                 """
                 )
@@ -5750,6 +5782,511 @@ def create_job():
     except Exception as e:
         print(f"Create job error: {str(e)}")
         return jsonify({"success": False, "message": f"Failed to create job: {str(e)}"}), 500
+
+
+# ==========================================
+# FRIENDS ENDPOINTS
+# ==========================================
+
+
+@app.route("/api/friends/send-request/<int:user_id>", methods=["POST", "OPTIONS"])
+def send_friend_request(user_id):
+    """Send a friend request to another user"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "Authorization token required"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            sender_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        if sender_id == user_id:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Cannot send friend request to yourself",
+                    }
+                ),
+                400,
+            )
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if users exist
+        if USE_POSTGRESQL:
+            cursor.execute("SELECT id FROM users WHERE id IN (%s, %s)", (sender_id, user_id))
+        else:
+            cursor.execute("SELECT id FROM users WHERE id IN (?, ?)", (sender_id, user_id))
+        users = cursor.fetchall()
+        if len(users) != 2:
+            cursor.close()
+            return_db_connection(conn)
+            return jsonify({"success": False, "message": "User not found"}), 404
+
+        # Check if friendship already exists
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT status FROM friendships
+                WHERE (sender_id = %s AND receiver_id = %s) OR (sender_id = %s AND receiver_id = %s)
+            """,
+                (sender_id, user_id, user_id, sender_id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT status FROM friendships
+                WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+            """,
+                (sender_id, user_id, user_id, sender_id),
+            )
+
+        existing = cursor.fetchone()
+        if existing:
+            status = existing["status"]
+            if status == "accepted":
+                cursor.close()
+                return_db_connection(conn)
+                return jsonify({"success": False, "message": "Already friends"}), 400
+            elif status == "pending":
+                cursor.close()
+                return_db_connection(conn)
+                return (
+                    jsonify(
+                        {"success": False, "message": "Friend request already sent"}
+                    ),
+                    400,
+                )
+
+        # Create friend request
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                INSERT INTO friendships (sender_id, receiver_id, status, created_at, updated_at)
+                VALUES (%s, %s, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT (sender_id, receiver_id) DO UPDATE SET status = 'pending', updated_at = CURRENT_TIMESTAMP
+            """,
+                (sender_id, user_id),
+            )
+        else:
+            # For SQLite, use INSERT OR IGNORE followed by UPDATE to preserve created_at
+            cursor.execute(
+                """
+                INSERT OR IGNORE INTO friendships (sender_id, receiver_id, status, created_at, updated_at)
+                VALUES (?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """,
+                (sender_id, user_id),
+            )
+            cursor.execute(
+                """
+                UPDATE friendships SET status = 'pending', updated_at = CURRENT_TIMESTAMP
+                WHERE sender_id = ? AND receiver_id = ?
+            """,
+                (sender_id, user_id),
+            )
+
+        conn.commit()
+        cursor.close()
+        return_db_connection(conn)
+
+        return (
+            jsonify({"success": True, "message": "Friend request sent successfully"}),
+            201,
+        )
+
+    except Exception as e:
+        print(f"Error sending friend request: {str(e)}")
+        return (
+            jsonify({"success": False, "message": "Failed to send friend request"}),
+            500,
+        )
+
+
+@app.route("/api/friends/requests", methods=["GET", "OPTIONS"])
+def get_friend_requests():
+    """Get friend requests for current user"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "Authorization token required"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get incoming friend requests
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT f.id, f.sender_id, f.created_at,
+                       u.first_name, u.last_name, u.email, u.avatar_url
+                FROM friendships f
+                JOIN users u ON f.sender_id = u.id
+                WHERE f.receiver_id = %s AND f.status = 'pending'
+                ORDER BY f.created_at DESC
+            """,
+                (user_id,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT f.id, f.sender_id, f.created_at,
+                       u.first_name, u.last_name, u.email, u.avatar_url
+                FROM friendships f
+                JOIN users u ON f.sender_id = u.id
+                WHERE f.receiver_id = ? AND f.status = 'pending'
+                ORDER BY f.created_at DESC
+            """,
+                (user_id,),
+            )
+
+        rows = cursor.fetchall()
+        requests_list = []
+        for row in rows:
+            requests_list.append(
+                {
+                    "id": row["id"],
+                    "sender_id": row["sender_id"],
+                    "created_at": row["created_at"],
+                    "sender": {
+                        "id": row["sender_id"],
+                        "first_name": row["first_name"] or "",
+                        "last_name": row["last_name"] or "",
+                        "email": row["email"],
+                        "avatar_url": row["avatar_url"] or "",
+                    },
+                }
+            )
+
+        cursor.close()
+        return_db_connection(conn)
+
+        return jsonify({"success": True, "requests": requests_list}), 200
+
+    except Exception as e:
+        print(f"Error getting friend requests: {str(e)}")
+        return (
+            jsonify({"success": False, "message": "Failed to get friend requests"}),
+            500,
+        )
+
+
+@app.route("/api/friends/respond/<int:request_id>", methods=["POST", "OPTIONS"])
+def respond_to_friend_request(request_id):
+    """Accept or decline a friend request"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        data = request.get_json()
+        action = data.get("action")  # 'accept' or 'decline'
+
+        if action not in ["accept", "decline"]:
+            return jsonify({"success": False, "message": "Invalid action"}), 400
+
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "Authorization token required"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if request exists and belongs to user
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT sender_id FROM friendships
+                WHERE id = %s AND receiver_id = %s AND status = 'pending'
+            """,
+                (request_id, user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT sender_id FROM friendships
+                WHERE id = ? AND receiver_id = ? AND status = 'pending'
+            """,
+                (request_id, user_id),
+            )
+
+        result = cursor.fetchone()
+        if not result:
+            cursor.close()
+            return_db_connection(conn)
+            return (
+                jsonify({"success": False, "message": "Friend request not found"}),
+                404,
+            )
+
+        if action == "accept":
+            # Update friendship status to accepted
+            if USE_POSTGRESQL:
+                cursor.execute(
+                    """
+                    UPDATE friendships SET status = 'accepted', updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """,
+                    (request_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE friendships SET status = 'accepted', updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """,
+                    (request_id,),
+                )
+        else:
+            # Delete the friend request
+            if USE_POSTGRESQL:
+                cursor.execute("DELETE FROM friendships WHERE id = %s", (request_id,))
+            else:
+                cursor.execute("DELETE FROM friendships WHERE id = ?", (request_id,))
+
+        conn.commit()
+        cursor.close()
+        return_db_connection(conn)
+
+        return (
+            jsonify(
+                {"success": True, "message": f"Friend request {action}ed successfully"}
+            ),
+            200,
+        )
+
+    except Exception as e:
+        print(f"Error responding to friend request: {str(e)}")
+        return (
+            jsonify(
+                {"success": False, "message": "Failed to respond to friend request"}
+            ),
+            500,
+        )
+
+
+@app.route("/api/friends/list", methods=["GET", "OPTIONS"])
+def get_friends_list():
+    """Get list of accepted friends"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "Authorization token required"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get accepted friends (both directions)
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT DISTINCT u.id, u.first_name, u.last_name, u.email, u.avatar_url, u.is_available_for_hire
+                FROM friendships f
+                JOIN users u ON (
+                    (f.sender_id = %s AND f.receiver_id = u.id) OR
+                    (f.receiver_id = %s AND f.sender_id = u.id)
+                )
+                WHERE (f.sender_id = %s OR f.receiver_id = %s) AND f.status = 'accepted'
+                ORDER BY u.first_name, u.last_name
+            """,
+                (user_id, user_id, user_id, user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT DISTINCT u.id, u.first_name, u.last_name, u.email, u.avatar_url, u.is_available_for_hire
+                FROM friendships f
+                JOIN users u ON (
+                    (f.sender_id = ? AND f.receiver_id = u.id) OR
+                    (f.receiver_id = ? AND f.sender_id = u.id)
+                )
+                WHERE (f.sender_id = ? OR f.receiver_id = ?) AND f.status = 'accepted'
+                ORDER BY u.first_name, u.last_name
+            """,
+                (user_id, user_id, user_id, user_id),
+            )
+
+        friends = []
+        for row in cursor.fetchall():
+            friends.append(
+                {
+                    "id": row["id"],
+                    "first_name": row["first_name"] or "",
+                    "last_name": row["last_name"] or "",
+                    "email": row["email"],
+                    "avatar_url": row["avatar_url"] or "",
+                    "is_available_for_hire": bool(row["is_available_for_hire"]),
+                }
+            )
+
+        cursor.close()
+        return_db_connection(conn)
+
+        return (
+            jsonify({"success": True, "friends": friends, "count": len(friends)}),
+            200,
+        )
+
+    except Exception as e:
+        print(f"Error getting friends list: {str(e)}")
+        return jsonify({"success": False, "message": "Failed to get friends list"}), 500
+
+
+@app.route("/api/friends/suggestions", methods=["GET", "OPTIONS"])
+def get_friend_suggestions():
+    """Get friend suggestions (users not already friends or requested)"""
+    if request.method == "OPTIONS":
+        return "", 200
+
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "Authorization token required"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get users who are not already friends or have pending requests
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT u.id, u.first_name, u.last_name, u.email, u.avatar_url, u.bio, u.location
+                FROM users u
+                WHERE u.id != %s AND u.is_active = TRUE
+                AND u.id NOT IN (
+                    SELECT CASE
+                        WHEN f.sender_id = %s THEN f.receiver_id
+                        ELSE f.sender_id
+                    END
+                    FROM friendships f
+                    WHERE (f.sender_id = %s OR f.receiver_id = %s) AND f.status IN ('pending', 'accepted')
+                )
+                ORDER BY u.created_at DESC
+                LIMIT 10
+            """,
+                (user_id, user_id, user_id, user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT u.id, u.first_name, u.last_name, u.email, u.avatar_url, u.bio, u.location
+                FROM users u
+                WHERE u.id != ? AND u.is_active = 1
+                AND u.id NOT IN (
+                    SELECT CASE
+                        WHEN f.sender_id = ? THEN f.receiver_id
+                        ELSE f.sender_id
+                    END
+                    FROM friendships f
+                    WHERE (f.sender_id = ? OR f.receiver_id = ?) AND f.status IN ('pending', 'accepted')
+                )
+                ORDER BY u.created_at DESC
+                LIMIT 10
+            """,
+                (user_id, user_id, user_id, user_id),
+            )
+
+        suggestions = []
+        for row in cursor.fetchall():
+            suggestions.append(
+                {
+                    "id": row["id"],
+                    "first_name": row["first_name"] or "",
+                    "last_name": row["last_name"] or "",
+                    "email": row["email"],
+                    "avatar_url": row["avatar_url"] or "",
+                    "bio": row["bio"] or "",
+                    "location": row["location"] or "",
+                }
+            )
+
+        cursor.close()
+        return_db_connection(conn)
+
+        return jsonify({"success": True, "suggestions": suggestions}), 200
+
+    except Exception as e:
+        print(f"Error getting friend suggestions: {str(e)}")
+        return (
+            jsonify({"success": False, "message": "Failed to get friend suggestions"}),
+            500,
+        )
 
 
 # ==========================================
