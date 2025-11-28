@@ -68,3 +68,4 @@ htmlcov/
 *.key
 .vercel
 .railway
+*.db-journal
