@@ -225,10 +225,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log('AuthContext: Login successful, user set:', response.user);
       toast.success('Login successful!');
     } catch (error: unknown) {
-      const apiError = error as ApiError;
       console.error('AuthContext: Login error:', error);
-      const errorMessage = apiError.response?.data?.detail || apiError.message || 'Login failed';
-      toast.error(errorMessage);
+      // Note: Do not show toast here - let the caller (Login.tsx) handle error display
+      // to avoid duplicate toast notifications
       throw error;
     }
   };
@@ -256,9 +255,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       toast.success('Registration successful!');
     } catch (error: unknown) {
-      const apiError = error as ApiError;
-      const message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Registration failed';
-      toast.error(message);
+      console.error('AuthContext: Registration error:', error);
+      // Note: Do not show toast here - let the caller (Register.tsx) handle error display
+      // to avoid duplicate toast notifications
       throw error;
     }
   };
@@ -298,10 +297,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log('AuthContext: Google OAuth login successful, user set:', response.user);
       toast.success('Google sign-in successful!');
     } catch (error: unknown) {
-      const apiError = error as ApiError;
       console.error('AuthContext: Google OAuth error:', error);
-      const errorMessage = apiError.response?.data?.detail || apiError.response?.data?.message || apiError.message || 'Google sign-in failed';
-      toast.error(errorMessage);
+      // Note: Do not show toast here - let the caller (Login.tsx/Register.tsx) handle error display
+      // to avoid duplicate toast notifications
       throw error;
     }
   };
@@ -341,10 +339,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log('AuthContext: Apple OAuth login successful, user set:', response.user);
       toast.success('Apple sign-in successful!');
     } catch (error: unknown) {
-      const apiError = error as ApiError;
       console.error('AuthContext: Apple OAuth error:', error);
-      const errorMessage = apiError.response?.data?.detail || apiError.response?.data?.message || apiError.message || 'Apple sign-in failed';
-      toast.error(errorMessage);
+      // Note: Do not show toast here - let the caller (Login.tsx/Register.tsx) handle error display
+      // to avoid duplicate toast notifications
       throw error;
     }
   };
