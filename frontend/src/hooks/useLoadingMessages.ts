@@ -11,20 +11,14 @@ interface LoadingMessageConfig {
 
 /**
  * Default loading messages for authentication operations.
- * These provide progressive feedback during slow connections.
+ * These provide simple feedback without exposing server state details.
  */
 const DEFAULT_AUTH_MESSAGES: LoadingMessageConfig[] = [
   { message: 'Signing in...', delay: 0 },
-  { message: 'Connecting to server...', delay: 3000 },
-  { message: 'Server is waking up, please wait...', delay: 8000 },
-  { message: 'Almost there...', delay: 20000 },
 ];
 
 const DEFAULT_REGISTER_MESSAGES: LoadingMessageConfig[] = [
   { message: 'Creating Account...', delay: 0 },
-  { message: 'Connecting to server...', delay: 3000 },
-  { message: 'Server is waking up, please wait...', delay: 8000 },
-  { message: 'Almost there...', delay: 20000 },
 ];
 
 interface UseLoadingMessagesOptions {
