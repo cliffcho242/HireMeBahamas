@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { AIMonitoringProvider } from './contexts/AIMonitoringContext';
@@ -58,6 +59,7 @@ function App() {
         </AIErrorBoundary>
       </AIMonitoringProvider>
       <Analytics />
+      <SpeedInsights />
     </>
   );
 }
