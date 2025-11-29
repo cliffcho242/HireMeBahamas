@@ -115,10 +115,12 @@ def _get_cache_config():
 cache = Cache(app, config=_get_cache_config())
 
 
-def make_cache_key(*args, **kwargs):
+def make_cache_key():
     """
     Generate a cache key based on request path and query parameters.
     Used for caching API responses with proper key differentiation.
+    
+    This function is designed to be used with Flask-Caching's key_prefix parameter.
     """
     # Include query string for differentiated caching
     return f"{request.path}?{request.query_string.decode('utf-8')}"
@@ -136,23 +138,30 @@ def invalidate_cache_pattern(pattern: str):
     """
     try:
         cache_type = cache.config.get("CACHE_TYPE", "simple")
-        if cache_type == "redis" and hasattr(cache.cache, '_read_clients'):
+        if cache_type == "redis":
             # Redis supports pattern-based key deletion
-            import redis
-            client = redis.from_url(REDIS_URL)
-            prefix = cache.config.get("CACHE_KEY_PREFIX", "")
-            full_pattern = f"{prefix}{pattern}"
-            cursor = 0
-            deleted_count = 0
-            while True:
-                cursor, keys = client.scan(cursor, match=full_pattern, count=100)
-                if keys:
-                    client.delete(*keys)
-                    deleted_count += len(keys)
-                if cursor == 0:
-                    break
-            if deleted_count > 0:
-                logger.info(f"Invalidated {deleted_count} cache keys matching '{pattern}'")
+            try:
+                import redis
+                client = redis.from_url(REDIS_URL)
+                # Test connection before proceeding
+                client.ping()
+                prefix = cache.config.get("CACHE_KEY_PREFIX", "")
+                full_pattern = f"{prefix}{pattern}"
+                cursor = 0
+                deleted_count = 0
+                while True:
+                    cursor, keys = client.scan(cursor, match=full_pattern, count=100)
+                    if keys:
+                        client.delete(*keys)
+                        deleted_count += len(keys)
+                    if cursor == 0:
+                        break
+                if deleted_count > 0:
+                    logger.info(f"Invalidated {deleted_count} cache keys matching '{pattern}'")
+            except Exception as redis_error:
+                # Fall back to simple cache clear if Redis operation fails
+                logger.warning(f"Redis cache invalidation failed, clearing all cache: {redis_error}")
+                cache.clear()
         else:
             # Simple cache - clear all (no pattern support)
             cache.clear()
