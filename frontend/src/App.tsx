@@ -3,27 +3,29 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { useMemo } from 'react';
+import { useMemo, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { AIMonitoringProvider } from './contexts/AIMonitoringContext';
 
-// Pages
-import Home from './pages/Home';
+// Core pages - eagerly loaded for fast initial render
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Jobs from './pages/Jobs';
-import JobDetail from './pages/JobDetail';
-import Profile from './pages/Profile';
-import Messages from './pages/Messages';
-import PostJob from './pages/PostJob';
-import HireMe from './pages/HireMe';
-import Friends from './pages/Users';
-import UserProfile from './pages/UserProfile';
-import Download from './pages/Download';
-import DownloadTest from './pages/DownloadTest';
+import Home from './pages/Home';
+
+// Lazy-loaded pages for super-fast initial bundle
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Jobs = lazy(() => import('./pages/Jobs'));
+const JobDetail = lazy(() => import('./pages/JobDetail'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Messages = lazy(() => import('./pages/Messages'));
+const PostJob = lazy(() => import('./pages/PostJob'));
+const HireMe = lazy(() => import('./pages/HireMe'));
+const Friends = lazy(() => import('./pages/Users'));
+const UserProfile = lazy(() => import('./pages/UserProfile'));
+const Download = lazy(() => import('./pages/Download'));
+const DownloadTest = lazy(() => import('./pages/DownloadTest'));
 
 // Components
 import Navbar from './components/Navbar';
@@ -34,15 +36,24 @@ import { AIErrorBoundary } from './components/AIErrorBoundary';
 import InstallPWA from './components/InstallPWA';
 import ConnectionStatus from './components/ConnectionStatus';
 
-// Create a client
+// Create a client with optimized settings for fast loading
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
     },
   },
 });
+
+// Fast loading spinner component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+  </div>
+);
 
 // Wrapper component to capture route for Speed Insights
 function SpeedInsightsWrapper() {
@@ -92,51 +103,52 @@ function AppContent() {
       {isAuthenticated && <Navbar />}
 
       <main className="flex-grow w-full">
-        <Routes>
-          {/* Public Routes - Only Login and Register (redirect authenticated users) */}
-          <Route
-            path="/login"
-            element={
-              <AuthGuard requireAuth={false}>
-                <Login />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <AuthGuard requireAuth={false}>
-                <Register />
-              </AuthGuard>
-            }
-          />
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            {/* Public Routes - Only Login and Register (redirect authenticated users) */}
+            <Route
+              path="/login"
+              element={
+                <AuthGuard requireAuth={false}>
+                  <Login />
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <AuthGuard requireAuth={false}>
+                  <Register />
+                </AuthGuard>
+              }
+            />
 
-          {/* Root route - Landing page for unauthenticated, Home for authenticated */}
-          <Route
-            path="/"
-            element={
-              isAuthenticated ? (
+            {/* Root route - Landing page for unauthenticated, Home for authenticated */}
+            <Route
+              path="/"
+              element={
+                isAuthenticated ? (
+                  <ProtectedRoute>
+                    <Home />
+                  </ProtectedRoute>
+                ) : (
+                  <LandingPage />
+                )
+              }
+            />
+
+            {/* Download Page - Public route for app installation */}
+            <Route path="/download" element={<Download />} />
+            <Route path="/download-test" element={<DownloadTest />} />
+
+            {/* Protected Routes - Everything else requires authentication */}
+            <Route
+              path="/jobs"
+              element={
                 <ProtectedRoute>
-                  <Home />
+                  <Jobs />
                 </ProtectedRoute>
-              ) : (
-                <LandingPage />
-              )
-            }
-          />
-
-          {/* Download Page - Public route for app installation */}
-          <Route path="/download" element={<Download />} />
-          <Route path="/download-test" element={<DownloadTest />} />
-
-          {/* Protected Routes - Everything else requires authentication */}
-          <Route
-            path="/jobs"
-            element={
-              <ProtectedRoute>
-                <Jobs />
-              </ProtectedRoute>
-            }
+              }
           />
           <Route
             path="/jobs/:id"
@@ -205,7 +217,8 @@ function AppContent() {
 
           {/* Catch all route - redirect to login if not authenticated */}
           <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
+          </Routes>
+        </Suspense>
       </main>
 
       {/* Only show footer for authenticated users */}
