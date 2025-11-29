@@ -1756,6 +1756,10 @@ def cleanup_orphaned_extensions(cursor, conn):
     # Also clean up orphaned tables/views in the public schema that may have been
     # left behind by extensions or previous installations. These cause errors when
     # Railway's monitoring dashboard tries to query them (e.g., pg_stat_statements).
+    # 
+    # If CREATE_DUMMY_PG_STAT_STATEMENTS is enabled, we create a dummy view instead
+    # of just dropping the relation. This allows Railway's monitoring queries to
+    # succeed with 0 rows instead of failing with an error.
     orphaned_relations = ["pg_stat_statements"]
     
     # Mapping of PostgreSQL relkind codes to human-readable names and DROP statements
@@ -1768,6 +1772,14 @@ def cleanup_orphaned_extensions(cursor, conn):
     
     for rel_name in orphaned_relations:
         try:
+            # Special handling for pg_stat_statements when dummy view creation is enabled
+            if rel_name == "pg_stat_statements" and CREATE_DUMMY_PG_STAT_STATEMENTS:
+                # Skip cleanup here - the dummy view will be created after cleanup
+                # The create_dummy_pg_stat_statements_view function handles replacing
+                # any existing table/view with the dummy view
+                print(f"ℹ️  Dummy pg_stat_statements view mode enabled - will create after cleanup")
+                continue
+            
             # Check if there's a table or view with this name in the public schema
             cursor.execute(
                 """
@@ -1806,7 +1818,144 @@ def cleanup_orphaned_extensions(cursor, conn):
             _safe_rollback(conn)
             all_succeeded = False
     
+    # If dummy pg_stat_statements view creation is enabled, create it now
+    if CREATE_DUMMY_PG_STAT_STATEMENTS:
+        dummy_view_success = create_dummy_pg_stat_statements_view(cursor, conn)
+        if not dummy_view_success:
+            all_succeeded = False
+    
     return all_succeeded
+
+
+def create_dummy_pg_stat_statements_view(cursor, conn):
+    """
+    Create a dummy pg_stat_statements view that returns empty results.
+    
+    This view satisfies Railway's monitoring queries that periodically run:
+    - SET statement_timeout = '30s'; SELECT COUNT(*) FROM public."pg_stat_statements"
+    - SET statement_timeout = '30s'; SELECT * FROM public."pg_stat_statements" LIMIT 10
+    
+    By creating a dummy view that returns no rows, these queries succeed silently
+    instead of generating error logs. This reduces log noise while having no impact
+    on application functionality.
+    
+    The view mimics the essential columns from pg_stat_statements that monitoring
+    tools typically expect. Since it returns no rows (FALSE WHERE clause), it has
+    zero storage overhead.
+    
+    Returns True if the view was created successfully, False otherwise.
+    """
+    try:
+        # Check if the view or table already exists
+        cursor.execute(
+            """
+            SELECT relkind FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relname = 'pg_stat_statements'
+            """
+        )
+        result = cursor.fetchone()
+        
+        if result:
+            relkind = result["relkind"]
+            # Check if it's already a view (relkind = 'v')
+            if relkind == 'v':
+                # Verify it's our dummy view by checking for the WHERE FALSE clause
+                # in the view definition. If it's a real pg_stat_statements view from
+                # the extension, it won't have WHERE FALSE.
+                cursor.execute(
+                    """
+                    SELECT pg_get_viewdef('public.pg_stat_statements'::regclass, true) AS definition
+                    """
+                )
+                view_def_result = cursor.fetchone()
+                # Check for the specific WHERE FALSE pattern that identifies our dummy view
+                # The real pg_stat_statements extension view would not have this pattern
+                if view_def_result and "where false" in view_def_result["definition"].lower():
+                    print("✅ Dummy pg_stat_statements view already exists (verified by WHERE FALSE)")
+                    return True
+                else:
+                    # It's a view but not our dummy - replace it
+                    print("🧹 Replacing existing pg_stat_statements view with dummy view")
+                    cursor.execute("DROP VIEW IF EXISTS public.pg_stat_statements CASCADE")
+                    conn.commit()
+            elif relkind == 'r':
+                # It's a table - drop it
+                print("🧹 Replacing orphaned TABLE 'public.pg_stat_statements' with dummy view")
+                cursor.execute("DROP TABLE IF EXISTS public.pg_stat_statements CASCADE")
+                conn.commit()
+            elif relkind == 'm':
+                # It's a materialized view - drop it
+                print("🧹 Replacing orphaned MATERIALIZED VIEW 'public.pg_stat_statements' with dummy view")
+                cursor.execute("DROP MATERIALIZED VIEW IF EXISTS public.pg_stat_statements CASCADE")
+                conn.commit()
+            else:
+                # Unknown relkind type - log warning and attempt generic cleanup
+                # This handles edge cases like indexes or other PostgreSQL object types
+                print(f"⚠️  Unknown relkind '{relkind}' for 'public.pg_stat_statements', attempting cleanup")
+                try:
+                    # Try DROP VIEW first (most common case), then DROP TABLE as fallback
+                    cursor.execute("DROP VIEW IF EXISTS public.pg_stat_statements CASCADE")
+                    conn.commit()
+                except psycopg2.Error:
+                    _safe_rollback(conn)
+                    cursor.execute("DROP TABLE IF EXISTS public.pg_stat_statements CASCADE")
+                    conn.commit()
+        
+        # Create the dummy view with essential columns that monitoring tools expect
+        # The view returns no rows (WHERE FALSE) so it has zero overhead
+        #
+        # Column schema is based on pg_stat_statements extension from PostgreSQL 13+
+        # Reference: https://www.postgresql.org/docs/current/pgstatstatements.html
+        #
+        # Compatibility notes:
+        # - PostgreSQL 12 and earlier use different column names (e.g., total_time vs total_exec_time)
+        # - Railway typically runs PostgreSQL 14+ where this schema is fully compatible
+        # - For older PostgreSQL versions, Railway's monitoring may use different queries
+        # - This schema covers the core columns used by monitoring tools
+        # - If monitoring queries fail due to schema differences, update this definition
+        cursor.execute(
+            """
+            CREATE OR REPLACE VIEW public.pg_stat_statements AS
+            SELECT
+                0::oid AS userid,
+                0::oid AS dbid,
+                0::bigint AS queryid,
+                ''::text AS query,
+                0::bigint AS calls,
+                0::double precision AS total_time,
+                0::double precision AS min_time,
+                0::double precision AS max_time,
+                0::double precision AS mean_time,
+                0::bigint AS rows,
+                0::bigint AS shared_blks_hit,
+                0::bigint AS shared_blks_read,
+                0::bigint AS shared_blks_dirtied,
+                0::bigint AS shared_blks_written,
+                0::bigint AS local_blks_hit,
+                0::bigint AS local_blks_read,
+                0::bigint AS local_blks_dirtied,
+                0::bigint AS local_blks_written,
+                0::bigint AS temp_blks_read,
+                0::bigint AS temp_blks_written,
+                0::double precision AS blk_read_time,
+                0::double precision AS blk_write_time
+            WHERE FALSE
+            """
+        )
+        conn.commit()
+        print("✅ Created dummy pg_stat_statements view (Railway monitoring queries will succeed with 0 rows)")
+        return True
+        
+    except psycopg2.Error as e:
+        error_details = _get_psycopg2_error_details(e)
+        print(f"⚠️  Could not create dummy pg_stat_statements view: {error_details}")
+        _safe_rollback(conn)
+        return False
+    except Exception as e:
+        print(f"⚠️  Unexpected error creating dummy pg_stat_statements view: {e}")
+        _safe_rollback(conn)
+        return False
 
 
 def init_postgresql_extensions(cursor, conn):
@@ -3074,6 +3223,14 @@ DB_KEEPALIVE_MAX_PING_AGE_SECONDS = 300  # Consider thread dead if no ping for 5
 # to query pg_stat_statements (which requires shared_preload_libraries configuration)
 # Cleanup runs every hour (3600 seconds) to catch any newly created extensions
 DB_EXTENSION_CLEANUP_INTERVAL_SECONDS = int(os.getenv("DB_EXTENSION_CLEANUP_INTERVAL_SECONDS", "3600"))
+
+# Create a dummy pg_stat_statements view to satisfy Railway's monitoring queries
+# When enabled, instead of dropping the pg_stat_statements table/view, we create a
+# dummy empty view that returns no rows. This allows Railway's monitoring queries
+# (SELECT COUNT(*) FROM public."pg_stat_statements") to succeed with 0 rows instead
+# of failing with an error. This reduces log noise from Railway's monitoring.
+# Set to "true" to enable this behavior.
+CREATE_DUMMY_PG_STAT_STATEMENTS = os.getenv("CREATE_DUMMY_PG_STAT_STATEMENTS", "true").lower() == "true"
 
 # Track keepalive thread and status
 _keepalive_thread = None
