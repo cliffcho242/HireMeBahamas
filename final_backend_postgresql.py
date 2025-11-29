@@ -5489,10 +5489,18 @@ def delete_post(post_id):
 @app.route("/api/users/<int:user_id>", methods=["GET", "OPTIONS"])
 def get_user(user_id):
     """
-    Get a specific user's profile by ID
+    Get a specific user's profile by ID.
+    
+    Performance optimizations to prevent HTTP 499/502 timeouts:
+    - Request timeout detection returns error before client disconnects
+    - Single connection used for all queries
+    - Indexed queries on primary keys
     """
     if request.method == "OPTIONS":
         return "", 200
+
+    # Track request timing for timeout detection
+    request_start = time.time()
 
     try:
         # Verify authentication
@@ -5507,6 +5515,14 @@ def get_user(user_id):
             current_user_id = payload["user_id"]
         except jwt.InvalidTokenError:
             return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        # Check for timeout before database query
+        if _check_request_timeout(request_start, API_REQUEST_TIMEOUT_SECONDS, "get user (before db)"):
+            return jsonify({
+                "success": False, 
+                "message": "Request timed out. Please try again.",
+                "error_code": "TIMEOUT"
+            }), 504
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -5587,6 +5603,16 @@ def get_user(user_id):
             (user_id,)
         )
         posts_count = cursor.fetchone()["count"]
+
+        # Check for timeout after database queries
+        if _check_request_timeout(request_start, API_REQUEST_TIMEOUT_SECONDS, "get user (after db)"):
+            cursor.close()
+            return_db_connection(conn)
+            return jsonify({
+                "success": False, 
+                "message": "Request timed out. Please try again.",
+                "error_code": "TIMEOUT"
+            }), 504
 
         cursor.close()
         return_db_connection(conn)
@@ -6983,9 +7009,19 @@ def get_friends_list():
 
 @app.route("/api/friends/suggestions", methods=["GET", "OPTIONS"])
 def get_friend_suggestions():
-    """Get friend suggestions (users not already friends or requested)"""
+    """
+    Get friend suggestions (users not already friends or requested).
+    
+    Performance optimizations to prevent HTTP 499/502 timeouts:
+    - Request timeout detection returns error before client disconnects
+    - Limited to 10 results to prevent slow queries
+    - Indexed queries on user IDs
+    """
     if request.method == "OPTIONS":
         return "", 200
+
+    # Track request timing for timeout detection
+    request_start = time.time()
 
     conn = None
     cursor = None
@@ -7007,6 +7043,14 @@ def get_friend_suggestions():
             return jsonify({"success": False, "message": "Token expired"}), 401
         except jwt.InvalidTokenError:
             return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        # Check for timeout before database query
+        if _check_request_timeout(request_start, API_REQUEST_TIMEOUT_SECONDS, "friend suggestions (before db)"):
+            return jsonify({
+                "success": False, 
+                "message": "Request timed out. Please try again.",
+                "error_code": "TIMEOUT"
+            }), 504
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -7064,6 +7108,14 @@ def get_friend_suggestions():
                     "location": row["location"] or "",
                 }
             )
+
+        # Check for timeout after database query
+        if _check_request_timeout(request_start, API_REQUEST_TIMEOUT_SECONDS, "friend suggestions (after db)"):
+            return jsonify({
+                "success": False, 
+                "message": "Request timed out. Please try again.",
+                "error_code": "TIMEOUT"
+            }), 504
 
         return jsonify({"success": True, "suggestions": suggestions}), 200
 
