@@ -79,6 +79,50 @@ CACHE_TIMEOUT_POSTS = int(os.getenv("CACHE_TIMEOUT_POSTS", "30"))  # Posts list:
 CACHE_TIMEOUT_USERS = int(os.getenv("CACHE_TIMEOUT_USERS", "120"))  # Users list: 2 minutes
 CACHE_TIMEOUT_PROFILE = int(os.getenv("CACHE_TIMEOUT_PROFILE", "60"))  # User profile: 1 minute
 
+# Redis client for cache invalidation (reused across calls)
+_redis_client = None
+_redis_available = None  # None = not checked, True/False = result
+
+
+def _get_redis_client():
+    """
+    Get or create a Redis client for cache operations.
+    
+    Returns the cached Redis client if available, or creates a new one.
+    Returns None if Redis is not configured or unavailable.
+    """
+    global _redis_client, _redis_available
+    
+    if not REDIS_URL:
+        return None
+    
+    # If we've already determined Redis is unavailable, don't retry
+    if _redis_available is False:
+        return None
+    
+    # Return cached client if available and connected
+    if _redis_client is not None:
+        try:
+            _redis_client.ping()
+            return _redis_client
+        except Exception:
+            # Connection lost, try to reconnect
+            _redis_client = None
+    
+    # Try to create a new connection
+    try:
+        import redis
+        _redis_client = redis.from_url(REDIS_URL, socket_timeout=2)
+        _redis_client.ping()
+        _redis_available = True
+        return _redis_client
+    except Exception as e:
+        logger.warning(f"Redis connection failed: {e}")
+        _redis_available = False
+        _redis_client = None
+        return None
+
+
 def _get_cache_config():
     """
     Get cache configuration with Redis support and fallback to simple cache.
@@ -91,11 +135,9 @@ def _get_cache_config():
     Falls back to simple in-memory cache if Redis is unavailable.
     """
     if REDIS_URL:
-        try:
-            import redis
-            # Test Redis connection before using it
-            r = redis.from_url(REDIS_URL, socket_timeout=2)
-            r.ping()
+        # Use the shared Redis client getter to test connection
+        client = _get_redis_client()
+        if client is not None:
             print(f"✅ Redis cache connected: {REDIS_URL[:30]}...")
             return {
                 "CACHE_TYPE": "redis",
@@ -103,8 +145,8 @@ def _get_cache_config():
                 "CACHE_DEFAULT_TIMEOUT": CACHE_DEFAULT_TIMEOUT,
                 "CACHE_KEY_PREFIX": "hiremebahamas:",
             }
-        except Exception as e:
-            print(f"⚠️ Redis unavailable ({e}), falling back to simple cache")
+        else:
+            print("⚠️ Redis unavailable, falling back to simple cache")
     
     print("📦 Using simple in-memory cache")
     return {
@@ -113,17 +155,6 @@ def _get_cache_config():
     }
 
 cache = Cache(app, config=_get_cache_config())
-
-
-def make_cache_key():
-    """
-    Generate a cache key based on request path and query parameters.
-    Used for caching API responses with proper key differentiation.
-    
-    This function is designed to be used with Flask-Caching's key_prefix parameter.
-    """
-    # Include query string for differentiated caching
-    return f"{request.path}?{request.query_string.decode('utf-8')}"
 
 
 def invalidate_cache_pattern(pattern: str):
@@ -139,28 +170,29 @@ def invalidate_cache_pattern(pattern: str):
     try:
         cache_type = cache.config.get("CACHE_TYPE", "simple")
         if cache_type == "redis":
-            # Redis supports pattern-based key deletion
-            try:
-                import redis
-                client = redis.from_url(REDIS_URL)
-                # Test connection before proceeding
-                client.ping()
-                prefix = cache.config.get("CACHE_KEY_PREFIX", "")
-                full_pattern = f"{prefix}{pattern}"
-                cursor = 0
-                deleted_count = 0
-                while True:
-                    cursor, keys = client.scan(cursor, match=full_pattern, count=100)
-                    if keys:
-                        client.delete(*keys)
-                        deleted_count += len(keys)
-                    if cursor == 0:
-                        break
-                if deleted_count > 0:
-                    logger.info(f"Invalidated {deleted_count} cache keys matching '{pattern}'")
-            except Exception as redis_error:
-                # Fall back to simple cache clear if Redis operation fails
-                logger.warning(f"Redis cache invalidation failed, clearing all cache: {redis_error}")
+            # Use the shared Redis client for cache operations
+            client = _get_redis_client()
+            if client is not None:
+                try:
+                    prefix = cache.config.get("CACHE_KEY_PREFIX", "")
+                    full_pattern = f"{prefix}{pattern}"
+                    cursor = 0
+                    deleted_count = 0
+                    while True:
+                        cursor, keys = client.scan(cursor, match=full_pattern, count=100)
+                        if keys:
+                            client.delete(*keys)
+                            deleted_count += len(keys)
+                        if cursor == 0:
+                            break
+                    if deleted_count > 0:
+                        logger.info(f"Invalidated {deleted_count} cache keys matching '{pattern}'")
+                except Exception as redis_error:
+                    # Fall back to simple cache clear if Redis operation fails
+                    logger.warning(f"Redis cache invalidation failed, clearing all cache: {redis_error}")
+                    cache.clear()
+            else:
+                # Redis client unavailable, clear all
                 cache.clear()
         else:
             # Simple cache - clear all (no pattern support)

@@ -22,6 +22,7 @@ def test_cache_configuration():
         CACHE_TIMEOUT_POSTS,
         CACHE_TIMEOUT_USERS,
         CACHE_TIMEOUT_PROFILE,
+        _get_redis_client,
     )
     
     print("=" * 80)
