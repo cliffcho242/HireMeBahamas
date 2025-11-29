@@ -87,6 +87,8 @@ const UserProfile: React.FC = () => {
   const [followingList, setFollowingList] = useState<FollowUser[]>([]);
   const [isLoadingFollowers, setIsLoadingFollowers] = useState(false);
   const [isLoadingFollowing, setIsLoadingFollowing] = useState(false);
+  const [followersLoaded, setFollowersLoaded] = useState(false);
+  const [followingLoaded, setFollowingLoaded] = useState(false);
   
   // Use ref to store interval ID for proper cleanup
   // In browsers, setInterval returns number; in Node.js it returns NodeJS.Timeout
@@ -185,6 +187,12 @@ const UserProfile: React.FC = () => {
 
   useEffect(() => {
     if (userId) {
+      // Reset loaded states when userId changes
+      setFollowersLoaded(false);
+      setFollowingLoaded(false);
+      setFollowersList([]);
+      setFollowingList([]);
+      setActiveTab('posts');
       fetchUserProfile();
     }
     
@@ -228,31 +236,61 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const fetchFollowers = async () => {
+  const fetchFollowers = async (forceRefresh = false) => {
     if (!userId) return;
+    
+    // Don't refetch if already loaded successfully (unless force refresh)
+    if (followersLoaded && !forceRefresh) return;
     
     setIsLoadingFollowers(true);
     try {
       const response = await usersAPI.getUserFollowers(parseInt(userId));
-      setFollowersList(response.followers || []);
+      // Ensure we always get an array, even if API response is malformed
+      const followers = Array.isArray(response?.followers) ? response.followers : [];
+      setFollowersList(followers);
+      setFollowersLoaded(true);
     } catch (error: unknown) {
       console.error('Failed to fetch followers:', error);
-      toast.error('Failed to load followers');
+      // Provide more helpful error message based on error type
+      const apiError = error as { response?: { status?: number }; message?: string };
+      if (apiError.response?.status === 401) {
+        toast.error('Please log in to view followers');
+      } else if (apiError.response?.status === 404) {
+        toast.error('User not found');
+      } else {
+        toast.error('Failed to load followers. Click again to retry.');
+      }
+      setFollowersLoaded(false);
     } finally {
       setIsLoadingFollowers(false);
     }
   };
 
-  const fetchFollowing = async () => {
+  const fetchFollowing = async (forceRefresh = false) => {
     if (!userId) return;
+    
+    // Don't refetch if already loaded successfully (unless force refresh)
+    if (followingLoaded && !forceRefresh) return;
     
     setIsLoadingFollowing(true);
     try {
       const response = await usersAPI.getUserFollowing(parseInt(userId));
-      setFollowingList(response.following || []);
+      // Ensure we always get an array, even if API response is malformed
+      const following = Array.isArray(response?.following) ? response.following : [];
+      setFollowingList(following);
+      setFollowingLoaded(true);
     } catch (error: unknown) {
       console.error('Failed to fetch following:', error);
-      toast.error('Failed to load following');
+      // Provide more helpful error message based on error type
+      const apiError = error as { response?: { status?: number }; message?: string };
+      if (apiError.response?.status === 401) {
+        toast.error('Please log in to view following');
+      } else if (apiError.response?.status === 404) {
+        toast.error('User not found');
+      } else {
+        toast.error('Failed to load following. Click again to retry.');
+      }
+      setFollowingLoaded(false);
     } finally {
       setIsLoadingFollowing(false);
     }
@@ -260,9 +298,10 @@ const UserProfile: React.FC = () => {
 
   const handleTabChange = (tab: 'posts' | 'about' | 'photos' | 'videos' | 'followers' | 'following') => {
     setActiveTab(tab);
-    if (tab === 'followers' && followersList.length === 0) {
+    // Fetch data if not loaded yet (allows retry on failure since followersLoaded/followingLoaded will be false)
+    if (tab === 'followers' && !followersLoaded && !isLoadingFollowers) {
       fetchFollowers();
-    } else if (tab === 'following' && followingList.length === 0) {
+    } else if (tab === 'following' && !followingLoaded && !isLoadingFollowing) {
       fetchFollowing();
     }
   };
