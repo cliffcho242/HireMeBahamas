@@ -8,6 +8,7 @@ import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import AppleSignin from 'react-apple-signin-auth';
 import { getOAuthConfig } from '../utils/oauthConfig';
 import { ApiError, GoogleCredentialResponse, AppleSignInResponse } from '../types';
+import { useLoadingMessages, DEFAULT_REGISTER_MESSAGES } from '../hooks/useLoadingMessages';
 
 interface RegisterForm {
   firstName: string;
@@ -23,9 +24,13 @@ const Register: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register: registerUser, loginWithGoogle, loginWithApple, isLoading, isAuthenticated } = useAuth();
   const [submitting, setSubmitting] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('Creating Account...');
   const [selectedUserType, setSelectedUserType] = useState<'freelancer' | 'client'>('freelancer');
   const navigate = useNavigate();
+  
+  // Use custom hook for progressive loading messages
+  const { loadingMessage, startLoading, stopLoading } = useLoadingMessages({
+    messages: DEFAULT_REGISTER_MESSAGES,
+  });
 
   // Check OAuth configuration using utility function
   const oauthConfig = getOAuthConfig();
@@ -58,22 +63,7 @@ const Register: React.FC = () => {
   const onSubmit = async (data: RegisterForm) => {
     if (submitting) return;
     setSubmitting(true);
-    setLoadingMessage('Creating Account...');
-    
-    // Update loading message after 3 seconds if still loading
-    const messageTimeout1 = setTimeout(() => {
-      setLoadingMessage('Connecting to server...');
-    }, 3000);
-    
-    // Update loading message after 8 seconds if still loading
-    const messageTimeout2 = setTimeout(() => {
-      setLoadingMessage('Server is waking up, please wait...');
-    }, 8000);
-    
-    // Update loading message after 20 seconds if still loading
-    const messageTimeout3 = setTimeout(() => {
-      setLoadingMessage('Almost there...');
-    }, 20000);
+    startLoading();
     
     try {
       await registerUser({
@@ -118,11 +108,8 @@ const Register: React.FC = () => {
       
       toast.error(message);
     } finally {
-      clearTimeout(messageTimeout1);
-      clearTimeout(messageTimeout2);
-      clearTimeout(messageTimeout3);
+      stopLoading();
       setSubmitting(false);
-      setLoadingMessage('Creating Account...');
     }
   };
 

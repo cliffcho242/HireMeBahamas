@@ -7,6 +7,7 @@ import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import AppleSignin from 'react-apple-signin-auth';
 import { getOAuthConfig } from '../utils/oauthConfig';
 import { ApiError, GoogleCredentialResponse, AppleSignInResponse } from '../types';
+import { useLoadingMessages, DEFAULT_AUTH_MESSAGES } from '../hooks/useLoadingMessages';
 import {
   UserIcon,
   BriefcaseIcon,
@@ -22,7 +23,11 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('admin@hiremebahamas.com');
   const [password, setPassword] = useState('AdminPass123!');
   const [submitting, setSubmitting] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('Signing in...');
+  
+  // Use custom hook for progressive loading messages
+  const { loadingMessage, startLoading, stopLoading } = useLoadingMessages({
+    messages: DEFAULT_AUTH_MESSAGES,
+  });
 
   // Check OAuth configuration using utility function
   const oauthConfig = getOAuthConfig();
@@ -43,22 +48,7 @@ const Login: React.FC = () => {
     e.preventDefault();
     if (submitting) return;
     setSubmitting(true);
-    setLoadingMessage('Signing in...');
-    
-    // Update loading message after 3 seconds if still loading
-    const messageTimeout1 = setTimeout(() => {
-      setLoadingMessage('Connecting to server...');
-    }, 3000);
-    
-    // Update loading message after 8 seconds if still loading
-    const messageTimeout2 = setTimeout(() => {
-      setLoadingMessage('Server is waking up, please wait...');
-    }, 8000);
-    
-    // Update loading message after 20 seconds if still loading
-    const messageTimeout3 = setTimeout(() => {
-      setLoadingMessage('Almost there...');
-    }, 20000);
+    startLoading();
     
     try {
       await login(email, password);
@@ -96,11 +86,8 @@ const Login: React.FC = () => {
       
       toast.error(message);
     } finally {
-      clearTimeout(messageTimeout1);
-      clearTimeout(messageTimeout2);
-      clearTimeout(messageTimeout3);
+      stopLoading();
       setSubmitting(false);
-      setLoadingMessage('Signing in...');
     }
   };
 
