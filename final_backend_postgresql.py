@@ -1857,21 +1857,63 @@ def create_dummy_pg_stat_statements_view(cursor, conn):
         result = cursor.fetchone()
         
         if result:
+            relkind = result["relkind"]
             # Check if it's already a view (relkind = 'v')
-            if result["relkind"] == 'v':
-                print("✅ Dummy pg_stat_statements view already exists")
-                return True
-            else:
-                # It's a table or other type - drop it first
-                kind_name = {'r': 'TABLE', 'm': 'MATERIALIZED VIEW'}.get(result["relkind"], 'OBJECT')
-                print(f"🧹 Replacing orphaned {kind_name} 'public.pg_stat_statements' with dummy view")
+            if relkind == 'v':
+                # Verify it's our dummy view by checking for the WHERE FALSE clause
+                # in the view definition. If it's a real pg_stat_statements view from
+                # the extension, it won't have WHERE FALSE.
+                cursor.execute(
+                    """
+                    SELECT pg_get_viewdef('public.pg_stat_statements'::regclass, true) AS definition
+                    """
+                )
+                view_def_result = cursor.fetchone()
+                # Check for the specific WHERE FALSE pattern that identifies our dummy view
+                # The real pg_stat_statements extension view would not have this pattern
+                if view_def_result and "where false" in view_def_result["definition"].lower():
+                    print("✅ Dummy pg_stat_statements view already exists (verified by WHERE FALSE)")
+                    return True
+                else:
+                    # It's a view but not our dummy - replace it
+                    print("🧹 Replacing existing pg_stat_statements view with dummy view")
+                    cursor.execute("DROP VIEW IF EXISTS public.pg_stat_statements CASCADE")
+                    conn.commit()
+            elif relkind == 'r':
+                # It's a table - drop it
+                print("🧹 Replacing orphaned TABLE 'public.pg_stat_statements' with dummy view")
                 cursor.execute("DROP TABLE IF EXISTS public.pg_stat_statements CASCADE")
+                conn.commit()
+            elif relkind == 'm':
+                # It's a materialized view - drop it
+                print("🧹 Replacing orphaned MATERIALIZED VIEW 'public.pg_stat_statements' with dummy view")
                 cursor.execute("DROP MATERIALIZED VIEW IF EXISTS public.pg_stat_statements CASCADE")
                 conn.commit()
+            else:
+                # Unknown relkind type - log warning and attempt generic cleanup
+                # This handles edge cases like indexes or other PostgreSQL object types
+                print(f"⚠️  Unknown relkind '{relkind}' for 'public.pg_stat_statements', attempting cleanup")
+                try:
+                    # Try DROP VIEW first (most common case), then DROP TABLE as fallback
+                    cursor.execute("DROP VIEW IF EXISTS public.pg_stat_statements CASCADE")
+                    conn.commit()
+                except psycopg2.Error:
+                    _safe_rollback(conn)
+                    cursor.execute("DROP TABLE IF EXISTS public.pg_stat_statements CASCADE")
+                    conn.commit()
         
         # Create the dummy view with essential columns that monitoring tools expect
         # The view returns no rows (WHERE FALSE) so it has zero overhead
-        # Columns are based on pg_stat_statements extension's typical schema
+        #
+        # Column schema is based on pg_stat_statements extension from PostgreSQL 13+
+        # Reference: https://www.postgresql.org/docs/current/pgstatstatements.html
+        #
+        # Compatibility notes:
+        # - PostgreSQL 12 and earlier use different column names (e.g., total_time vs total_exec_time)
+        # - Railway typically runs PostgreSQL 14+ where this schema is fully compatible
+        # - For older PostgreSQL versions, Railway's monitoring may use different queries
+        # - This schema covers the core columns used by monitoring tools
+        # - If monitoring queries fail due to schema differences, update this definition
         cursor.execute(
             """
             CREATE OR REPLACE VIEW public.pg_stat_statements AS
