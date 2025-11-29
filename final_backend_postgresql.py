@@ -3938,8 +3938,9 @@ def database_wakeup():
             if cursor:
                 try:
                     cursor.close()
-                except Exception:
-                    pass
+                except Exception as cleanup_error:
+                    # Log cleanup errors for debugging but continue with connection cleanup
+                    logger.debug("Cursor close failed during wakeup cleanup: %s", cleanup_error)
             if conn:
                 return_db_connection(conn)
         
