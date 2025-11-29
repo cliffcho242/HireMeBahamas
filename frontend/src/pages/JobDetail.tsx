@@ -56,7 +56,7 @@ const JobDetail: React.FC = () => {
     try {
       const response = await jobsAPI.toggleJobStatus(id);
       if (response.success) {
-        setJob({ ...job, status: response.status });
+        setJob({ ...job, status: response.job_status });
       }
     } catch (error) {
       console.error('Error toggling job status:', error);

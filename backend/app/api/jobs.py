@@ -217,6 +217,14 @@ async def toggle_job_status(
             detail="Not authorized to modify this job",
         )
 
+    # Only allow toggling between active and inactive status
+    # Other statuses (closed, etc.) should not be toggleable
+    if job.status not in ("active", "inactive"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot toggle job with status '{job.status}'. Only active or inactive jobs can be toggled.",
+        )
+
     # Toggle between active and inactive
     job.status = "inactive" if job.status == "active" else "active"
 
@@ -225,7 +233,7 @@ async def toggle_job_status(
 
     return {
         "success": True,
-        "status": job.status,
+        "job_status": job.status,
         "is_active": job.status == "active",
         "message": f"Job is now {'active' if job.status == 'active' else 'inactive'}",
     }
