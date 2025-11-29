@@ -149,6 +149,67 @@ async def get_posts(
     return {"success": True, "posts": posts_data}
 
 
+@router.get("/user/{user_id}", response_model=dict)
+async def get_user_posts(
+    user_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
+    """Get posts for a specific user with pagination
+    
+    Args:
+        user_id: The ID of the user whose posts to fetch
+        skip: Number of posts to skip (for pagination)
+        limit: Maximum number of posts to return
+        db: Database session
+        current_user: Currently authenticated user (optional)
+        
+    Returns:
+        List of posts for the specified user
+    """
+    # Verify user exists
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    target_user = user_result.scalar_one_or_none()
+    
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Build query for user's posts with user relationship
+    query = (
+        select(Post)
+        .options(selectinload(Post.user))
+        .where(Post.user_id == user_id)
+        .order_by(desc(Post.created_at))
+    )
+
+    # Apply pagination
+    query = query.offset(skip).limit(limit)
+
+    result = await db.execute(query)
+    posts = result.scalars().all()
+
+    # Build response with like/comment counts using helper
+    posts_data = []
+    for post in posts:
+        # Defensive check: ensure post has a valid user relationship
+        if not post.user:
+            logger.warning(
+                f"Post {post.id} has no associated user relationship - "
+                f"possible data integrity issue. Skipping post."
+            )
+            continue
+        
+        post_data = await enrich_post_with_metadata(post, db, current_user)
+        posts_data.append(post_data.model_dump())
+
+    return {"success": True, "posts": posts_data}
+
+
 @router.get("/{post_id}", response_model=PostResponse)
 async def get_post(
     post_id: int,

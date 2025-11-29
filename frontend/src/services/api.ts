@@ -545,6 +545,11 @@ export const postsAPI = {
     return response.data.posts || []; // Return the posts array, default to empty array
   },
 
+  getUserPosts: async (userId: number) => {
+    const response = await api.get(`/api/posts/user/${userId}`);
+    return response.data.posts || []; // Return the posts array, default to empty array
+  },
+
   createPost: async (postData: {
     content: string;
     image_url?: string;
