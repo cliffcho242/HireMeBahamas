@@ -67,8 +67,17 @@
     <meta name="format-detection" content="address=no" />
     <meta name="format-detection" content="email=no" />
 
-    <!-- Preconnect for Performance -->
+    <!-- DNS Prefetch for external resources -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    
+    <!-- Preconnect for Performance - Establish early connections -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="http://127.0.0.1:8008" />
+    
+    <!-- Preconnect for CDN (Vercel Edge Network) -->
+    <link rel="preconnect" href="https://vercel.live" crossorigin />
 
     <title>HireMeBahamas - Caribbean Job Platform</title>
 

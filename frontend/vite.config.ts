@@ -48,6 +48,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Increase the maximum file size to be precached (default is 2MB)
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -56,18 +58,41 @@ export default defineConfig({
               cacheName: 'google-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
               },
             },
           },
           {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-webfonts',
+              expiration: {
+                maxEntries: 30,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+            },
+          },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif)$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'image-cache',
               expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+            },
+          },
+          {
+            // Cache JS/CSS chunks for offline access
+            urlPattern: /\.(?:js|css)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'static-resources',
+              expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 30,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
               },
             },
           },
@@ -77,6 +102,10 @@ export default defineConfig({
             options: {
               cacheName: 'api-cache',
               networkTimeoutSeconds: 10,
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60, // 1 hour
+              },
             },
           },
         ],
@@ -108,12 +137,23 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
+        // Generate chunk names with content hash for better caching
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks: {
+          // Core React libraries - loaded first
           vendor: ['react', 'react-dom', 'react-router-dom'],
+          // UI animation and icons
           ui: ['framer-motion', '@heroicons/react'],
+          // Form handling libraries
           forms: ['react-hook-form', '@hookform/resolvers', 'zod', 'yup'],
+          // Data fetching and state
           query: ['@tanstack/react-query', 'axios'],
+          // Utility libraries
           utils: ['date-fns', 'clsx', 'tailwind-merge'],
+          // State management
+          state: ['zustand', 'immer'],
         },
       },
     },
@@ -122,3 +162,4 @@ export default defineConfig({
     include: ['react', 'react-dom', 'react-router-dom'],
   },
 });
+
