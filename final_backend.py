@@ -242,7 +242,9 @@ def init_database():
                 )
             """
             )
-            table_exists = cursor.fetchone()[0]
+            result = cursor.fetchone()
+            # RealDictCursor returns a dict, so we access by key 'exists'
+            table_exists = result['exists'] if result else False
         else:
             cursor.execute(
                 """
