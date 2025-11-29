@@ -5725,8 +5725,10 @@ def get_user(identifier):
         cursor = conn.cursor()
 
         # Determine if identifier is a numeric ID or username
-        # Design note: If the identifier looks like a number, try ID first, then fall back
-        # to username. This handles the edge case of purely numeric usernames.
+        # Design note: If the identifier can be parsed as a number, try ID lookup first.
+        # If no user is found by ID (or identifier is not numeric), fall back to username
+        # lookup. This approach handles purely numeric usernames and maintains backward
+        # compatibility with existing ID-based lookups.
         user = None
         
         try:

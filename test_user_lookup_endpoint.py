@@ -6,6 +6,7 @@ Tests the /api/users/<identifier> endpoint in final_backend_postgresql.py
 
 import json
 import os
+import secrets
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -83,7 +84,6 @@ def app():
     
     final_backend_postgresql.app.config['TESTING'] = True
     # Use a unique secret key for each test
-    import secrets
     final_backend_postgresql.app.config['SECRET_KEY'] = secrets.token_hex(32)
     
     yield final_backend_postgresql.app
