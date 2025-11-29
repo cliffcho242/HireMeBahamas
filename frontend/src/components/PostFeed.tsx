@@ -772,9 +772,10 @@ const PostFeed: React.FC = () => {
                     <img
                       src={post.image_url}
                       alt="Post image"
-                      className="w-full h-auto max-h-96 object-cover image-fade-in loaded gpu-accelerated"
+                      className="w-full h-auto max-h-96 object-cover image-fade-in gpu-accelerated"
                       loading="lazy"
                       decoding="async"
+                      onLoad={(e) => e.currentTarget.classList.add('loaded')}
                     />
                   </div>
                 )}

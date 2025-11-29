@@ -288,11 +288,13 @@
 
 /* GPU-accelerated smooth transitions for social buttons */
 .social-btn {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  will-change: transform, box-shadow;
+  will-change: transform;
 }
 
 .social-btn:hover {
@@ -306,7 +308,12 @@
 
 /* Like button animation */
 .like-btn-animated {
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              color 0.2s ease-out;
+}
+
+.like-btn-animated.liked {
+  color: #ef4444;
 }
 
 .like-btn-animated.liked {
@@ -487,6 +494,13 @@
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Smooth scrolling with GPU acceleration */
+.scroll-smooth-gpu {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 /* Smooth scroll snap for stories */

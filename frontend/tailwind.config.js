@@ -6,7 +6,7 @@ export default {
   ],
   theme: {
     extend: {
-      // Enhanced breakpoints for ALL devices - Mobile, Tablet, Desktop, 4K, 5K displays
+      // Enhanced breakpoints for all devices - Mobile, Tablet, Desktop, 4K, 5K displays
       screens: {
         'xs': '320px',      // Extra small phones (iPhone SE, older Android)
         'sm': '640px',      // Large phones (iPhone 12/13/14, most Android)
@@ -153,14 +153,15 @@ export default {
           800: '#1e40af',
           900: '#1e3a8a',
         },
-        // Enhanced social interaction colors
+        // Semantic social interaction colors for consistent UX
+        // Using explicit values for clear intent (maps to red-500, blue-500, emerald-500)
         'social': {
-          'like': '#ef4444',
-          'like-hover': '#dc2626',
-          'comment': '#3b82f6',
-          'comment-hover': '#2563eb',
-          'share': '#10b981',
-          'share-hover': '#059669',
+          'like': '#ef4444',        // red-500
+          'like-hover': '#dc2626',  // red-600
+          'comment': '#3b82f6',     // blue-500
+          'comment-hover': '#2563eb', // blue-600
+          'share': '#10b981',       // emerald-500
+          'share-hover': '#059669', // emerald-600
         },
       },
       // Enhanced 5K-optimized backdrop blur values
