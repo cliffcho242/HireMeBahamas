@@ -153,16 +153,21 @@ async def get_posts(
 async def get_user_posts(
     user_id: int,
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
     """Get posts for a specific user with pagination
     
+    Note: This endpoint returns posts from the specified user regardless of their account status.
+    Posts remain visible even if the author's account becomes inactive (is_active=False).
+    This ensures posts don't disappear due to user inactivity.
+    Posts are only removed when explicitly deleted via the delete endpoint.
+    
     Args:
         user_id: The ID of the user whose posts to fetch
         skip: Number of posts to skip (for pagination)
-        limit: Maximum number of posts to return
+        limit: Maximum number of posts to return (default 20, max 100)
         db: Database session
         current_user: Currently authenticated user (optional)
         
@@ -180,6 +185,8 @@ async def get_user_posts(
         )
     
     # Build query for user's posts with user relationship
+    # IMPORTANT: We intentionally do NOT filter by User.is_active here
+    # Posts should remain visible regardless of the author's account status
     query = (
         select(Post)
         .options(selectinload(Post.user))
@@ -197,12 +204,20 @@ async def get_user_posts(
     posts_data = []
     for post in posts:
         # Defensive check: ensure post has a valid user relationship
+        # This handles edge cases where user might be deleted but post remains
         if not post.user:
             logger.warning(
                 f"Post {post.id} has no associated user relationship - "
                 f"possible data integrity issue. Skipping post."
             )
             continue
+        
+        # Additional check: log if post is from an inactive user (for monitoring)
+        if not post.user.is_active:
+            logger.info(
+                f"Including post {post.id} from inactive user {post.user.id} "
+                f"({post.user.email}) in user profile - posts remain visible after user inactivity"
+            )
         
         post_data = await enrich_post_with_metadata(post, db, current_user)
         posts_data.append(post_data.model_dump())
