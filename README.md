@@ -364,6 +364,10 @@ The platform is fully responsive with:
 - `GET /api/users/{id}` - Get user details
 - `POST /api/users/{id}/friend` - Send friend request
 
+### Health Check
+- `GET /health` - Simple health check endpoint (used by Railway/Render for monitoring)
+- `GET /api/health` - Detailed health check with database status and connection pool info
+
 ## 🎯 User Roles
 
 ### Job Seekers
