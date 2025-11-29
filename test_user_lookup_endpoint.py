@@ -246,6 +246,31 @@ class TestUserLookup:
         assert response.status_code == 401
         data = response.get_json()
         assert data["success"] is False
+    
+    def test_lookup_numeric_username_fallback(self, client):
+        """Test that purely numeric username is found after ID fallback"""
+        # Create a user with a numeric username (edge case)
+        test_data = create_test_user(
+            client,
+            email="numericuser@example.com",
+            username="12345"
+        )
+        token = test_data["token"]
+        user_id = test_data["user"]["id"]
+        
+        # Look up by the numeric username - this should fall back to username
+        # lookup after ID lookup fails (since no user with ID 12345 exists)
+        response = client.get(
+            "/api/users/12345",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        
+        # Should find the user by username fallback
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["success"] is True
+        assert data["user"]["username"] == "12345"
+        assert data["user"]["email"] == "numericuser@example.com"
 
 
 if __name__ == "__main__":

@@ -5725,9 +5725,15 @@ def get_user(identifier):
         cursor = conn.cursor()
 
         # Determine if identifier is a numeric ID or username
+        # Design note: If the identifier looks like a number, try ID first, then fall back
+        # to username. This handles the edge case of purely numeric usernames.
+        user = None
+        is_numeric = False
+        
         try:
             user_id = int(identifier)
-            # It's a numeric ID - query by ID
+            is_numeric = True
+            # It's a numeric ID - query by ID first
             cursor.execute(
                 """
                 SELECT id, email, first_name, last_name, username, avatar_url, bio,
@@ -5744,8 +5750,12 @@ def get_user(identifier):
                 """,
                 (user_id,)
             )
+            user = cursor.fetchone()
         except ValueError:
-            # It's a username - query by username
+            is_numeric = False
+        
+        # If no user found by ID (or identifier isn't numeric), try username
+        if user is None:
             cursor.execute(
                 """
                 SELECT id, email, first_name, last_name, username, avatar_url, bio,
@@ -5762,8 +5772,7 @@ def get_user(identifier):
                 """,
                 (identifier,)
             )
-        
-        user = cursor.fetchone()
+            user = cursor.fetchone()
         
         if not user:
             cursor.close()
