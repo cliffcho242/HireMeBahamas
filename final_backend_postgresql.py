@@ -5728,11 +5728,9 @@ def get_user(identifier):
         # Design note: If the identifier looks like a number, try ID first, then fall back
         # to username. This handles the edge case of purely numeric usernames.
         user = None
-        is_numeric = False
         
         try:
             user_id = int(identifier)
-            is_numeric = True
             # It's a numeric ID - query by ID first
             cursor.execute(
                 """
@@ -5752,7 +5750,8 @@ def get_user(identifier):
             )
             user = cursor.fetchone()
         except ValueError:
-            is_numeric = False
+            # Identifier is not numeric, will fall through to username lookup
+            pass
         
         # If no user found by ID (or identifier isn't numeric), try username
         if user is None:
