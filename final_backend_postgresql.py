@@ -6749,14 +6749,26 @@ def create_job():
             job_id = cursor.lastrowid
 
         # Also create a post for the news feed so the job appears on the home page
+        # Reuse the already-stripped values from the job data used above
         job_title = data["title"].strip()
         job_company = data["company"].strip()
         job_location = data["location"].strip()
-        job_type = data.get("job_type", "full-time").strip()
+        job_type_formatted = data.get("job_type", "full-time").strip().replace('-', ' ').title()
         job_description = data["description"].strip()
         
+        # Truncate description for the post (max 500 chars)
+        truncated_description = job_description[:500]
+        if len(job_description) > 500:
+            truncated_description += '...'
+        
         # Create a formatted post content for the job
-        post_content = f"📢 New Job Posting!\n\n🏢 {job_title} at {job_company}\n📍 {job_location}\n⏰ {job_type.replace('-', ' ').title()}\n\n{job_description[:500]}{'...' if len(job_description) > 500 else ''}"
+        post_content = (
+            f"📢 New Job Posting!\n\n"
+            f"🏢 {job_title} at {job_company}\n"
+            f"📍 {job_location}\n"
+            f"⏰ {job_type_formatted}\n\n"
+            f"{truncated_description}"
+        )
         
         if USE_POSTGRESQL:
             cursor.execute(
@@ -6767,7 +6779,7 @@ def create_job():
                 """,
                 (user_id, post_content, now)
             )
-            post_id = cursor.fetchone()["id"]
+            cursor.fetchone()  # Consume the result but don't need to store it
         else:
             cursor.execute(
                 """
@@ -6776,7 +6788,6 @@ def create_job():
                 """,
                 (user_id, post_content, now)
             )
-            post_id = cursor.lastrowid
 
         conn.commit()
         cursor.close()
@@ -6787,12 +6798,11 @@ def create_job():
             "message": "Job created successfully",
             "job": {
                 "id": job_id,
-                "title": data["title"].strip(),
-                "company": data["company"].strip(),
-                "location": data["location"].strip(),
+                "title": job_title,
+                "company": job_company,
+                "location": job_location,
                 "created_at": now.isoformat(),
-            },
-            "post_id": post_id
+            }
         }), 201
 
     except Exception as e:
