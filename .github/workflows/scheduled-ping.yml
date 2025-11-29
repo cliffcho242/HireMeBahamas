@@ -1,0 +1,228 @@
+name: Scheduled App Ping
+
+# This workflow keeps the application active by pinging it every 5 minutes.
+# Many free-tier hosting platforms (Railway, Render, Heroku, etc.) spin down
+# inactive applications after a period of inactivity (typically 15-30 minutes).
+#
+# Regular pings prevent the app from going to sleep, ensuring:
+# - Fast response times for users (no cold start delay)
+# - Continuous availability of the service
+# - Active database connections (preventing database sleep)
+#
+# Schedule: Every 5 minutes
+# This interval is aggressive enough to prevent sleep while being
+# conservative with GitHub Actions minutes.
+
+on:
+  schedule:
+    # Run every 5 minutes to keep the app active
+    # Free-tier platforms typically sleep apps after 15-30 minutes of inactivity
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    # Allow manual trigger for testing
+
+concurrency:
+  group: scheduled-ping
+  cancel-in-progress: true
+
+jobs:
+  ping-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - name: Ping Railway Backend
+        id: ping-railway
+        continue-on-error: true
+        env:
+          RAILWAY_BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
+        run: |
+          if [ -z "$RAILWAY_BACKEND_URL" ]; then
+            echo "ℹ️ RAILWAY_BACKEND_URL not configured, skipping Railway ping"
+            echo "skipped=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "🏓 Pinging Railway app at $RAILWAY_BACKEND_URL/ping"
+
+          # Simple ping with 30s timeout
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 30 \
+            "$RAILWAY_BACKEND_URL/ping" 2>/dev/null) || true
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Railway app ping successful (HTTP $http_code) - Response: $body"
+            echo "success=true" >> $GITHUB_OUTPUT
+          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
+            echo "⚠️ Railway app responded with HTTP $http_code"
+            echo "success=partial" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Railway app did not respond (may be waking up)"
+            echo "🔄 Retrying with longer timeout (60s)..."
+
+            # Second attempt with 60s timeout (for cold starts)
+            response=$(curl -s -w "\n%{http_code}" \
+              --max-time 60 \
+              "$RAILWAY_BACKEND_URL/ping" 2>/dev/null) || true
+
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | head -n -1)
+
+            if [ "$http_code" = "200" ]; then
+              echo "✅ Railway app ping successful after retry (HTTP $http_code) - Response: $body"
+              echo "success=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Railway app ping failed after retry"
+              echo "success=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Ping Railway Health Endpoint
+        id: health-railway
+        continue-on-error: true
+        if: steps.ping-railway.outputs.success == 'true' || steps.ping-railway.outputs.success == 'partial'
+        env:
+          RAILWAY_BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
+        run: |
+          echo "📊 Checking Railway health at $RAILWAY_BACKEND_URL/api/health"
+
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 30 \
+            "$RAILWAY_BACKEND_URL/api/health" 2>/dev/null) || true
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Railway health check successful (HTTP $http_code)"
+            echo "$body" | jq . 2>/dev/null || echo "$body"
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Railway health check returned HTTP $http_code"
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Ping Render Backend
+        id: ping-render
+        continue-on-error: true
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+        run: |
+          if [ -z "$RENDER_BACKEND_URL" ]; then
+            echo "ℹ️ RENDER_BACKEND_URL not configured, skipping Render ping"
+            echo "skipped=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "🏓 Pinging Render app at $RENDER_BACKEND_URL/ping"
+
+          # Simple ping with 30s timeout
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 30 \
+            "$RENDER_BACKEND_URL/ping" 2>/dev/null) || true
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Render app ping successful (HTTP $http_code) - Response: $body"
+            echo "success=true" >> $GITHUB_OUTPUT
+          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
+            echo "⚠️ Render app responded with HTTP $http_code"
+            echo "success=partial" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Render app did not respond (may be waking up)"
+            echo "🔄 Retrying with longer timeout (60s)..."
+
+            # Second attempt with 60s timeout (for cold starts)
+            response=$(curl -s -w "\n%{http_code}" \
+              --max-time 60 \
+              "$RENDER_BACKEND_URL/ping" 2>/dev/null) || true
+
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | head -n -1)
+
+            if [ "$http_code" = "200" ]; then
+              echo "✅ Render app ping successful after retry (HTTP $http_code) - Response: $body"
+              echo "success=true" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Render app ping failed after retry"
+              echo "success=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Ping Render Health Endpoint
+        id: health-render
+        continue-on-error: true
+        if: steps.ping-render.outputs.success == 'true' || steps.ping-render.outputs.success == 'partial'
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+        run: |
+          echo "📊 Checking Render health at $RENDER_BACKEND_URL/api/health"
+
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 30 \
+            "$RENDER_BACKEND_URL/api/health" 2>/dev/null) || true
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Render health check successful (HTTP $http_code)"
+            echo "$body" | jq . 2>/dev/null || echo "$body"
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Render health check returned HTTP $http_code"
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Summary
+        run: |
+          echo "## App Keepalive Ping Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Ping Status | Health Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------------|---------------|" >> $GITHUB_STEP_SUMMARY
+
+          railway_ping="${{ steps.ping-railway.outputs.success }}"
+          railway_health="${{ steps.health-railway.outputs.success }}"
+          railway_skipped="${{ steps.ping-railway.outputs.skipped }}"
+
+          if [ "$railway_skipped" = "true" ]; then
+            echo "| Railway | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$railway_ping" = "true" ]; then
+            health_status="✅ Healthy"
+            [ "$railway_health" != "true" ] && health_status="⚠️ Degraded"
+            echo "| Railway | ✅ Success | $health_status |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$railway_ping" = "partial" ]; then
+            echo "| Railway | ⚠️ Partial | Responded with non-200 |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Railway | ❌ Failed | Unable to reach app |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          render_ping="${{ steps.ping-render.outputs.success }}"
+          render_health="${{ steps.health-render.outputs.success }}"
+          render_skipped="${{ steps.ping-render.outputs.skipped }}"
+
+          if [ "$render_skipped" = "true" ]; then
+            echo "| Render | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$render_ping" = "true" ]; then
+            health_status="✅ Healthy"
+            [ "$render_health" != "true" ] && health_status="⚠️ Degraded"
+            echo "| Render | ✅ Success | $health_status |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$render_ping" = "partial" ]; then
+            echo "| Render | ⚠️ Partial | Responded with non-200 |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Render | ❌ Failed | Unable to reach app |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This workflow runs **every 5 minutes** to keep the application active." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Endpoints Used" >> $GITHUB_STEP_SUMMARY
+          echo "- **Ping**: \`/ping\` - Lightweight ping for keepalive (returns 'pong')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health**: \`/api/health\` - Detailed health check with database status" >> $GITHUB_STEP_SUMMARY

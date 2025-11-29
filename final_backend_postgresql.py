@@ -3684,6 +3684,7 @@ def root():
                 "version": "1.0.0",
                 "message": "Welcome to the HireMeBahamas API",
                 "endpoints": {
+                    "ping": "/ping",
                     "health": "/health",
                     "health_detailed": "/api/health",
                     "database_wakeup": "/api/database/wakeup",
@@ -3716,6 +3717,33 @@ def health_check():
         ),
         200,
     )
+
+
+@app.route("/ping", methods=["GET", "HEAD"])
+@limiter.exempt
+def ping():
+    """
+    Simple ping endpoint for scheduled keepalive services.
+    
+    This lightweight endpoint is optimized for external schedulers (cron jobs,
+    uptime monitors, etc.) that need to periodically ping the app to keep it
+    active and prevent it from sleeping on free-tier hosting platforms.
+    
+    Features:
+    - Minimal response payload (returns 200 OK with "pong")
+    - Supports both GET and HEAD methods
+    - Exempt from rate limiting for monitoring services
+    - No database access required (app-level health only)
+    
+    Use this endpoint for:
+    - External cron job pings (every 5-10 minutes)
+    - Uptime monitoring services (Pingdom, UptimeRobot, etc.)
+    - Platform health check configuration
+    
+    For detailed health status including database connectivity,
+    use /api/health instead.
+    """
+    return "pong", 200
 
 
 @app.route("/api/health", methods=["GET"])
