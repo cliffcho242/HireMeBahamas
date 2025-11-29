@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Switch } from '@headlessui/react';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import api, { jobsAPI } from '../services/api';
 import { Job } from '../types/job';
 
 const JobDetail: React.FC = () => {
@@ -9,6 +10,7 @@ const JobDetail: React.FC = () => {
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
+  const [toggling, setToggling] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -47,6 +49,23 @@ const JobDetail: React.FC = () => {
     }
   };
 
+  const handleToggleJob = async () => {
+    if (!id || !job) return;
+    
+    setToggling(true);
+    try {
+      const response = await jobsAPI.toggleJobStatus(id);
+      if (response.success) {
+        setJob({ ...job, status: response.status });
+      }
+    } catch (error) {
+      console.error('Error toggling job status:', error);
+      alert('Error updating job status. Please try again.');
+    } finally {
+      setToggling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -63,15 +82,62 @@ const JobDetail: React.FC = () => {
     );
   }
 
+  const isJobOwner = user && user.id === job.employer_id;
+  const isJobActive = job.status === 'active';
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow-sm p-8">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.title}</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.title}</h1>
+              {!isJobActive && (
+                <span className="px-3 py-1 text-sm font-medium bg-gray-100 text-gray-600 rounded-full">
+                  Inactive
+                </span>
+              )}
+            </div>
             <p className="text-xl text-gray-600 mb-2">{job.company}</p>
             <p className="text-gray-500">{job.location}</p>
           </div>
+
+          {/* HireMe Toggle for Job Owner */}
+          {isJobOwner && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Job Visibility
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {isJobActive
+                      ? "Your job is visible to job seekers."
+                      : "Your job is hidden from job seekers."}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm font-medium ${isJobActive ? 'text-green-600' : 'text-gray-500'}`}>
+                    {isJobActive ? 'Active' : 'Inactive'}
+                  </span>
+                  <Switch
+                    checked={isJobActive}
+                    onChange={handleToggleJob}
+                    disabled={toggling}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      isJobActive ? 'bg-green-600' : 'bg-gray-200'
+                    } ${toggling ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        isJobActive ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </Switch>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-2">
@@ -113,6 +179,12 @@ const JobDetail: React.FC = () => {
                     <span className="text-sm font-medium text-gray-500">Job Type</span>
                     <p className="text-gray-900 capitalize">{job.job_type}</p>
                   </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Status</span>
+                    <p className={`capitalize ${isJobActive ? 'text-green-600' : 'text-gray-500'}`}>
+                      {job.status}
+                    </p>
+                  </div>
                   {job.salary_min && job.salary_max && (
                     <div>
                       <span className="text-sm font-medium text-gray-500">Salary Range</span>
@@ -130,7 +202,7 @@ const JobDetail: React.FC = () => {
                 </div>
               </div>
 
-              {user && user.id !== job.employer_id && (
+              {user && user.id !== job.employer_id && isJobActive && (
                 <button
                   onClick={handleApply}
                   disabled={applying}
@@ -138,6 +210,12 @@ const JobDetail: React.FC = () => {
                 >
                   {applying ? 'Applying...' : 'Apply for this Job'}
                 </button>
+              )}
+
+              {user && user.id !== job.employer_id && !isJobActive && (
+                <div className="text-center p-4 bg-gray-100 rounded-lg">
+                  <p className="text-gray-600">This job is currently not accepting applications.</p>
+                </div>
               )}
 
               {!user && (

@@ -351,6 +351,11 @@ export const jobsAPI = {
     const response = await api.get('/api/jobs/my/applications');
     return response.data;
   },
+
+  toggleJobStatus: async (id: string | number) => {
+    const response = await api.post(`/api/jobs/${id}/toggle`);
+    return response.data;
+  },
 };
 
 // Messages API
