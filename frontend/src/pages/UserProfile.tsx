@@ -18,6 +18,7 @@ import { authAPI, postsAPI, usersAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { ApiError } from '../types';
+import { getApiErrorMessage } from '../utils/errorHandler';
 
 interface UserProfile {
   id: number;
@@ -251,15 +252,7 @@ const UserProfile: React.FC = () => {
       setFollowersLoaded(true);
     } catch (error: unknown) {
       console.error('Failed to fetch followers:', error);
-      // Provide more helpful error message based on error type
-      const apiError = error as { response?: { status?: number }; message?: string };
-      if (apiError.response?.status === 401) {
-        toast.error('Please log in to view followers');
-      } else if (apiError.response?.status === 404) {
-        toast.error('User not found');
-      } else {
-        toast.error('Failed to load followers. Click again to retry.');
-      }
+      toast.error(getApiErrorMessage(error, 'followers'));
       setFollowersLoaded(false);
     } finally {
       setIsLoadingFollowers(false);
@@ -281,15 +274,7 @@ const UserProfile: React.FC = () => {
       setFollowingLoaded(true);
     } catch (error: unknown) {
       console.error('Failed to fetch following:', error);
-      // Provide more helpful error message based on error type
-      const apiError = error as { response?: { status?: number }; message?: string };
-      if (apiError.response?.status === 401) {
-        toast.error('Please log in to view following');
-      } else if (apiError.response?.status === 404) {
-        toast.error('User not found');
-      } else {
-        toast.error('Failed to load following. Click again to retry.');
-      }
+      toast.error(getApiErrorMessage(error, 'following'));
       setFollowingLoaded(false);
     } finally {
       setIsLoadingFollowing(false);

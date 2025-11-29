@@ -18,6 +18,7 @@ import { Post, PostUser } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { postCache } from '../services/postCache';
+import { getApiErrorMessage } from '../utils/errorHandler';
 
 // Type for posts that have a valid user - used after filtering
 interface ValidPost extends Post {
@@ -425,15 +426,7 @@ const PostFeed: React.FC = () => {
       setShowComments(prev => ({ ...prev, [postId]: true }));
     } catch (error) {
       console.error('Failed to load comments:', error);
-      // Provide more helpful error message based on error type
-      const apiError = error as { response?: { status?: number }; message?: string };
-      if (apiError.response?.status === 401) {
-        toast.error('Please log in to view comments');
-      } else if (apiError.response?.status === 404) {
-        toast.error('Post not found');
-      } else {
-        toast.error('Failed to load comments. Click again to retry.');
-      }
+      toast.error(getApiErrorMessage(error, 'comments'));
       setCommentsLoaded(prev => ({ ...prev, [postId]: false }));
     } finally {
       setLoadingComments(prev => ({ ...prev, [postId]: false }));
