@@ -3838,8 +3838,10 @@ def database_ping_endpoint():
 
 
 # Database wakeup retry configuration
-# Base delay for exponential backoff (in seconds)
+# Base delay for linear backoff (in seconds)
 # Each retry waits (WAKEUP_RETRY_BASE_DELAY * attempt_number) seconds
+# Using linear backoff (0.5s, 1.0s, 1.5s) rather than exponential since
+# database wakeup typically needs only a short wait between attempts
 WAKEUP_RETRY_BASE_DELAY = 0.5
 
 
@@ -3954,7 +3956,7 @@ def database_wakeup():
                     # Log connection cleanup errors but don't mask original error
                     logger.debug("Connection cleanup failed during wakeup: %s", conn_cleanup_error)
         
-        # Wait briefly before retry (exponential backoff) - outside finally block
+        # Wait briefly before retry (linear backoff) - outside finally block
         if should_retry and attempt < max_attempts:
             time.sleep(WAKEUP_RETRY_BASE_DELAY * attempt)
     
