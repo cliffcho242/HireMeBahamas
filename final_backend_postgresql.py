@@ -6785,6 +6785,47 @@ def create_job():
             )
             job_id = cursor.lastrowid
 
+        # Also create a post for the news feed so the job appears on the home page
+        # Reuse the already-stripped values from the job data used above
+        job_title = data["title"].strip()
+        job_company = data["company"].strip()
+        job_location = data["location"].strip()
+        job_type_formatted = data.get("job_type", "full-time").strip().replace('-', ' ').title()
+        job_description = data["description"].strip()
+        
+        # Truncate description for the post (max 500 chars)
+        truncated_description = job_description[:500]
+        if len(job_description) > 500:
+            truncated_description += '...'
+        
+        # Create a formatted post content for the job
+        post_content = (
+            f"📢 New Job Posting!\n\n"
+            f"🏢 {job_title} at {job_company}\n"
+            f"📍 {job_location}\n"
+            f"⏰ {job_type_formatted}\n\n"
+            f"{truncated_description}"
+        )
+        
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                INSERT INTO posts (user_id, content, created_at)
+                VALUES (%s, %s, %s)
+                RETURNING id
+                """,
+                (user_id, post_content, now)
+            )
+            cursor.fetchone()  # Consume the result but don't need to store it
+        else:
+            cursor.execute(
+                """
+                INSERT INTO posts (user_id, content, created_at)
+                VALUES (?, ?, ?)
+                """,
+                (user_id, post_content, now)
+            )
+
         conn.commit()
         cursor.close()
         return_db_connection(conn)
@@ -6794,9 +6835,9 @@ def create_job():
             "message": "Job created successfully",
             "job": {
                 "id": job_id,
-                "title": data["title"].strip(),
-                "company": data["company"].strip(),
-                "location": data["location"].strip(),
+                "title": job_title,
+                "company": job_company,
+                "location": job_location,
                 "created_at": now.isoformat(),
             }
         }), 201
