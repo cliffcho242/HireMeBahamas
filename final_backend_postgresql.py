@@ -3869,6 +3869,8 @@ def database_wakeup():
     # Try multiple connection attempts to wake up the database
     for attempt in range(1, max_attempts + 1):
         ping_start = time.time()
+        conn = None
+        cursor = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -3885,9 +3887,6 @@ def database_wakeup():
                 server_time = _get_cursor_value(result, "server_time", None)
                 if server_time:
                     server_time = str(server_time)
-            
-            cursor.close()
-            return_db_connection(conn)
             
             attempt_results.append({
                 "attempt": attempt,
@@ -3916,16 +3915,28 @@ def database_wakeup():
             ping_ms = int((time.time() - ping_start) * 1000)
             error_msg = str(e)
             
+            # Truncate error message using the existing constant
+            truncated_error = error_msg[:MAX_ERROR_MESSAGE_LENGTH] if len(error_msg) > MAX_ERROR_MESSAGE_LENGTH else error_msg
+            
             attempt_results.append({
                 "attempt": attempt,
                 "success": False,
                 "ping_ms": ping_ms,
-                "error": error_msg[:200] if len(error_msg) > 200 else error_msg
+                "error": truncated_error
             })
             
             # Wait briefly before retry (exponential backoff)
             if attempt < max_attempts:
                 time.sleep(0.5 * attempt)
+        finally:
+            # Ensure cursor and connection are always properly cleaned up
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                return_db_connection(conn)
     
     # All attempts failed
     return jsonify({
