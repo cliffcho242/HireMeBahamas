@@ -93,6 +93,127 @@ async def get_users(
     return {"success": True, "users": users_data, "total": total}
 
 
+# NOTE: Static routes must be defined BEFORE dynamic routes like /{identifier}
+# to ensure they are matched correctly by FastAPI's routing.
+
+@router.get("/following/list")
+async def get_following(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get list of users that current user is following"""
+    result = await db.execute(
+        select(User)
+        .join(Follow, Follow.followed_id == User.id)
+        .where(Follow.follower_id == current_user.id, User.is_active == True)
+    )
+    following_users = result.scalars().all()
+    
+    if not following_users:
+        return {"success": True, "following": []}
+    
+    user_ids = [user.id for user in following_users]
+    
+    # Get followers count for all users in one query
+    followers_count_query = (
+        select(Follow.followed_id, func.count().label('count'))
+        .where(Follow.followed_id.in_(user_ids))
+        .group_by(Follow.followed_id)
+    )
+    followers_result = await db.execute(followers_count_query)
+    followers_counts = {row[0]: row[1] for row in followers_result.all()}
+    
+    # Get following count for all users in one query
+    following_count_query = (
+        select(Follow.follower_id, func.count().label('count'))
+        .where(Follow.follower_id.in_(user_ids))
+        .group_by(Follow.follower_id)
+    )
+    following_result = await db.execute(following_count_query)
+    following_counts = {row[0]: row[1] for row in following_result.all()}
+
+    users_data = []
+    for user in following_users:
+        users_data.append({
+            "id": user.id,
+            "first_name": user.first_name or "",
+            "last_name": user.last_name or "",
+            "email": user.email,
+            "username": user.username,
+            "avatar_url": user.avatar_url,
+            "bio": user.bio,
+            "occupation": user.occupation,
+            "location": user.location,
+            "is_following": True,  # Current user is following this user by definition
+            "followers_count": followers_counts.get(user.id, 0),
+            "following_count": following_counts.get(user.id, 0),
+        })
+
+    return {"success": True, "following": users_data}
+
+
+@router.get("/followers/list")
+async def get_followers(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get list of users that follow current user"""
+    result = await db.execute(
+        select(User)
+        .join(Follow, Follow.follower_id == User.id)
+        .where(Follow.followed_id == current_user.id, User.is_active == True)
+    )
+    followers = result.scalars().all()
+    
+    if not followers:
+        return {"success": True, "followers": []}
+
+    # Get the list of user IDs that current user is following
+    following_ids_result = await db.execute(
+        select(Follow.followed_id).where(Follow.follower_id == current_user.id)
+    )
+    following_ids = {fid for (fid,) in following_ids_result.all()}
+    
+    user_ids = [user.id for user in followers]
+    
+    # Get followers count for all users in one query
+    followers_count_query = (
+        select(Follow.followed_id, func.count().label('count'))
+        .where(Follow.followed_id.in_(user_ids))
+        .group_by(Follow.followed_id)
+    )
+    followers_count_result = await db.execute(followers_count_query)
+    followers_counts = {row[0]: row[1] for row in followers_count_result.all()}
+    
+    # Get following count for all users in one query
+    following_count_query = (
+        select(Follow.follower_id, func.count().label('count'))
+        .where(Follow.follower_id.in_(user_ids))
+        .group_by(Follow.follower_id)
+    )
+    following_count_result = await db.execute(following_count_query)
+    following_counts = {row[0]: row[1] for row in following_count_result.all()}
+
+    users_data = []
+    for user in followers:
+        users_data.append({
+            "id": user.id,
+            "first_name": user.first_name or "",
+            "last_name": user.last_name or "",
+            "email": user.email,
+            "username": user.username,
+            "avatar_url": user.avatar_url,
+            "bio": user.bio,
+            "occupation": user.occupation,
+            "location": user.location,
+            "is_following": user.id in following_ids,  # Check if current user follows this follower
+            "followers_count": followers_counts.get(user.id, 0),
+            "following_count": following_counts.get(user.id, 0),
+        })
+
+    return {"success": True, "followers": users_data}
+
+
 @router.get("/{identifier}")
 async def get_user(
     identifier: str,
@@ -331,124 +452,6 @@ async def unfollow_user(
     await db.commit()
 
     return {"success": True, "message": "User unfollowed successfully"}
-
-
-@router.get("/following/list")
-async def get_following(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get list of users that current user is following"""
-    result = await db.execute(
-        select(User)
-        .join(Follow, Follow.followed_id == User.id)
-        .where(Follow.follower_id == current_user.id, User.is_active == True)
-    )
-    following_users = result.scalars().all()
-    
-    if not following_users:
-        return {"success": True, "following": []}
-    
-    user_ids = [user.id for user in following_users]
-    
-    # Get followers count for all users in one query
-    followers_count_query = (
-        select(Follow.followed_id, func.count().label('count'))
-        .where(Follow.followed_id.in_(user_ids))
-        .group_by(Follow.followed_id)
-    )
-    followers_result = await db.execute(followers_count_query)
-    followers_counts = {row[0]: row[1] for row in followers_result.all()}
-    
-    # Get following count for all users in one query
-    following_count_query = (
-        select(Follow.follower_id, func.count().label('count'))
-        .where(Follow.follower_id.in_(user_ids))
-        .group_by(Follow.follower_id)
-    )
-    following_result = await db.execute(following_count_query)
-    following_counts = {row[0]: row[1] for row in following_result.all()}
-
-    users_data = []
-    for user in following_users:
-        users_data.append({
-            "id": user.id,
-            "first_name": user.first_name or "",
-            "last_name": user.last_name or "",
-            "email": user.email,
-            "username": user.username,
-            "avatar_url": user.avatar_url,
-            "bio": user.bio,
-            "occupation": user.occupation,
-            "location": user.location,
-            "is_following": True,  # Current user is following this user by definition
-            "followers_count": followers_counts.get(user.id, 0),
-            "following_count": following_counts.get(user.id, 0),
-        })
-
-    return {"success": True, "following": users_data}
-
-
-@router.get("/followers/list")
-async def get_followers(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get list of users that follow current user"""
-    result = await db.execute(
-        select(User)
-        .join(Follow, Follow.follower_id == User.id)
-        .where(Follow.followed_id == current_user.id, User.is_active == True)
-    )
-    followers = result.scalars().all()
-    
-    if not followers:
-        return {"success": True, "followers": []}
-
-    # Get the list of user IDs that current user is following
-    following_ids_result = await db.execute(
-        select(Follow.followed_id).where(Follow.follower_id == current_user.id)
-    )
-    following_ids = {fid for (fid,) in following_ids_result.all()}
-    
-    user_ids = [user.id for user in followers]
-    
-    # Get followers count for all users in one query
-    followers_count_query = (
-        select(Follow.followed_id, func.count().label('count'))
-        .where(Follow.followed_id.in_(user_ids))
-        .group_by(Follow.followed_id)
-    )
-    followers_count_result = await db.execute(followers_count_query)
-    followers_counts = {row[0]: row[1] for row in followers_count_result.all()}
-    
-    # Get following count for all users in one query
-    following_count_query = (
-        select(Follow.follower_id, func.count().label('count'))
-        .where(Follow.follower_id.in_(user_ids))
-        .group_by(Follow.follower_id)
-    )
-    following_count_result = await db.execute(following_count_query)
-    following_counts = {row[0]: row[1] for row in following_count_result.all()}
-
-    users_data = []
-    for user in followers:
-        users_data.append({
-            "id": user.id,
-            "first_name": user.first_name or "",
-            "last_name": user.last_name or "",
-            "email": user.email,
-            "username": user.username,
-            "avatar_url": user.avatar_url,
-            "bio": user.bio,
-            "occupation": user.occupation,
-            "location": user.location,
-            "is_following": user.id in following_ids,  # Check if current user follows this follower
-            "followers_count": followers_counts.get(user.id, 0),
-            "following_count": following_counts.get(user.id, 0),
-        })
-
-    return {"success": True, "followers": users_data}
 
 
 @router.get("/{user_id}/followers")
