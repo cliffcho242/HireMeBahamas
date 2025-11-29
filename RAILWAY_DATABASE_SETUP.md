@@ -174,6 +174,56 @@ DATABASE_URL=postgresql://myuser:mypassword@db.supabase.co:5432/mydb
 
 ## 🔧 Troubleshooting
 
+### "Database not connecting" in Railway Data Tab
+
+**Cause**: Railway's web interface cannot establish a connection to the PostgreSQL database container.
+
+**Symptoms**:
+- Railway Dashboard Data tab shows: "Database Connection - Attempting to connect to the database... Database not connecting :/"
+- The message "This service has all the necessary variables that this UI uses to connect to the database" appears
+
+**Solution**:
+1. **Wait 30-60 seconds** - This is the most common fix. The database container may be:
+   - Starting up after inactivity (cold start)
+   - Recovering from a restart
+   - Transitioning between Railway infrastructure
+
+2. **Refresh the Railway Dashboard** - After waiting, click the refresh button or reload the page
+
+3. **Check PostgreSQL Service Status**:
+   - Look at the PostgreSQL service card in your project
+   - Status should show "Active" (green indicator)
+   - If showing "Deploying", "Starting", or "Sleeping", wait for it to complete
+
+4. **Use the Database Wake-Up Endpoint** (Recommended):
+   - Visit `https://your-app.railway.app/api/database/wakeup`
+   - This endpoint performs multiple connection attempts to wake up the database
+   - Wait for a successful response, then refresh Railway's Data tab
+   - Example response when successful:
+     ```json
+     {
+       "success": true,
+       "message": "Database is awake and accepting connections...",
+       "attempts": 1
+     }
+     ```
+
+5. **Verify Database is Healthy via API**:
+   - Visit `https://your-app.railway.app/api/health`
+   - If this returns `{"database": "connected"}`, the database is working
+   - The issue is only with Railway's UI, not your application
+
+6. **Restart PostgreSQL Service** (if still not working):
+   - Click on your PostgreSQL service in Railway
+   - Click the **⋮** menu → **Restart**
+   - Wait 1-2 minutes for restart to complete
+
+7. **Check Railway Status Page**:
+   - Visit [Railway Status](https://status.railway.app)
+   - Look for any ongoing incidents affecting database connectivity
+
+**Note**: This error only affects Railway's Data tab UI. Your application handles database connections independently and includes automatic retry logic for transient connection issues.
+
 ### "Unable to connect to the database via SSH" Error
 
 **Cause**: The PostgreSQL database container is starting up or transitioning

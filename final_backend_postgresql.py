@@ -3529,6 +3529,9 @@ def root():
                 "endpoints": {
                     "health": "/health",
                     "health_detailed": "/api/health",
+                    "database_wakeup": "/api/database/wakeup",
+                    "database_ping": "/api/database/ping",
+                    "database_recovery": "/api/database/recovery-status",
                 },
             }
         ),
@@ -3832,6 +3835,113 @@ def database_ping_endpoint():
         print(f"⚠️ External database ping failed: {ping_result.get('error', 'unknown error')}")
     
     return jsonify(response), http_status
+
+
+@app.route("/api/database/wakeup", methods=["GET", "POST"])
+@limiter.exempt
+def database_wakeup():
+    """
+    Wake up the database and verify connectivity.
+    
+    This endpoint is specifically designed to help users who encounter
+    "Database not connecting" errors in Railway's Data tab. It:
+    - Performs multiple connection attempts with retries
+    - Wakes up sleeping databases
+    - Returns detailed connection status
+    
+    Usage:
+    - Call this endpoint before accessing Railway's Data tab
+    - Wait for successful response, then refresh Railway dashboard
+    
+    Returns:
+        JSON with:
+        - success: Whether database is now accessible
+        - attempts: Number of connection attempts made
+        - message: Human-readable status message
+        - details: Detailed connection information
+    
+    Exempt from rate limiting to allow multiple wake-up attempts.
+    """
+    timestamp = datetime.now(timezone.utc).isoformat()
+    max_attempts = 3
+    attempt_results = []
+    
+    # Try multiple connection attempts to wake up the database
+    for attempt in range(1, max_attempts + 1):
+        ping_start = time.time()
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Execute a simple query to ensure connection is active
+            cursor.execute("SELECT 1 as test, NOW() as server_time")
+            result = cursor.fetchone()
+            
+            ping_ms = int((time.time() - ping_start) * 1000)
+            
+            # Get server time for verification
+            server_time = None
+            if result:
+                server_time = _get_cursor_value(result, "server_time", None)
+                if server_time:
+                    server_time = str(server_time)
+            
+            cursor.close()
+            return_db_connection(conn)
+            
+            attempt_results.append({
+                "attempt": attempt,
+                "success": True,
+                "ping_ms": ping_ms,
+                "server_time": server_time
+            })
+            
+            # Success on this attempt, return immediately
+            return jsonify({
+                "success": True,
+                "timestamp": timestamp,
+                "message": "Database is awake and accepting connections. You can now access Railway's Data tab.",
+                "database_type": "PostgreSQL" if USE_POSTGRESQL else "SQLite",
+                "attempts": attempt,
+                "attempt_details": attempt_results,
+                "next_steps": [
+                    "Refresh the Railway Dashboard",
+                    "Navigate to your PostgreSQL service",
+                    "Click on the 'Data' tab",
+                    "The database connection should now work"
+                ]
+            }), 200
+            
+        except Exception as e:
+            ping_ms = int((time.time() - ping_start) * 1000)
+            error_msg = str(e)
+            
+            attempt_results.append({
+                "attempt": attempt,
+                "success": False,
+                "ping_ms": ping_ms,
+                "error": error_msg[:200] if len(error_msg) > 200 else error_msg
+            })
+            
+            # Wait briefly before retry (exponential backoff)
+            if attempt < max_attempts:
+                time.sleep(0.5 * attempt)
+    
+    # All attempts failed
+    return jsonify({
+        "success": False,
+        "timestamp": timestamp,
+        "message": "Unable to connect to database after multiple attempts. The database may be starting up.",
+        "database_type": "PostgreSQL" if USE_POSTGRESQL else "SQLite",
+        "attempts": max_attempts,
+        "attempt_details": attempt_results,
+        "troubleshooting": [
+            "Wait 30-60 seconds and try again",
+            "Check if PostgreSQL service shows 'Active' in Railway",
+            "If PostgreSQL is 'Sleeping', make any API request to wake it",
+            "Check Railway status page for any incidents: https://status.railway.app"
+        ]
+    }), 503
 
 
 # ==========================================
