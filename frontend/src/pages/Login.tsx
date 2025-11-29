@@ -22,6 +22,7 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('admin@hiremebahamas.com');
   const [password, setPassword] = useState('AdminPass123!');
   const [submitting, setSubmitting] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Signing in...');
 
   // Check OAuth configuration using utility function
   const oauthConfig = getOAuthConfig();
@@ -42,6 +43,23 @@ const Login: React.FC = () => {
     e.preventDefault();
     if (submitting) return;
     setSubmitting(true);
+    setLoadingMessage('Signing in...');
+    
+    // Update loading message after 3 seconds if still loading
+    const messageTimeout1 = setTimeout(() => {
+      setLoadingMessage('Connecting to server...');
+    }, 3000);
+    
+    // Update loading message after 8 seconds if still loading
+    const messageTimeout2 = setTimeout(() => {
+      setLoadingMessage('Server is waking up, please wait...');
+    }, 8000);
+    
+    // Update loading message after 20 seconds if still loading
+    const messageTimeout3 = setTimeout(() => {
+      setLoadingMessage('Almost there...');
+    }, 20000);
+    
     try {
       await login(email, password);
       toast.success('Welcome back to HireMeBahamas!');
@@ -53,22 +71,36 @@ const Login: React.FC = () => {
       const isNetworkError = apiError?.code === 'ERR_NETWORK' || 
                             apiError?.code === 'ECONNABORTED' ||
                             apiError?.message?.includes('Network Error') ||
-                            apiError?.message?.includes('timeout');
+                            apiError?.message?.includes('timeout') ||
+                            apiError?.message?.includes('timed out');
       
       let message: string;
       if (isNetworkError) {
-        message = 'Connection to server failed. Please check your internet connection and try again. The server may be starting up.';
+        // Provide more helpful message during slow connections
+        if (apiError?.message?.includes('timed out') || apiError?.code === 'ECONNABORTED') {
+          message = 'The server is taking longer than expected to respond. This often happens during cold starts. Please wait a moment and try again.';
+        } else {
+          message = 'Connection to server failed. Please check your internet connection and try again. The server may be starting up (this can take up to 60 seconds).';
+        }
       } else if (apiError?.response?.status === 503) {
-        message = 'Server is starting up. Please wait a moment and try again.';
+        message = 'Server is starting up. Please wait 30-60 seconds and try again.';
+      } else if (apiError?.response?.status === 504) {
+        message = 'Server request timed out. The server may be under heavy load. Please try again in a moment.';
       } else if (apiError?.response?.status === 429) {
         message = 'Too many login attempts. Please wait a minute and try again.';
+      } else if (apiError?.response?.status === 502) {
+        message = 'Server is temporarily unavailable. This usually resolves within a minute. Please try again.';
       } else {
         message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Login failed. Please try again.';
       }
       
       toast.error(message);
     } finally {
+      clearTimeout(messageTimeout1);
+      clearTimeout(messageTimeout2);
+      clearTimeout(messageTimeout3);
       setSubmitting(false);
+      setLoadingMessage('Signing in...');
     }
   };
 
@@ -295,7 +327,7 @@ const Login: React.FC = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Signing in...
+                      {loadingMessage}
                     </span>
                   ) : (
                     'Sign In'
