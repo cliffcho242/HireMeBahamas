@@ -99,7 +99,7 @@ export default defineConfig({
     minify: 'terser',
     cssCodeSplit: true,
     chunkSizeWarningLimit: 1000,
-    sourcemap: false,
+    sourcemap: 'hidden',
     terserOptions: {
       compress: {
         drop_console: true,

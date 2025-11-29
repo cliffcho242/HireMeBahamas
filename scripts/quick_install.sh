@@ -64,11 +64,11 @@ install_python_deps() {
     
     # Use pip cache and quiet mode
     if [ -f "$PROJECT_ROOT/requirements.txt" ]; then
-        pip install -q --upgrade pip 2>/dev/null
-        pip install -q -r "$PROJECT_ROOT/requirements.txt" 2>/dev/null
+        pip install --quiet --upgrade pip
+        pip install --quiet -r "$PROJECT_ROOT/requirements.txt"
         success "Python dependencies installed"
     else
-        warn "requirements.txt not found"
+        warn "requirements.txt not found - skipping Python packages"
     fi
 }
 
@@ -80,19 +80,21 @@ install_node_deps() {
         # Install root packages
         if [ -f "$PROJECT_ROOT/package.json" ]; then
             cd "$PROJECT_ROOT"
-            npm install --silent --prefer-offline 2>/dev/null
+            npm install --silent --prefer-offline
         fi
         
         # Install frontend packages with caching
-        if [ -d "$PROJECT_ROOT/frontend" ]; then
+        if [ -d "$PROJECT_ROOT/frontend" ] && [ -f "$PROJECT_ROOT/frontend/package.json" ]; then
             cd "$PROJECT_ROOT/frontend"
-            npm install --silent --prefer-offline 2>/dev/null
+            npm install --silent --prefer-offline
+        else
+            warn "frontend/package.json not found - skipping frontend packages"
         fi
         
         cd "$PROJECT_ROOT"
         success "Node.js dependencies installed"
     else
-        warn "npm not found - skipping Node.js deps"
+        warn "npm not found - install Node.js first"
     fi
 }
 
@@ -107,8 +109,8 @@ install_node_deps &
 NODE_PID=$!
 
 # Wait for parallel tasks
-wait $PY_PID 2>/dev/null || warn "Python installation had issues"
-wait $NODE_PID 2>/dev/null || warn "Node.js installation had issues"
+wait $PY_PID || warn "Python dependency installation failed - check requirements.txt exists"
+wait $NODE_PID || warn "Node.js dependency installation failed - check package.json exists"
 
 # Calculate elapsed time
 END_TIME=$(date +%s)
