@@ -133,10 +133,9 @@ const UserProfile: React.FC = () => {
       setFollowersCount(normalizedProfile.followers_count);
       setFollowingCount(normalizedProfile.following_count);
 
-      // Fetch user's posts
-      const allPosts = await postsAPI.getPosts();
-      const filteredPosts = allPosts.filter((post: { user_id?: number }) => post.user_id === parseInt(userId));
-      setUserPosts(filteredPosts);
+      // Fetch user's posts using the dedicated endpoint
+      const userPosts = await postsAPI.getUserPosts(parseInt(userId));
+      setUserPosts(userPosts);
     } catch (error: unknown) {
       console.error('Failed to fetch user profile:', error);
       
