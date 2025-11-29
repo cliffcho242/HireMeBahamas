@@ -6748,6 +6748,36 @@ def create_job():
             )
             job_id = cursor.lastrowid
 
+        # Also create a post for the news feed so the job appears on the home page
+        job_title = data["title"].strip()
+        job_company = data["company"].strip()
+        job_location = data["location"].strip()
+        job_type = data.get("job_type", "full-time").strip()
+        job_description = data["description"].strip()
+        
+        # Create a formatted post content for the job
+        post_content = f"📢 New Job Posting!\n\n🏢 {job_title} at {job_company}\n📍 {job_location}\n⏰ {job_type.replace('-', ' ').title()}\n\n{job_description[:500]}{'...' if len(job_description) > 500 else ''}"
+        
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                INSERT INTO posts (user_id, content, created_at)
+                VALUES (%s, %s, %s)
+                RETURNING id
+                """,
+                (user_id, post_content, now)
+            )
+            post_id = cursor.fetchone()["id"]
+        else:
+            cursor.execute(
+                """
+                INSERT INTO posts (user_id, content, created_at)
+                VALUES (?, ?, ?)
+                """,
+                (user_id, post_content, now)
+            )
+            post_id = cursor.lastrowid
+
         conn.commit()
         cursor.close()
         return_db_connection(conn)
@@ -6761,7 +6791,8 @@ def create_job():
                 "company": data["company"].strip(),
                 "location": data["location"].strip(),
                 "created_at": now.isoformat(),
-            }
+            },
+            "post_id": post_id
         }), 201
 
     except Exception as e:
