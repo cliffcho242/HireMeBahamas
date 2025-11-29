@@ -346,7 +346,7 @@ const PostFeed: React.FC = () => {
       toast.success('Comment added!');
     } catch (error) {
       console.error('Failed to add comment:', error);
-      toast.error('Failed to add comment');
+      toast.error(getApiErrorMessage(error, 'comment', 'Failed to add comment'));
     }
   };
 
@@ -374,7 +374,7 @@ const PostFeed: React.FC = () => {
       toast.success('Comment deleted!');
     } catch (error) {
       console.error('Failed to delete comment:', error);
-      toast.error('Failed to delete comment');
+      toast.error(getApiErrorMessage(error, 'comment'));
     }
   };
 
