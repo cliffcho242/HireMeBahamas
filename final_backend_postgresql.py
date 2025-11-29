@@ -3837,6 +3837,12 @@ def database_ping_endpoint():
     return jsonify(response), http_status
 
 
+# Database wakeup retry configuration
+# Base delay for exponential backoff (in seconds)
+# Each retry waits (WAKEUP_RETRY_BASE_DELAY * attempt_number) seconds
+WAKEUP_RETRY_BASE_DELAY = 0.5
+
+
 @app.route("/api/database/wakeup", methods=["GET", "POST"])
 @limiter.exempt
 def database_wakeup():
@@ -3942,11 +3948,15 @@ def database_wakeup():
                     # Log cleanup errors for debugging but continue with connection cleanup
                     logger.debug("Cursor close failed during wakeup cleanup: %s", cleanup_error)
             if conn:
-                return_db_connection(conn)
+                try:
+                    return_db_connection(conn)
+                except Exception as conn_cleanup_error:
+                    # Log connection cleanup errors but don't mask original error
+                    logger.debug("Connection cleanup failed during wakeup: %s", conn_cleanup_error)
         
         # Wait briefly before retry (exponential backoff) - outside finally block
         if should_retry and attempt < max_attempts:
-            time.sleep(0.5 * attempt)
+            time.sleep(WAKEUP_RETRY_BASE_DELAY * attempt)
     
     # Return success response if connection succeeded
     if success_response:
