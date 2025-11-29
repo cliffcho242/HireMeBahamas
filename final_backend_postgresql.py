@@ -5678,15 +5678,18 @@ def delete_post(post_id):
 # USER ENDPOINTS
 # ==========================================
 
-@app.route("/api/users/<int:user_id>", methods=["GET", "OPTIONS"])
-def get_user(user_id):
+@app.route("/api/users/<identifier>", methods=["GET", "OPTIONS"])
+def get_user(identifier):
     """
-    Get a specific user's profile by ID.
+    Get a specific user's profile by ID or username.
     
     Performance optimizations to prevent HTTP 499/502 timeouts:
     - Request timeout detection returns error before client disconnects
     - Single connection used for all queries
     - Indexed queries on primary keys
+    
+    Args:
+        identifier: Can be either a numeric user ID or a username string
     """
     if request.method == "OPTIONS":
         return "", 200
@@ -5721,23 +5724,44 @@ def get_user(user_id):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Get user details
-        cursor.execute(
-            """
-            SELECT id, email, first_name, last_name, username, avatar_url, bio,
-                   occupation, company_name, location, phone, user_type, 
-                   is_available_for_hire, created_at
-            FROM users
-            WHERE id = %s AND is_active = TRUE
-            """ if USE_POSTGRESQL else """
-            SELECT id, email, first_name, last_name, username, avatar_url, bio,
-                   occupation, company_name, location, phone, user_type, 
-                   is_available_for_hire, created_at
-            FROM users
-            WHERE id = ? AND is_active = 1
-            """,
-            (user_id,)
-        )
+        # Determine if identifier is a numeric ID or username
+        try:
+            user_id = int(identifier)
+            # It's a numeric ID - query by ID
+            cursor.execute(
+                """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, company_name, location, phone, user_type, 
+                       is_available_for_hire, created_at
+                FROM users
+                WHERE id = %s AND is_active = TRUE
+                """ if USE_POSTGRESQL else """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, company_name, location, phone, user_type, 
+                       is_available_for_hire, created_at
+                FROM users
+                WHERE id = ? AND is_active = 1
+                """,
+                (user_id,)
+            )
+        except ValueError:
+            # It's a username - query by username
+            cursor.execute(
+                """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, company_name, location, phone, user_type, 
+                       is_available_for_hire, created_at
+                FROM users
+                WHERE username = %s AND is_active = TRUE
+                """ if USE_POSTGRESQL else """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, company_name, location, phone, user_type, 
+                       is_available_for_hire, created_at
+                FROM users
+                WHERE username = ? AND is_active = 1
+                """,
+                (identifier,)
+            )
         
         user = cursor.fetchone()
         
@@ -5745,6 +5769,9 @@ def get_user(user_id):
             cursor.close()
             return_db_connection(conn)
             return jsonify({"success": False, "message": "User not found"}), 404
+
+        # Get the user's ID for follow queries (in case we looked up by username)
+        user_id = user["id"]
 
         # Check if current user follows this user
         cursor.execute(
