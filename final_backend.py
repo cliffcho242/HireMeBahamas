@@ -244,7 +244,8 @@ def init_database():
             )
             result = cursor.fetchone()
             # RealDictCursor returns a dict, so we access by key 'exists'
-            table_exists = result['exists'] if result else False
+            # Use get() for safe access in case of NULL or missing key
+            table_exists = result.get('exists', False) if result else False
         else:
             cursor.execute(
                 """
