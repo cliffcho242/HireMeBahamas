@@ -18,6 +18,7 @@ import { Post, PostUser } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { postCache } from '../services/postCache';
+import { getApiErrorMessage } from '../utils/errorHandler';
 
 // Type for posts that have a valid user - used after filtering
 interface ValidPost extends Post {
@@ -67,6 +68,7 @@ const PostFeed: React.FC = () => {
   const [editContent, setEditContent] = useState<string>('');
   const [comments, setComments] = useState<{ [key: number]: Comment[] }>({});
   const [loadingComments, setLoadingComments] = useState<{ [key: number]: boolean }>({});
+  const [commentsLoaded, setCommentsLoaded] = useState<{ [key: number]: boolean }>({});
   const [showEmojiPicker, setShowEmojiPicker] = useState<{ [key: number]: boolean }>({});
   const { user } = useAuth();
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -404,21 +406,28 @@ const PostFeed: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const loadComments = async (postId: number) => {
-    if (comments[postId]) {
-      // Already loaded, just toggle
+  const loadComments = async (postId: number, forceRefresh = false) => {
+    // If already loaded successfully and not forcing refresh, just toggle visibility
+    if (commentsLoaded[postId] && !forceRefresh) {
       setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
       return;
     }
 
+    // Don't start a new fetch if already loading
+    if (loadingComments[postId]) return;
+
     setLoadingComments(prev => ({ ...prev, [postId]: true }));
     try {
       const commentsData = await postsAPI.getComments(postId);
-      setComments(prev => ({ ...prev, [postId]: commentsData }));
+      // Ensure we always get an array, even if API response is malformed
+      const safeComments = Array.isArray(commentsData) ? commentsData : [];
+      setComments(prev => ({ ...prev, [postId]: safeComments }));
+      setCommentsLoaded(prev => ({ ...prev, [postId]: true }));
       setShowComments(prev => ({ ...prev, [postId]: true }));
     } catch (error) {
       console.error('Failed to load comments:', error);
-      toast.error('Failed to load comments');
+      toast.error(getApiErrorMessage(error, 'comments'));
+      setCommentsLoaded(prev => ({ ...prev, [postId]: false }));
     } finally {
       setLoadingComments(prev => ({ ...prev, [postId]: false }));
     }
@@ -544,11 +553,11 @@ const PostFeed: React.FC = () => {
   };
 
   const toggleComments = (postId: number) => {
-    if (showComments[postId]) {
-      // Just hide comments
+    if (showComments[postId] && commentsLoaded[postId]) {
+      // Hide comments if already showing and loaded successfully
       setShowComments(prev => ({ ...prev, [postId]: false }));
     } else {
-      // Load and show comments
+      // Load and show comments (will retry if previously failed since commentsLoaded will be false)
       loadComments(postId);
     }
   };
