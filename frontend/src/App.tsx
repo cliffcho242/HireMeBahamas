@@ -32,6 +32,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AuthGuard from './components/AuthGuard';
 import { AIErrorBoundary } from './components/AIErrorBoundary';
 import InstallPWA from './components/InstallPWA';
+import ConnectionStatus from './components/ConnectionStatus';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -84,6 +85,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-gray-50 flex flex-col overflow-x-hidden">
+      {/* Connection status banner - shows when backend is slow/unavailable */}
+      <ConnectionStatus />
+
       {/* Only show navbar and footer for authenticated users */}
       {isAuthenticated && <Navbar />}
 
