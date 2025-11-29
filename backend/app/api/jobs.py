@@ -196,6 +196,49 @@ async def delete_job(
     return {"message": "Job deleted successfully"}
 
 
+@router.post("/{job_id}/toggle")
+async def toggle_job_status(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Toggle a job's status between active and inactive (HireMe off/on for jobs)"""
+    result = await db.execute(select(Job).where(Job.id == job_id))
+    job = result.scalar_one_or_none()
+
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
+        )
+
+    if job.employer_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this job",
+        )
+
+    # Only allow toggling between active and inactive status
+    # Other statuses (closed, etc.) should not be toggleable
+    if job.status not in ("active", "inactive"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot toggle job with status '{job.status}'. Only active or inactive jobs can be toggled.",
+        )
+
+    # Toggle between active and inactive
+    job.status = "inactive" if job.status == "active" else "active"
+
+    await db.commit()
+    await db.refresh(job)
+
+    return {
+        "success": True,
+        "job_status": job.status,
+        "is_active": job.status == "active",
+        "message": f"Job is now {'active' if job.status == 'active' else 'inactive'}",
+    }
+
+
 @router.post("/{job_id}/apply", response_model=JobApplicationResponse)
 async def apply_to_job(
     job_id: int,
