@@ -43,6 +43,22 @@ For managed PostgreSQL providers (Railway, Render, Heroku, etc.):
 - The application also removes orphaned tables/views that cause monitoring errors
 - The application will continue to work normally without this extension
 
+### Dummy pg_stat_statements View (Recommended)
+
+By default, the application creates a **dummy `pg_stat_statements` view** that returns no rows. This allows Railway's monitoring queries to succeed silently instead of generating error logs.
+
+**How it works:**
+1. The application drops any existing `pg_stat_statements` extension/table
+2. Creates an empty view with the expected column structure
+3. Railway's queries (`SELECT COUNT(*) FROM public."pg_stat_statements"`) return 0 rows
+4. No error logs are generated
+
+**Configuration:**
+- `CREATE_DUMMY_PG_STAT_STATEMENTS=true` (default) - Create the dummy view
+- `CREATE_DUMMY_PG_STAT_STATEMENTS=false` - Just drop orphaned objects (old behavior)
+
+This is the recommended approach as it eliminates log noise while having zero performance impact.
+
 ### Note About External Monitoring Errors
 If you see `pg_stat_statements` errors in your Railway logs like:
 ```
@@ -60,13 +76,16 @@ Railway's monitoring dashboard periodically queries `pg_stat_statements` to coll
 3. PostgreSQL returns an error because the extension cannot function without the library preloaded
 
 **What our application does:**
-- Automatically cleans up any orphaned `pg_stat_statements` tables/views during startup
+- By default, creates a dummy `pg_stat_statements` view that returns empty results
+- This allows Railway's monitoring queries to succeed silently
+- Alternatively, automatically cleans up any orphaned `pg_stat_statements` tables/views during startup
 - Does NOT use `pg_stat_statements` in any application queries
 
 **What you can do:**
+- Enable the dummy view (default) to eliminate log errors entirely
 - These errors are harmless to your application and data
 - They do not affect application functionality
-- If the errors are excessive, contact Railway support to either:
+- If errors persist, contact Railway support to either:
   - Add `pg_stat_statements` to `shared_preload_libraries` (requires server config access)
   - Disable the monitoring queries for your database
 
