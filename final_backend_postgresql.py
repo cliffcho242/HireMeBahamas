@@ -67,14 +67,139 @@ limiter = Limiter(
     storage_uri="memory://",
 )
 
-# Caching configuration
-cache = Cache(
-    app,
-    config={
+# Caching configuration with Redis support (falls back to simple cache if Redis unavailable)
+# Redis provides distributed caching for production deployments with multiple workers
+# Set REDIS_URL environment variable to enable Redis caching
+REDIS_URL = os.getenv("REDIS_URL")
+CACHE_DEFAULT_TIMEOUT = int(os.getenv("CACHE_DEFAULT_TIMEOUT", "300"))  # 5 minutes default
+
+# Cache timeout configuration for different resource types
+CACHE_TIMEOUT_JOBS = int(os.getenv("CACHE_TIMEOUT_JOBS", "60"))  # Jobs list: 1 minute
+CACHE_TIMEOUT_POSTS = int(os.getenv("CACHE_TIMEOUT_POSTS", "30"))  # Posts list: 30 seconds (more dynamic)
+CACHE_TIMEOUT_USERS = int(os.getenv("CACHE_TIMEOUT_USERS", "120"))  # Users list: 2 minutes
+CACHE_TIMEOUT_PROFILE = int(os.getenv("CACHE_TIMEOUT_PROFILE", "60"))  # User profile: 1 minute
+
+# Redis client for cache invalidation (reused across calls)
+_redis_client = None
+_redis_available = None  # None = not checked, True/False = result
+
+
+def _get_redis_client():
+    """
+    Get or create a Redis client for cache operations.
+    
+    Returns the cached Redis client if available, or creates a new one.
+    Returns None if Redis is not configured or unavailable.
+    """
+    global _redis_client, _redis_available
+    
+    if not REDIS_URL:
+        return None
+    
+    # If we've already determined Redis is unavailable, don't retry
+    if _redis_available is False:
+        return None
+    
+    # Return cached client if available and connected
+    if _redis_client is not None:
+        try:
+            _redis_client.ping()
+            return _redis_client
+        except Exception:
+            # Connection lost, try to reconnect
+            _redis_client = None
+    
+    # Try to create a new connection
+    try:
+        import redis
+        _redis_client = redis.from_url(REDIS_URL, socket_timeout=2)
+        _redis_client.ping()
+        _redis_available = True
+        return _redis_client
+    except Exception as e:
+        logger.warning(f"Redis connection failed: {e}")
+        _redis_available = False
+        _redis_client = None
+        return None
+
+
+def _get_cache_config():
+    """
+    Get cache configuration with Redis support and fallback to simple cache.
+    
+    Redis is preferred for production as it provides:
+    - Distributed caching across multiple workers/containers
+    - Persistence across container restarts
+    - Better memory management with eviction policies
+    
+    Falls back to simple in-memory cache if Redis is unavailable.
+    """
+    if REDIS_URL:
+        # Use the shared Redis client getter to test connection
+        client = _get_redis_client()
+        if client is not None:
+            print("✅ Redis cache connected")
+            return {
+                "CACHE_TYPE": "redis",
+                "CACHE_REDIS_URL": REDIS_URL,
+                "CACHE_DEFAULT_TIMEOUT": CACHE_DEFAULT_TIMEOUT,
+                "CACHE_KEY_PREFIX": "hiremebahamas:",
+            }
+        else:
+            print("⚠️ Redis unavailable, falling back to simple cache")
+    
+    print("📦 Using simple in-memory cache")
+    return {
         "CACHE_TYPE": "simple",
-        "CACHE_DEFAULT_TIMEOUT": 300,
-    },
-)
+        "CACHE_DEFAULT_TIMEOUT": CACHE_DEFAULT_TIMEOUT,
+    }
+
+cache = Cache(app, config=_get_cache_config())
+
+
+def invalidate_cache_pattern(pattern: str):
+    """
+    Invalidate cache entries matching a pattern.
+    
+    For Redis: Uses SCAN to find and delete matching keys.
+    For simple cache: Clears entire cache (simple cache doesn't support pattern deletion).
+    
+    Args:
+        pattern: Cache key pattern (e.g., "jobs:*", "posts:*")
+    """
+    try:
+        cache_type = cache.config.get("CACHE_TYPE", "simple")
+        if cache_type == "redis":
+            # Use the shared Redis client for cache operations
+            client = _get_redis_client()
+            if client is not None:
+                try:
+                    prefix = cache.config.get("CACHE_KEY_PREFIX", "")
+                    full_pattern = f"{prefix}{pattern}"
+                    cursor = 0
+                    deleted_count = 0
+                    while True:
+                        cursor, keys = client.scan(cursor, match=full_pattern, count=100)
+                        if keys:
+                            client.delete(*keys)
+                            deleted_count += len(keys)
+                        if cursor == 0:
+                            break
+                    if deleted_count > 0:
+                        logger.info(f"Invalidated {deleted_count} cache keys matching '{pattern}'")
+                except Exception as redis_error:
+                    # Fall back to simple cache clear if Redis operation fails
+                    logger.warning(f"Redis cache invalidation failed, clearing all cache: {redis_error}")
+                    cache.clear()
+            else:
+                # Redis client unavailable, clear all
+                cache.clear()
+        else:
+            # Simple cache - clear all (no pattern support)
+            cache.clear()
+            logger.info(f"Cleared simple cache (pattern: {pattern})")
+    except Exception as e:
+        logger.warning(f"Cache invalidation failed for pattern '{pattern}': {e}")
 
 # Enhanced CORS configuration
 CORS(
@@ -2533,17 +2658,37 @@ def create_database_indexes(cursor, conn):
             ("users_email_lower_idx", "CREATE INDEX IF NOT EXISTS users_email_lower_idx ON users (LOWER(email))"),
             # Speeds up queries filtering by active users
             ("users_is_active_idx", "CREATE INDEX IF NOT EXISTS users_is_active_idx ON users (is_active) WHERE is_active = TRUE"),
+            # Speeds up username lookups (user profile by username)
+            ("users_username_idx", "CREATE INDEX IF NOT EXISTS users_username_idx ON users (username) WHERE username IS NOT NULL"),
             # Speeds up user's posts queries
             ("posts_user_id_idx", "CREATE INDEX IF NOT EXISTS posts_user_id_idx ON posts (user_id)"),
             # Speeds up posts ordering by date
             ("posts_created_at_idx", "CREATE INDEX IF NOT EXISTS posts_created_at_idx ON posts (created_at DESC)"),
+            # Composite index for posts feed (user_id + created_at for efficient pagination)
+            ("posts_user_created_idx", "CREATE INDEX IF NOT EXISTS posts_user_created_idx ON posts (user_id, created_at DESC)"),
             # Speeds up job searches
             ("jobs_is_active_idx", "CREATE INDEX IF NOT EXISTS jobs_is_active_idx ON jobs (is_active) WHERE is_active = TRUE"),
             ("jobs_created_at_idx", "CREATE INDEX IF NOT EXISTS jobs_created_at_idx ON jobs (created_at DESC)"),
+            # Composite index for job filtering by category
+            ("jobs_category_active_idx", "CREATE INDEX IF NOT EXISTS jobs_category_active_idx ON jobs (category, is_active) WHERE is_active = TRUE"),
+            # Composite index for job filtering by location
+            ("jobs_location_active_idx", "CREATE INDEX IF NOT EXISTS jobs_location_active_idx ON jobs (location, is_active) WHERE is_active = TRUE"),
             # Speeds up followers list queries - prevents HTTP 499 timeouts from slow queries
             ("follows_follower_id_idx", "CREATE INDEX IF NOT EXISTS follows_follower_id_idx ON follows (follower_id)"),
             # Speeds up following list queries - prevents HTTP 499 timeouts from slow queries
             ("follows_followed_id_idx", "CREATE INDEX IF NOT EXISTS follows_followed_id_idx ON follows (followed_id)"),
+            # Composite index for friendship checks (both directions)
+            ("friendships_sender_receiver_idx", "CREATE INDEX IF NOT EXISTS friendships_sender_receiver_idx ON friendships (sender_id, receiver_id)"),
+            # Speeds up conversation lookups
+            ("conversations_participants_idx", "CREATE INDEX IF NOT EXISTS conversations_participants_idx ON conversations (participant_1_id, participant_2_id)"),
+            # Speeds up message retrieval for conversations
+            ("messages_conversation_idx", "CREATE INDEX IF NOT EXISTS messages_conversation_idx ON messages (conversation_id, created_at)"),
+            # Speeds up unread message count queries
+            ("messages_unread_idx", "CREATE INDEX IF NOT EXISTS messages_unread_idx ON messages (is_read, sender_id) WHERE is_read = FALSE"),
+            # Speeds up likes count queries
+            ("likes_post_id_idx", "CREATE INDEX IF NOT EXISTS likes_post_id_idx ON likes (post_id)"),
+            # Speeds up comments count queries
+            ("comments_post_id_idx", "CREATE INDEX IF NOT EXISTS comments_post_id_idx ON comments (post_id)"),
         ]
         
         for index_name, index_sql in indexes:
@@ -2563,11 +2708,18 @@ def create_database_indexes(cursor, conn):
         try:
             cursor.execute("CREATE INDEX IF NOT EXISTS posts_user_id_idx ON posts (user_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS posts_created_at_idx ON posts (created_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS posts_user_created_idx ON posts (user_id, created_at)")
             cursor.execute("CREATE INDEX IF NOT EXISTS jobs_is_active_idx ON jobs (is_active)")
             cursor.execute("CREATE INDEX IF NOT EXISTS jobs_created_at_idx ON jobs (created_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS jobs_category_idx ON jobs (category)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS jobs_location_idx ON jobs (location)")
             # Indexes for follows table to speed up followers/following list queries
             cursor.execute("CREATE INDEX IF NOT EXISTS follows_follower_id_idx ON follows (follower_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS follows_followed_id_idx ON follows (followed_id)")
+            # Indexes for messaging system
+            cursor.execute("CREATE INDEX IF NOT EXISTS messages_conversation_idx ON messages (conversation_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS likes_post_id_idx ON likes (post_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS comments_post_id_idx ON comments (post_id)")
             conn.commit()
             print("✅ SQLite indexes created or already exist")
         except Exception as e:
@@ -5173,12 +5325,16 @@ def get_profile():
 
 
 @app.route("/api/posts", methods=["GET", "OPTIONS"])
+@cache.cached(timeout=CACHE_TIMEOUT_POSTS, key_prefix="posts_list", query_string=True)
 def get_posts():
     """
-    Get posts with user information
+    Get posts with user information.
     
     Posts are PERMANENTLY stored - never automatically deleted.
     Supports pagination for handling millions of posts efficiently.
+    
+    Cached for performance optimization (default: 30 seconds).
+    Cache is keyed by pagination parameters.
     
     Query Parameters:
     - page: Page number (default: 1)
@@ -5414,6 +5570,9 @@ def create_post():
         conn.commit()
         cursor.close()
         return_db_connection(conn)
+
+        # Invalidate posts cache after creating a new post
+        invalidate_cache_pattern("posts_*")
 
         return (
             jsonify(
@@ -5660,6 +5819,9 @@ def delete_post(post_id):
         conn.commit()
         cursor.close()
         return_db_connection(conn)
+
+        # Invalidate posts cache after deleting a post
+        invalidate_cache_pattern("posts_*")
 
         return (
             jsonify({"success": True, "message": "Post deleted successfully"}),
@@ -6408,9 +6570,13 @@ def get_followers_list():
 
 
 @app.route("/api/jobs", methods=["GET", "OPTIONS"])
+@cache.cached(timeout=CACHE_TIMEOUT_JOBS, key_prefix="jobs_list", query_string=True)
 def get_jobs():
     """
-    Get all active jobs with optional filtering
+    Get all active jobs with optional filtering.
+    
+    Cached for performance optimization (default: 60 seconds).
+    Cache is keyed by query parameters (search, category, location).
     """
     if request.method == "OPTIONS":
         return "", 200
@@ -6528,10 +6694,13 @@ def get_jobs():
 
 
 @app.route("/api/jobs/stats/overview", methods=["GET", "OPTIONS"])
+@cache.cached(timeout=CACHE_TIMEOUT_JOBS * 2, key_prefix="jobs_stats")
 def get_job_stats():
     """
-    Get job statistics overview
-    Returns counts of active jobs, companies hiring, and new jobs this week
+    Get job statistics overview.
+    Returns counts of active jobs, companies hiring, and new jobs this week.
+    
+    Cached for 2x the jobs timeout (aggregate data changes less frequently).
     """
     if request.method == "OPTIONS":
         return "", 200
@@ -6829,6 +6998,9 @@ def create_job():
         conn.commit()
         cursor.close()
         return_db_connection(conn)
+
+        # Invalidate jobs cache after creating a new job
+        invalidate_cache_pattern("jobs_*")
 
         return jsonify({
             "success": True,
