@@ -189,26 +189,26 @@ const Stories: React.FC = () => {
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-        <div className="flex space-x-4 overflow-x-auto pb-2">
+      <div className="bg-white rounded-lg shadow-sm p-4 4xl:p-6 mb-4 post-card-smooth">
+        <div className="flex space-x-4 4xl:space-x-6 overflow-x-auto pb-2 stories-scroll scroll-smooth-gpu">
           {/* Create Story */}
           {user && (
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 story-item">
               <div
-                className="relative w-20 h-28 bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform"
+                className="relative w-20 h-28 4xl:w-24 4xl:h-32 bg-gray-100 rounded-lg overflow-hidden cursor-pointer avatar-interactive"
                 onClick={() => setShowCreateModal(true)}
               >
                 <div className="w-full h-3/4 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
-                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                    <PlusIcon className="w-5 h-5 text-blue-600" />
+                  <div className="w-8 h-8 4xl:w-10 4xl:h-10 bg-white rounded-full flex items-center justify-center social-btn">
+                    <PlusIcon className="w-5 h-5 4xl:w-6 4xl:h-6 text-blue-600" />
                   </div>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 bg-white p-2">
-                  <p className="text-xs font-medium text-center text-gray-900">Create Story</p>
+                  <p className="text-xs 4xl:text-sm font-medium text-center text-gray-900 text-render-5k">Create Story</p>
                 </div>
-                <div className="absolute -top-1 -left-1 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white">
-                  <div className="w-3 h-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-xs">
+                <div className="absolute -top-1 -left-1 w-6 h-6 4xl:w-7 4xl:h-7 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white story-ring-animated">
+                  <div className="w-3 h-3 4xl:w-4 4xl:h-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold text-xs text-render-5k">
                       {user.first_name?.[0]}{user.last_name?.[0]}
                     </span>
                   </div>
@@ -219,17 +219,18 @@ const Stories: React.FC = () => {
 
           {/* Stories */}
           {stories.map((story) => (
-            <div key={story.id} className="flex-shrink-0">
+            <div key={story.id} className="flex-shrink-0 story-item">
               <div
                 onClick={() => setSelectedStory(story)}
-                className="relative w-20 h-28 rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform ring-2 ring-blue-500"
+                className="relative w-20 h-28 4xl:w-24 4xl:h-32 rounded-lg overflow-hidden cursor-pointer avatar-interactive ring-2 ring-blue-500 story-ring-animated"
               >
                 {story.video_url ? (
                   <video
                     src={story.video_url}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover gpu-accelerated"
                     muted
                     loop
+                    playsInline
                     onMouseEnter={(e) => e.currentTarget.play()}
                     onMouseLeave={(e) => e.currentTarget.pause()}
                   />
@@ -237,26 +238,27 @@ const Stories: React.FC = () => {
                   <img
                     src={story.image_url}
                     alt={`${story.user.first_name} ${story.user.last_name}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover image-fade-in loaded"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">
+                    <span className="text-white font-bold text-lg 4xl:text-xl text-render-5k">
                       {story.user.first_name[0]}{story.user.last_name[0]}
                     </span>
                   </div>
                 )}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                  <p className="text-xs font-medium text-white text-center truncate">
+                  <p className="text-xs 4xl:text-sm font-medium text-white text-center truncate text-render-5k">
                     {story.user.first_name}
                   </p>
                 </div>
                 {story.video_url && (
-                  <div className="absolute top-2 right-2 w-4 h-4 bg-black/50 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <div className="absolute top-2 right-2 w-4 h-4 4xl:w-5 4xl:h-5 bg-black/50 rounded-full flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                   </div>
                 )}
-                <div className="absolute top-2 left-2 w-3 h-3 bg-blue-500 rounded-full border border-white"></div>
+                <div className="absolute top-2 left-2 w-3 h-3 4xl:w-4 4xl:h-4 bg-blue-500 rounded-full border border-white"></div>
               </div>
             </div>
           ))}
@@ -265,21 +267,21 @@ const Stories: React.FC = () => {
 
       {/* Create Story Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="glass-modal rounded-xl p-6 w-full max-w-md mx-4 4xl:max-w-lg animate-scale-in">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Create Story</h3>
+              <h3 className="text-lg 4xl:text-xl font-semibold text-render-5k">Create Story</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 social-btn p-1 rounded-full"
               >
-                <XMarkIcon className="w-6 h-6" />
+                <XMarkIcon className="w-6 h-6 4xl:w-7 4xl:h-7" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 4xl:space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm 4xl:text-base font-medium text-gray-700 mb-2">
                   Story Content *
                 </label>
                 <textarea
