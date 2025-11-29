@@ -18,6 +18,12 @@ DATABASE_URL = config(
     )
 )
 
+# Convert sync PostgreSQL URLs to async driver format
+# This ensures that URLs like "postgresql://..." are converted to "postgresql+asyncpg://..."
+# which is required for SQLAlchemy's async engine (create_async_engine)
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 # Determine if this is a production environment
 # Detection is based on:
 # 1. Explicit ENVIRONMENT variable set to 'production' or 'prod'
