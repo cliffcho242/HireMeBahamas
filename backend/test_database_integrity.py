@@ -14,8 +14,10 @@ from sqlalchemy import select, func, inspect
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-# Set test database URL
-os.environ['DATABASE_URL'] = 'sqlite+aiosqlite:///./test_hiremebahamas.db'
+# Set test database URL if not already set by CI
+# CI sets DATABASE_URL to PostgreSQL; local dev uses SQLite
+if 'DATABASE_URL' not in os.environ or not os.environ['DATABASE_URL'].startswith('postgresql'):
+    os.environ['DATABASE_URL'] = 'sqlite+aiosqlite:///./test_hiremebahamas.db'
 
 from app.database import Base, get_db, init_db, close_db, engine
 from app.models import User, Follow, Notification, Message, Conversation, Job, JobApplication, Review
