@@ -41,7 +41,24 @@ jobs:
           VITE_API_URL: ${{ secrets.VITE_API_URL || 
             'https://hiremebahamas.onrender.com' }}
 
+      - name: Check Vercel secrets
+        id: check_secrets
+        run: |
+          if [ -n "${{ secrets.VERCEL_TOKEN }}" ] && [ -n "${{ secrets.VERCEL_ORG_ID }}" ] && [ -n "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            echo "secrets_configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "secrets_configured=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Vercel secrets not configured. Skipping Vercel deployment via GitHub Actions."
+            echo "The frontend will be deployed automatically via Vercel's native Git integration."
+            echo ""
+            echo "To enable deployment via GitHub Actions, configure these secrets:"
+            echo "  - VERCEL_TOKEN: Generate at https://vercel.com/account/tokens"
+            echo "  - VERCEL_ORG_ID: Found in Vercel project settings"
+            echo "  - VERCEL_PROJECT_ID: Found in Vercel project settings"
+          fi
+
       - name: Deploy to Vercel
+        if: steps.check_secrets.outputs.secrets_configured == 'true'
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -49,3 +66,9 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./frontend
           vercel-args: '--prod'
+
+      - name: Deployment status
+        if: steps.check_secrets.outputs.secrets_configured != 'true'
+        run: |
+          echo "✅ Build completed successfully!"
+          echo "📦 Frontend assets are ready for deployment via Vercel's Git integration."
