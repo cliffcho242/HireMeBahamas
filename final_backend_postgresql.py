@@ -5678,15 +5678,18 @@ def delete_post(post_id):
 # USER ENDPOINTS
 # ==========================================
 
-@app.route("/api/users/<int:user_id>", methods=["GET", "OPTIONS"])
-def get_user(user_id):
+@app.route("/api/users/<identifier>", methods=["GET", "OPTIONS"])
+def get_user(identifier):
     """
-    Get a specific user's profile by ID.
+    Get a specific user's profile by ID or username.
     
     Performance optimizations to prevent HTTP 499/502 timeouts:
     - Request timeout detection returns error before client disconnects
     - Single connection used for all queries
     - Indexed queries on primary keys
+    
+    Args:
+        identifier: Can be either a numeric user ID or a username string
     """
     if request.method == "OPTIONS":
         return "", 200
@@ -5721,30 +5724,64 @@ def get_user(user_id):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Get user details
-        cursor.execute(
-            """
-            SELECT id, email, first_name, last_name, username, avatar_url, bio,
-                   occupation, company_name, location, phone, user_type, 
-                   is_available_for_hire, created_at
-            FROM users
-            WHERE id = %s AND is_active = TRUE
-            """ if USE_POSTGRESQL else """
-            SELECT id, email, first_name, last_name, username, avatar_url, bio,
-                   occupation, company_name, location, phone, user_type, 
-                   is_available_for_hire, created_at
-            FROM users
-            WHERE id = ? AND is_active = 1
-            """,
-            (user_id,)
-        )
+        # Determine if identifier is a numeric ID or username
+        # Design note: If the identifier can be parsed as a number, try ID lookup first.
+        # If no user is found by ID (or identifier is not numeric), fall back to username
+        # lookup. This approach handles purely numeric usernames and maintains backward
+        # compatibility with existing ID-based lookups.
+        user = None
         
-        user = cursor.fetchone()
+        try:
+            user_id = int(identifier)
+            # It's a numeric ID - query by ID first
+            cursor.execute(
+                """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, company_name, location, phone, user_type, 
+                       is_available_for_hire, created_at
+                FROM users
+                WHERE id = %s AND is_active = TRUE
+                """ if USE_POSTGRESQL else """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, company_name, location, phone, user_type, 
+                       is_available_for_hire, created_at
+                FROM users
+                WHERE id = ? AND is_active = 1
+                """,
+                (user_id,)
+            )
+            user = cursor.fetchone()
+        except ValueError:
+            # Identifier is not numeric, will fall through to username lookup
+            pass
+        
+        # If no user found by ID (or identifier isn't numeric), try username
+        if user is None:
+            cursor.execute(
+                """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, company_name, location, phone, user_type, 
+                       is_available_for_hire, created_at
+                FROM users
+                WHERE username = %s AND is_active = TRUE
+                """ if USE_POSTGRESQL else """
+                SELECT id, email, first_name, last_name, username, avatar_url, bio,
+                       occupation, company_name, location, phone, user_type, 
+                       is_available_for_hire, created_at
+                FROM users
+                WHERE username = ? AND is_active = 1
+                """,
+                (identifier,)
+            )
+            user = cursor.fetchone()
         
         if not user:
             cursor.close()
             return_db_connection(conn)
             return jsonify({"success": False, "message": "User not found"}), 404
+
+        # Get the user's ID for follow queries (in case we looked up by username)
+        found_user_id = user["id"]
 
         # Check if current user follows this user
         cursor.execute(
@@ -5755,7 +5792,7 @@ def get_user(user_id):
             SELECT id FROM follows
             WHERE follower_id = ? AND followed_id = ?
             """,
-            (current_user_id, user_id)
+            (current_user_id, found_user_id)
         )
         is_following = cursor.fetchone() is not None
 
@@ -5768,7 +5805,7 @@ def get_user(user_id):
             SELECT COUNT(*) as count FROM follows
             WHERE followed_id = ?
             """,
-            (user_id,)
+            (found_user_id,)
         )
         followers_count = cursor.fetchone()["count"]
 
@@ -5781,7 +5818,7 @@ def get_user(user_id):
             SELECT COUNT(*) as count FROM follows
             WHERE follower_id = ?
             """,
-            (user_id,)
+            (found_user_id,)
         )
         following_count = cursor.fetchone()["count"]
 
@@ -5794,7 +5831,7 @@ def get_user(user_id):
             SELECT COUNT(*) as count FROM posts
             WHERE user_id = ?
             """,
-            (user_id,)
+            (found_user_id,)
         )
         posts_count = cursor.fetchone()["count"]
 
