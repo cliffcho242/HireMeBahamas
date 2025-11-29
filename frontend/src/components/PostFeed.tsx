@@ -665,8 +665,8 @@ const PostFeed: React.FC = () => {
           key={post.id}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.1 }}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+          transition={{ delay: index * 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden post-card-smooth gpu-accelerated"
         >
           {/* Post Header */}
           <div className="p-4 pb-3">
@@ -675,8 +675,8 @@ const PostFeed: React.FC = () => {
                 onClick={() => navigate(`/user/${post.user.id}`)}
                 className="flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer">
-                  <span className="text-white font-semibold text-sm">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center avatar-interactive cursor-pointer">
+                  <span className="text-white font-semibold text-sm text-render-5k">
                     {post.user.first_name[0]}{post.user.last_name[0]}
                   </span>
                 </div>
@@ -685,7 +685,7 @@ const PostFeed: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => navigate(`/user/${post.user.id}`)}
-                    className="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors"
+                    className="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors duration-200"
                   >
                     {post.user.first_name} {post.user.last_name}
                   </button>
@@ -696,7 +696,7 @@ const PostFeed: React.FC = () => {
                 </div>
                 <button
                   onClick={() => navigate(`/user/${post.user.id}`)}
-                  className="text-xs text-blue-600 font-medium truncate hover:text-blue-700 transition-colors"
+                  className="text-xs text-blue-600 font-medium truncate hover:text-blue-700 transition-colors duration-200"
                 >
                   @{post.user.username || post.user.email.split('@')[0]}
                 </button>
@@ -766,23 +766,26 @@ const PostFeed: React.FC = () => {
             ) : (
               // View mode
               <>
-                <p className="text-gray-900 whitespace-pre-wrap text-sm leading-relaxed">{post.content}</p>
+                <p className="text-gray-900 whitespace-pre-wrap text-sm leading-relaxed text-render-5k">{post.content}</p>
                 {post.image_url && (
-                  <div className="mt-3 rounded-lg overflow-hidden border border-gray-200">
+                  <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 hd-image-container">
                     <img
                       src={post.image_url}
                       alt="Post image"
-                      className="w-full h-auto max-h-96 object-cover"
+                      className="w-full h-auto max-h-96 object-cover image-fade-in loaded gpu-accelerated"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </div>
                 )}
                 {post.video_url && (
-                  <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 bg-black">
+                  <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 bg-black gpu-accelerated">
                     <video
                       src={post.video_url}
                       controls
                       className="w-full h-auto max-h-96"
                       preload="metadata"
+                      playsInline
                     >
                       Your browser does not support the video tag.
                     </video>
@@ -809,12 +812,12 @@ const PostFeed: React.FC = () => {
             <div className="flex items-center justify-between">
               <button
                 onClick={() => handleLikePost(post.id)}
-                className={`flex items-center space-x-2 flex-1 justify-center py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors ${
-                  post.is_liked ? 'text-red-600' : 'text-gray-600'
+                className={`flex items-center space-x-2 flex-1 justify-center py-2 px-4 rounded-lg social-btn like-btn-animated ${
+                  post.is_liked ? 'text-red-600 liked' : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 {post.is_liked ? (
-                  <HeartIconSolid className="w-5 h-5" />
+                  <HeartIconSolid className="w-5 h-5 will-change-transform" />
                 ) : (
                   <HeartIcon className="w-5 h-5" />
                 )}
@@ -823,7 +826,7 @@ const PostFeed: React.FC = () => {
 
               <button
                 onClick={() => toggleComments(post.id)}
-                className="flex items-center space-x-2 flex-1 justify-center py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
+                className="flex items-center space-x-2 flex-1 justify-center py-2 px-4 rounded-lg social-btn hover:bg-gray-100 text-gray-600"
               >
                 <ChatBubbleLeftIcon className="w-5 h-5" />
                 <span className="text-sm font-medium">Comment</span>
@@ -831,7 +834,7 @@ const PostFeed: React.FC = () => {
 
               <button 
                 onClick={() => handleSharePost(post)}
-                className="flex items-center space-x-2 flex-1 justify-center py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
+                className="flex items-center space-x-2 flex-1 justify-center py-2 px-4 rounded-lg social-btn share-ripple hover:bg-gray-100 text-gray-600"
               >
                 <ShareIcon className="w-5 h-5" />
                 <span className="text-sm font-medium">Share</span>
@@ -841,7 +844,7 @@ const PostFeed: React.FC = () => {
 
           {/* Comments Section */}
           {showComments[post.id] && (
-            <div className="px-4 py-3 bg-gray-50">
+            <div className="px-4 py-3 bg-gray-50 comment-section-enter">
               {/* Add Comment */}
               {user && (
                 <div className="flex space-x-3 mb-3">
