@@ -138,7 +138,7 @@ def _get_cache_config():
         # Use the shared Redis client getter to test connection
         client = _get_redis_client()
         if client is not None:
-            print(f"✅ Redis cache connected: {REDIS_URL[:30]}...")
+            print("✅ Redis cache connected")
             return {
                 "CACHE_TYPE": "redis",
                 "CACHE_REDIS_URL": REDIS_URL,
