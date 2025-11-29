@@ -1,15 +1,9 @@
 {
-  "alias": [
-    "hiremebahamas.com",
-    "www.hiremebahamas.com"
-  ],
+  "framework": "vite",
   "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "env": {
-    "VITE_API_URL": "https://hiremebahamas.onrender.com"
-  }
+  ]
 }
