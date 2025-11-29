@@ -3,47 +3,44 @@
 HireBahamas DNS Configuration Status & Action Plan
 ===================================================
 
+⚠️ IMPORTANT: Update Nameservers to Manage DNS on Vercel
+=========================================================
+
+To fully manage your DNS records on Vercel, update the nameservers
+in your DNS provider to Vercel's nameservers.
+
+Learn more: https://vercel.com/docs/concepts/projects/domains#vercel-nameservers
+
 CURRENT DNS STATUS (Detected):
 ==============================
 
 Domain: hiremebahamas.com
 
 Current Nameservers:
-  ✅ dns1.registrar-servers.com
-  ✅ dns2.registrar-servers.com
+  ⚠️ dns1.registrar-servers.com
+  ⚠️ dns2.registrar-servers.com
   (Registrar: Appears to be Namecheap or similar)
 
 Current A Record:
   ✅ 76.76.21.21 (Vercel's IP - ALREADY CONFIGURED!)
-
-GOOD NEWS:
-==========
-Your domain is ALREADY pointing to Vercel! The A record (76.76.21.21) is correct.
 
 WHAT THIS MEANS:
 ================
 - hiremebahamas.com → Already routes to Vercel ✅
 - DNS is working ✅
 - SSL should be active ✅
+- But DNS is managed at registrar, not Vercel
 
-RECOMMENDED ACTIONS:
-====================
+RECOMMENDED ACTION:
+===================
 
-Option 1: KEEP CURRENT SETUP (Recommended if working)
-------------------------------------------------------
-Your current setup is fine. You're using A records instead of nameservers.
-
-To verify it's working:
-1. Visit: https://hiremebahamas.com
-2. Check if your Vercel site loads
-3. Check SSL certificate (should show as secure)
-
-Option 2: SWITCH TO VERCEL NAMESERVERS (Optional, better control)
------------------------------------------------------------------
+SWITCH TO VERCEL NAMESERVERS (Recommended for full Vercel integration)
+-----------------------------------------------------------------------
 Benefits:
-- Easier DNS management in Vercel dashboard
-- Automatic SSL/CDN configuration
-- Better integration with Vercel features
+- ✅ Easier DNS management in Vercel dashboard
+- ✅ Automatic SSL/CDN configuration
+- ✅ Better integration with Vercel features
+- ✅ No need to manage DNS at multiple places
 
 Steps:
 1. Go to your domain registrar (dns1.registrar-servers.com suggests Namecheap)
@@ -55,8 +52,14 @@ Steps:
    ns1.vercel-dns.com
    ns2.vercel-dns.com
 
-3. Wait 2-24 hours for propagation
+3. Wait 1-2 hours (typical) or up to 48 hours (maximum) for propagation
 4. Manage all DNS in Vercel dashboard
+
+ALTERNATIVE: Keep Current Setup
+-------------------------------
+If you prefer to keep managing DNS at your registrar, your current
+A record setup (76.76.21.21) will continue to work, but you won't
+have the benefits of full Vercel DNS management.
 
 ADDING BACKEND SUBDOMAIN:
 =========================
@@ -165,11 +168,17 @@ print(
    - A record points to 76.76.21.21 (Vercel)
    - hiremebahamas.com should already work
 
+⚠️ RECOMMENDED: Switch to Vercel Nameservers
+   Update nameservers in your DNS provider to manage DNS on Vercel:
+   - ns1.vercel-dns.com
+   - ns2.vercel-dns.com
+   Learn more: https://vercel.com/docs/concepts/projects/domains#vercel-nameservers
+
 🎯 NEXT STEPS:
-   1. Verify website loads: https://hiremebahamas.com
-   2. Add backend subdomain: api.hiremebahamas.com
-   3. Update frontend .env with new API URL
-   4. (Optional) Switch to Vercel nameservers for easier management
+   1. Update nameservers to Vercel's (recommended)
+   2. Verify website loads: https://hiremebahamas.com
+   3. Add backend subdomain: api.hiremebahamas.com
+   4. Update frontend .env with new API URL
 
 🚀 ONCE RAILWAY BACKEND IS DEPLOYED:
    1. Add CNAME: api → hiremebahamas-backend.railway.app

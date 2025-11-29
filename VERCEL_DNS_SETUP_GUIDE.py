@@ -3,6 +3,15 @@
 Vercel DNS Configuration Guide for HireBahamas
 ================================================
 
+⚠️ IMPORTANT: Update Nameservers to Manage DNS on Vercel
+=========================================================
+
+To manage your DNS records on Vercel, you need to update the nameservers
+in your DNS provider. This is the RECOMMENDED approach for the best
+integration with Vercel's features.
+
+Learn more: https://vercel.com/docs/concepts/projects/domains#vercel-nameservers
+
 NAMESERVERS TO USE:
 -------------------
 Update your domain registrar's nameservers to Vercel's:
@@ -14,32 +23,32 @@ Primary Nameservers:
 STEP-BY-STEP INSTRUCTIONS:
 ==========================
 
-1. GET YOUR VERCEL NAMESERVERS
-   -----------------------------
-   Go to: https://vercel.com/dashboard
-   → Select your project: hiremebahamas
-   → Go to Settings → Domains
-   → Click on your domain: hiremebahamas.com
-   → Look for "Nameservers" section
-
-   Vercel will show the exact nameservers, typically:
-   - ns1.vercel-dns.com
-   - ns2.vercel-dns.com
-
-2. UPDATE YOUR DOMAIN REGISTRAR
+1. LOG INTO YOUR DOMAIN REGISTRAR
    ------------------------------
-   Log into your domain registrar (where you bought hiremebahamas.com)
-   Common registrars: GoDaddy, Namecheap, Google Domains, etc.
+   Go to where you purchased your domain (GoDaddy, Namecheap, Google Domains, etc.)
 
+2. FIND NAMESERVER SETTINGS
+   -------------------------
    Navigate to:
    → Domain Management / DNS Settings
    → Find "Nameservers" or "Custom Nameservers"
-   → Change from registrar's default to:
+
+3. UPDATE NAMESERVERS TO VERCEL
+   ----------------------------
+   Change from your registrar's default to:
       ns1.vercel-dns.com
       ns2.vercel-dns.com
    → Save changes
 
-3. PROPAGATION TIME
+4. VERIFY IN VERCEL
+   ----------------
+   Go to: https://vercel.com/dashboard
+   → Select your project: hiremebahamas
+   → Go to Settings → Domains
+   → Click on your domain: hiremebahamas.com
+   → Verify nameservers are detected
+
+5. PROPAGATION TIME
    ----------------
    DNS changes take time to propagate:
    - Minimum: 1-2 hours
@@ -48,7 +57,7 @@ STEP-BY-STEP INSTRUCTIONS:
 
    During this time, some users may see old site, some new site.
 
-4. VERIFY DNS PROPAGATION
+6. VERIFY DNS PROPAGATION
    -----------------------
    Use these commands to check:
 
@@ -59,7 +68,7 @@ STEP-BY-STEP INSTRUCTIONS:
    nslookup hiremebahamas.com 8.8.8.8  # Google DNS
    nslookup hiremebahamas.com 1.1.1.1  # Cloudflare DNS
 
-5. CONFIGURE VERCEL DNS RECORDS
+7. CONFIGURE VERCEL DNS RECORDS
    -----------------------------
    After nameservers are updated, add DNS records in Vercel:
 
