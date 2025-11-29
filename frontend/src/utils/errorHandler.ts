@@ -18,7 +18,7 @@ export interface ApiErrorResponse {
 
 /**
  * Get a user-friendly error message based on the error response.
- * Provides context-specific messages for common error codes.
+ * Prioritizes specific error messages from the API, then falls back to status code messages.
  * 
  * @param error - The error object from the API call
  * @param resourceType - The type of resource being accessed (e.g., 'followers', 'comments')
@@ -32,13 +32,23 @@ export function getApiErrorMessage(
 ): string {
   const apiError = error as ApiErrorResponse;
   
-  // Check for specific HTTP status codes
+  // First, check for specific error messages from the API response
+  // These are more helpful than generic status code messages
+  if (apiError.response?.data?.detail) {
+    return apiError.response.data.detail;
+  }
+  
+  if (apiError.response?.data?.message) {
+    return apiError.response.data.message;
+  }
+  
+  // Fall back to status code-based messages if no specific message is available
   if (apiError.response?.status === 401) {
     return `Please log in to view ${resourceType}`;
   }
   
   if (apiError.response?.status === 404) {
-    return 'Resource not found';
+    return `The requested ${resourceType} could not be found`;
   }
   
   if (apiError.response?.status === 403) {
@@ -47,15 +57,6 @@ export function getApiErrorMessage(
   
   if (apiError.response?.status === 500) {
     return 'Server error. Please try again later.';
-  }
-  
-  // Check for error message in response data
-  if (apiError.response?.data?.detail) {
-    return apiError.response.data.detail;
-  }
-  
-  if (apiError.response?.data?.message) {
-    return apiError.response.data.message;
   }
   
   // Use default message or a generic retry message
