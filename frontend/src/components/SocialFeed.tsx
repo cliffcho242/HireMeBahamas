@@ -94,8 +94,8 @@ const Post = ({ post, onLike }: { post: any, onLike: any }) => {
       <div className="post-header">
         <div className="user-info">
           <div className="avatar">
-            {post.author.profile_picture ? (
-              <img src={post.author.profile_picture} alt={post.author.full_name} />
+            {post.author.avatar_url ? (
+              <img src={post.author.avatar_url} alt={post.author.full_name} />
             ) : (
               <div className="avatar-placeholder">
                 {post.author.full_name.charAt(0).toUpperCase()}
@@ -176,8 +176,8 @@ const CreatePost = ({ onPostCreated, currentUser }: { onPostCreated: any, curren
     <div className="create-post-card">
       <div className="create-post-header">
         <div className="avatar">
-          {currentUser?.profile_picture ? (
-            <img src={currentUser.profile_picture} alt={currentUser.full_name} />
+          {currentUser?.avatar_url ? (
+            <img src={currentUser.avatar_url} alt={currentUser.full_name} />
           ) : (
             <div className="avatar-placeholder">
               {currentUser?.full_name?.charAt(0).toUpperCase() || 'U'}
@@ -433,8 +433,8 @@ const SocialFeed = () => {
           <div className="left-sidebar">
             <div className="user-profile-card">
               <div className="avatar">
-                {currentUser?.profile_picture ? (
-                  <img src={currentUser.profile_picture} alt={currentUser.full_name} />
+                {currentUser?.avatar_url ? (
+                  <img src={currentUser.avatar_url} alt={currentUser.full_name} />
                 ) : (
                   <div className="avatar-placeholder">
                     {currentUser?.full_name?.charAt(0).toUpperCase()}
