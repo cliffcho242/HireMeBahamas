@@ -3865,9 +3865,14 @@ def database_wakeup():
     timestamp = datetime.now(timezone.utc).isoformat()
     max_attempts = 3
     attempt_results = []
+    should_retry = True
+    success_response = None
     
     # Try multiple connection attempts to wake up the database
     for attempt in range(1, max_attempts + 1):
+        if not should_retry:
+            break
+            
         ping_start = time.time()
         conn = None
         cursor = None
@@ -3895,8 +3900,9 @@ def database_wakeup():
                 "server_time": server_time
             })
             
-            # Success on this attempt, return immediately
-            return jsonify({
+            # Mark success and prepare response (will be returned after cleanup)
+            should_retry = False
+            success_response = jsonify({
                 "success": True,
                 "timestamp": timestamp,
                 "message": "Database is awake and accepting connections. You can now access Railway's Data tab.",
@@ -3915,8 +3921,11 @@ def database_wakeup():
             ping_ms = int((time.time() - ping_start) * 1000)
             error_msg = str(e)
             
-            # Truncate error message using the existing constant
-            truncated_error = error_msg[:MAX_ERROR_MESSAGE_LENGTH] if len(error_msg) > MAX_ERROR_MESSAGE_LENGTH else error_msg
+            # Truncate error message using the existing constant and pattern (with ellipsis)
+            if len(error_msg) > MAX_ERROR_MESSAGE_LENGTH:
+                truncated_error = error_msg[:(MAX_ERROR_MESSAGE_LENGTH - 3)] + "..."
+            else:
+                truncated_error = error_msg
             
             attempt_results.append({
                 "attempt": attempt,
@@ -3924,10 +3933,6 @@ def database_wakeup():
                 "ping_ms": ping_ms,
                 "error": truncated_error
             })
-            
-            # Wait briefly before retry (exponential backoff)
-            if attempt < max_attempts:
-                time.sleep(0.5 * attempt)
         finally:
             # Ensure cursor and connection are always properly cleaned up
             if cursor:
@@ -3937,6 +3942,14 @@ def database_wakeup():
                     pass
             if conn:
                 return_db_connection(conn)
+        
+        # Wait briefly before retry (exponential backoff) - outside finally block
+        if should_retry and attempt < max_attempts:
+            time.sleep(0.5 * attempt)
+    
+    # Return success response if connection succeeded
+    if success_response:
+        return success_response
     
     # All attempts failed
     return jsonify({
