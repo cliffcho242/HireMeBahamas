@@ -1,6 +1,6 @@
 name: Scheduled App Ping
 
-# This workflow keeps the application active by pinging it every 5 minutes.
+# This workflow keeps the application active by pinging it every 10 minutes.
 # Many free-tier hosting platforms (Railway, Render, Heroku, etc.) spin down
 # inactive applications after a period of inactivity (typically 15-30 minutes).
 #
@@ -9,15 +9,17 @@ name: Scheduled App Ping
 # - Continuous availability of the service
 # - Active database connections (preventing database sleep)
 #
-# Schedule: Every 5 minutes
-# This interval is aggressive enough to prevent sleep while being
-# conservative with GitHub Actions minutes.
+# Schedule: Every 10 minutes
+# This interval is conservative enough to save GitHub Actions minutes while
+# still preventing app sleep on platforms with 15-30 minute inactivity timeouts.
+# For database-specific keepalive, see keep-database-awake.yml (runs every 2 minutes).
 
 on:
   schedule:
-    # Run every 5 minutes to keep the app active
+    # Run every 10 minutes to keep the app active
     # Free-tier platforms typically sleep apps after 15-30 minutes of inactivity
-    - cron: '*/5 * * * *'
+    # 10-minute interval provides buffer while conserving GitHub Actions minutes
+    - cron: '*/10 * * * *'
   workflow_dispatch:
     # Allow manual trigger for testing
 
@@ -100,6 +102,7 @@ jobs:
 
           if [ "$http_code" = "200" ]; then
             echo "✅ Railway health check successful (HTTP $http_code)"
+            # jq is pre-installed on ubuntu-latest runners
             echo "$body" | jq . 2>/dev/null || echo "$body"
             echo "success=true" >> $GITHUB_OUTPUT
           else
@@ -174,6 +177,7 @@ jobs:
 
           if [ "$http_code" = "200" ]; then
             echo "✅ Render health check successful (HTTP $http_code)"
+            # jq is pre-installed on ubuntu-latest runners
             echo "$body" | jq . 2>/dev/null || echo "$body"
             echo "success=true" >> $GITHUB_OUTPUT
           else
@@ -221,7 +225,7 @@ jobs:
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "This workflow runs **every 5 minutes** to keep the application active." >> $GITHUB_STEP_SUMMARY
+          echo "This workflow runs **every 10 minutes** to keep the application active." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Endpoints Used" >> $GITHUB_STEP_SUMMARY
           echo "- **Ping**: \`/ping\` - Lightweight ping for keepalive (returns 'pong')" >> $GITHUB_STEP_SUMMARY
