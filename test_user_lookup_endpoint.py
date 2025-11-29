@@ -123,7 +123,6 @@ def create_test_user(client, email="testuser@example.com", username="testuser123
     data = response.get_json()
     
     # Update the username directly in the database
-    import sqlite3
     conn = sqlite3.connect(str(final_backend_postgresql.DB_PATH))
     cursor = conn.cursor()
     cursor.execute("UPDATE users SET username = ? WHERE email = ?", (username, email))

@@ -5779,7 +5779,7 @@ def get_user(identifier):
             return jsonify({"success": False, "message": "User not found"}), 404
 
         # Get the user's ID for follow queries (in case we looked up by username)
-        user_id = user["id"]
+        found_user_id = user["id"]
 
         # Check if current user follows this user
         cursor.execute(
@@ -5790,7 +5790,7 @@ def get_user(identifier):
             SELECT id FROM follows
             WHERE follower_id = ? AND followed_id = ?
             """,
-            (current_user_id, user_id)
+            (current_user_id, found_user_id)
         )
         is_following = cursor.fetchone() is not None
 
@@ -5803,7 +5803,7 @@ def get_user(identifier):
             SELECT COUNT(*) as count FROM follows
             WHERE followed_id = ?
             """,
-            (user_id,)
+            (found_user_id,)
         )
         followers_count = cursor.fetchone()["count"]
 
@@ -5816,7 +5816,7 @@ def get_user(identifier):
             SELECT COUNT(*) as count FROM follows
             WHERE follower_id = ?
             """,
-            (user_id,)
+            (found_user_id,)
         )
         following_count = cursor.fetchone()["count"]
 
@@ -5829,7 +5829,7 @@ def get_user(identifier):
             SELECT COUNT(*) as count FROM posts
             WHERE user_id = ?
             """,
-            (user_id,)
+            (found_user_id,)
         )
         posts_count = cursor.fetchone()["count"]
 
