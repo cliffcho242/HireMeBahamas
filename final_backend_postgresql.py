@@ -2257,6 +2257,36 @@ def init_database():
                 """
                 )
 
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        id SERIAL PRIMARY KEY,
+                        participant_1_id INTEGER NOT NULL,
+                        participant_2_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(participant_1_id, participant_2_id),
+                        FOREIGN KEY (participant_1_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (participant_2_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS messages (
+                        id SERIAL PRIMARY KEY,
+                        conversation_id INTEGER NOT NULL,
+                        sender_id INTEGER NOT NULL,
+                        content TEXT NOT NULL,
+                        is_read BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
+                        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+
             else:
                 # SQLite syntax (original)
                 cursor.execute(
@@ -2389,6 +2419,36 @@ def init_database():
                         UNIQUE(sender_id, receiver_id),
                         FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE,
                         FOREIGN KEY (receiver_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        participant_1_id INTEGER NOT NULL,
+                        participant_2_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(participant_1_id, participant_2_id),
+                        FOREIGN KEY (participant_1_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (participant_2_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS messages (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        conversation_id INTEGER NOT NULL,
+                        sender_id INTEGER NOT NULL,
+                        content TEXT NOT NULL,
+                        is_read INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
+                        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE
                     )
                 """
                 )
@@ -2695,6 +2755,60 @@ def migrate_missing_tables(cursor, conn):
                 conn.commit()
                 print("✅ Created missing 'likes' table")
 
+            # Check and create conversations table
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'conversations'
+                ) as table_exists
+            """
+            )
+            if not cursor.fetchone()["table_exists"]:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        id SERIAL PRIMARY KEY,
+                        participant_1_id INTEGER NOT NULL,
+                        participant_2_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(participant_1_id, participant_2_id),
+                        FOREIGN KEY (participant_1_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (participant_2_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'conversations' table")
+
+            # Check and create messages table
+            cursor.execute(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'messages'
+                ) as table_exists
+            """
+            )
+            if not cursor.fetchone()["table_exists"]:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS messages (
+                        id SERIAL PRIMARY KEY,
+                        conversation_id INTEGER NOT NULL,
+                        sender_id INTEGER NOT NULL,
+                        content TEXT NOT NULL,
+                        is_read BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
+                        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'messages' table")
+
         else:
             # SQLite version
             # Check and create follows table
@@ -2820,6 +2934,56 @@ def migrate_missing_tables(cursor, conn):
                 )
                 conn.commit()
                 print("✅ Created missing 'likes' table")
+
+            # Check and create conversations table
+            cursor.execute(
+                """
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='conversations'
+            """
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        participant_1_id INTEGER NOT NULL,
+                        participant_2_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(participant_1_id, participant_2_id),
+                        FOREIGN KEY (participant_1_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (participant_2_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'conversations' table")
+
+            # Check and create messages table
+            cursor.execute(
+                """
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='messages'
+            """
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS messages (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        conversation_id INTEGER NOT NULL,
+                        sender_id INTEGER NOT NULL,
+                        content TEXT NOT NULL,
+                        is_read INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
+                        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """
+                )
+                conn.commit()
+                print("✅ Created missing 'messages' table")
 
     except Exception as e:
         print(f"⚠️ Table migration warning: {e}")
@@ -7133,6 +7297,848 @@ def get_friend_suggestions():
         )
     finally:
         # Always clean up database resources to prevent connection leaks
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
+
+
+# ==========================================
+# MESSAGES ENDPOINTS
+# ==========================================
+
+
+@app.route("/api/messages/conversations", methods=["GET", "OPTIONS"])
+def get_conversations():
+    """
+    Get all conversations for the current user.
+    Returns conversations with participant info and messages.
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    conn = None
+    cursor = None
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "Authorization token required"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get all conversations where user is a participant
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT c.id, c.participant_1_id, c.participant_2_id, 
+                       c.created_at, c.updated_at,
+                       u1.first_name as p1_first_name, u1.last_name as p1_last_name,
+                       u1.avatar_url as p1_avatar_url,
+                       u2.first_name as p2_first_name, u2.last_name as p2_last_name,
+                       u2.avatar_url as p2_avatar_url
+                FROM conversations c
+                JOIN users u1 ON c.participant_1_id = u1.id
+                JOIN users u2 ON c.participant_2_id = u2.id
+                WHERE c.participant_1_id = %s OR c.participant_2_id = %s
+                ORDER BY c.updated_at DESC
+                """,
+                (user_id, user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT c.id, c.participant_1_id, c.participant_2_id, 
+                       c.created_at, c.updated_at,
+                       u1.first_name as p1_first_name, u1.last_name as p1_last_name,
+                       u1.avatar_url as p1_avatar_url,
+                       u2.first_name as p2_first_name, u2.last_name as p2_last_name,
+                       u2.avatar_url as p2_avatar_url
+                FROM conversations c
+                JOIN users u1 ON c.participant_1_id = u1.id
+                JOIN users u2 ON c.participant_2_id = u2.id
+                WHERE c.participant_1_id = ? OR c.participant_2_id = ?
+                ORDER BY c.updated_at DESC
+                """,
+                (user_id, user_id),
+            )
+
+        conversations_data = cursor.fetchall()
+        conversations = []
+
+        for conv in conversations_data:
+            conversation_id = conv["id"]
+            
+            # Get messages for this conversation
+            if USE_POSTGRESQL:
+                cursor.execute(
+                    """
+                    SELECT m.id, m.conversation_id, m.sender_id, m.content, 
+                           m.is_read, m.created_at,
+                           u.first_name, u.last_name
+                    FROM messages m
+                    JOIN users u ON m.sender_id = u.id
+                    WHERE m.conversation_id = %s
+                    ORDER BY m.created_at ASC
+                    """,
+                    (conversation_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT m.id, m.conversation_id, m.sender_id, m.content, 
+                           m.is_read, m.created_at,
+                           u.first_name, u.last_name
+                    FROM messages m
+                    JOIN users u ON m.sender_id = u.id
+                    WHERE m.conversation_id = ?
+                    ORDER BY m.created_at ASC
+                    """,
+                    (conversation_id,),
+                )
+
+            messages_data = cursor.fetchall()
+            messages = [
+                {
+                    "id": msg["id"],
+                    "conversation_id": msg["conversation_id"],
+                    "sender_id": msg["sender_id"],
+                    "content": msg["content"],
+                    "is_read": bool(msg["is_read"]),
+                    "created_at": msg["created_at"].isoformat() if hasattr(msg["created_at"], 'isoformat') else str(msg["created_at"]),
+                    "sender": {
+                        "first_name": msg["first_name"] or "",
+                        "last_name": msg["last_name"] or "",
+                    },
+                }
+                for msg in messages_data
+            ]
+
+            conversations.append({
+                "id": conv["id"],
+                "participant_1_id": conv["participant_1_id"],
+                "participant_2_id": conv["participant_2_id"],
+                "created_at": conv["created_at"].isoformat() if hasattr(conv["created_at"], 'isoformat') else str(conv["created_at"]),
+                "updated_at": conv["updated_at"].isoformat() if hasattr(conv["updated_at"], 'isoformat') and conv["updated_at"] else str(conv["updated_at"]) if conv["updated_at"] else None,
+                "participant_1": {
+                    "first_name": conv["p1_first_name"] or "",
+                    "last_name": conv["p1_last_name"] or "",
+                    "avatar_url": conv["p1_avatar_url"] or "",
+                },
+                "participant_2": {
+                    "first_name": conv["p2_first_name"] or "",
+                    "last_name": conv["p2_last_name"] or "",
+                    "avatar_url": conv["p2_avatar_url"] or "",
+                },
+                "messages": messages,
+            })
+
+        return jsonify(conversations), 200
+
+    except Exception as e:
+        logger.error(f"Error getting conversations: {str(e)}", exc_info=True)
+        return (
+            jsonify({"success": False, "message": "Failed to get conversations"}),
+            500,
+        )
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
+
+
+@app.route("/api/messages/conversations", methods=["POST"])
+def create_conversation():
+    """
+    Create a new conversation or return existing one between two users.
+    """
+    conn = None
+    cursor = None
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "Authorization token required"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        data = request.get_json()
+        participant_id = data.get("participant_id")
+        
+        if not participant_id:
+            return jsonify({"success": False, "message": "participant_id is required"}), 400
+
+        # Convert to int if string
+        try:
+            participant_id = int(participant_id)
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "message": "Invalid participant_id"}), 400
+
+        if participant_id == user_id:
+            return jsonify({"success": False, "message": "Cannot create conversation with yourself"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if participant exists
+        if USE_POSTGRESQL:
+            cursor.execute("SELECT id FROM users WHERE id = %s", (participant_id,))
+        else:
+            cursor.execute("SELECT id FROM users WHERE id = ?", (participant_id,))
+        
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "User not found"}), 404
+
+        # Check if conversation already exists (check both orderings)
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT c.id, c.participant_1_id, c.participant_2_id, 
+                       c.created_at, c.updated_at,
+                       u1.first_name as p1_first_name, u1.last_name as p1_last_name,
+                       u1.avatar_url as p1_avatar_url,
+                       u2.first_name as p2_first_name, u2.last_name as p2_last_name,
+                       u2.avatar_url as p2_avatar_url
+                FROM conversations c
+                JOIN users u1 ON c.participant_1_id = u1.id
+                JOIN users u2 ON c.participant_2_id = u2.id
+                WHERE (c.participant_1_id = %s AND c.participant_2_id = %s)
+                   OR (c.participant_1_id = %s AND c.participant_2_id = %s)
+                """,
+                (user_id, participant_id, participant_id, user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT c.id, c.participant_1_id, c.participant_2_id, 
+                       c.created_at, c.updated_at,
+                       u1.first_name as p1_first_name, u1.last_name as p1_last_name,
+                       u1.avatar_url as p1_avatar_url,
+                       u2.first_name as p2_first_name, u2.last_name as p2_last_name,
+                       u2.avatar_url as p2_avatar_url
+                FROM conversations c
+                JOIN users u1 ON c.participant_1_id = u1.id
+                JOIN users u2 ON c.participant_2_id = u2.id
+                WHERE (c.participant_1_id = ? AND c.participant_2_id = ?)
+                   OR (c.participant_1_id = ? AND c.participant_2_id = ?)
+                """,
+                (user_id, participant_id, participant_id, user_id),
+            )
+
+        existing = cursor.fetchone()
+        
+        if existing:
+            # Return existing conversation with messages
+            conversation_id = existing["id"]
+            
+            # Get messages for this conversation
+            if USE_POSTGRESQL:
+                cursor.execute(
+                    """
+                    SELECT m.id, m.conversation_id, m.sender_id, m.content, 
+                           m.is_read, m.created_at,
+                           u.first_name, u.last_name
+                    FROM messages m
+                    JOIN users u ON m.sender_id = u.id
+                    WHERE m.conversation_id = %s
+                    ORDER BY m.created_at ASC
+                    """,
+                    (conversation_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT m.id, m.conversation_id, m.sender_id, m.content, 
+                           m.is_read, m.created_at,
+                           u.first_name, u.last_name
+                    FROM messages m
+                    JOIN users u ON m.sender_id = u.id
+                    WHERE m.conversation_id = ?
+                    ORDER BY m.created_at ASC
+                    """,
+                    (conversation_id,),
+                )
+
+            messages_data = cursor.fetchall()
+            messages = [
+                {
+                    "id": msg["id"],
+                    "conversation_id": msg["conversation_id"],
+                    "sender_id": msg["sender_id"],
+                    "content": msg["content"],
+                    "is_read": bool(msg["is_read"]),
+                    "created_at": msg["created_at"].isoformat() if hasattr(msg["created_at"], 'isoformat') else str(msg["created_at"]),
+                    "sender": {
+                        "first_name": msg["first_name"] or "",
+                        "last_name": msg["last_name"] or "",
+                    },
+                }
+                for msg in messages_data
+            ]
+
+            return jsonify({
+                "id": existing["id"],
+                "participant_1_id": existing["participant_1_id"],
+                "participant_2_id": existing["participant_2_id"],
+                "created_at": existing["created_at"].isoformat() if hasattr(existing["created_at"], 'isoformat') else str(existing["created_at"]),
+                "updated_at": existing["updated_at"].isoformat() if hasattr(existing["updated_at"], 'isoformat') and existing["updated_at"] else str(existing["updated_at"]) if existing["updated_at"] else None,
+                "participant_1": {
+                    "first_name": existing["p1_first_name"] or "",
+                    "last_name": existing["p1_last_name"] or "",
+                    "avatar_url": existing["p1_avatar_url"] or "",
+                },
+                "participant_2": {
+                    "first_name": existing["p2_first_name"] or "",
+                    "last_name": existing["p2_last_name"] or "",
+                    "avatar_url": existing["p2_avatar_url"] or "",
+                },
+                "messages": messages,
+            }), 200
+
+        # Create new conversation
+        now = datetime.now(timezone.utc)
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                INSERT INTO conversations (participant_1_id, participant_2_id, created_at, updated_at)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id
+                """,
+                (user_id, participant_id, now, now),
+            )
+            conversation_id = cursor.fetchone()["id"]
+        else:
+            cursor.execute(
+                """
+                INSERT INTO conversations (participant_1_id, participant_2_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (user_id, participant_id, now, now),
+            )
+            conversation_id = cursor.lastrowid
+
+        conn.commit()
+
+        # Get participant info for response
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT first_name, last_name, avatar_url FROM users WHERE id = %s
+                """,
+                (user_id,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT first_name, last_name, avatar_url FROM users WHERE id = ?
+                """,
+                (user_id,),
+            )
+        p1 = cursor.fetchone()
+
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT first_name, last_name, avatar_url FROM users WHERE id = %s
+                """,
+                (participant_id,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT first_name, last_name, avatar_url FROM users WHERE id = ?
+                """,
+                (participant_id,),
+            )
+        p2 = cursor.fetchone()
+
+        return jsonify({
+            "id": conversation_id,
+            "participant_1_id": user_id,
+            "participant_2_id": participant_id,
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat(),
+            "participant_1": {
+                "first_name": p1["first_name"] or "" if p1 else "",
+                "last_name": p1["last_name"] or "" if p1 else "",
+                "avatar_url": p1["avatar_url"] or "" if p1 else "",
+            },
+            "participant_2": {
+                "first_name": p2["first_name"] or "" if p2 else "",
+                "last_name": p2["last_name"] or "" if p2 else "",
+                "avatar_url": p2["avatar_url"] or "" if p2 else "",
+            },
+            "messages": [],
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error creating conversation: {str(e)}", exc_info=True)
+        return (
+            jsonify({"success": False, "message": "Failed to create conversation"}),
+            500,
+        )
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
+
+
+@app.route("/api/messages/conversations/<int:conversation_id>/messages", methods=["GET", "OPTIONS"])
+def get_conversation_messages(conversation_id):
+    """
+    Get all messages in a conversation.
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    conn = None
+    cursor = None
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "Authorization token required"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Verify user is part of the conversation
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT id FROM conversations 
+                WHERE id = %s AND (participant_1_id = %s OR participant_2_id = %s)
+                """,
+                (conversation_id, user_id, user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id FROM conversations 
+                WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)
+                """,
+                (conversation_id, user_id, user_id),
+            )
+
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "Conversation not found or access denied"}), 404
+
+        # Get messages
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT m.id, m.conversation_id, m.sender_id, m.content, 
+                       m.is_read, m.created_at,
+                       u.first_name, u.last_name
+                FROM messages m
+                JOIN users u ON m.sender_id = u.id
+                WHERE m.conversation_id = %s
+                ORDER BY m.created_at ASC
+                """,
+                (conversation_id,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT m.id, m.conversation_id, m.sender_id, m.content, 
+                       m.is_read, m.created_at,
+                       u.first_name, u.last_name
+                FROM messages m
+                JOIN users u ON m.sender_id = u.id
+                WHERE m.conversation_id = ?
+                ORDER BY m.created_at ASC
+                """,
+                (conversation_id,),
+            )
+
+        messages_data = cursor.fetchall()
+        messages = [
+            {
+                "id": msg["id"],
+                "conversation_id": msg["conversation_id"],
+                "sender_id": msg["sender_id"],
+                "content": msg["content"],
+                "is_read": bool(msg["is_read"]),
+                "created_at": msg["created_at"].isoformat() if hasattr(msg["created_at"], 'isoformat') else str(msg["created_at"]),
+                "sender": {
+                    "first_name": msg["first_name"] or "",
+                    "last_name": msg["last_name"] or "",
+                },
+            }
+            for msg in messages_data
+        ]
+
+        return jsonify(messages), 200
+
+    except Exception as e:
+        logger.error(f"Error getting messages: {str(e)}", exc_info=True)
+        return (
+            jsonify({"success": False, "message": "Failed to get messages"}),
+            500,
+        )
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
+
+
+@app.route("/api/messages/conversations/<int:conversation_id>/messages", methods=["POST"])
+def send_message(conversation_id):
+    """
+    Send a message in a conversation.
+    """
+    conn = None
+    cursor = None
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "Authorization token required"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        data = request.get_json()
+        content = data.get("content", "").strip()
+        
+        if not content:
+            return jsonify({"success": False, "message": "Message content is required"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Verify user is part of the conversation
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT id FROM conversations 
+                WHERE id = %s AND (participant_1_id = %s OR participant_2_id = %s)
+                """,
+                (conversation_id, user_id, user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id FROM conversations 
+                WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)
+                """,
+                (conversation_id, user_id, user_id),
+            )
+
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "Conversation not found or access denied"}), 404
+
+        # Create message
+        now = datetime.now(timezone.utc)
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                INSERT INTO messages (conversation_id, sender_id, content, is_read, created_at)
+                VALUES (%s, %s, %s, FALSE, %s)
+                RETURNING id
+                """,
+                (conversation_id, user_id, content, now),
+            )
+            message_id = cursor.fetchone()["id"]
+        else:
+            cursor.execute(
+                """
+                INSERT INTO messages (conversation_id, sender_id, content, is_read, created_at)
+                VALUES (?, ?, ?, 0, ?)
+                """,
+                (conversation_id, user_id, content, now),
+            )
+            message_id = cursor.lastrowid
+
+        # Update conversation updated_at
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "UPDATE conversations SET updated_at = %s WHERE id = %s",
+                (now, conversation_id),
+            )
+        else:
+            cursor.execute(
+                "UPDATE conversations SET updated_at = ? WHERE id = ?",
+                (now, conversation_id),
+            )
+
+        conn.commit()
+
+        # Get sender info for response
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "SELECT first_name, last_name FROM users WHERE id = %s",
+                (user_id,),
+            )
+        else:
+            cursor.execute(
+                "SELECT first_name, last_name FROM users WHERE id = ?",
+                (user_id,),
+            )
+        sender = cursor.fetchone()
+
+        return jsonify({
+            "id": message_id,
+            "conversation_id": conversation_id,
+            "sender_id": user_id,
+            "content": content,
+            "is_read": False,
+            "created_at": now.isoformat(),
+            "sender": {
+                "first_name": sender["first_name"] or "" if sender else "",
+                "last_name": sender["last_name"] or "" if sender else "",
+            },
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error sending message: {str(e)}", exc_info=True)
+        return (
+            jsonify({"success": False, "message": "Failed to send message"}),
+            500,
+        )
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
+
+
+@app.route("/api/messages/messages/<int:message_id>/read", methods=["PUT", "OPTIONS"])
+def mark_message_read(message_id):
+    """
+    Mark a message as read.
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    conn = None
+    cursor = None
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "Authorization token required"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get message and verify user is recipient (not sender)
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT m.id, m.sender_id, c.participant_1_id, c.participant_2_id
+                FROM messages m
+                JOIN conversations c ON m.conversation_id = c.id
+                WHERE m.id = %s
+                """,
+                (message_id,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT m.id, m.sender_id, c.participant_1_id, c.participant_2_id
+                FROM messages m
+                JOIN conversations c ON m.conversation_id = c.id
+                WHERE m.id = ?
+                """,
+                (message_id,),
+            )
+
+        message = cursor.fetchone()
+        if not message:
+            return jsonify({"success": False, "message": "Message not found"}), 404
+
+        # Verify user is part of the conversation but not the sender
+        is_participant = user_id in (message["participant_1_id"], message["participant_2_id"])
+        is_sender = user_id == message["sender_id"]
+        
+        if not is_participant:
+            return jsonify({"success": False, "message": "Access denied"}), 403
+        
+        if is_sender:
+            return jsonify({"success": False, "message": "Cannot mark your own message as read"}), 400
+
+        # Mark as read
+        if USE_POSTGRESQL:
+            cursor.execute(
+                "UPDATE messages SET is_read = TRUE WHERE id = %s",
+                (message_id,),
+            )
+        else:
+            cursor.execute(
+                "UPDATE messages SET is_read = 1 WHERE id = ?",
+                (message_id,),
+            )
+
+        conn.commit()
+
+        return jsonify({"success": True, "message": "Message marked as read"}), 200
+
+    except Exception as e:
+        logger.error(f"Error marking message as read: {str(e)}", exc_info=True)
+        return (
+            jsonify({"success": False, "message": "Failed to mark message as read"}),
+            500,
+        )
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
+
+
+@app.route("/api/messages/unread-count", methods=["GET", "OPTIONS"])
+def get_unread_message_count():
+    """
+    Get count of unread messages for current user.
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    conn = None
+    cursor = None
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({"success": False, "message": "Authorization token required"}),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Count unread messages where user is recipient (not sender)
+        if USE_POSTGRESQL:
+            cursor.execute(
+                """
+                SELECT COUNT(*) as unread_count
+                FROM messages m
+                JOIN conversations c ON m.conversation_id = c.id
+                WHERE m.is_read = FALSE 
+                AND m.sender_id != %s
+                AND (c.participant_1_id = %s OR c.participant_2_id = %s)
+                """,
+                (user_id, user_id, user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT COUNT(*) as unread_count
+                FROM messages m
+                JOIN conversations c ON m.conversation_id = c.id
+                WHERE m.is_read = 0 
+                AND m.sender_id != ?
+                AND (c.participant_1_id = ? OR c.participant_2_id = ?)
+                """,
+                (user_id, user_id, user_id),
+            )
+
+        result = cursor.fetchone()
+        unread_count = result["unread_count"] if result else 0
+
+        return jsonify({"unread_count": unread_count}), 200
+
+    except Exception as e:
+        logger.error(f"Error getting unread count: {str(e)}", exc_info=True)
+        return (
+            jsonify({"success": False, "message": "Failed to get unread count"}),
+            500,
+        )
+    finally:
         if cursor:
             try:
                 cursor.close()
