@@ -1,13 +1,5 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
-import PostFeed from '../components/PostFeed';
-import Stories from '../components/Stories';
-import CreatePostModal from '../components/CreatePostModal';
-import CreateEventModal from '../components/CreateEventModal';
-import EventReminderSystem from '../components/EventReminderSystem';
-import FriendsOnline from '../components/FriendsOnline';
-import Notifications from '../components/Notifications';
-import Messages from '../components/Messages';
 import { useAuth } from '../contexts/AuthContext';
 import {
   UserGroupIcon,
@@ -24,6 +16,62 @@ import {
   ClockIcon
 } from '@heroicons/react/24/outline';
 import { HomeIcon as HomeIconSolid, ChatBubbleLeftRightIcon as MessagesIconSolid } from '@heroicons/react/24/solid';
+
+// Lazy load heavy components for better initial load time
+const PostFeed = lazy(() => import('../components/PostFeed'));
+const Stories = lazy(() => import('../components/Stories'));
+const CreatePostModal = lazy(() => import('../components/CreatePostModal'));
+const CreateEventModal = lazy(() => import('../components/CreateEventModal'));
+const EventReminderSystem = lazy(() => import('../components/EventReminderSystem'));
+const FriendsOnline = lazy(() => import('../components/FriendsOnline'));
+const Notifications = lazy(() => import('../components/Notifications'));
+const Messages = lazy(() => import('../components/Messages'));
+
+// Loading fallback components
+const StoriesLoader = () => (
+  <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+    <div className="flex space-x-4 overflow-x-auto pb-2">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex-shrink-0 w-20 h-28 bg-gray-200 rounded-lg animate-pulse"></div>
+      ))}
+    </div>
+  </div>
+);
+
+const PostFeedLoader = () => (
+  <div className="space-y-4">
+    {[1, 2].map((i) => (
+      <div key={i} className="bg-white rounded-lg shadow-sm p-4">
+        <div className="flex space-x-3 mb-4">
+          <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+          <div className="flex-1">
+            <div className="h-4 bg-gray-200 rounded w-1/3 mb-2 animate-pulse"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          </div>
+        </div>
+        <div className="h-4 bg-gray-200 rounded w-full mb-2 animate-pulse"></div>
+        <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+      </div>
+    ))}
+  </div>
+);
+
+const SidebarLoader = () => (
+  <div className="bg-white rounded-lg shadow-sm p-4">
+    <div className="space-y-3">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+          <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const IconButtonLoader = () => (
+  <div className="w-9 h-9 bg-gray-200 rounded-full animate-pulse"></div>
+);
 
 const Home: React.FC = () => {
   const { user } = useAuth();
@@ -117,8 +165,12 @@ const Home: React.FC = () => {
             >
               <PlusIcon className="w-5 h-5 4xl:w-6 4xl:h-6" />
             </button>
-            <Messages />
-            <Notifications />
+            <Suspense fallback={<IconButtonLoader />}>
+              <Messages />
+            </Suspense>
+            <Suspense fallback={<IconButtonLoader />}>
+              <Notifications />
+            </Suspense>
 
             {user && (
               <div className="flex items-center space-x-2 ml-2">
@@ -220,7 +272,9 @@ const Home: React.FC = () => {
           <div className="lg:col-span-2 w-full">
             {/* Stories - Responsive */}
             <div className="mb-3 sm:mb-4">
-              <Stories />
+              <Suspense fallback={<StoriesLoader />}>
+                <Stories />
+              </Suspense>
             </div>
 
             {/* Create Post Card - Responsive */}
@@ -266,14 +320,18 @@ const Home: React.FC = () => {
             )}
 
             {/* Posts Feed */}
-            <PostFeed key={refreshPosts} />
+            <Suspense fallback={<PostFeedLoader />}>
+              <PostFeed key={refreshPosts} />
+            </Suspense>
           </div>
 
           {/* Right Sidebar */}
           <div className="hidden xl:block xl:col-span-1">
             <div className="space-y-4 sticky top-20">
               {/* Friends Online */}
-              <FriendsOnline />
+              <Suspense fallback={<SidebarLoader />}>
+                <FriendsOnline />
+              </Suspense>
 
               {/* Sponsored/Ads Section */}
               <div className="bg-white rounded-lg shadow-sm p-4">
@@ -294,24 +352,30 @@ const Home: React.FC = () => {
       </div>
 
       {/* Create Post Modal */}
-      <CreatePostModal
-        isOpen={isCreatePostModalOpen}
-        onClose={() => setIsCreatePostModalOpen(false)}
-        onPostCreated={() => setRefreshPosts(prev => prev + 1)}
-      />
+      <Suspense fallback={null}>
+        <CreatePostModal
+          isOpen={isCreatePostModalOpen}
+          onClose={() => setIsCreatePostModalOpen(false)}
+          onPostCreated={() => setRefreshPosts(prev => prev + 1)}
+        />
+      </Suspense>
 
       {/* Create Event Modal */}
-      <CreateEventModal
-        isOpen={isCreateEventModalOpen}
-        onClose={() => setIsCreateEventModalOpen(false)}
-        onEventCreated={() => {
-          setRefreshPosts(prev => prev + 1);
-          // Additional logic for event creation can be added here
-        }}
-      />
+      <Suspense fallback={null}>
+        <CreateEventModal
+          isOpen={isCreateEventModalOpen}
+          onClose={() => setIsCreateEventModalOpen(false)}
+          onEventCreated={() => {
+            setRefreshPosts(prev => prev + 1);
+            // Additional logic for event creation can be added here
+          }}
+        />
+      </Suspense>
 
       {/* Event Reminder System - Shows notifications for upcoming video calls */}
-      <EventReminderSystem events={[]} />
+      <Suspense fallback={null}>
+        <EventReminderSystem events={[]} />
+      </Suspense>
     </div>
   );
 };
