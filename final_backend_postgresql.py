@@ -5502,6 +5502,8 @@ def get_user(user_id):
     # Track request timing for timeout detection
     request_start = time.time()
 
+    conn = None
+    cursor = None
     try:
         # Verify authentication
         auth_header = request.headers.get("Authorization")
@@ -5606,16 +5608,11 @@ def get_user(user_id):
 
         # Check for timeout after database queries
         if _check_request_timeout(request_start, API_REQUEST_TIMEOUT_SECONDS, "get user (after db)"):
-            cursor.close()
-            return_db_connection(conn)
             return jsonify({
                 "success": False, 
                 "message": "Request timed out. Please try again.",
                 "error_code": "TIMEOUT"
             }), 504
-
-        cursor.close()
-        return_db_connection(conn)
 
         return jsonify({
             "success": True,
@@ -5644,6 +5641,15 @@ def get_user(user_id):
     except Exception as e:
         print(f"Get user error: {str(e)}")
         return jsonify({"success": False, "message": f"Failed to fetch user: {str(e)}"}), 500
+    finally:
+        # Always clean up database resources to prevent connection leaks
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
 
 
 @app.route("/api/users/list", methods=["GET", "OPTIONS"])
