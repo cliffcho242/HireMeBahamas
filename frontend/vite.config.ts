@@ -1,11 +1,24 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import compression from 'vite-plugin-compression';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    // Gzip compression for faster loading
+    compression({
+      algorithm: 'gzip',
+      ext: '.gz',
+      threshold: 1024,
+    }),
+    // Brotli compression for even faster loading
+    compression({
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      threshold: 1024,
+    }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
@@ -85,12 +98,22 @@ export default defineConfig({
     target: 'es2015',
     minify: 'terser',
     cssCodeSplit: true,
-    chunkSizeWarningLimit: 1000, // Increase chunk size warning limit to 1000 kB (default is 500 kB)
+    chunkSizeWarningLimit: 1000,
+    sourcemap: 'hidden',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           ui: ['framer-motion', '@heroicons/react'],
+          forms: ['react-hook-form', '@hookform/resolvers', 'zod', 'yup'],
+          query: ['@tanstack/react-query', 'axios'],
+          utils: ['date-fns', 'clsx', 'tailwind-merge'],
         },
       },
     },
