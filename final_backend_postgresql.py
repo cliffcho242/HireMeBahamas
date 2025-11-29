@@ -7627,7 +7627,11 @@ def create_conversation():
                 "messages": messages,
             }), 200
 
-        # Create new conversation
+        # Create new conversation with canonical participant ordering
+        # Always store with participant_1_id < participant_2_id to prevent duplicates
+        p1_id = min(user_id, participant_id)
+        p2_id = max(user_id, participant_id)
+        
         now = datetime.now(timezone.utc)
         if USE_POSTGRESQL:
             cursor.execute(
@@ -7636,7 +7640,7 @@ def create_conversation():
                 VALUES (%s, %s, %s, %s)
                 RETURNING id
                 """,
-                (user_id, participant_id, now, now),
+                (p1_id, p2_id, now, now),
             )
             conversation_id = cursor.fetchone()["id"]
         else:
@@ -7645,7 +7649,7 @@ def create_conversation():
                 INSERT INTO conversations (participant_1_id, participant_2_id, created_at, updated_at)
                 VALUES (?, ?, ?, ?)
                 """,
-                (user_id, participant_id, now, now),
+                (p1_id, p2_id, now, now),
             )
             conversation_id = cursor.lastrowid
 
@@ -7657,14 +7661,14 @@ def create_conversation():
                 """
                 SELECT first_name, last_name, avatar_url FROM users WHERE id = %s
                 """,
-                (user_id,),
+                (p1_id,),
             )
         else:
             cursor.execute(
                 """
                 SELECT first_name, last_name, avatar_url FROM users WHERE id = ?
                 """,
-                (user_id,),
+                (p1_id,),
             )
         p1 = cursor.fetchone()
 
@@ -7673,21 +7677,21 @@ def create_conversation():
                 """
                 SELECT first_name, last_name, avatar_url FROM users WHERE id = %s
                 """,
-                (participant_id,),
+                (p2_id,),
             )
         else:
             cursor.execute(
                 """
                 SELECT first_name, last_name, avatar_url FROM users WHERE id = ?
                 """,
-                (participant_id,),
+                (p2_id,),
             )
         p2 = cursor.fetchone()
 
         return jsonify({
             "id": conversation_id,
-            "participant_1_id": user_id,
-            "participant_2_id": participant_id,
+            "participant_1_id": p1_id,
+            "participant_2_id": p2_id,
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),
             "participant_1": {
