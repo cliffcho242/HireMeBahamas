@@ -1,8 +1,9 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import { useMemo } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { AIMonitoringProvider } from './contexts/AIMonitoringContext';
@@ -42,6 +43,20 @@ const queryClient = new QueryClient({
   },
 });
 
+// Wrapper component to capture route for Speed Insights
+function SpeedInsightsWrapper() {
+  const location = useLocation();
+  
+  // Convert dynamic route paths to pattern format for proper aggregation
+  const route = useMemo(() => {
+    return location.pathname
+      .replace(/\/jobs\/\d+/, '/jobs/[id]')
+      .replace(/\/user\/\d+/, '/user/[userId]');
+  }, [location.pathname]);
+
+  return <SpeedInsights route={route} />;
+}
+
 function App() {
   return (
     <>
@@ -52,6 +67,7 @@ function App() {
               <AuthProvider>
                 <SocketProvider>
                   <AppContent />
+                  <SpeedInsightsWrapper />
                 </SocketProvider>
               </AuthProvider>
             </Router>
@@ -59,7 +75,6 @@ function App() {
         </AIErrorBoundary>
       </AIMonitoringProvider>
       <Analytics />
-      <SpeedInsights />
     </>
   );
 }
