@@ -98,7 +98,7 @@ const BannerContent: React.FC<BannerContentProps> = ({
                       Connecting to server...
                     </p>
                     <p className="text-xs sm:text-sm opacity-90">
-                      {message || 'The server may take up to 60 seconds to wake up.'}
+                      {message || 'This may take up to a minute on first request.'}
                     </p>
                   </div>
                 </>

@@ -43,7 +43,7 @@ export const useBackendHealth = () => {
           setHealth({
             isHealthy: false,
             isWaking: true,
-            message: 'Server is waking up... Please wait 30 seconds.',
+            message: 'Server is waking up... This may take up to a minute.',
             lastCheck: new Date(),
           });
           
