@@ -133,3 +133,26 @@ services:
     # External pinger URL: https://hiremebahamas.onrender.com/ping
     # ==========================================================================
     healthCheckPath: /health
+
+  # ==========================================================================
+  # KEEP-ALIVE BACKGROUND WORKER
+  # ==========================================================================
+  # 
+  # This background worker pings the web service every 70 seconds to prevent
+  # it from sleeping due to inactivity on Render's free tier.
+  # 
+  # Note: If using the Starter plan ($7/mo), this worker is not necessary
+  # as the service is always on. However, it provides additional reliability.
+  # ==========================================================================
+  - type: worker
+    name: keep-alive
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install requests
+    startCommand: python keep_alive.py
+    envVars:
+      - key: RENDER_EXTERNAL_URL
+        value: https://hiremebahamas.onrender.com
+      - key: PYTHONUNBUFFERED
+        value: "true"
