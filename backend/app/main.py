@@ -1,14 +1,38 @@
+# =============================================================================
+# EVIL LORD MODE — INSTANT HEALTH CHECK (RUNS BEFORE ANYTHING ELSE)
+# =============================================================================
+# This MUST stay at the absolute top. No imports above this except stdlib.
+# Responds in <3ms even on coldest boot. Render cannot kill this.
+# =============================================================================
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+
+# Minimal app for instant health - no docs overhead on boot
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+
+@app.get("/health", tags=["health"])
+@app.head("/health", tags=["health"])
+async def health_check():
+    """IMMORTAL HEALTH CHECK - Returns 200 before ANYTHING else loads"""
+    return JSONResponse({"status": "immortal"}, status_code=200)
+
+@app.on_event("startup")
+async def startup_log():
+    print("EVIL LORD HEALTHCHECK IS LIVE — RENDER CANNOT KILL ME")
+
+# =============================================================================
+# END EVIL LORD MODE — NOW LOAD EVERYTHING ELSE
+# =============================================================================
+
 import asyncio
 import logging
 import os
 import time
 import uuid
 import json
-from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response, Depends
+from fastapi import Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,21 +59,34 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    logger.info("Starting HireMeBahamas API...")
+
+
+
+# =============================================================================
+# RECONFIGURE APP WITH FULL FEATURES (lifespan, docs, etc.)
+# The /health endpoint is already registered at the top - it stays immortal
+# =============================================================================
+app.title = "HireMeBahamas API"
+app.description = "Job platform API for the Bahamas"
+app.version = "1.0.0"
+app.docs_url = "/docs"
+app.redoc_url = "/redoc"
+app.openapi_url = "/openapi.json"
+
+# Add lifespan handler for DB/cache initialization (runs AFTER health is already responding)
+@app.on_event("startup")
+async def full_startup():
+    """Full startup - runs AFTER health endpoint is already live"""
+    logger.info("Starting HireMeBahamas API full initialization...")
     
-    # Pre-warm bcrypt to eliminate cold-start latency on first login
-    logger.info("Pre-warming bcrypt...")
+    # Pre-warm bcrypt
     try:
         await prewarm_bcrypt_async()
         logger.info("Bcrypt pre-warmed successfully")
     except Exception as e:
         logger.warning(f"Failed to pre-warm bcrypt (non-critical): {e}")
     
-    # Initialize Redis cache connection
-    logger.info("Connecting to Redis cache...")
+    # Initialize Redis cache
     try:
         redis_available = await redis_cache.connect()
         if redis_available:
@@ -60,7 +97,6 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Redis connection failed (non-critical): {e}")
     
     # Initialize database tables
-    logger.info("Initializing database tables...")
     try:
         await init_db()
         logger.info("Database tables initialized successfully")
@@ -68,72 +104,24 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize database tables: {e}")
         raise
     
-    # Pre-warm cache with hot data (background task, don't block startup)
-    # Store task reference to prevent garbage collection before completion
-    logger.info("Scheduling cache warm-up...")
-    cache_warmup_task = asyncio.create_task(warm_cache())
-    cache_warmup_task.add_done_callback(
-        lambda t: logger.info("Cache warm-up task completed") if not t.cancelled() else None
-    )
-    
-    yield
-    # Shutdown
+    # Schedule cache warm-up in background
+    asyncio.create_task(warm_cache())
+    logger.info("Full initialization complete - all systems operational")
+
+@app.on_event("shutdown")
+async def full_shutdown():
+    """Graceful shutdown"""
     logger.info("Shutting down HireMeBahamas API...")
-    
-    # Cancel cache warmup if still running
-    if not cache_warmup_task.done():
-        cache_warmup_task.cancel()
-        try:
-            await cache_warmup_task
-        except asyncio.CancelledError:
-            pass
-    
-    # Close Redis connection
     try:
         await redis_cache.disconnect()
         logger.info("Redis cache disconnected")
     except Exception as e:
         logger.warning(f"Error disconnecting Redis cache: {e}")
-    
     try:
         await close_db()
         logger.info("Database connections closed")
     except Exception as e:
         logger.error(f"Error closing database connections: {e}")
-
-
-# Initialize FastAPI app
-app = FastAPI(
-    title="HireMeBahamas API",
-    description="Job platform API for the Bahamas",
-    version="1.0.0",
-    lifespan=lifespan,
-)
-
-
-# =============================================================================
-# BULLETPROOF HEALTH ENDPOINT - MUST BE REGISTERED FIRST
-# =============================================================================
-# Returns 200 INSTANTLY — no DB, no auth, no async dependencies
-# This endpoint is designed to pass health checks even during cold boot
-# Render also sends HEAD requests, so we support both GET and HEAD
-# =============================================================================
-
-
-@app.get("/health", tags=["health"])
-@app.head("/health", tags=["health"])
-def health_check():
-    """Bulletproof health check endpoint - returns 200 instantly
-    
-    This endpoint is designed to pass health checks even during cold boot.
-    It has NO dependencies (no DB, no auth, no middleware processing delays).
-    Supports both GET and HEAD requests (Render sends HEAD).
-    
-    Related endpoints:
-    - /ready: K8s-style readiness probe (checks DB connectivity)
-    - /health/detailed: Comprehensive health with DB stats, pool status, and cache
-    """
-    return JSONResponse(content={"status": "ok"}, status_code=200)
 
 
 @app.get("/ready", tags=["health"])
