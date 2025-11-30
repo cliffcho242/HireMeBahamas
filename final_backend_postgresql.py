@@ -4590,6 +4590,57 @@ def health_check():
     return jsonify({"status": "ok"}), 200
 
 
+@app.route("/ready", methods=["GET"])
+@limiter.exempt
+def readiness_probe():
+    """
+    Database readiness probe for Render/Railway cold start handling.
+    
+    Returns 200 ONLY when PostgreSQL is fully connected and responsive.
+    Returns 503 if database is down or not ready.
+    
+    Use this as Render Health Check Path: /ready
+    Render will wait up to 180s for this to return 200 before routing traffic.
+    """
+    conn = None
+    cursor = None
+    try:
+        # 5 second timeout for database check
+        start_time = time.time()
+        
+        conn = get_db_connection()
+        if conn is None:
+            print("🔴 /ready: Database connection unavailable")
+            return jsonify({"status": "not_ready", "database": "unavailable"}), 503
+        
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
+        
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        
+        # Check if we exceeded 5 second timeout
+        if elapsed_ms > 5000:
+            print(f"🔴 /ready: Database check timed out ({elapsed_ms}ms)")
+            return jsonify({"status": "not_ready", "database": "timeout"}), 503
+        
+        print(f"🟢 /ready: DATABASE READY! Query completed in {elapsed_ms}ms")
+        return jsonify({"status": "ready", "database": "ok", "latency_ms": elapsed_ms}), 200
+        
+    except Exception as e:
+        error_msg = str(e)[:200]
+        print(f"🔴 /ready: Database error - {error_msg}")
+        return jsonify({"status": "not_ready", "database": "error", "error": error_msg}), 503
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
+
+
 @app.route("/ping", methods=["GET", "HEAD"])
 @limiter.exempt
 def ping():
