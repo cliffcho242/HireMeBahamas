@@ -2,7 +2,7 @@
 """Render Keep-Alive: Pings /health every 40s with exponential backoff."""
 import os, time, requests
 
-APP_URL = os.getenv("RENDER_EXTERNAL_URL", "https://hiremebahamas.onrender.com")
+APP_URL = os.getenv("RENDER_EXTERNAL_URL", "https://hiremebahamas.onrender.com").rstrip("/")
 delay, max_delay = 40, 300
 
 while True:
