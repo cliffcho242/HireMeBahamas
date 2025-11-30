@@ -16,6 +16,7 @@
     "verify:user-page": "node verify-user-page-deps.js"
   },
   "dependencies": {
+    "@apollo/client": "^3.11.0",
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
@@ -33,6 +34,9 @@
     "date-fns": "^3.3.1",
     "emoji-picker-react": "^4.14.2",
     "framer-motion": "^12.23.24",
+    "graphql": "^16.9.0",
+    "graphql-ws": "^5.16.0",
+    "idb-keyval": "^6.2.1",
     "immer": "^10.0.3",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
@@ -48,6 +52,7 @@
     "react-responsive": "^10.0.1",
     "react-router-dom": "^7.9.4",
     "socket.io-client": "^4.8.1",
+    "subscriptions-transport-ws": "^0.11.0",
     "tailwind-merge": "^2.6.0",
     "workbox-precaching": "^7.0.0",
     "workbox-routing": "^7.0.0",
