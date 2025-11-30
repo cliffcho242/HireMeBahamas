@@ -500,6 +500,33 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["STORIES_FOLDER"] = STORIES_FOLDER
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "mp4", "mov", "avi", "webm"}
 
+# ==========================================
+# SQL COLUMN DEFINITIONS
+# ==========================================
+# Explicit column lists prevent SELECT * anti-pattern and improve performance
+# by reducing network transfer and enabling better query optimization
+
+# Full user columns for profile/registration (all columns from users table)
+USER_COLUMNS_FULL = """
+    id, email, password_hash, first_name, last_name, user_type,
+    location, phone, bio, avatar_url, created_at, last_login,
+    is_active, is_available_for_hire, trade, username, occupation,
+    company_name, skills, experience, education
+"""
+
+# User columns for login (only what's needed for authentication + cache)
+USER_COLUMNS_LOGIN = """
+    id, email, password_hash, first_name, last_name, user_type,
+    location, phone, bio, avatar_url, is_available_for_hire, is_active
+"""
+
+# User columns for public profile display (excludes password_hash)
+USER_COLUMNS_PUBLIC = """
+    id, email, first_name, last_name, user_type, location, phone,
+    bio, avatar_url, created_at, is_active, is_available_for_hire,
+    trade, username, occupation, company_name, skills, experience, education
+"""
+
 # Ensure upload directories exist
 os.makedirs(STORIES_FOLDER, exist_ok=True)
 
@@ -5329,7 +5356,7 @@ def register():
             )
             user_id = cursor.lastrowid
             # Fetch the created user for SQLite
-            cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+            cursor.execute(f"SELECT {USER_COLUMNS_FULL} FROM users WHERE id = ?", (user_id,))
             user = cursor.fetchone()
 
         insert_ms = int((time.time() - insert_start) * 1000)
@@ -5544,9 +5571,9 @@ def login():
             cursor = conn.cursor()
 
             if USE_POSTGRESQL:
-                cursor.execute("SELECT * FROM users WHERE LOWER(email) = %s", (email,))
+                cursor.execute(f"SELECT {USER_COLUMNS_LOGIN} FROM users WHERE LOWER(email) = %s", (email,))
             else:
-                cursor.execute("SELECT * FROM users WHERE LOWER(email) = ?", (email,))
+                cursor.execute(f"SELECT {USER_COLUMNS_LOGIN} FROM users WHERE LOWER(email) = ?", (email,))
 
             user = cursor.fetchone()
             db_query_ms = int((time.time() - db_start) * 1000)
@@ -5809,9 +5836,9 @@ def refresh_token():
         cursor = conn.cursor()
 
         if USE_POSTGRESQL:
-            cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+            cursor.execute(f"SELECT {USER_COLUMNS_PUBLIC} FROM users WHERE id = %s", (user_id,))
         else:
-            cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+            cursor.execute(f"SELECT {USER_COLUMNS_PUBLIC} FROM users WHERE id = ?", (user_id,))
 
         user = cursor.fetchone()
         cursor.close()
@@ -6061,9 +6088,9 @@ def profile():
 
             # Get user from database (for both GET and after PUT update)
             if USE_POSTGRESQL:
-                cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+                cursor.execute(f"SELECT {USER_COLUMNS_PUBLIC} FROM users WHERE id = %s", (user_id,))
             else:
-                cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+                cursor.execute(f"SELECT {USER_COLUMNS_PUBLIC} FROM users WHERE id = ?", (user_id,))
 
             user = cursor.fetchone()
             
@@ -8534,6 +8561,7 @@ def get_conversations():
         cursor = conn.cursor()
 
         # Get all conversations where user is a participant
+        # OPTIMIZATION: Fetch conversations and messages in 2 queries instead of N+1
         if USE_POSTGRESQL:
             cursor.execute(
                 """
@@ -8570,13 +8598,16 @@ def get_conversations():
             )
 
         conversations_data = cursor.fetchall()
-        conversations = []
-
-        for conv in conversations_data:
-            conversation_id = conv["id"]
-            
-            # Get messages for this conversation
+        
+        # Collect all conversation IDs for batch message fetch
+        conversation_ids = [conv["id"] for conv in conversations_data]
+        
+        # OPTIMIZATION: Fetch all messages for all conversations in a single query
+        # This eliminates N+1 queries (was 1 query per conversation)
+        messages_by_conversation = {}
+        if conversation_ids:
             if USE_POSTGRESQL:
+                # Use ANY for efficient IN clause with array
                 cursor.execute(
                     """
                     SELECT m.id, m.conversation_id, m.sender_id, m.content, 
@@ -8584,28 +8615,35 @@ def get_conversations():
                            u.first_name, u.last_name
                     FROM messages m
                     JOIN users u ON m.sender_id = u.id
-                    WHERE m.conversation_id = %s
-                    ORDER BY m.created_at ASC
+                    WHERE m.conversation_id = ANY(%s)
+                    ORDER BY m.conversation_id, m.created_at ASC
                     """,
-                    (conversation_id,),
+                    (conversation_ids,),
                 )
             else:
+                # SQLite doesn't support ANY, use IN with placeholders
+                # SECURITY: placeholders contains only "?" characters, not user data
+                # The actual values are passed as parameterized query arguments
+                placeholders = ",".join("?" * len(conversation_ids))
                 cursor.execute(
-                    """
+                    f"""
                     SELECT m.id, m.conversation_id, m.sender_id, m.content, 
                            m.is_read, m.created_at,
                            u.first_name, u.last_name
                     FROM messages m
                     JOIN users u ON m.sender_id = u.id
-                    WHERE m.conversation_id = ?
-                    ORDER BY m.created_at ASC
+                    WHERE m.conversation_id IN ({placeholders})
+                    ORDER BY m.conversation_id, m.created_at ASC
                     """,
-                    (conversation_id,),
+                    tuple(conversation_ids),
                 )
-
-            messages_data = cursor.fetchall()
-            messages = [
-                {
+            
+            # Group messages by conversation_id
+            for msg in cursor.fetchall():
+                conv_id = msg["conversation_id"]
+                if conv_id not in messages_by_conversation:
+                    messages_by_conversation[conv_id] = []
+                messages_by_conversation[conv_id].append({
                     "id": msg["id"],
                     "conversation_id": msg["conversation_id"],
                     "sender_id": msg["sender_id"],
@@ -8616,10 +8654,11 @@ def get_conversations():
                         "first_name": msg["first_name"] or "",
                         "last_name": msg["last_name"] or "",
                     },
-                }
-                for msg in messages_data
-            ]
+                })
 
+        # Build response using pre-fetched messages
+        conversations = []
+        for conv in conversations_data:
             conversations.append({
                 "id": conv["id"],
                 "participant_1_id": conv["participant_1_id"],
@@ -8636,7 +8675,7 @@ def get_conversations():
                     "last_name": conv["p2_last_name"] or "",
                     "avatar_url": conv["p2_avatar_url"] or "",
                 },
-                "messages": messages,
+                "messages": messages_by_conversation.get(conv["id"], []),
             })
 
         return jsonify(conversations), 200
