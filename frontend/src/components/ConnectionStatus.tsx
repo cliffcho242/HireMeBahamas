@@ -126,7 +126,7 @@ const BannerContent: React.FC<BannerContentProps> = ({
                       {WAKE_UP_TIPS[tipIndex]}
                     </p>
                     <p className="text-xs sm:text-sm opacity-90 truncate">
-                      {message || `${getEstimatedTime()} • Attempt ${retryCount}/${maxRetries}`}
+                      {message || `${getEstimatedTime()} • Attempt ${Math.max(1, retryCount)}/${maxRetries}`}
                     </p>
                   </div>
                 </>
