@@ -13,13 +13,18 @@ This guide provides the **exact configuration** to deploy on Render connecting t
 ### 1️⃣ DATABASE_URL (Copy-Paste into Render Dashboard)
 
 ```
-postgresql+asyncpg://postgres:YOUR_PASSWORD@dpg-XXXX-a.oregon-postgres.render.com:5432/YOUR_DB?sslmode=require&connect_timeout=20&options=-c%20jit=off
+postgresql+asyncpg://postgres:YOUR_PASSWORD@YOUR_RAILWAY_HOST:5432/YOUR_DB?sslmode=require&connect_timeout=20&options=-c%20jit=off
 ```
 
 **Replace:**
 - `YOUR_PASSWORD` → Your Railway PostgreSQL password
-- `dpg-XXXX-a.oregon-postgres.render.com` → Your Railway PostgreSQL host
+- `YOUR_RAILWAY_HOST` → Your Railway PostgreSQL host (e.g., `viaduct.proxy.rlwy.net` or internal host)
 - `YOUR_DB` → Your database name
+
+**Example Railway URL:**
+```
+postgresql+asyncpg://postgres:abc123@viaduct.proxy.rlwy.net:12345/railway?sslmode=require&connect_timeout=20&options=-c%20jit=off
+```
 
 **Why these parameters:**
 | Parameter | Value | Purpose |

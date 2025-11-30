@@ -119,6 +119,8 @@ services:
     # ==========================================================================
     startCommand: gunicorn backend.app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --max-requests 1000 --max-requests-jitter 100 --timeout 120 --keep-alive 5 --bind 0.0.0.0:$PORT
     envVars:
+      # Note: This config is for the FastAPI backend (backend.app.main)
+      # FastAPI uses ENVIRONMENT variable. FLASK_ENV is not needed.
       - key: ENVIRONMENT
         value: production
       - key: SECRET_KEY

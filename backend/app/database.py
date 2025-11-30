@@ -172,11 +172,10 @@ engine_kwargs = {
     "max_overflow": POOL_MAX_OVERFLOW,
     "pool_pre_ping": True,  # CRITICAL: Validates connections before use
     "pool_timeout": POOL_TIMEOUT,
-    # poolclass is NOT specified - async engine uses AsyncAdaptedQueuePool automatically
 }
 
 # Add production-specific connection settings
-# These settings make connection failures PHYSICALLY IMPOSSIBLE
+# These settings significantly reduce the likelihood of connection failures
 if IS_PRODUCTION_DATABASE:
     # Aggressive connection recycling in production
     # 60 seconds is well under Railway's idle timeout
