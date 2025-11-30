@@ -230,27 +230,51 @@ Sentry.init({
 - ✅ Full-text search indexes (GIN index for job search)
 - ✅ Partial indexes for active records
 - ✅ Composite indexes for multi-column queries
+- ✅ **Explicit column lists** - Replace SELECT * with specific columns (USER_COLUMNS_LOGIN, USER_COLUMNS_PUBLIC)
+- ✅ **N+1 query elimination** - Batch queries using ANY() operator for conversations/messages
 
-### 2. API Response Optimization
+### 2. N+1 Query Prevention
+The conversations endpoint was optimized to eliminate N+1 queries:
+
+**Before (N+1 pattern):**
+```python
+# 1 query for conversations + N queries for messages (one per conversation)
+for conv in conversations:
+    cursor.execute("SELECT * FROM messages WHERE conversation_id = %s", (conv['id'],))
+```
+
+**After (Batch pattern):**
+```python
+# 2 queries total: 1 for conversations, 1 for ALL messages
+conversation_ids = [c['id'] for c in conversations]
+cursor.execute("SELECT * FROM messages WHERE conversation_id = ANY(%s)", (conversation_ids,))
+messages_by_conv = {}  # Group messages by conversation_id
+for msg in cursor.fetchall():
+    messages_by_conv.setdefault(msg['conversation_id'], []).append(msg)
+```
+
+Performance improvement: **O(N) → O(1)** database round trips for N conversations.
+
+### 3. API Response Optimization
 - ✅ Implement pagination (with LIMIT/OFFSET)
 - ✅ Cache user profiles and list endpoints
 - ✅ Enable HTTP/2 for multiplexing
 - ✅ Use CDN for static assets
 - ✅ Request timeout detection
 
-### 3. Caching Strategy
+### 4. Caching Strategy
 - ✅ Cache frequently accessed data in Redis
 - ✅ Implement cache invalidation on updates
 - ✅ Use service workers for offline caching
 - ✅ Browser caching with proper headers
 - ✅ Personalized cache keys for user-specific data
 
-### 4. Code Splitting
+### 5. Code Splitting
 - ✅ Lazy load routes with React.lazy()
 - ✅ Split vendor bundles
 - ✅ Dynamic imports for large components
 
-### 5. Async/Concurrent Processing
+### 6. Async/Concurrent Processing
 - ✅ ConcurrentBatcher for parallel database queries
 - ✅ Thread pool for CPU-bound operations
 - ✅ Async database drivers (asyncpg)
