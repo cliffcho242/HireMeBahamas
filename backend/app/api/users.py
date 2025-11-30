@@ -17,6 +17,89 @@ MAX_INT32 = 2147483647  # 2^31 - 1: Maximum value for 32-bit signed integer (Pos
 USERNAME_PATTERN = r'^[a-zA-Z0-9_-]+$'  # Valid username format: alphanumeric, underscore, hyphen
 
 
+async def resolve_user_by_identifier(
+    identifier: str,
+    db: AsyncSession,
+    requester_id: int
+) -> User:
+    """Resolve a user by ID or username.
+    
+    Args:
+        identifier: User ID (integer as string) or username
+        db: Database session
+        requester_id: ID of the user making the request (for logging)
+        
+    Returns:
+        User object if found and active
+        
+    Raises:
+        HTTPException: 400 for invalid input, 404 if user not found or inactive
+    """
+    # Validate identifier is not empty
+    if not identifier or not identifier.strip():
+        logger.warning(f"Empty identifier provided by user_id={requester_id}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Identifier cannot be empty"
+        )
+    
+    identifier = identifier.strip()
+    
+    # Validate identifier length
+    if len(identifier) > 150:
+        logger.warning(f"Identifier too long ({len(identifier)} chars) from user_id={requester_id}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid identifier: too long (max 150 characters)"
+        )
+    
+    # Try to parse as integer ID first
+    target_user = None
+    if identifier.isdigit():
+        try:
+            user_id = int(identifier)
+            if user_id <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid user ID: must be a positive integer"
+                )
+            if user_id > MAX_INT32:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid user ID: value too large"
+                )
+            result = await db.execute(select(User).where(User.id == user_id))
+            target_user = result.scalar_one_or_none()
+        except HTTPException:
+            raise
+        except (ValueError, OverflowError):
+            pass
+    
+    # If not found by ID, try username lookup
+    if not target_user:
+        if not re.match(USERNAME_PATTERN, identifier):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid identifier format"
+            )
+        result = await db.execute(select(User).where(User.username == identifier))
+        target_user = result.scalar_one_or_none()
+    
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    if not target_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account is not active"
+        )
+    
+    return target_user
+
+
 @router.get("/list")
 async def get_users(
     skip: int = Query(0, ge=0),
@@ -488,64 +571,8 @@ async def get_user_followers(
     """
     logger.info(f"Fetching followers for identifier={identifier} by user_id={current_user.id}")
     
-    # Validate identifier is not empty
-    if not identifier or not identifier.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Identifier cannot be empty"
-        )
-    
-    identifier = identifier.strip()
-    
-    # Validate identifier length
-    if len(identifier) > 150:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid identifier: too long (max 150 characters)"
-        )
-    
-    # Try to parse as integer ID first
-    target_user = None
-    if identifier.isdigit():
-        try:
-            user_id = int(identifier)
-            if user_id <= 0:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid user ID: must be a positive integer"
-                )
-            if user_id > MAX_INT32:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid user ID: value too large"
-                )
-            result = await db.execute(select(User).where(User.id == user_id))
-            target_user = result.scalar_one_or_none()
-        except (ValueError, OverflowError):
-            pass
-    
-    # If not found by ID, try username lookup
-    if not target_user:
-        if not re.match(USERNAME_PATTERN, identifier):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid identifier format"
-            )
-        result = await db.execute(select(User).where(User.username == identifier))
-        target_user = result.scalar_one_or_none()
-    
-    if not target_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    if not target_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User account is not active"
-        )
-    
+    # Resolve user by ID or username
+    target_user = await resolve_user_by_identifier(identifier, db, current_user.id)
     user_id = target_user.id
     
     result = await db.execute(
@@ -625,64 +652,8 @@ async def get_user_following(
     """
     logger.info(f"Fetching following for identifier={identifier} by user_id={current_user.id}")
     
-    # Validate identifier is not empty
-    if not identifier or not identifier.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Identifier cannot be empty"
-        )
-    
-    identifier = identifier.strip()
-    
-    # Validate identifier length
-    if len(identifier) > 150:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid identifier: too long (max 150 characters)"
-        )
-    
-    # Try to parse as integer ID first
-    target_user = None
-    if identifier.isdigit():
-        try:
-            user_id = int(identifier)
-            if user_id <= 0:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid user ID: must be a positive integer"
-                )
-            if user_id > MAX_INT32:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid user ID: value too large"
-                )
-            result = await db.execute(select(User).where(User.id == user_id))
-            target_user = result.scalar_one_or_none()
-        except (ValueError, OverflowError):
-            pass
-    
-    # If not found by ID, try username lookup
-    if not target_user:
-        if not re.match(USERNAME_PATTERN, identifier):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid identifier format"
-            )
-        result = await db.execute(select(User).where(User.username == identifier))
-        target_user = result.scalar_one_or_none()
-    
-    if not target_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    if not target_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User account is not active"
-        )
-    
+    # Resolve user by ID or username
+    target_user = await resolve_user_by_identifier(identifier, db, current_user.id)
     user_id = target_user.id
     
     result = await db.execute(

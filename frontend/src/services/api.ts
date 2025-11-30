@@ -623,24 +623,42 @@ export const hireMeAPI = {
   },
 };
 
+/**
+ * Validate and normalize a user ID for API requests.
+ * @param userId - The user ID to validate (can be string or number)
+ * @returns The validated and normalized user ID as a string
+ * @throws Error if the user ID is invalid
+ */
+function validateUserId(userId: number | string): string {
+  // Convert to string for consistent handling
+  const id = typeof userId === 'string' ? userId.trim() : String(userId);
+  
+  // Check for empty, null, undefined, or NaN values
+  if (!id || id === '' || id === 'NaN' || id === 'undefined' || id === 'null') {
+    throw new Error('Invalid user ID');
+  }
+  
+  // Additional validation: if it looks like a number, ensure it's positive
+  if (/^\d+$/.test(id)) {
+    const numId = parseInt(id, 10);
+    if (isNaN(numId) || numId <= 0) {
+      throw new Error('Invalid user ID');
+    }
+  }
+  
+  return id;
+}
+
 // Users API
 export const usersAPI = {
   followUser: async (userId: number | string) => {
-    // Validate userId before making the request
-    const id = typeof userId === 'string' ? userId : String(userId);
-    if (!id || id === 'NaN' || id === 'undefined' || id === 'null') {
-      throw new Error('Invalid user ID');
-    }
+    const id = validateUserId(userId);
     const response = await api.post(`/api/users/follow/${id}`);
     return response.data;
   },
 
   unfollowUser: async (userId: number | string) => {
-    // Validate userId before making the request
-    const id = typeof userId === 'string' ? userId : String(userId);
-    if (!id || id === 'NaN' || id === 'undefined' || id === 'null') {
-      throw new Error('Invalid user ID');
-    }
+    const id = validateUserId(userId);
     const response = await api.post(`/api/users/unfollow/${id}`);
     return response.data;
   },
@@ -656,21 +674,13 @@ export const usersAPI = {
   },
 
   getUserFollowers: async (userId: number | string): Promise<FollowersResponse> => {
-    // Validate userId before making the request
-    const id = typeof userId === 'string' ? userId : String(userId);
-    if (!id || id === 'NaN' || id === 'undefined' || id === 'null') {
-      throw new Error('Invalid user ID');
-    }
+    const id = validateUserId(userId);
     const response = await api.get(`/api/users/${id}/followers`);
     return response.data;
   },
 
   getUserFollowing: async (userId: number | string): Promise<FollowingResponse> => {
-    // Validate userId before making the request
-    const id = typeof userId === 'string' ? userId : String(userId);
-    if (!id || id === 'NaN' || id === 'undefined' || id === 'null') {
-      throw new Error('Invalid user ID');
-    }
+    const id = validateUserId(userId);
     const response = await api.get(`/api/users/${id}/following`);
     return response.data;
   },
