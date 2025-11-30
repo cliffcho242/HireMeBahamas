@@ -228,7 +228,7 @@ services:
   # 2. Name: keepalive-ping
   # 3. Schedule: */5 * * * *
   # 4. Docker Image: curlimages/curl:latest
-  # 5. Command: curl -f -L https://hiremebahamas.onrender.com/health || exit 1
+  # 5. Command: curl -f -s -o /dev/null https://hiremebahamas.onrender.com/health
   # 
   # See docs/RENDER_CRON_JOB_SETUP.md for complete guide
   # ==========================================================================
@@ -238,4 +238,4 @@ services:
     plan: free
     schedule: "*/5 * * * *"
     dockerImage: curlimages/curl:latest
-    dockerCommand: curl -f -L https://hiremebahamas.onrender.com/health || exit 1
+    dockerCommand: curl -f -s -o /dev/null https://hiremebahamas.onrender.com/health
