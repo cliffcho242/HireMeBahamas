@@ -200,7 +200,7 @@ export default defineConfig({
           utils: ['date-fns', 'clsx', 'tailwind-merge'],
           // State management
           state: ['zustand', 'immer'],
-          // GraphQL (if used)
+          // GraphQL - Apollo Client for queries/mutations/subscriptions
           graphql: ['@apollo/client', 'graphql'],
         },
       },

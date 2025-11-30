@@ -88,7 +88,8 @@ PYTHON_VERSION=3.12.0
 FRONTEND_URL=https://hiremebahamas.vercel.app
 
 # Database (paste from Railway)
-DATABASE_URL=postgresql://user:pass@host:port/db?sslmode=require&connect_timeout=10&options=-c%20jit%3Doff
+# Note: jit=off disables PostgreSQL JIT compilation for faster simple queries
+DATABASE_URL=postgresql://user:pass@host:port/db?sslmode=require&connect_timeout=10&options=-c%20jit=off
 
 # Redis (paste from Upstash/Railway)
 REDIS_URL=rediss://default:xxx@xxx.upstash.io:6379

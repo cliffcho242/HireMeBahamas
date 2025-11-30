@@ -27,17 +27,24 @@ Expected behavior:
 """
 import random
 import sys
+import os
 import time
 from datetime import datetime, timedelta
 
 import requests
 
 # =============================================================================
-# CONFIGURATION - HARD-CODED FOR PRODUCTION (no env dependency on cold start)
+# CONFIGURATION
 # =============================================================================
-HEALTH_URL = "https://hiremebahamas.onrender.com/health"
-WARM_CACHE_URL = "https://hiremebahamas.onrender.com/warm-cache"
-PING_URL = "https://hiremebahamas.onrender.com/ping"
+# Default URLs point to production. Override with environment variables for
+# staging/testing deployments:
+#   RENDER_EXTERNAL_URL=https://staging.onrender.com
+#   WARM_CACHE_URL=https://staging.onrender.com/warm-cache
+# =============================================================================
+BASE_URL = os.getenv("RENDER_EXTERNAL_URL", "https://hiremebahamas.onrender.com").rstrip("/")
+HEALTH_URL = f"{BASE_URL}/health"
+WARM_CACHE_URL = f"{BASE_URL}/warm-cache"
+PING_URL = f"{BASE_URL}/ping"
 
 # Timing configuration
 WARMUP_DURATION_MINUTES = 5
