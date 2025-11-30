@@ -321,14 +321,18 @@ async def full_shutdown():
         logger.error(f"Error closing database connections: {e}")
 
 
-@app.get("/ready", tags=["health"])
-async def readiness_check(db: AsyncSession = Depends(get_db)):
+# Database readiness check endpoint (full database connectivity check)
+@app.get("/ready/db", tags=["health"])
+async def db_readiness_check(db: AsyncSession = Depends(get_db)):
     """Readiness probe with database connectivity check
     
     K8s-style readiness probe that checks if the application is ready to
     receive traffic. Checks database connectivity.
     
     Returns 200 if the app is ready, 503 if database is unavailable.
+    
+    Note: Use /ready for instant cold start response.
+    Use /ready/db for full database connectivity check.
     """
     try:
         db_health = await check_database_health(db)
@@ -383,8 +387,7 @@ async def cache_health():
     
     Returns cache hit rates, backend status, and performance metrics.
     """
-    health_result = await redis_cache.health_check()
-    return health_result
+    return await redis_cache.health_check()
 
 
 # API health check endpoint (simple status check)
@@ -441,8 +444,7 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
         health_response["database"]["pool"] = {"error": str(e)}
     
     # Add cache stats
-    cache_health_result = await redis_cache.health_check()
-    health_response["cache"] = cache_health_result
+    health_response["cache"] = await redis_cache.health_check()
     
     return health_response
 
