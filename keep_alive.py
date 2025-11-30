@@ -47,15 +47,10 @@ PING_INTERVAL_SECONDS = 60  # Ping every 60 seconds to prevent sleep
 REQUEST_TIMEOUT_SECONDS = 30  # Timeout for each request
 MAX_CONSECUTIVE_FAILURES = 10  # Log warning after this many failures
 
-# Endpoints to ping (in order of priority)
-# /health/ping - Primary lightweight endpoint for keepalive
-# /ping - Fallback lightweight endpoint
-# /api/auth/ping - Bonus auth ping if it exists
-ENDPOINTS = [
-    "/health/ping",
-    "/ping",
-    "/api/auth/ping",
-]
+# Primary endpoint for keepalive - this is the main endpoint we ping
+# Only this endpoint is used to keep the service alive
+# Additional endpoints could be added for redundancy if needed
+PRIMARY_ENDPOINT = "/health/ping"
 
 
 def log(message: str, is_error: bool = False) -> None:
@@ -75,16 +70,14 @@ def ping_endpoint(base_url: str, endpoint: str) -> bool:
         endpoint: The endpoint path to ping
         
     Returns:
-        True if ping succeeded, False otherwise
+        True if ping succeeded (200 OK), False otherwise
     """
     url = f"{base_url}{endpoint}"
     try:
         response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
         if response.status_code == 200:
             return True
-        # 404 is acceptable for optional endpoints like /api/auth/ping
-        if response.status_code == 404:
-            return True  # Endpoint doesn't exist, but service is alive
+        log(f"Unexpected status {response.status_code} from {endpoint}", is_error=True)
         return False
     except requests.exceptions.Timeout:
         log(f"Timeout pinging {endpoint} (>{REQUEST_TIMEOUT_SECONDS}s)", is_error=True)
@@ -100,39 +93,37 @@ def ping_endpoint(base_url: str, endpoint: str) -> bool:
 def main() -> None:
     """Main keep-alive loop."""
     # Get the Render external URL from environment
-    base_url = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
+    raw_url = os.environ.get("RENDER_EXTERNAL_URL")
     
-    if not base_url:
+    if not raw_url:
         log("ERROR: RENDER_EXTERNAL_URL environment variable is not set.", is_error=True)
         log("Please set RENDER_EXTERNAL_URL to your Render service URL", is_error=True)
         log("Example: RENDER_EXTERNAL_URL=https://hiremebahamas.onrender.com", is_error=True)
         sys.exit(1)
     
+    base_url = raw_url.rstrip("/")
+    
     log(f"Keep-alive worker started for {base_url}")
     log(f"Ping interval: {PING_INTERVAL_SECONDS} seconds")
-    log(f"Endpoints to ping: {', '.join(ENDPOINTS)}")
+    log(f"Primary endpoint: {PRIMARY_ENDPOINT}")
     
     consecutive_failures = 0
     ping_count = 0
     
     while True:
         ping_count += 1
-        any_success = False
         
-        # Ping all endpoints
-        for endpoint in ENDPOINTS:
-            if ping_endpoint(base_url, endpoint):
-                any_success = True
-                # Log success every 10 pings (approximately every 10 minutes)
-                if ping_count % 10 == 0:
-                    log(f"Ping #{ping_count} successful - {endpoint}")
-                break  # Stop on first successful ping
+        # Ping the primary endpoint
+        success = ping_endpoint(base_url, PRIMARY_ENDPOINT)
         
-        if any_success:
+        if success:
             consecutive_failures = 0
+            # Log success every 10 pings (approximately every 10 minutes)
+            if ping_count % 10 == 0:
+                log(f"Ping #{ping_count} successful")
         else:
             consecutive_failures += 1
-            log(f"All endpoints failed (attempt {consecutive_failures})", is_error=True)
+            log(f"Ping failed (attempt {consecutive_failures})", is_error=True)
             
             if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
                 log(
