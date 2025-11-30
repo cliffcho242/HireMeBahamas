@@ -11,6 +11,9 @@ import os
 import sys
 from pathlib import Path
 
+import anyio
+from passlib.context import CryptContext
+
 # Add backend to path
 backend_path = Path(__file__).parent
 sys.path.insert(0, str(backend_path))
@@ -127,7 +130,11 @@ def test_bcrypt_performance():
 
 
 def test_async_bcrypt_performance():
-    """Test that async bcrypt operations work correctly and don't block the event loop"""
+    """Test that async bcrypt operations work correctly and don't block the event loop.
+    
+    This test imports and uses the actual security module functions to validate
+    the real implementation rather than duplicating code.
+    """
     
     # Save original environment variable value to restore later
     original_bcrypt_rounds = os.environ.get('BCRYPT_ROUNDS')
@@ -136,27 +143,13 @@ def test_async_bcrypt_performance():
         # Set environment variable for testing
         os.environ['BCRYPT_ROUNDS'] = '10'
         
-        import anyio
-        from passlib.context import CryptContext
-        
-        # Recreate the optimized context from security.py
-        BCRYPT_ROUNDS = int(os.environ.get('BCRYPT_ROUNDS', '10'))
-        pwd_context = CryptContext(
-            schemes=["bcrypt"], 
-            deprecated="auto",
-            bcrypt__rounds=BCRYPT_ROUNDS
+        # Import the actual functions from the security module
+        from app.core.security import (
+            verify_password_async,
+            get_password_hash_async,
+            prewarm_bcrypt_async,
+            BCRYPT_ROUNDS
         )
-        
-        async def verify_password_async(plain_password: str, hashed_password: str) -> bool:
-            return await anyio.to_thread.run_sync(
-                pwd_context.verify, plain_password, hashed_password
-            )
-        
-        async def get_password_hash_async(password: str) -> str:
-            return await anyio.to_thread.run_sync(pwd_context.hash, password)
-        
-        async def prewarm_bcrypt_async() -> None:
-            await anyio.to_thread.run_sync(lambda: pwd_context.hash("prewarm-dummy"))
         
         async def run_async_tests():
             print("=" * 80)
