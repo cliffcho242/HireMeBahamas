@@ -66,13 +66,25 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize database tables: {e}")
         raise
     
-    # Pre-warm cache with hot data (async, don't block startup)
+    # Pre-warm cache with hot data (background task, don't block startup)
+    # Store task reference to prevent garbage collection before completion
     logger.info("Scheduling cache warm-up...")
-    asyncio.create_task(warm_cache())
+    cache_warmup_task = asyncio.create_task(warm_cache())
+    cache_warmup_task.add_done_callback(
+        lambda t: logger.info("Cache warm-up task completed") if not t.cancelled() else None
+    )
     
     yield
     # Shutdown
     logger.info("Shutting down HireMeBahamas API...")
+    
+    # Cancel cache warmup if still running
+    if not cache_warmup_task.done():
+        cache_warmup_task.cancel()
+        try:
+            await cache_warmup_task
+        except asyncio.CancelledError:
+            pass
     
     # Close Redis connection
     try:

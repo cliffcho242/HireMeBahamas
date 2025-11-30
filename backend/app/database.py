@@ -120,8 +120,6 @@ if IS_PRODUCTION_DATABASE:
         "command_timeout": STATEMENT_TIMEOUT_SECONDS,
         "server_settings": {
             "statement_timeout": str(STATEMENT_TIMEOUT_SECONDS * 1000),
-            # Enable auto_explain for slow queries (optional, for debugging)
-            # "auto_explain.log_min_duration": "1000",  # Log queries > 1s
         },
     }
     engine_kwargs["connect_args"] = connect_args

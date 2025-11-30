@@ -10,7 +10,11 @@
  */
 import { useCallback, useRef } from 'react';
 
-// Route to chunk mapping (matches manualChunks in vite.config.ts)
+/**
+ * Route to page chunk mapping.
+ * These are the lazy-loaded page components that will be prefetched
+ * on hover/focus for instant navigation.
+ */
 const ROUTE_CHUNKS: Record<string, () => Promise<unknown>> = {
   '/': () => import('../pages/Home'),
   '/jobs': () => import('../pages/Jobs'),
@@ -25,11 +29,22 @@ const ROUTE_CHUNKS: Record<string, () => Promise<unknown>> = {
 // Track prefetched routes to avoid duplicate fetches
 const prefetchedRoutes = new Set<string>();
 
+// Helper to safely call requestIdleCallback with fallback
+function scheduleIdleCallback(callback: () => void, timeout?: number): void {
+  if ('requestIdleCallback' in window) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).requestIdleCallback(callback, timeout ? { timeout } : undefined);
+  } else {
+    // Fallback for browsers without requestIdleCallback
+    setTimeout(callback, 0);
+  }
+}
+
 /**
  * Hook for prefetching route chunks on hover/focus
  */
 export function useRoutePrefetch() {
-  const prefetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const prefetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const prefetch = useCallback((route: string) => {
     // Skip if already prefetched
@@ -49,21 +64,12 @@ export function useRoutePrefetch() {
       prefetchedRoutes.add(route);
       
       // Prefetch during idle time
-      if ('requestIdleCallback' in window) {
-        (window as Window & { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(() => {
-          chunkLoader().catch(() => {
-            // Remove from prefetched if failed so it can retry
-            prefetchedRoutes.delete(route);
-          });
+      scheduleIdleCallback(() => {
+        chunkLoader().catch(() => {
+          // Remove from prefetched if failed so it can retry
+          prefetchedRoutes.delete(route);
         });
-      } else {
-        // Fallback for browsers without requestIdleCallback
-        setTimeout(() => {
-          chunkLoader().catch(() => {
-            prefetchedRoutes.delete(route);
-          });
-        }, 0);
-      }
+      });
     }, 100); // 100ms debounce
   }, []);
 
@@ -84,23 +90,21 @@ export function useRoutePrefetch() {
 export function prefetchMainRoutes() {
   const mainRoutes = ['/jobs', '/messages', '/profile'];
   
-  // Use intersection observer pattern for intelligent prefetching
-  if ('requestIdleCallback' in window) {
-    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback(() => {
-      mainRoutes.forEach((route, index) => {
-        // Stagger prefetches to avoid network congestion
-        setTimeout(() => {
-          const chunkLoader = ROUTE_CHUNKS[route];
-          if (chunkLoader && !prefetchedRoutes.has(route)) {
-            prefetchedRoutes.add(route);
-            chunkLoader().catch(() => {
-              prefetchedRoutes.delete(route);
-            });
-          }
-        }, index * 500); // 500ms between each prefetch
-      });
-    }, { timeout: 3000 }); // Timeout after 3s if idle never called
-  }
+  // Use requestIdleCallback for intelligent prefetching during idle time
+  scheduleIdleCallback(() => {
+    mainRoutes.forEach((route, index) => {
+      // Stagger prefetches to avoid network congestion
+      setTimeout(() => {
+        const chunkLoader = ROUTE_CHUNKS[route];
+        if (chunkLoader && !prefetchedRoutes.has(route)) {
+          prefetchedRoutes.add(route);
+          chunkLoader().catch(() => {
+            prefetchedRoutes.delete(route);
+          });
+        }
+      }, index * 500); // 500ms between each prefetch
+    });
+  }, 3000); // Timeout after 3s if idle never called
 }
 
 /**
