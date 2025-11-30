@@ -16,10 +16,11 @@ import socketio
 
 # Import APIs
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
-from .database import init_db, close_db, get_db
+from .database import init_db, close_db, get_db, get_pool_status
 from .core.metrics import get_metrics_response, set_app_info
 from .core.security import prewarm_bcrypt_async
 from .core.redis_cache import redis_cache, warm_cache
+from .core.db_health import check_database_health, get_database_stats
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -142,8 +143,6 @@ async def readiness_check(db: AsyncSession = Depends(get_db)):
     
     Returns 200 if the app is ready, 503 if database is unavailable.
     """
-    from .core.db_health import check_database_health
-    
     try:
         db_health = await check_database_health(db)
         if db_health["status"] == "healthy":
@@ -400,9 +399,6 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
     For quick health checks, use /health (no DB dependency).
     For readiness probes, use /ready (checks DB connectivity).
     """
-    from .core.db_health import check_database_health, get_database_stats
-    from .database import get_pool_status
-    
     # Check API health
     api_status = {
         "status": "healthy",

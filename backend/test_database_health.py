@@ -5,10 +5,13 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add backend to path
 backend_path = Path(__file__).parent
 sys.path.insert(0, str(backend_path))
 
+@pytest.mark.asyncio
 async def test_database_health():
     """Test database health monitoring utilities"""
     
