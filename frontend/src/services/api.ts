@@ -18,6 +18,9 @@ interface FollowingResponse {
   following: User[];
 }
 
+// Session storage key - must match sessionManager.ts
+const SESSION_KEY = 'hireme_session';
+
 // Derive API base URL with safe production fallback
 const DEFAULT_PROD_API = 'https://hiremebahamas.onrender.com';
 const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
@@ -183,12 +186,23 @@ api.interceptors.response.use(
     
     // Handle auth errors
     if (error.response?.status === 401) {
-      // Only auto-logout for auth endpoints or profile endpoints
+      // Check if this is a USER_NOT_FOUND error (user account deleted or database reset)
+      const errorData = error.response?.data;
+      const isUserNotFound = errorData?.error_code === 'USER_NOT_FOUND' || 
+                             errorData?.action === 'logout';
+      
+      // Auto-logout for auth endpoints, profile endpoints, or when user is not found
       const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/profile');
       
-      if (isAuthEndpoint) {
-        console.log('Authentication failed - logging out');
+      if (isAuthEndpoint || isUserNotFound) {
+        console.log('Authentication failed - logging out', isUserNotFound ? '(user not found in database)' : '');
         localStorage.removeItem('token');
+        // Clear session storage as well (use the same key as sessionManager)
+        try {
+          localStorage.removeItem(SESSION_KEY);
+        } catch {
+          // Ignore errors when clearing session (e.g., in private browsing)
+        }
         window.location.href = '/login';
       } else {
         // For other endpoints, just log the error but don't force logout

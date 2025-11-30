@@ -5119,9 +5119,17 @@ def refresh_token():
         return_db_connection(conn)
 
         if not user:
+            # User ID from token doesn't exist in database anymore
+            # This can happen if the database was reset or user was deleted
+            # Return 401 to force the client to clear the invalid token and re-login
             return (
-                jsonify({"success": False, "message": "User not found"}),
-                404,
+                jsonify({
+                    "success": False, 
+                    "message": "Your account was not found. Please log in again.",
+                    "error_code": "USER_NOT_FOUND",
+                    "action": "logout"
+                }),
+                401,
             )
 
         # Create new JWT token with extended expiration
@@ -5203,9 +5211,18 @@ def verify_session():
             return_db_connection(conn)
 
             if not user:
+                # User ID from token doesn't exist in database anymore
+                # This can happen if the database was reset or user was deleted
+                # Return 401 to force the client to clear the invalid token and re-login
                 return (
-                    jsonify({"success": False, "message": "User not found"}),
-                    404,
+                    jsonify({
+                        "success": False, 
+                        "valid": False,
+                        "message": "Your account was not found. Please log in again.",
+                        "error_code": "USER_NOT_FOUND",
+                        "action": "logout"
+                    }),
+                    401,
                 )
 
             return (
@@ -5288,9 +5305,17 @@ def get_profile():
         return_db_connection(conn)
 
         if not user:
+            # User ID from token doesn't exist in database anymore
+            # This can happen if the database was reset or user was deleted
+            # Return 401 to force the client to clear the invalid token and re-login
             return (
-                jsonify({"success": False, "message": "User not found"}),
-                404,
+                jsonify({
+                    "success": False, 
+                    "message": "Your account was not found. Please log in again.",
+                    "error_code": "USER_NOT_FOUND",
+                    "action": "logout"
+                }),
+                401,
             )
 
         return (
@@ -5524,7 +5549,12 @@ def create_post():
             cursor.close()
             return_db_connection(conn)
             return (
-                jsonify({"success": False, "message": "User not found. Please log in again."}),
+                jsonify({
+                    "success": False, 
+                    "message": "Your account was not found. Please log in again.",
+                    "error_code": "USER_NOT_FOUND",
+                    "action": "logout"
+                }),
                 401,
             )
 
@@ -5940,7 +5970,11 @@ def get_user(identifier):
         if not user:
             cursor.close()
             return_db_connection(conn)
-            return jsonify({"success": False, "message": "User not found"}), 404
+            return jsonify({
+                "success": False, 
+                "message": f"User not found. The user '{identifier}' may have been deleted or does not exist.",
+                "error_code": "USER_NOT_FOUND"
+            }), 404
 
         # Get the user's ID for follow queries (in case we looked up by username)
         found_user_id = user["id"]
@@ -6903,7 +6937,12 @@ def create_job():
         if not cursor.fetchone():
             cursor.close()
             return_db_connection(conn)
-            return jsonify({"success": False, "message": "User not found. Please log in again."}), 401
+            return jsonify({
+                "success": False, 
+                "message": "Your account was not found. Please log in again.",
+                "error_code": "USER_NOT_FOUND",
+                "action": "logout"
+            }), 401
 
         # Insert job
         now = datetime.now(timezone.utc)
