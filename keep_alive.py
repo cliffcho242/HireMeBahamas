@@ -5,7 +5,7 @@ NUCLEAR-GRADE Render Keep-Alive with jitter — Deploy once, win forever.
 Rules:
 1. First 5 min after deploy → 20s ± 5s jitter (covers cold-boot window)
 2. Normal mode → 55s ± 10s jitter
-3. On failure → exponential backoff (10→20→40→80→160→300s) + ±20% jitter
+3. On failure → exponential backoff (10→20→40→80→160→300s) + ±20s jitter
 4. Reset backoff only after 3 consecutive successes
 5. Never sleep below 5s
 """
@@ -54,7 +54,7 @@ while True:
         )
         if r.status_code == 200:
             print(f"PING OK — {mode} → sleep {sleep_time}s")
-            consecutive_success += 1
+            consecutive_success = min(consecutive_success + 1, 3)
             if consecutive_success >= 3:
                 backoff_level = 0
                 consecutive_success = 0
@@ -62,7 +62,7 @@ while True:
             raise Exception(f"HTTP {r.status_code}")
     except Exception as e:
         consecutive_success = 0
-        backoff_level += 1
+        backoff_level = min(backoff_level + 1, 6)  # Cap at level 6 (300s max)
         print(f"PING FAILED ({e}) → BACKOFF ↑ L{backoff_level} → sleep {sleep_time}s")
 
     time.sleep(sleep_time)

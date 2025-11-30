@@ -125,7 +125,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
             
             # Simulate the ping
             url = os.environ["RENDER_EXTERNAL_URL"]
-            response = requests.get(f"{url}/health", timeout=15)
+            requests.get(f"{url}/health", timeout=15)
             
             # Verify the request was made correctly
             mock_get.assert_called_once_with(
