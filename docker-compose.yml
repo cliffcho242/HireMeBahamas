@@ -1,7 +1,15 @@
+# High Availability Docker Compose Configuration for HireMeBahamas
+# See docs/HIGH_AVAILABILITY.md for detailed documentation
+#
+# Usage:
+#   Development:       docker-compose up
+#   Production HA:     docker-compose --profile production up
+#   With load balancer: docker-compose --profile loadbalancer up
+#
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database with High Availability settings
   postgres:
     image: ghcr.io/railwayapp-templates/postgres-ssl:16.11
     environment:
@@ -51,6 +59,12 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
 
   # Redis for caching and sessions
   redis:
@@ -66,6 +80,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
 
   # Adminer - Database Management Interface
   adminer:
@@ -80,7 +100,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Flask Backend API (Production-like)
+  # Flask Backend API (Development - Single Instance)
   backend-flask:
     build:
       context: .
@@ -94,6 +114,8 @@ services:
       TOKEN_EXPIRATION_DAYS: 7
       ENVIRONMENT: production  # Use production mode to test production code paths
       PORT: 8080
+      WEB_CONCURRENCY: 2
+      WEB_THREADS: 8
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,6 +124,168 @@ services:
     stop_signal: SIGTERM
     stop_grace_period: 30s
     command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --timeout 120 --reload --access-logfile - --error-logfile -
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # NGINX Load Balancer for High Availability
+  # Use with: docker-compose --profile loadbalancer up
+  nginx-lb:
+    image: nginx:1.25-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8082:8081"  # NGINX status endpoint
+    volumes:
+      - ./docker/nginx-loadbalancer.conf:/etc/nginx/nginx.conf:ro
+      - ./uploads:/app/uploads:ro
+    depends_on:
+      - backend-flask-1
+      - backend-flask-2
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/nginx-health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - loadbalancer
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
+  # Backend Instance 1 (for load balancing)
+  backend-flask-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    environment:
+      DATABASE_URL: postgresql://hiremebahamas_user:hiremebahamas_password@postgres:5432/hiremebahamas
+      SECRET_KEY: dev-secret-key-change-in-production
+      JWT_SECRET_KEY: dev-jwt-secret-key-change-in-production
+      TOKEN_EXPIRATION_DAYS: 7
+      ENVIRONMENT: production
+      PORT: 8080
+      WEB_CONCURRENCY: 2
+      WEB_THREADS: 8
+      INSTANCE_ID: backend-1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/uploads
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 8 --timeout 120 --access-logfile - --error-logfile -
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    profiles:
+      - loadbalancer
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Backend Instance 2 (for load balancing)
+  backend-flask-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    environment:
+      DATABASE_URL: postgresql://hiremebahamas_user:hiremebahamas_password@postgres:5432/hiremebahamas
+      SECRET_KEY: dev-secret-key-change-in-production
+      JWT_SECRET_KEY: dev-jwt-secret-key-change-in-production
+      TOKEN_EXPIRATION_DAYS: 7
+      ENVIRONMENT: production
+      PORT: 8080
+      WEB_CONCURRENCY: 2
+      WEB_THREADS: 8
+      INSTANCE_ID: backend-2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/uploads
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 8 --timeout 120 --access-logfile - --error-logfile -
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    profiles:
+      - loadbalancer
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Backend Instance 3 (backup instance for load balancing)
+  backend-flask-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    environment:
+      DATABASE_URL: postgresql://hiremebahamas_user:hiremebahamas_password@postgres:5432/hiremebahamas
+      SECRET_KEY: dev-secret-key-change-in-production
+      JWT_SECRET_KEY: dev-jwt-secret-key-change-in-production
+      TOKEN_EXPIRATION_DAYS: 7
+      ENVIRONMENT: production
+      PORT: 8080
+      WEB_CONCURRENCY: 2
+      WEB_THREADS: 8
+      INSTANCE_ID: backend-3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/uploads
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 8 --timeout 120 --access-logfile - --error-logfile -
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    profiles:
+      - loadbalancer
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
   # FastAPI Backend - Production Mode
   backend-fastapi:
@@ -115,7 +299,7 @@ services:
       REDIS_URL: redis://redis:6379
       ENVIRONMENT: production
       SECRET_KEY: dev-secret-key-change-in-production
-      DB_ECHO: false
+      DB_ECHO: "false"
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,9 +1,26 @@
+# High Availability Configuration for HireMeBahamas
+# See docs/HIGH_AVAILABILITY.md for detailed documentation
+
 services:
   - type: web
     name: hiremebahamas-backend
-    env: python
+    runtime: python
     region: oregon
-    plan: free
+    plan: standard  # Required for auto-scaling (upgrade from free for production HA)
+    
+    # Auto-scaling configuration for high availability
+    # Render automatically manages scaling based on these thresholds:
+    # - When CPU exceeds targetCPUPercent, new instances are added
+    # - When memory exceeds targetMemoryPercent, new instances are added
+    # - Scaling down occurs after ~5 minutes of reduced load
+    # - New instances are warmed up before receiving traffic
+    # Note: Requires Standard plan or higher
+    scaling:
+      minInstances: 1        # Minimum instances (always running)
+      maxInstances: 10       # Maximum instances during peak load
+      targetCPUPercent: 70   # Scale up when average CPU > 70%
+      targetMemoryPercent: 80 # Scale up when average memory > 80%
+    
     buildCommand: |
       apt-get update
       apt-get install -y --no-install-recommends \
@@ -61,9 +78,17 @@ services:
       - key: FRONTEND_URL
         value: https://hiremebahamas.vercel.app
       - key: PYTHONUNBUFFERED
-        value: true
+        value: "true"
       - key: PYTHON_VERSION
-        value: 3.12.0
+        value: "3.12.0"
+      # High availability: Configure worker concurrency for optimal scaling
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: WEB_THREADS
+        value: "8"
       # DATABASE_URL must be set manually in Render dashboard
       # to connect to your PostgreSQL database
+    
+    # Health check configuration for load balancer integration
+    # Faster health checks enable quicker failover
     healthCheckPath: /health

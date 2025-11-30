@@ -453,6 +453,17 @@ GitHub Actions will automatically:
 📚 **Complete Guide**: [AUTO_DEPLOY_SETUP.md](./AUTO_DEPLOY_SETUP.md)  
 ⚡ **Quick Reference**: [AUTO_DEPLOY_QUICK_REF.md](./AUTO_DEPLOY_QUICK_REF.md)
 
+### High Availability & Scaling
+
+For production deployments requiring high availability:
+
+- **Load Balancing**: Automatic via Railway/Render/Vercel managed platforms
+- **Auto-Scaling**: Configure in `render.yaml` or platform dashboard
+- **Health Checks**: Built-in `/health` endpoint for load balancer integration
+- **Zero-Downtime Deploys**: Rolling updates with graceful shutdown
+
+📚 **Complete Guide**: [docs/HIGH_AVAILABILITY.md](./docs/HIGH_AVAILABILITY.md)
+
 ### Manual Deployment
 
 #### Development
