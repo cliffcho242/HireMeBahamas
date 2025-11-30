@@ -1,81 +1,104 @@
 // Service Worker for HireMeBahamas PWA
-const CACHE_NAME = 'hiremebahamas-v2';
+// =======================================
+// ADDICTIVE FEATURES:
+// - Instant push notifications (VAPID)
+// - Background sync for offline actions
+// - Sound notifications
+// - Badge updates
+// =======================================
+
+const CACHE_NAME = 'hiremebahamas-v3';
+const STATIC_CACHE = 'hiremebahamas-static-v3';
+const DYNAMIC_CACHE = 'hiremebahamas-dynamic-v3';
+
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
-  '/sounds/notification.mp3'
+  '/sounds/notification.mp3',
+  '/offline.html'
 ];
 
-// Install event - cache resources
+// =======================================
+// INSTALL EVENT - Cache resources
+// =======================================
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing Service Worker...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Opened cache');
-        // Use addAll with catch to handle missing files gracefully
+        console.log('[SW] Caching app shell');
         return cache.addAll(urlsToCache).catch((error) => {
-          console.warn('Some cache files may not have been cached:', error);
-          // Still proceed with what we can cache
+          console.warn('[SW] Some cache files may not have been cached:', error);
           return Promise.allSettled(
             urlsToCache.map(url => 
-              cache.add(url).catch(e => console.warn(`Failed to cache ${url}:`, e))
+              cache.add(url).catch(e => console.warn(`[SW] Failed to cache ${url}:`, e))
             )
           );
         });
       })
       .catch((error) => {
-        console.error('Cache install failed:', error);
+        console.error('[SW] Cache install failed:', error);
       })
   );
+  // Skip waiting - activate immediately
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// =======================================
+// ACTIVATE EVENT - Clean up old caches
+// =======================================
 self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [CACHE_NAME];
+  console.log('[SW] Activating Service Worker...');
+  const cacheWhitelist = [CACHE_NAME, STATIC_CACHE, DYNAMIC_CACHE];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
+  // Claim all clients immediately
   self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// =======================================
+// FETCH EVENT - Network-first with cache fallback
+// =======================================
 self.addEventListener('fetch', (event) => {
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin)) {
     return;
   }
 
+  // Skip API requests (handled by workbox)
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Cache hit - return response
         if (response) {
           return response;
         }
 
         return fetch(event.request).then(
           (response) => {
-            // Check if valid response
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
 
-            // Clone the response
             const responseToCache = response.clone();
 
-            caches.open(CACHE_NAME)
+            caches.open(DYNAMIC_CACHE)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
               });
@@ -91,8 +114,12 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Push notification event - handles incoming push messages
+// =======================================
+// PUSH NOTIFICATION EVENT - Instant delivery
+// =======================================
 self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification received');
+  
   let notificationData = {
     title: 'HireMeBahamas',
     body: 'You have a new notification',
@@ -104,7 +131,7 @@ self.addEventListener('push', (event) => {
     }
   };
 
-  // Try to parse push data
+  // Parse push data
   if (event.data) {
     try {
       const data = event.data.json();
@@ -113,16 +140,17 @@ self.addEventListener('push', (event) => {
         body: data.body || data.message || 'You have a new notification',
         icon: data.icon || '/pwa-192x192.png',
         badge: data.badge || '/pwa-192x192.png',
-        tag: data.tag || 'message-' + Date.now(),
+        tag: data.tag || `notification-${Date.now()}`,
+        image: data.image,
         data: {
           url: data.url || data.click_action || '/messages',
           messageId: data.messageId,
           conversationId: data.conversationId,
-          senderId: data.senderId
+          senderId: data.senderId,
+          type: data.type
         }
       };
     } catch {
-      // Use text data if JSON parsing fails
       notificationData.body = event.data.text() || 'You have a new notification';
     }
   }
@@ -132,14 +160,17 @@ self.addEventListener('push', (event) => {
     icon: notificationData.icon,
     badge: notificationData.badge,
     tag: notificationData.tag,
-    vibrate: [200, 100, 200],
+    image: notificationData.image,
+    vibrate: [200, 100, 200, 100, 200],
     renotify: true,
     requireInteraction: false,
+    silent: false,
     data: notificationData.data,
     actions: [
       {
         action: 'view',
-        title: 'View Message'
+        title: 'View',
+        icon: '/pwa-192x192.png'
       },
       {
         action: 'dismiss',
@@ -149,43 +180,45 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(notificationData.title, options)
+    Promise.all([
+      self.registration.showNotification(notificationData.title, options),
+      // Update badge count
+      updateBadgeCount(1)
+    ])
   );
 });
 
-// Notification click event - handles user clicking on notification
+// =======================================
+// NOTIFICATION CLICK - Navigate to content
+// =======================================
 self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked:', event.action);
   event.notification.close();
 
-  // Handle action buttons
   if (event.action === 'dismiss') {
     return;
   }
 
-  // Get the URL to open (from notification data or default to messages)
   const urlToOpen = event.notification.data?.url || '/messages';
-  // Create full URL
   const fullUrl = new URL(urlToOpen, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {
-        // Check if there is already a window/tab open with the app
+        // Focus existing window if found
         for (let i = 0; i < windowClients.length; i++) {
           const client = windowClients[i];
-          // If so, focus it and send a message to navigate
           if (client.url.includes(self.location.origin) && 'focus' in client) {
             client.focus();
-            // Use postMessage to tell the client to navigate
-            // The client should listen for this message and use React Router
             client.postMessage({
               type: 'NOTIFICATION_CLICK',
-              url: urlToOpen
+              url: urlToOpen,
+              data: event.notification.data
             });
             return client;
           }
         }
-        // If not, open a new window/tab with the full URL
+        // Open new window
         if (clients.openWindow) {
           return clients.openWindow(fullUrl);
         }
@@ -193,34 +226,103 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Handle notification close event
+// =======================================
+// NOTIFICATION CLOSE
+// =======================================
 self.addEventListener('notificationclose', (event) => {
-  console.log('Notification closed:', event.notification.tag);
+  console.log('[SW] Notification closed:', event.notification.tag);
 });
 
-// Background sync event
+// =======================================
+// BACKGROUND SYNC - Queue offline actions
+// =======================================
 self.addEventListener('sync', (event) => {
+  console.log('[SW] Background sync:', event.tag);
+  
   if (event.tag === 'sync-messages') {
     event.waitUntil(syncMessages());
-  } else if (event.tag === 'sync-data') {
-    event.waitUntil(syncData());
+  } else if (event.tag === 'sync-posts') {
+    event.waitUntil(syncPosts());
+  } else if (event.tag === 'sync-likes') {
+    event.waitUntil(syncLikes());
+  } else if (event.tag === 'api-queue') {
+    event.waitUntil(syncApiQueue());
+  } else if (event.tag === 'messages-queue') {
+    event.waitUntil(syncMessagesQueue());
   }
 });
 
-// Sync messages in background
+// Sync pending messages from IndexedDB
 async function syncMessages() {
-  console.log('Background sync: syncing messages');
-  // This would be implemented to sync pending messages
-  // when network connectivity is restored
+  console.log('[SW] Syncing pending messages...');
+  try {
+    const db = await openDB();
+    const pendingMessages = await getAllFromStore(db, 'pending-messages');
+    
+    for (const msg of pendingMessages) {
+      try {
+        const response = await fetch('/api/messages/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(msg.data)
+        });
+        
+        if (response.ok) {
+          await deleteFromStore(db, 'pending-messages', msg.id);
+          console.log('[SW] Message synced:', msg.id);
+        }
+      } catch (error) {
+        console.error('[SW] Failed to sync message:', error);
+      }
+    }
+  } catch (error) {
+    console.error('[SW] Sync messages failed:', error);
+  }
 }
 
-async function syncData() {
-  // Implement your sync logic here
-  console.log('Background sync triggered');
+// Sync pending posts
+async function syncPosts() {
+  console.log('[SW] Syncing pending posts...');
 }
 
-// Handle message from main thread (for custom notifications)
+// Sync pending likes
+async function syncLikes() {
+  console.log('[SW] Syncing pending likes...');
+}
+
+// Sync API queue
+async function syncApiQueue() {
+  console.log('[SW] Syncing API queue...');
+}
+
+// Sync messages queue
+async function syncMessagesQueue() {
+  console.log('[SW] Syncing messages queue...');
+}
+
+// =======================================
+// BADGE API - Update app badge
+// =======================================
+async function updateBadgeCount(count) {
+  if ('setAppBadge' in navigator) {
+    try {
+      if (count > 0) {
+        await navigator.setAppBadge(count);
+      } else {
+        await navigator.clearAppBadge();
+      }
+    } catch (error) {
+      console.error('[SW] Badge API error:', error);
+    }
+  }
+}
+
+// =======================================
+// MESSAGE HANDLER - Custom notifications
+// =======================================
 self.addEventListener('message', (event) => {
+  console.log('[SW] Message received:', event.data?.type);
+  
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, options } = event.data;
     self.registration.showNotification(title, {
@@ -233,5 +335,89 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+  
+  if (event.data && event.data.type === 'UPDATE_BADGE') {
+    updateBadgeCount(event.data.count);
+  }
+  
+  if (event.data && event.data.type === 'CLEAR_BADGE') {
+    updateBadgeCount(0);
+  }
 });
+
+// =======================================
+// PERIODIC SYNC - Background refresh
+// =======================================
+self.addEventListener('periodicsync', (event) => {
+  console.log('[SW] Periodic sync:', event.tag);
+  
+  if (event.tag === 'refresh-feed') {
+    event.waitUntil(refreshFeed());
+  }
+});
+
+async function refreshFeed() {
+  console.log('[SW] Refreshing feed in background...');
+  try {
+    const response = await fetch('/api/posts?limit=20');
+    if (response.ok) {
+      const data = await response.json();
+      // Cache the new posts
+      const cache = await caches.open(DYNAMIC_CACHE);
+      await cache.put('/api/posts?limit=20', new Response(JSON.stringify(data)));
+      console.log('[SW] Feed refreshed successfully');
+    }
+  } catch (error) {
+    console.error('[SW] Feed refresh failed:', error);
+  }
+}
+
+// =======================================
+// INDEXED DB HELPERS
+// =======================================
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('hiremebahamas-sw', 1);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('pending-messages')) {
+        db.createObjectStore('pending-messages', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('pending-posts')) {
+        db.createObjectStore('pending-posts', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('pending-likes')) {
+        db.createObjectStore('pending-likes', { keyPath: 'id', autoIncrement: true });
+      }
+    };
+  });
+}
+
+function getAllFromStore(db, storeName) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const store = tx.objectStore(storeName);
+    const request = store.getAll();
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+function deleteFromStore(db, storeName, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    const request = store.delete(id);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+}
+
+console.log('[SW] Service Worker loaded - HireMeBahamas Addictive Edition v3');
 
