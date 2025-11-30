@@ -4545,6 +4545,53 @@ def database_ping_endpoint():
     return jsonify(response), http_status
 
 
+@app.route("/metrics", methods=["GET"])
+@limiter.exempt
+def prometheus_metrics():
+    """
+    Prometheus metrics endpoint for monitoring.
+    
+    Returns metrics in Prometheus text format for scraping by Prometheus server.
+    Metrics include:
+    - HTTP request counts and durations
+    - Database connection pool stats
+    - Authentication attempt counts
+    - Application uptime
+    
+    This endpoint is exempt from rate limiting to allow monitoring services
+    to scrape metrics frequently (typically every 15-30 seconds).
+    
+    Integration with Grafana:
+    - Add Prometheus as a data source in Grafana
+    - Use the provided metrics for dashboards and alerts
+    
+    Example Prometheus configuration:
+        scrape_configs:
+          - job_name: 'hiremebahamas'
+            metrics_path: '/metrics'
+            scrape_interval: 30s
+            static_configs:
+              - targets: ['your-backend-url:8080']
+    """
+    from flask import Response
+    
+    # Try to import metrics module
+    try:
+        from backend.app.core.metrics import get_metrics_response, set_app_info
+        
+        # Set app info on each request (idempotent)
+        set_app_info(version="1.0.0", environment=ENVIRONMENT)
+        
+        metrics_data, content_type = get_metrics_response()
+        return Response(metrics_data, mimetype=content_type)
+    except ImportError:
+        # Fallback if prometheus_client is not available
+        return Response(
+            b"# prometheus_client not installed\n",
+            mimetype="text/plain"
+        )
+
+
 # Database wakeup retry configuration
 # Base delay for linear backoff (in seconds)
 # Each retry waits (WAKEUP_RETRY_BASE_DELAY * attempt_number) seconds
