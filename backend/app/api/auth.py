@@ -11,7 +11,9 @@ from app.core.security import (
     create_access_token,
     decode_access_token,
     get_password_hash,
+    get_password_hash_async,
     verify_password,
+    verify_password_async,
     BCRYPT_ROUNDS,
 )
 from app.core.upload import upload_image
@@ -186,8 +188,8 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
 
-    # Create new user
-    hashed_password = get_password_hash(user_data.password)
+    # Create new user (async hash to avoid blocking the event loop)
+    hashed_password = await get_password_hash_async(user_data.password)
 
     db_user = User(
         email=user_data.email,
@@ -313,9 +315,9 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
             detail="This account uses social login. Please sign in with Google or Apple.",
         )
     
-    # Verify password
+    # Verify password (async to avoid blocking the event loop)
     password_verify_start = time.time()
-    password_valid = verify_password(user_data.password, user.hashed_password)
+    password_valid = await verify_password_async(user_data.password, user.hashed_password)
     password_verify_ms = int((time.time() - password_verify_start) * 1000)
     
     logger.info(
@@ -444,16 +446,16 @@ async def change_password(
 ):
     """Change user password"""
 
-    # Verify current password
-    if not verify_password(
+    # Verify current password (async to avoid blocking the event loop)
+    if not await verify_password_async(
         password_data.current_password, current_user.hashed_password
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect current password"
         )
 
-    # Update password
-    current_user.hashed_password = get_password_hash(password_data.new_password)
+    # Update password (async to avoid blocking the event loop)
+    current_user.hashed_password = await get_password_hash_async(password_data.new_password)
     current_user.updated_at = datetime.utcnow()
 
     await db.commit()

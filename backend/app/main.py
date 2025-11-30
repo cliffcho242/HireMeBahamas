@@ -16,6 +16,7 @@ import socketio
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
 from .database import init_db, close_db, get_db
 from .core.metrics import get_metrics_response, set_app_info
+from .core.security import prewarm_bcrypt_async
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -34,6 +35,15 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting HireMeBahamas API...")
+    
+    # Pre-warm bcrypt to eliminate cold-start latency on first login
+    logger.info("Pre-warming bcrypt...")
+    try:
+        await prewarm_bcrypt_async()
+        logger.info("Bcrypt pre-warmed successfully")
+    except Exception as e:
+        logger.warning(f"Failed to pre-warm bcrypt (non-critical): {e}")
+    
     # Initialize database tables
     logger.info("Initializing database tables...")
     try:
