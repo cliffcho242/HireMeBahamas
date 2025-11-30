@@ -19,6 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { ApiError } from '../types';
 import { getApiErrorMessage } from '../utils/errorHandler';
+import { debugLog } from '../utils/debugLogger';
 
 interface UserProfile {
   id: number;
@@ -97,12 +98,12 @@ const UserProfile: React.FC = () => {
 
   const fetchUserProfile = useCallback(async () => {
     if (!userId) {
-      console.warn('[UserProfile] No userId provided in URL params');
+      debugLog.warn('[UserProfile] No userId provided in URL params');
       return;
     }
     
-    // Debug logging for user profile lookup
-    console.log('[UserProfile] Fetching profile for userId:', userId, 
+    // Debug logging for user profile lookup (only in development)
+    debugLog.log('[UserProfile] Fetching profile for userId:', userId, 
       '| Type:', typeof userId, 
       '| Is numeric:', /^\d+$/.test(userId));
     
@@ -110,7 +111,7 @@ const UserProfile: React.FC = () => {
     setError(null);
     try {
       const response = await authAPI.getUserProfile(userId);
-      console.log('[UserProfile] Profile fetch successful for userId:', userId);
+      debugLog.log('[UserProfile] Profile fetch successful for userId:', userId);
       const userData = response.user as unknown as Record<string, unknown>; // API response may have additional fields
       
       // Normalize user data with safe defaults
@@ -146,8 +147,8 @@ const UserProfile: React.FC = () => {
       const userPosts = await postsAPI.getUserPosts(parseInt(userId));
       setUserPosts(userPosts);
     } catch (error: unknown) {
-      // Enhanced error logging for debugging "user not found" issues
-      console.error('[UserProfile] Failed to fetch profile:', {
+      // Enhanced error logging for debugging "user not found" issues (only in development)
+      debugLog.error('[UserProfile] Failed to fetch profile:', {
         userId,
         userIdType: typeof userId,
         isNumeric: /^\d+$/.test(userId),
@@ -170,9 +171,9 @@ const UserProfile: React.FC = () => {
         message?: string 
       };
       
-      // Log detailed error info for debugging
+      // Log detailed error info for debugging (only in development)
       if (errorObj.response?.data) {
-        console.error('[UserProfile] Error details from API:', errorObj.response.data);
+        debugLog.error('[UserProfile] Error details from API:', errorObj.response.data);
       }
       
       if (errorObj.response?.data?.detail) {
@@ -190,7 +191,7 @@ const UserProfile: React.FC = () => {
       
       // Auto-redirect to users page after 3 seconds for 404 errors
       if (errorObj.response?.status === 404) {
-        console.log(`[UserProfile] User not found. Auto-redirecting to users page in ${REDIRECT_DELAY_SECONDS} seconds...`);
+        debugLog.log(`[UserProfile] User not found. Auto-redirecting to users page in ${REDIRECT_DELAY_SECONDS} seconds...`);
         setRedirectCountdown(REDIRECT_DELAY_SECONDS);
         
         // Clear any existing interval

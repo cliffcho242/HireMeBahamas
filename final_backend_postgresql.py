@@ -6257,8 +6257,12 @@ def get_user(identifier):
             }), 400
         
         # Log the lookup attempt for debugging
+        # In production, mask the identifier to avoid logging sensitive data
+        masked_identifier = identifier if not IS_PRODUCTION else (
+            f"{identifier[:2]}***" if len(identifier) > 2 else "***"
+        )
         logger.info("[%s] User profile lookup: identifier='%s', type=%s", 
-                   request_id, identifier, 'numeric' if identifier.isdigit() else 'username')
+                   request_id, masked_identifier, 'numeric' if identifier.isdigit() else 'username')
 
         # Verify authentication
         auth_header = request.headers.get("Authorization")
@@ -6271,8 +6275,9 @@ def get_user(identifier):
         try:
             payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
             current_user_id = payload["user_id"]
+            # Log authenticated user lookup (IDs only, not sensitive in this context)
             logger.info("[%s] Authenticated user ID: %s looking up user: '%s'", 
-                       request_id, current_user_id, identifier)
+                       request_id, current_user_id, masked_identifier)
         except jwt.InvalidTokenError as e:
             logger.warning("[%s] User lookup failed: invalid token - %s", request_id, str(e))
             return jsonify({"success": False, "message": "Invalid token"}), 401
@@ -6351,7 +6356,7 @@ def get_user(identifier):
             logger.warning(
                 "[%s] User not found: identifier='%s', lookup_type='%s', "
                 "searched_by_id=%s, searched_by_username=%s",
-                request_id, identifier, 
+                request_id, masked_identifier, 
                 'numeric' if str(identifier).isdigit() else 'username',
                 str(identifier).isdigit(), True
             )
