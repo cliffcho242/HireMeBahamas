@@ -147,10 +147,14 @@ def verify_token(token: str) -> Dict[str, Any]:
 
 
 # FastAPI dependencies
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+
+# Optional bearer token security scheme
+optional_bearer = HTTPBearer(auto_error=False)
 
 
 # Import here to avoid circular imports
@@ -197,3 +201,42 @@ async def get_current_user(
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+async def get_current_user_optional(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer),
+):
+    """Get current authenticated user optionally (returns None if not authenticated).
+    
+    This is useful for GraphQL endpoints where some queries may be public
+    but can provide additional data when authenticated.
+    
+    Note: The database session should be obtained from the GraphQL context,
+    not from dependency injection here. This function only extracts and validates
+    the token to get the user_id.
+    """
+    if credentials is None:
+        return None
+    
+    try:
+        # Import User model here to avoid circular imports
+        from app.database import get_async_session
+        from app.models import User
+
+        token = credentials.credentials
+        payload = verify_token(token)
+        user_id = payload.get("sub")
+
+        if user_id is None:
+            return None
+
+        # Use a new session to fetch the user
+        # This is acceptable because we're just reading user data once
+        async with get_async_session() as session:
+            result = await session.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+            return user
+
+    except (ValueError, Exception):
+        return None

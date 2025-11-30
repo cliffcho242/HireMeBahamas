@@ -411,6 +411,11 @@ app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
 app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 
+# Include GraphQL router
+from .graphql.schema import create_graphql_router
+graphql_router = create_graphql_router()
+app.include_router(graphql_router, prefix="/api", tags=["graphql"])
+
 
 # Initialize Socket.IO for real-time messaging
 sio = socketio.AsyncServer(
