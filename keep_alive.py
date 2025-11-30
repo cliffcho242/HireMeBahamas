@@ -10,7 +10,8 @@ Environment Variables:
     APP_URL: The external URL of the Render web service
              (e.g., https://hiremebahamas.onrender.com)
     
-    (Also supports RENDER_EXTERNAL_URL for backward compatibility)
+    Falls back to RENDER_EXTERNAL_URL if APP_URL is not set.
+    If neither is set, defaults to https://hiremebahamas.onrender.com
 
 Render Dashboard Setup:
     1. New → Background Worker
@@ -25,14 +26,10 @@ Render Dashboard Setup:
        - PYTHONUNBUFFERED = true
 """
 import os
-import sys
 import time
 import requests
 
-url = os.environ.get("APP_URL") or os.environ.get("RENDER_EXTERNAL_URL")
-if not url:
-    print("ERROR: APP_URL not set", flush=True)
-    sys.exit(1)
+url = os.environ.get("APP_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "https://hiremebahamas.onrender.com"
 
 ping_url, delay, max_delay = f"{url}/health", 40, 300
 print(f"Keep-alive started: {ping_url} every {delay}s", flush=True)
