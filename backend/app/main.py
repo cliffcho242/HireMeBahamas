@@ -122,14 +122,16 @@ app = FastAPI(
 
 @app.get("/health", tags=["health"])
 @app.head("/health", tags=["health"])
-async def health_check():
+def health_check():
     """Bulletproof health check endpoint - returns 200 instantly
     
     This endpoint is designed to pass health checks even during cold boot.
     It has NO dependencies (no DB, no auth, no middleware processing delays).
     Supports both GET and HEAD requests (Render sends HEAD).
     
-    For detailed health with DB status, use /ready or /health/detailed
+    Related endpoints:
+    - /ready: K8s-style readiness probe (checks DB connectivity)
+    - /health/detailed: Comprehensive health with DB stats, pool status, and cache
     """
     return JSONResponse(content={"status": "ok"}, status_code=200)
 
