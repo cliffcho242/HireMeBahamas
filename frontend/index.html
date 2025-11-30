@@ -78,6 +78,13 @@
     
     <!-- Preconnect for CDN (Vercel Edge Network) -->
     <link rel="preconnect" href="https://vercel.live" crossorigin />
+    
+    <!-- HTTP/2 Resource Hints for Multiplexing -->
+    <!-- Preload critical assets for faster initial render -->
+    <link rel="modulepreload" href="/src/main.tsx" />
+    
+    <!-- Prefetch likely navigation targets for instant page transitions -->
+    <link rel="prefetch" href="/api/auth/me" as="fetch" crossorigin />
 
     <title>HireMeBahamas - Caribbean Job Platform</title>
 
@@ -169,6 +176,9 @@
         /* Support safe areas for notched devices */
         padding: env(safe-area-inset-top) env(safe-area-inset-right)
           env(safe-area-inset-bottom) env(safe-area-inset-left);
+        /* SSR-like background to prevent flash */
+        background-color: #f9fafb;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
       }
 
       /* Responsive font sizing */
@@ -196,7 +206,47 @@
         min-height: 100vh;
       }
 
-      /* Loading spinner */
+      /* SSR-like shell - visible content before React hydrates */
+      .ssr-shell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        color: white;
+        text-align: center;
+        padding: 2rem;
+      }
+      
+      .ssr-shell__logo {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        letter-spacing: -0.02em;
+      }
+      
+      .ssr-shell__tagline {
+        font-size: 1.125rem;
+        opacity: 0.9;
+        margin-bottom: 2rem;
+      }
+      
+      .ssr-shell__loader {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      /* Hide SSR shell when React mounts */
+      #root:not(:empty) .ssr-shell {
+        display: none;
+      }
+
+      /* Loading spinner fallback */
       #root:empty::before {
         content: '';
         position: fixed;
@@ -227,7 +277,14 @@
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- SSR-like shell for instant visual feedback before JavaScript loads -->
+    <div id="root">
+      <div class="ssr-shell" aria-label="Loading HireMeBahamas">
+        <div class="ssr-shell__logo">HireMeBahamas</div>
+        <div class="ssr-shell__tagline">Connect. Share. Grow Your Career.</div>
+        <div class="ssr-shell__loader" role="status" aria-label="Loading application"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

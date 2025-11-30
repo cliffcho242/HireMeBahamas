@@ -115,6 +115,9 @@ export default defineConfig({
   server: {
     host: true,
     port: 3000,
+    // HTTP/2 is automatically enabled in Vite when using HTTPS
+    // For development, enable HTTPS for HTTP/2 benefits:
+    // https: true,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8008',
@@ -129,6 +132,10 @@ export default defineConfig({
     cssCodeSplit: true,
     chunkSizeWarningLimit: 1000,
     sourcemap: 'hidden',
+    // Enable module preload for HTTP/2 multiplexing benefits
+    modulePreload: {
+      polyfill: true, // Polyfill for older browsers
+    },
     terserOptions: {
       compress: {
         drop_console: true,
@@ -141,14 +148,15 @@ export default defineConfig({
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
+        // Optimized chunking for HTTP/2 parallel loading
         manualChunks: {
-          // Core React libraries - loaded first
+          // Core React libraries - loaded first for initial render
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          // UI animation and icons
+          // UI animation and icons - separate chunk for HTTP/2 multiplexing
           ui: ['framer-motion', '@heroicons/react'],
-          // Form handling libraries
+          // Form handling libraries - loaded on demand
           forms: ['react-hook-form', '@hookform/resolvers', 'zod', 'yup'],
-          // Data fetching and state
+          // Data fetching and state - critical for data loading
           query: ['@tanstack/react-query', 'axios'],
           // Utility libraries
           utils: ['date-fns', 'clsx', 'tailwind-merge'],
@@ -160,6 +168,11 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
+  },
+  // Preview server settings for production-like testing
+  preview: {
+    port: 3000,
+    host: true,
   },
 });
 
