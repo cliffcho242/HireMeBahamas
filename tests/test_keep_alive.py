@@ -41,8 +41,10 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify the script contains delay = 40 (ping interval)
-        self.assertIn("delay = 40", content)
+        # Verify the script sets delay to 40 seconds
+        # The delay is set in the tuple assignment and reset after successful ping
+        self.assertIn("40, 300", content)  # Initial: delay=40, max_delay=300
+        self.assertIn("delay = 40", content)  # Reset after successful ping
 
     def test_uses_health_endpoint(self):
         """Test that the script uses the /health endpoint."""
