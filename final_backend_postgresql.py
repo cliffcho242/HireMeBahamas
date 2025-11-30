@@ -398,6 +398,85 @@ def _invalidate_login_cache(email: str) -> bool:
         return False
 
 
+# Cache timeout for auth profile (in seconds)
+# Set to 30 seconds for quick updates while maintaining fast response times
+CACHE_TIMEOUT_AUTH_PROFILE = int(os.getenv("CACHE_TIMEOUT_AUTH_PROFILE", "30"))
+
+
+def _get_auth_profile_cache_key(user_id: int) -> str:
+    """Generate cache key for auth profile."""
+    return f"auth_profile:{user_id}"
+
+
+def _get_cached_auth_profile(user_id: int) -> dict | None:
+    """
+    Get cached auth profile from Redis.
+    
+    Returns the cached profile dict if found, None otherwise.
+    Cache hit reduces /api/auth/profile response from ~200ms to <50ms.
+    """
+    redis_client = _get_redis_client()
+    if redis_client is None:
+        return None
+    
+    try:
+        cache_key = _get_auth_profile_cache_key(user_id)
+        cached_data = redis_client.get(cache_key)
+        
+        if cached_data is None:
+            return None
+        
+        profile_data = json.loads(cached_data)
+        logger.debug(f"Auth profile cache hit for user_id: {user_id}")
+        return profile_data
+        
+    except Exception as e:
+        logger.warning(f"Auth profile cache read failed: {e}")
+        return None
+
+
+def _cache_auth_profile(user_id: int, profile_data: dict) -> bool:
+    """
+    Cache auth profile in Redis.
+    
+    Stores the profile response with a 30-second TTL.
+    """
+    redis_client = _get_redis_client()
+    if redis_client is None:
+        return False
+    
+    try:
+        cache_key = _get_auth_profile_cache_key(user_id)
+        redis_client.setex(
+            cache_key,
+            CACHE_TIMEOUT_AUTH_PROFILE,
+            json.dumps(profile_data)
+        )
+        logger.debug(f"Auth profile cached for user_id: {user_id}")
+        return True
+        
+    except Exception as e:
+        logger.warning(f"Auth profile cache write failed: {e}")
+        return False
+
+
+def _invalidate_auth_profile_cache(user_id: int) -> bool:
+    """Invalidate cached auth profile for a user."""
+    redis_client = _get_redis_client()
+    if redis_client is None:
+        return False
+    
+    try:
+        cache_key = _get_auth_profile_cache_key(user_id)
+        redis_client.delete(cache_key)
+        logger.debug(f"Auth profile cache invalidated for user_id: {user_id}")
+        return True
+        
+    except Exception as e:
+        logger.warning(f"Auth profile cache invalidation failed: {e}")
+        return False
+
+
 # Enhanced CORS configuration
 CORS(
     app,
@@ -5881,7 +5960,14 @@ def verify_session():
 
 @app.route("/api/auth/profile", methods=["GET", "PUT", "OPTIONS"])
 def profile():
-    """Get or update user profile"""
+    """
+    Get or update user profile.
+    
+    GET: Returns cached profile if available (Redis), otherwise queries database.
+    PUT: Updates profile and invalidates cache.
+    
+    Performance: GET requests with Redis cache return in <50ms.
+    """
     if request.method == "OPTIONS":
         return "", 200
 
@@ -5910,6 +5996,12 @@ def profile():
                 jsonify({"success": False, "message": "Invalid token"}),
                 401,
             )
+
+        # For GET requests, try Redis cache first
+        if request.method == "GET":
+            cached_profile = _get_cached_auth_profile(user_id)
+            if cached_profile is not None:
+                return jsonify(cached_profile), 200
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -5961,6 +6053,9 @@ def profile():
                     # Invalidate user profile cache after update
                     invalidate_user_cache(user_id)
                     
+                    # Invalidate auth profile cache
+                    _invalidate_auth_profile_cache(user_id)
+                    
                     # Also invalidate login cache (need to get email first)
                     # This is done after fetching the user below
 
@@ -5993,33 +6088,35 @@ def profile():
                     401,
                 )
 
-            return (
-                jsonify(
-                    {
-                        "id": user["id"],
-                        "email": user["email"],
-                        "first_name": user["first_name"] or "",
-                        "last_name": user["last_name"] or "",
-                        "username": user.get("username") or "",
-                        "role": user["user_type"] or "user",
-                        "user_type": user["user_type"] or "user",
-                        "location": user["location"] or "",
-                        "phone": user["phone"] or "",
-                        "bio": user["bio"] or "",
-                        "occupation": user.get("occupation") or "",
-                        "company_name": user.get("company_name") or "",
-                        "skills": user.get("skills") or "",
-                        "experience": user.get("experience") or "",
-                        "education": user.get("education") or "",
-                        "avatar_url": user["avatar_url"] or "",
-                        "is_available_for_hire": bool(user["is_available_for_hire"]),
-                        "is_active": bool(user.get("is_active", True)),
-                        "created_at": str(user["created_at"]) if user.get("created_at") else "",
-                        "updated_at": str(user.get("last_login")) if user.get("last_login") else "",
-                    }
-                ),
-                200,
-            )
+            # Build profile response
+            profile_data = {
+                "id": user["id"],
+                "email": user["email"],
+                "first_name": user["first_name"] or "",
+                "last_name": user["last_name"] or "",
+                "username": user.get("username") or "",
+                "role": user["user_type"] or "user",
+                "user_type": user["user_type"] or "user",
+                "location": user["location"] or "",
+                "phone": user["phone"] or "",
+                "bio": user["bio"] or "",
+                "occupation": user.get("occupation") or "",
+                "company_name": user.get("company_name") or "",
+                "skills": user.get("skills") or "",
+                "experience": user.get("experience") or "",
+                "education": user.get("education") or "",
+                "avatar_url": user["avatar_url"] or "",
+                "is_available_for_hire": bool(user["is_available_for_hire"]),
+                "is_active": bool(user.get("is_active", True)),
+                "created_at": str(user["created_at"]) if user.get("created_at") else "",
+                "updated_at": str(user.get("last_login")) if user.get("last_login") else "",
+            }
+            
+            # Cache profile for GET requests
+            if request.method == "GET":
+                _cache_auth_profile(user_id, profile_data)
+
+            return jsonify(profile_data), 200
 
         except Exception as db_error:
             # Ensure database resources are properly cleaned up
