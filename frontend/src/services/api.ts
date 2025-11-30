@@ -18,6 +18,9 @@ interface FollowingResponse {
   following: User[];
 }
 
+// Session storage key - must match sessionManager.ts
+const SESSION_KEY = 'hireme_session';
+
 // Derive API base URL with safe production fallback
 const DEFAULT_PROD_API = 'https://hiremebahamas.onrender.com';
 const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
@@ -194,9 +197,9 @@ api.interceptors.response.use(
       if (isAuthEndpoint || isUserNotFound) {
         console.log('Authentication failed - logging out', isUserNotFound ? '(user not found in database)' : '');
         localStorage.removeItem('token');
-        // Clear session storage as well
+        // Clear session storage as well (use the same key as sessionManager)
         try {
-          sessionStorage.removeItem('hiremebahamas_session');
+          localStorage.removeItem(SESSION_KEY);
         } catch {
           // Ignore errors when clearing session (e.g., in private browsing)
         }

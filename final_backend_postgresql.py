@@ -5972,7 +5972,7 @@ def get_user(identifier):
             return_db_connection(conn)
             return jsonify({
                 "success": False, 
-                "message": f"User not found. The user with ID '{identifier}' may have been deleted or does not exist.",
+                "message": f"User not found. The user '{identifier}' may have been deleted or does not exist.",
                 "error_code": "USER_NOT_FOUND"
             }), 404
 
