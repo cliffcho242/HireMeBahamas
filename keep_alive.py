@@ -1,52 +1,68 @@
 #!/usr/bin/env python3
 """
-Optimal Render Keep-Alive: Mathematically optimal intervals for 100% uptime.
+NUCLEAR-GRADE Render Keep-Alive with jitter — Deploy once, win forever.
 
 Rules:
-1. Base interval = 55s (Render free tier sleeps after ~15 min = 900s → 900÷16 = 56.25s → 55s safest)
-2. First 5 minutes after deploy → ping every 20s (covers cold-boot window)
-3. After 5 minutes → switch to 55s forever
-4. On any failed ping → immediately drop to 15s aggressive mode for 2 min, then back to normal
+1. First 5 min after deploy → 20s ± 5s jitter (covers cold-boot window)
+2. Normal mode → 55s ± 10s jitter
+3. On failure → exponential backoff (10→20→40→80→160→300s) + ±20% jitter
+4. Reset backoff only after 3 consecutive successes
+5. Never sleep below 5s
 """
 import os
 import time
+import random
 import requests
 from datetime import datetime, timedelta
 
-# NEVER CHANGE THIS URL — HARDCODED FOR ZERO FAILURE
+# BULLETPROOF — CAN NEVER BE WRONG
 BASE_URL = os.getenv("RENDER_EXTERNAL_URL", "https://hiremebahamas.onrender.com").rstrip("/")
 HEALTH_URL = f"{BASE_URL}/health"
 
-print(f"OPTIMAL KEEP-ALIVE STARTED → {HEALTH_URL}")
+print(f"NUCLEAR KEEP-ALIVE STARTED → {HEALTH_URL}")
 
 start_time = datetime.now()
-aggressive_until = None  # type: ignore
+consecutive_success = 0
+backoff_level = 0
 
 while True:
-    # Determine current interval - store current time once for efficiency
-    now = datetime.now()
-    uptime = now - start_time
+    uptime = datetime.now() - start_time
 
-    if aggressive_until and now < aggressive_until:
-        interval = 15
-        mode = "AGGRESSIVE 15s"
-    elif uptime < timedelta(minutes=5):
-        interval = 20
-        mode = "WARMUP 20s"
+    # Base interval + jitter
+    if uptime < timedelta(minutes=5):
+        base = 20
+        jitter_sec = random.randint(-5, 5)
+        mode = "WARMUP"
     else:
-        interval = 55
-        mode = "NORMAL 55s"
+        base = 55
+        jitter_sec = random.randint(-10, 10)
+        mode = "NORMAL"
+
+    # Apply backoff if failing
+    if consecutive_success < 3 and backoff_level > 0:
+        base = min(10 * (2 ** (backoff_level - 1)), 300)
+        jitter_sec = random.randint(-20, 20)
+        mode = f"BACKOFF L{backoff_level}"
+
+    sleep_time = max(5, base + jitter_sec)  # never below 5s
 
     try:
-        r = requests.get(HEALTH_URL, timeout=12, headers={"User-Agent": "OptimalKeepAlive/1.0"})
+        r = requests.get(
+            HEALTH_URL,
+            timeout=15,
+            headers={"User-Agent": "NuclearKeepAlive/1.0"}
+        )
         if r.status_code == 200:
-            print(f"PING OK — {mode}")
-            aggressive_until = None  # reset on success
+            print(f"PING OK — {mode} → sleep {sleep_time}s")
+            consecutive_success += 1
+            if consecutive_success >= 3:
+                backoff_level = 0
+                consecutive_success = 0
         else:
-            print(f"PING WARN {r.status_code} — {mode} → switching to AGGRESSIVE 15s for 2 min")
-            aggressive_until = datetime.now() + timedelta(minutes=2)
+            raise Exception(f"HTTP {r.status_code}")
     except Exception as e:
-        print(f"PING FAILED ({e}) → switching to AGGRESSIVE 15s for 2 min")
-        aggressive_until = datetime.now() + timedelta(minutes=2)
+        consecutive_success = 0
+        backoff_level += 1
+        print(f"PING FAILED ({e}) → BACKOFF ↑ L{backoff_level} → sleep {sleep_time}s")
 
-    time.sleep(interval)
+    time.sleep(sleep_time)

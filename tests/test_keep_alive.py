@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Test suite for keep_alive.py background worker.
-Tests the optimal keep-alive functionality that prevents Render services from sleeping.
+Tests the nuclear-grade keep-alive functionality that prevents Render services from sleeping.
 """
 import os
 import unittest
@@ -35,22 +35,25 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         # Verify it does NOT exit on missing env var (since we have a default)
         self.assertNotIn("sys.exit(1)", content)
 
-    def test_optimal_intervals_defined(self):
-        """Test that the script has optimal interval modes defined."""
+    def test_nuclear_intervals_defined(self):
+        """Test that the script has nuclear-grade interval modes with jitter defined."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify warmup interval (20s for first 5 minutes)
-        self.assertIn("interval = 20", content)
-        self.assertIn("WARMUP 20s", content)
+        # Verify warmup interval (20s ± 5s jitter for first 5 minutes)
+        self.assertIn("base = 20", content)
+        self.assertIn("WARMUP", content)
+        self.assertIn("random.randint(-5, 5)", content)
         
-        # Verify normal interval (55s after warmup)
-        self.assertIn("interval = 55", content)
-        self.assertIn("NORMAL 55s", content)
+        # Verify normal interval (55s ± 10s jitter after warmup)
+        self.assertIn("base = 55", content)
+        self.assertIn("NORMAL", content)
+        self.assertIn("random.randint(-10, 10)", content)
         
-        # Verify aggressive interval (15s on failures)
-        self.assertIn("interval = 15", content)
-        self.assertIn("AGGRESSIVE 15s", content)
+        # Verify exponential backoff on failures
+        self.assertIn("BACKOFF", content)
+        self.assertIn("backoff_level", content)
+        self.assertIn("random.randint(-20, 20)", content)
 
     def test_uses_health_endpoint(self):
         """Test that the script uses the /health endpoint."""
@@ -60,13 +63,13 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         # Verify the script uses the /health endpoint
         self.assertIn("/health", content)
 
-    def test_timeout_is_12_seconds(self):
-        """Test that the request timeout is 12 seconds."""
+    def test_timeout_is_15_seconds(self):
+        """Test that the request timeout is 15 seconds."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify the script uses a 12 second timeout
-        self.assertIn("timeout=12", content)
+        # Verify the script uses a 15 second timeout
+        self.assertIn("timeout=15", content)
 
     def test_exception_handling(self):
         """Test that exceptions are caught and don't stop the loop."""
@@ -75,18 +78,37 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         
         # Verify the script has exception handling
         self.assertIn("except Exception as e:", content)
-        # Verify it continues running after exception (sleep with interval)
-        self.assertIn("time.sleep(interval)", content)
+        # Verify it continues running after exception (sleep with sleep_time)
+        self.assertIn("time.sleep(sleep_time)", content)
 
-    def test_aggressive_mode_on_failure(self):
-        """Test that the script enters aggressive mode on ping failure."""
+    def test_exponential_backoff_on_failure(self):
+        """Test that the script uses exponential backoff on ping failure."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify aggressive mode is triggered on failure
-        self.assertIn("aggressive_until", content)
-        self.assertIn("timedelta(minutes=2)", content)
-        self.assertIn("AGGRESSIVE 15s for 2 min", content)
+        # Verify exponential backoff is implemented
+        self.assertIn("backoff_level", content)
+        self.assertIn("consecutive_success", content)
+        # Verify backoff formula (10 * 2^(level-1), max 300)
+        self.assertIn("min(10 * (2 ** (backoff_level - 1)), 300)", content)
+        # Verify backoff resets after 3 consecutive successes
+        self.assertIn("consecutive_success >= 3", content)
+
+    def test_minimum_sleep_time(self):
+        """Test that sleep time never goes below 5 seconds."""
+        with open("keep_alive.py", "r") as f:
+            content = f.read()
+        
+        # Verify minimum sleep time of 5 seconds
+        self.assertIn("max(5, base + jitter_sec)", content)
+
+    def test_logs_show_exact_sleep_time(self):
+        """Test that logs show the exact next sleep time."""
+        with open("keep_alive.py", "r") as f:
+            content = f.read()
+        
+        # Verify logs show sleep time
+        self.assertIn("sleep {sleep_time}s", content)
 
 
 class TestKeepAliveBehavior(unittest.TestCase):
@@ -103,12 +125,12 @@ class TestKeepAliveBehavior(unittest.TestCase):
             
             # Simulate the ping
             url = os.environ["RENDER_EXTERNAL_URL"]
-            response = requests.get(f"{url}/health", timeout=12)
+            response = requests.get(f"{url}/health", timeout=15)
             
             # Verify the request was made correctly
             mock_get.assert_called_once_with(
                 "https://test.onrender.com/health",
-                timeout=12
+                timeout=15
             )
 
     @patch("requests.get")
@@ -122,7 +144,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
             url = os.environ["RENDER_EXTERNAL_URL"]
             
             try:
-                requests.get(f"{url}/health", timeout=12)
+                requests.get(f"{url}/health", timeout=15)
             except Exception:
                 pass  # This should be caught like in keep_alive.py
             
@@ -140,7 +162,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
             url = os.environ["RENDER_EXTERNAL_URL"]
             
             try:
-                requests.get(f"{url}/health", timeout=12)
+                requests.get(f"{url}/health", timeout=15)
             except Exception:
                 pass  # This should be caught like in keep_alive.py
             
