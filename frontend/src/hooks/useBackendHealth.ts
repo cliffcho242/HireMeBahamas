@@ -27,6 +27,9 @@ const RETRY_MESSAGES = [
   'Final attempt, one moment...',
 ];
 
+// Valid health status values that indicate the backend is operational
+const VALID_HEALTH_STATUSES = ['healthy', 'degraded', 'alive', 'ok'];
+
 // Standalone async function for health check (outside component)
 async function checkServerHealth(retryAttempt: number): Promise<{
   isHealthy: boolean;
@@ -67,9 +70,8 @@ async function checkServerHealth(retryAttempt: number): Promise<{
     const response = await api.get('/health', { timeout });
     
     // Accept various healthy status responses from the backend
-    // Backend may return "healthy", "degraded", "alive", or "ok"
     const status = response.data?.status;
-    const isHealthyStatus = status === 'healthy' || status === 'degraded' || status === 'alive' || status === 'ok';
+    const isHealthyStatus = VALID_HEALTH_STATUSES.includes(status);
     
     if (response.status === 200 && isHealthyStatus) {
       return {
