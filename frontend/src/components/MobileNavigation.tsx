@@ -63,7 +63,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = '' }) =
 
   const navItems = [
     { path: '/', icon: HomeIcon, iconSolid: HomeIconSolid, label: 'Home', badge: null },
-    { path: '/friends', icon: UserGroupIcon, iconSolid: UserGroupIconSolid, label: 'Friends', badge: null },
+    { path: '/friends', icon: UserGroupIcon, iconSolid: UserGroupIconSolid, label: 'Discover', badge: null },
     { path: '/jobs', icon: BriefcaseIcon, iconSolid: BriefcaseIconSolid, label: 'Jobs', badge: null },
     { path: '/messages', icon: ChatBubbleLeftRightIcon, iconSolid: ChatIconSolid, label: 'Messages', badge: null },
   ];
