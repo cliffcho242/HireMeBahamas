@@ -5,10 +5,6 @@
       "source": "/",
       "headers": [
         {
-          "key": "Link",
-          "value": "</assets/vendor.js>; rel=preload; as=script, </assets/index.css>; rel=preload; as=style"
-        },
-        {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
         },

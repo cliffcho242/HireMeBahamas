@@ -150,13 +150,13 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash].[ext]',
         // Optimized chunking for HTTP/2 parallel loading
         manualChunks: {
-          // Core React libraries - loaded first for hydration
+          // Core React libraries - loaded first for initial render
           vendor: ['react', 'react-dom', 'react-router-dom'],
           // UI animation and icons - separate chunk for HTTP/2 multiplexing
           ui: ['framer-motion', '@heroicons/react'],
           // Form handling libraries - loaded on demand
           forms: ['react-hook-form', '@hookform/resolvers', 'zod', 'yup'],
-          // Data fetching and state - critical for SSR-like behavior
+          // Data fetching and state - critical for data loading
           query: ['@tanstack/react-query', 'axios'],
           // Utility libraries
           utils: ['date-fns', 'clsx', 'tailwind-merge'],
