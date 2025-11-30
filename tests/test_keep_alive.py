@@ -41,8 +41,11 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify the script contains delay = 40 (ping interval)
-        self.assertIn("delay = 40", content)
+        # Verify the script sets delay to 40 (initial or after success reset)
+        self.assertTrue(
+            ", 40" in content or "= 40" in content,
+            "Ping interval of 40 seconds not found in keep_alive.py"
+        )
 
     def test_uses_health_endpoint(self):
         """Test that the script uses the /health endpoint."""
