@@ -13,7 +13,11 @@ import React, { createContext, useContext, useEffect, useCallback, useState, Rea
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { messagesAPI } from '../services/api';
+import { BackendMessage } from '../types';
 import toast from 'react-hot-toast';
+
+// Configuration constants
+const NOTIFICATION_SOUND_PATH = '/sounds/notification.mp3';
 
 // Type for window with webkitAudioContext
 interface WebkitWindow extends Window {
@@ -53,18 +57,6 @@ const playWebAudioBeep = () => {
     console.warn('Web Audio API beep failed:', error);
   }
 };
-
-interface Message {
-  id: number;
-  content: string;
-  sender_id: number;
-  conversation_id: number;
-  created_at: string;
-  sender: {
-    first_name: string;
-    last_name: string;
-  };
-}
 
 interface MessageNotificationContextType {
   unreadCount: number;
@@ -130,10 +122,28 @@ export const MessageNotificationProvider: React.FC<MessageNotificationProviderPr
   // Check if notifications are supported
   const isSupported = typeof Notification !== 'undefined';
   
+  // Listen for service worker messages (e.g., notification clicks)
+  useEffect(() => {
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'NOTIFICATION_CLICK' && event.data?.url) {
+        // Use window.location for navigation since we're outside React Router context
+        // This is safe because the service worker has already focused the window
+        window.location.href = event.data.url;
+      }
+    };
+    
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      };
+    }
+  }, []);
+  
   // Initialize audio element
   useEffect(() => {
     // Create audio element for notification sound
-    const audio = new Audio('/sounds/notification.mp3');
+    const audio = new Audio(NOTIFICATION_SOUND_PATH);
     audio.preload = 'auto';
     audio.volume = 0.5;
     audioRef.current = audio;
@@ -259,14 +269,20 @@ export const MessageNotificationProvider: React.FC<MessageNotificationProviderPr
     };
   }, [user, fetchUnreadCountAsync]);
   
-  // Reset unread count when user changes (logs out)
-  // Using a separate effect to handle the logout case
+  // Keep unreadCountRef in sync with unreadCount (for use in callbacks)
+  const unreadCountRef = useRef(unreadCount);
   useEffect(() => {
-    if (!user && unreadCount > 0) {
+    unreadCountRef.current = unreadCount;
+  }, [unreadCount]);
+  
+  // Reset unread count when user logs out
+  // Only depends on user - uses a ref to avoid dependency on unreadCount in the effect
+  useEffect(() => {
+    if (!user && unreadCountRef.current > 0) {
       // Schedule the reset in a microtask to avoid synchronous setState in effect
       queueMicrotask(() => setUnreadCount(0));
     }
-  }, [user, unreadCount]);
+  }, [user]);
   
   // Update document title with unread count
   useEffect(() => {
@@ -299,7 +315,7 @@ export const MessageNotificationProvider: React.FC<MessageNotificationProviderPr
   }, [soundEnabled]);
   
   // Show browser notification
-  const showBrowserNotification = useCallback((message: Message) => {
+  const showBrowserNotification = useCallback((message: BackendMessage) => {
     if (!browserNotificationsEnabled) return;
     if (!isSupported || Notification.permission !== 'granted') return;
     
@@ -337,7 +353,7 @@ export const MessageNotificationProvider: React.FC<MessageNotificationProviderPr
   }, [browserNotificationsEnabled, isSupported]);
   
   // Start title blinking
-  const startTitleBlink = useCallback((message: Message) => {
+  const startTitleBlink = useCallback((message: BackendMessage) => {
     if (document.visibilityState !== 'hidden') return; // Don't blink if tab is visible
     
     // Stop any existing blink
@@ -350,18 +366,20 @@ export const MessageNotificationProvider: React.FC<MessageNotificationProviderPr
     let showOriginal = false;
     
     blinkIntervalRef.current = window.setInterval(() => {
+      // Use unreadCountRef to get current value without dependency
+      const currentCount = unreadCountRef.current;
       document.title = showOriginal 
-        ? (unreadCount > 0 ? `[${unreadCount}] ${originalTitleRef.current}` : originalTitleRef.current)
+        ? (currentCount > 0 ? `[${currentCount}] ${originalTitleRef.current}` : originalTitleRef.current)
         : newMessageTitle;
       showOriginal = !showOriginal;
     }, 1000);
-  }, [unreadCount]);
+  }, []);
   
   // Handle incoming messages from WebSocket
   useEffect(() => {
     if (!socket || !user) return;
     
-    const handleNewMessage = (message: Message) => {
+    const handleNewMessage = (message: BackendMessage) => {
       // Don't notify for own messages
       if (message.sender_id === user.id) return;
       

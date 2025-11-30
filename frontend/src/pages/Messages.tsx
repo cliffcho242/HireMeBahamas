@@ -41,7 +41,7 @@ interface Conversation {
 const Messages: React.FC = () => {
   const { user } = useAuth();
   const { socket } = useSocket();
-  const { refreshUnreadCount, playNotificationSound } = useMessageNotifications();
+  const { refreshUnreadCount } = useMessageNotifications();
   const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -121,21 +121,19 @@ const Messages: React.FC = () => {
           )
         );
         
-        // Play notification sound if message is not from current user
-        // and not viewing the current conversation
-        if (message.sender_id !== user.id && !isCurrentConversation) {
-          playNotificationSound();
+        // Note: Sound notification is handled globally by MessageNotificationContext
+        // Only refresh unread count here if we're viewing the current conversation
+        // (because we'll mark messages as read)
+        if (isCurrentConversation) {
+          refreshUnreadCount();
         }
-        
-        // Refresh unread count
-        refreshUnreadCount();
       });
 
       return () => {
         socket.off('new_message');
       };
     }
-  }, [socket, user, selectedConversation, playNotificationSound, refreshUnreadCount]);
+  }, [socket, user, selectedConversation, refreshUnreadCount]);
 
   // Reset query parameter processing flag on unmount
   useEffect(() => {

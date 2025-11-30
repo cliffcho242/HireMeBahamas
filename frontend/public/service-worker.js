@@ -164,26 +164,30 @@ self.addEventListener('notificationclick', (event) => {
 
   // Get the URL to open (from notification data or default to messages)
   const urlToOpen = event.notification.data?.url || '/messages';
+  // Create full URL
+  const fullUrl = new URL(urlToOpen, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {
-        // Check if there is already a window/tab open with the target URL
+        // Check if there is already a window/tab open with the app
         for (let i = 0; i < windowClients.length; i++) {
           const client = windowClients[i];
-          // If so, focus it
+          // If so, focus it and send a message to navigate
           if (client.url.includes(self.location.origin) && 'focus' in client) {
             client.focus();
-            // Navigate to the messages page
-            if (client.navigate) {
-              return client.navigate(urlToOpen);
-            }
+            // Use postMessage to tell the client to navigate
+            // The client should listen for this message and use React Router
+            client.postMessage({
+              type: 'NOTIFICATION_CLICK',
+              url: urlToOpen
+            });
             return client;
           }
         }
-        // If not, open a new window/tab
+        // If not, open a new window/tab with the full URL
         if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
+          return clients.openWindow(fullUrl);
         }
       })
   );
