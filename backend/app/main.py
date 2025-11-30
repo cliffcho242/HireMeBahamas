@@ -21,7 +21,7 @@ app = FastAPI(
 @app.get("/health")
 @app.head("/health")
 def health():
-    return JSONResponse({"status": "immortal"}, status_code=200)
+    return JSONResponse({"status": "healthy"}, status_code=200)
 
 @app.get("/ready")
 async def ready():
