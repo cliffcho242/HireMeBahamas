@@ -1,6 +1,6 @@
-# Render Cron Job Setup — Complete 2025 Guide
+# Render Cron Job Setup — Complete Guide
 
-> **Last Updated:** November 2025 | **Result:** Service NEVER sleeps, zero cold starts, 100% uptime
+> **Result:** Service NEVER sleeps, zero cold starts, 100% uptime
 
 This guide provides the **exact, production-ready configuration** to create a Render Cron Job that permanently prevents your web service from sleeping.
 
@@ -41,7 +41,12 @@ Use these **exact settings** (copy-paste ready):
 | **Region** | Oregon (or same region as your web service) |
 | **Schedule** | `*/5 * * * *` |
 | **Docker Image** | `curlimages/curl:latest` |
-| **Command** | `curl -f -L https://hiremebahamas.onrender.com/health \|\| exit 1` |
+| **Command** | See command below* |
+
+*Command (copy this exactly):
+```bash
+curl -f -L https://hiremebahamas.onrender.com/health || exit 1
+```
 
 ### Step 3: Click "Create Cron Job"
 
@@ -105,7 +110,8 @@ curl -f -L https://hiremebahamas.onrender.com/health || exit 1
 |------|---------|
 | `-f` | Fail silently on HTTP errors (exit code 22 on 4xx/5xx) |
 | `-L` | Follow redirects (in case of HTTP→HTTPS redirect) |
-| `\|\| exit 1` | Exit with error code if curl fails (marks job as failed) |
+
+The `|| exit 1` at the end ensures the job exits with error code if curl fails, which marks the job as failed in Render dashboard.
 
 This command:
 1. Sends an HTTP GET request to `/health`
@@ -148,9 +154,13 @@ If you prefer a different image:
 
 | Image | Size | Command |
 |-------|------|---------|
-| `curlimages/curl:latest` | ~5MB | `curl -f -L URL \|\| exit 1` |
-| `alpine:latest` | ~5MB | `wget -q -O- URL \|\| exit 1` |
-| `busybox:latest` | ~1MB | `wget -q -O- URL \|\| exit 1` |
+| `curlimages/curl:latest` | ~5MB | See curl example below |
+| `alpine:latest` | ~5MB | See wget example below |
+| `busybox:latest` | ~1MB | See wget example below |
+
+**curl command:** `curl -f -L URL || exit 1`
+
+**wget command:** `wget -q -O- URL || exit 1`
 
 ### Using Alpine with wget
 
@@ -209,9 +219,9 @@ In Render Dashboard:
 3. You should see successful executions every 5 minutes:
 
 ```
-[2025-11-30 12:00:00] Starting job...
-[2025-11-30 12:00:01] {"status":"ok"}
-[2025-11-30 12:00:01] Job completed successfully
+[YYYY-MM-DD HH:MM:SS] Starting job...
+[YYYY-MM-DD HH:MM:SS] {"status":"ok"}
+[YYYY-MM-DD HH:MM:SS] Job completed successfully
 ```
 
 ### 2. Check Execution History

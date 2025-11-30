@@ -105,7 +105,12 @@ Render's native Cron Job feature is the **best free option** to prevent your ser
    | **Region** | Oregon (same as your web service) |
    | **Schedule** | `*/5 * * * *` (every 5 minutes) |
    | **Docker Image** | `curlimages/curl:latest` |
-   | **Command** | `curl -f -L https://hiremebahamas.onrender.com/health \|\| exit 1` |
+   | **Command** | See command below* |
+
+   *Command (copy this exactly):
+   ```bash
+   curl -f -L https://hiremebahamas.onrender.com/health || exit 1
+   ```
 
 3. **Click "Create Cron Job"**
 
