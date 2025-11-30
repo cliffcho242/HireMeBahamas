@@ -70,6 +70,11 @@ def test_database_indexes():
                 'jobs_created_at_idx',
                 'follows_follower_id_idx',
                 'follows_followed_id_idx',
+                # New indexes added for performance optimization
+                'users_created_at_idx',
+                'friendships_sender_receiver_idx',
+                'friendships_receiver_sender_idx',
+                'stories_expires_at_idx',
             ]
             
             for expected in expected_indexes:
@@ -101,6 +106,11 @@ def test_database_indexes():
                 'jobs_created_at_idx',
                 'follows_follower_id_idx',
                 'follows_followed_id_idx',
+                # New indexes added for performance optimization
+                'users_created_at_idx',
+                'friendships_sender_receiver_idx',
+                'friendships_receiver_sender_idx',
+                'stories_expires_at_idx',
             ]
             
             for expected in expected_indexes:
