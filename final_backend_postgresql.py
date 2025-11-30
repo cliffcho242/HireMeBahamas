@@ -9653,7 +9653,7 @@ def api_fallback(path):
         return "", 200
 
     # Log the unknown route for debugging
-    print(f"⚠️ Unknown API route accessed: /api/{path} (method: {request.method})")
+    logger.warning(f"Unknown API route accessed: /api/{path} (method: {request.method})")
     
     # Return a 200 OK with an empty data structure
     # This prevents mobile clients from showing error states
