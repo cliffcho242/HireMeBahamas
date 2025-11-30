@@ -2268,7 +2268,10 @@ def init_database():
                         trade VARCHAR(100) DEFAULT '',
                         username VARCHAR(100),
                         occupation VARCHAR(100),
-                        company_name VARCHAR(200)
+                        company_name VARCHAR(200),
+                        skills TEXT,
+                        experience TEXT,
+                        education TEXT
                     )
                 """
                 )
@@ -2434,7 +2437,10 @@ def init_database():
                         trade TEXT DEFAULT '',
                         username TEXT,
                         occupation TEXT,
-                        company_name TEXT
+                        company_name TEXT,
+                        skills TEXT,
+                        experience TEXT,
+                        education TEXT
                     )
                 """
                 )
@@ -2733,6 +2739,9 @@ def migrate_user_columns(cursor, conn):
             ("username", "VARCHAR(100)" if USE_POSTGRESQL else "TEXT"),
             ("occupation", "VARCHAR(100)" if USE_POSTGRESQL else "TEXT"),
             ("company_name", "VARCHAR(200)" if USE_POSTGRESQL else "TEXT"),
+            ("skills", "TEXT"),
+            ("experience", "TEXT"),
+            ("education", "TEXT"),
         ]
 
         for column_name, column_type in columns_to_add:
@@ -5259,9 +5268,9 @@ def verify_session():
         )
 
 
-@app.route("/api/auth/profile", methods=["GET", "OPTIONS"])
-def get_profile():
-    """Get user profile"""
+@app.route("/api/auth/profile", methods=["GET", "PUT", "OPTIONS"])
+def profile():
+    """Get or update user profile"""
     if request.method == "OPTIONS":
         return "", 200
 
@@ -5291,10 +5300,53 @@ def get_profile():
                 401,
             )
 
-        # Get user from database
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # Handle PUT request (update profile)
+        if request.method == "PUT":
+            data = request.get_json()
+            if not data:
+                cursor.close()
+                return_db_connection(conn)
+                return (
+                    jsonify({"success": False, "message": "No data provided"}),
+                    400,
+                )
+
+            # Define allowed fields for update (prevents SQL injection and unauthorized field updates)
+            allowed_fields = [
+                "first_name", "last_name", "username", "phone", "location",
+                "bio", "occupation", "company_name", "skills", "experience", "education"
+            ]
+
+            # Build update query dynamically based on provided fields
+            update_fields = []
+            update_values = []
+            for field in allowed_fields:
+                if field in data:
+                    update_fields.append(field)
+                    update_values.append(data[field])
+
+            if update_fields:
+                # Build SET clause with parameterized queries
+                if USE_POSTGRESQL:
+                    set_clause = ", ".join([f"{field} = %s" for field in update_fields])
+                    update_values.append(user_id)
+                    cursor.execute(
+                        f"UPDATE users SET {set_clause} WHERE id = %s",
+                        tuple(update_values)
+                    )
+                else:
+                    set_clause = ", ".join([f"{field} = ?" for field in update_fields])
+                    update_values.append(user_id)
+                    cursor.execute(
+                        f"UPDATE users SET {set_clause} WHERE id = ?",
+                        tuple(update_values)
+                    )
+                conn.commit()
+
+        # Get user from database (for both GET and after PUT update)
         if USE_POSTGRESQL:
             cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
         else:
@@ -5325,21 +5377,33 @@ def get_profile():
                     "email": user["email"],
                     "first_name": user["first_name"] or "",
                     "last_name": user["last_name"] or "",
+                    "username": user.get("username") or "",
+                    "role": user["user_type"] or "user",
                     "user_type": user["user_type"] or "user",
                     "location": user["location"] or "",
                     "phone": user["phone"] or "",
                     "bio": user["bio"] or "",
+                    "occupation": user.get("occupation") or "",
+                    "company_name": user.get("company_name") or "",
+                    "skills": user.get("skills") or "",
+                    "experience": user.get("experience") or "",
+                    "education": user.get("education") or "",
                     "avatar_url": user["avatar_url"] or "",
                     "is_available_for_hire": bool(user["is_available_for_hire"]),
+                    "is_active": bool(user.get("is_active", True)),
+                    "created_at": str(user["created_at"]) if user.get("created_at") else "",
+                    "updated_at": str(user.get("last_login")) if user.get("last_login") else "",
                 }
             ),
             200,
         )
 
     except Exception as e:
-        print(f"Profile fetch error: {str(e)}")
+        import traceback
+        print(f"Profile error: {str(e)}")
+        traceback.print_exc()
         return (
-            jsonify({"success": False, "message": f"Profile fetch failed: {str(e)}"}),
+            jsonify({"success": False, "message": f"Profile operation failed: {str(e)}"}),
             500,
         )
 
