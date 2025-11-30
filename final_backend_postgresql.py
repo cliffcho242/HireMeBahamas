@@ -8622,6 +8622,8 @@ def get_conversations():
                 )
             else:
                 # SQLite doesn't support ANY, use IN with placeholders
+                # SECURITY: placeholders contains only "?" characters, not user data
+                # The actual values are passed as parameterized query arguments
                 placeholders = ",".join("?" * len(conversation_ids))
                 cursor.execute(
                     f"""
