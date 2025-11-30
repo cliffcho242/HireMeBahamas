@@ -1,0 +1,160 @@
+name: Dependency Updates
+
+# Automated dependency update workflow for regular maintenance.
+# This workflow:
+# - Runs weekly to check for outdated dependencies
+# - Creates a summary of available updates
+# - Can be triggered manually for immediate checks
+
+on:
+  schedule:
+    # Run every Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    # Allow manual trigger for immediate checks
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check-python-dependencies:
+    name: Check Python Dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libpq-dev python3-dev
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pip-tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-tools pipdeptree
+
+      - name: Check for outdated packages (root requirements)
+        id: check-root
+        run: |
+          echo "## Root Requirements (requirements.txt)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Install current requirements
+          pip install -r requirements.txt --quiet 2>/dev/null || true
+          
+          # Check for outdated packages
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          pip list --outdated --format=columns 2>/dev/null | head -50 >> $GITHUB_STEP_SUMMARY || echo "No outdated packages found" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check for outdated packages (backend requirements)
+        id: check-backend
+        run: |
+          echo "## Backend Requirements (backend/requirements.txt)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Create fresh virtual environment for backend check
+          python -m venv /tmp/backend-venv
+          source /tmp/backend-venv/bin/activate
+          pip install --upgrade pip --quiet
+          
+          # Install backend requirements
+          pip install -r backend/requirements.txt --quiet 2>/dev/null || true
+          
+          # Check for outdated packages
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          pip list --outdated --format=columns 2>/dev/null | head -50 >> $GITHUB_STEP_SUMMARY || echo "No outdated packages found" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          deactivate
+
+      - name: Generate dependency tree
+        run: |
+          echo "## Dependency Tree (Top-level)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          pipdeptree --warn silence 2>/dev/null | head -100 >> $GITHUB_STEP_SUMMARY || true
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  check-node-dependencies:
+    name: Check Node.js Dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Check for outdated packages
+        working-directory: ./frontend
+        run: |
+          echo "## Frontend Dependencies (frontend/package.json)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Outdated Packages" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          npm outdated 2>&1 | head -50 >> $GITHUB_STEP_SUMMARY || echo "All packages are up to date" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Security audit
+        working-directory: ./frontend
+        continue-on-error: true
+        run: |
+          echo "### Security Audit" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          npm audit --production 2>&1 | head -100 >> $GITHUB_STEP_SUMMARY || echo "No vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  summary:
+    name: Generate Update Summary
+    runs-on: ubuntu-latest
+    needs: [check-python-dependencies, check-node-dependencies]
+    
+    steps:
+      - name: Create Summary Header
+        run: |
+          echo "# 📦 Dependency Update Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Generated:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Recommendations" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Review security updates first** - Prioritize packages with known vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Test major version updates** - Major version bumps may include breaking changes" >> $GITHUB_STEP_SUMMARY
+          echo "3. **Update incrementally** - Update a few packages at a time and run tests" >> $GITHUB_STEP_SUMMARY
+          echo "4. **Check changelogs** - Review release notes for important changes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*This report is generated weekly on Mondays at 9:00 AM UTC.*" >> $GITHUB_STEP_SUMMARY

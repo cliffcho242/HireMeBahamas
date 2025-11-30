@@ -351,6 +351,32 @@ async def root():
     }
 
 
+# Prometheus metrics endpoint
+@app.get("/metrics", include_in_schema=False)
+async def metrics():
+    """Prometheus metrics endpoint for monitoring.
+    
+    Returns metrics in Prometheus text format for scraping by Prometheus server.
+    This endpoint is excluded from the OpenAPI schema.
+    
+    Metrics include:
+    - HTTP request counts and durations
+    - Database connection pool stats
+    - Authentication attempt counts
+    - Application uptime
+    """
+    from starlette.responses import Response
+    from .core.metrics import get_metrics_response, set_app_info
+    import os
+    
+    # Set app info on each request (idempotent)
+    environment = os.getenv("ENVIRONMENT", "development")
+    set_app_info(version="1.0.0", environment=environment)
+    
+    metrics_data, content_type = get_metrics_response()
+    return Response(content=metrics_data, media_type=content_type)
+
+
 if __name__ == "__main__":
     import uvicorn
 
