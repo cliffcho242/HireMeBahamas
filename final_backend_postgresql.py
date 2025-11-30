@@ -311,6 +311,15 @@ GENERIC_MOBILE_USER_AGENT_PATTERNS = [
     'opera mobi',  # Opera Mobile browser
 ]
 
+# Query stats configuration constants
+# Maximum length of query text to display in query stats responses
+# Longer queries are truncated to prevent response payload bloat
+QUERY_STATS_MAX_DISPLAY_LENGTH = 500
+
+# Threshold in milliseconds for identifying slow queries in database health checks
+# Queries averaging above this threshold trigger slow_query_alert
+SLOW_QUERY_THRESHOLD_MS = 500
+
 
 def _detect_client_type(user_agent: str) -> str:
     """
@@ -8971,11 +8980,15 @@ def get_query_stats():
             }), 200
 
         # Query pg_stat_statements for performance data
-        # Use parameterized query for limit, but order column is from whitelist
+        # SECURITY: order_column is validated through whitelist (order_by_map) above
+        # and cannot contain user input - only 'total_exec_time', 'mean_exec_time', or 'calls'
+        # User-supplied values (min_avg_time_ms, limit) use parameterized queries
         try:
+            # Build query with whitelisted column name
+            # The ORDER BY clause uses a validated column from order_by_map
             query = f"""
                 SELECT 
-                    LEFT(query, 500) as query,
+                    LEFT(query, {QUERY_STATS_MAX_DISPLAY_LENGTH}) as query,
                     calls,
                     total_exec_time as total_time_ms,
                     mean_exec_time as avg_time_ms,
@@ -9121,11 +9134,12 @@ def get_database_health():
         
         if pg_stat_available:
             try:
+                # Use parameterized query for the threshold value
                 cursor.execute("""
                     SELECT COUNT(*) as slow_count
                     FROM pg_stat_statements
-                    WHERE mean_exec_time > 500
-                """)
+                    WHERE mean_exec_time > %s
+                """, (SLOW_QUERY_THRESHOLD_MS,))
                 result = cursor.fetchone()
                 slow_query_count = result["slow_count"] if result else 0
                 slow_query_alert = slow_query_count > 0
