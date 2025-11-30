@@ -8,19 +8,13 @@ import { useCallback, useMemo } from 'react';
 import { 
   useQuery, 
   useMutation, 
-  useLazyQuery,
-  ApolloError,
-  DocumentNode,
-  QueryResult,
-  MutationTuple,
   Reference,
 } from '@apollo/client';
-import { apolloClient, prefetchQuery } from './client';
+import { prefetchQuery } from './client';
 import {
   GET_ME,
   GET_USER,
   GET_POSTS,
-  GET_USER_POSTS,
   GET_POST_COMMENTS,
   GET_CONVERSATIONS,
   GET_MESSAGES,
@@ -31,6 +25,7 @@ import {
   SEND_MESSAGE,
   MARK_NOTIFICATION_READ,
   MARK_ALL_NOTIFICATIONS_READ,
+  MESSAGE_FRAGMENT,
 } from './queries';
 
 // ============== TYPES ==============
@@ -420,13 +415,13 @@ export const useLikePost = () => {
     },
     { postId: number }
   >(LIKE_POST, {
-    optimisticResponse: ({ postId }) => ({
+    optimisticResponse: () => ({
       likePost: {
-        __typename: 'LikeResponse',
+        __typename: 'LikeResponse' as const,
         success: true,
-        action: 'like', // Will be overwritten by real response
+        action: 'like',
         liked: true,
-        likesCount: 0, // Will be updated
+        likesCount: 0,
       },
     }),
     update: (cache, { data }, { variables }) => {
@@ -468,14 +463,13 @@ export const useFollowUser = () => {
     },
     { userId: number }
   >(FOLLOW_USER, {
-    optimisticResponse: {
+    optimisticResponse: () => ({
       followUser: {
-        __typename: 'FollowResponse',
         success: true,
         action: 'follow',
         following: true,
       },
-    },
+    }),
   });
 
   const followUser = useCallback(
@@ -514,18 +508,16 @@ export const useSendMessage = () => {
               return existing;
             }
 
+            // Simply append the new message reference to the edges
             const newMessageRef = cache.writeFragment({
               data: data.sendMessage.message,
-              fragment: {
-                __typename: 'MessageType',
-                id: data.sendMessage.message.id,
-              } as unknown as DocumentNode,
+              fragment: MESSAGE_FRAGMENT,
             });
 
             return {
               ...existing,
               edges: [
-                ...existing.edges,
+                ...(existing?.edges || []),
                 { cursor: '', node: newMessageRef },
               ],
             };

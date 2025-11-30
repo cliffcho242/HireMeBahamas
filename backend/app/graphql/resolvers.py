@@ -150,7 +150,7 @@ async def enrich_post(
         likes_count=likes_count,
         comments_count=comments_count,
         is_liked=is_liked,
-        author=user_to_post_author(post.user) if post.user else strawberry.UNSET,
+        author=user_to_post_author(post.user) if post.user else None,
     )
 
 
@@ -348,7 +348,7 @@ class Query:
                     conversation_id=msg.conversation_id,
                     is_read=msg.is_read or False,
                     created_at=msg.created_at,
-                    sender=user_to_message_sender(msg.sender) if msg.sender else strawberry.UNSET,
+                    sender=user_to_message_sender(msg.sender) if msg.sender else None,
                 ),
             ))
         
@@ -411,7 +411,7 @@ class Query:
                     conversation_id=last_msg.conversation_id,
                     is_read=last_msg.is_read or False,
                     created_at=last_msg.created_at,
-                    sender=user_to_message_sender(last_msg.sender) if last_msg.sender else strawberry.UNSET,
+                    sender=user_to_message_sender(last_msg.sender) if last_msg.sender else None,
                 )
             
             conv_types.append(ConversationType(
@@ -420,8 +420,8 @@ class Query:
                 participant_2_id=conv.participant_2_id,
                 created_at=conv.created_at,
                 updated_at=conv.updated_at,
-                participant_1=user_to_conversation_participant(conv.participant_1) if conv.participant_1 else strawberry.UNSET,
-                participant_2=user_to_conversation_participant(conv.participant_2) if conv.participant_2 else strawberry.UNSET,
+                participant_1=user_to_conversation_participant(conv.participant_1) if conv.participant_1 else None,
+                participant_2=user_to_conversation_participant(conv.participant_2) if conv.participant_2 else None,
                 messages=[
                     MessageType(
                         id=m.id,
@@ -431,7 +431,7 @@ class Query:
                         conversation_id=m.conversation_id,
                         is_read=m.is_read or False,
                         created_at=m.created_at,
-                        sender=user_to_message_sender(m.sender) if m.sender else strawberry.UNSET,
+                        sender=user_to_message_sender(m.sender) if m.sender else None,
                     ) for m in conv.messages
                 ],
                 last_message=last_message,
@@ -591,7 +591,7 @@ class Query:
                 content=c.content,
                 created_at=c.created_at,
                 updated_at=c.updated_at,
-                author=user_to_comment_author(c.user) if c.user else strawberry.UNSET,
+                author=user_to_comment_author(c.user) if c.user else None,
             )
             for c in comments
         ]

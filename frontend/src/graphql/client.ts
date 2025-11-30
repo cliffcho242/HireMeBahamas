@@ -16,7 +16,6 @@ import {
   split,
   Observable,
   NormalizedCacheObject,
-  FieldPolicy,
 } from '@apollo/client';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { getMainDefinition } from '@apollo/client/utilities';
@@ -31,9 +30,11 @@ const DEFAULT_PROD_API = 'https://hiremebahamas.onrender.com';
 let API_BASE_URL = ENV_API || 'http://127.0.0.1:9999';
 
 // If no env is set and we're on the hiremebahamas.com domain, use the Render backend
+// Use strict hostname matching to prevent URL manipulation attacks
 if (!ENV_API && typeof window !== 'undefined') {
-  const origin = window.location.origin;
-  if (origin.includes('hiremebahamas.com')) {
+  const hostname = window.location.hostname;
+  // Strict match: only exact domain or www subdomain
+  if (hostname === 'hiremebahamas.com' || hostname === 'www.hiremebahamas.com') {
     API_BASE_URL = DEFAULT_PROD_API;
   }
 }
@@ -126,28 +127,13 @@ const splitLink = split(
     );
   },
   // For subscriptions, create/use WS link
-  new ApolloLink((operation, forward) => {
+  new ApolloLink((operation) => {
     const link = createWsLink();
     return link.request(operation) || Observable.of();
   }),
   // For queries/mutations, use HTTP
   ApolloLink.from([errorLink, authLink, httpLink])
 );
-
-/**
- * Type policies for Relay-style pagination
- */
-const relayStylePagination = (): FieldPolicy => ({
-  keyArgs: false,
-  merge(existing, incoming) {
-    if (!existing) return incoming;
-    
-    return {
-      ...incoming,
-      edges: [...(existing.edges || []), ...(incoming.edges || [])],
-    };
-  },
-});
 
 /**
  * InMemory Cache with type policies
@@ -290,8 +276,22 @@ export const initializeApolloClient = async (): Promise<ApolloClient<NormalizedC
     await del(CACHE_PERSISTENCE_KEY);
   });
   
-  // Persist cache periodically
-  setInterval(persistCache, 30000); // Every 30 seconds
+  // Persist cache periodically (every 5 minutes to balance performance and data persistence)
+  setInterval(persistCache, 300000);
+  
+  // Also persist cache when user navigates away
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', () => {
+      persistCache();
+    });
+    
+    // Persist on visibility change (user switches tabs)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        persistCache();
+      }
+    });
+  }
   
   return apolloClient;
 };
@@ -299,7 +299,7 @@ export const initializeApolloClient = async (): Promise<ApolloClient<NormalizedC
 /**
  * Prefetch a query (for hover prefetching)
  */
-export const prefetchQuery = async <TData = unknown, TVariables = Record<string, unknown>>(
+export const prefetchQuery = async <TVariables = Record<string, unknown>>(
   query: Parameters<typeof apolloClient.query>[0]['query'],
   variables?: TVariables
 ) => {

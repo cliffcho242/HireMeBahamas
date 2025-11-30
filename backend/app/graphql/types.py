@@ -54,7 +54,7 @@ class PostType:
     likes_count: int = 0
     comments_count: int = 0
     is_liked: bool = False
-    author: PostAuthorType = strawberry.UNSET
+    author: Optional[PostAuthorType] = None
 
 
 @strawberry.type
@@ -75,7 +75,7 @@ class CommentType:
     content: str
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    author: CommentAuthorType = strawberry.UNSET
+    author: Optional[CommentAuthorType] = None
 
 
 @strawberry.type
@@ -97,7 +97,7 @@ class MessageType:
     conversation_id: int
     is_read: bool = False
     created_at: Optional[datetime] = None
-    sender: MessageSenderType = strawberry.UNSET
+    sender: Optional[MessageSenderType] = None
 
 
 @strawberry.type
@@ -117,9 +117,9 @@ class ConversationType:
     participant_2_id: int
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    participant_1: ConversationParticipantType = strawberry.UNSET
-    participant_2: ConversationParticipantType = strawberry.UNSET
-    messages: List[MessageType] = strawberry.UNSET
+    participant_1: Optional[ConversationParticipantType] = None
+    participant_2: Optional[ConversationParticipantType] = None
+    messages: List[MessageType] = strawberry.field(default_factory=list)
     last_message: Optional[MessageType] = None
 
 
@@ -156,7 +156,7 @@ class JobType:
     status: str = "active"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    employer: PostAuthorType = strawberry.UNSET
+    employer: Optional[PostAuthorType] = None
 
 
 @strawberry.type

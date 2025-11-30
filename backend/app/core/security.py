@@ -206,12 +206,15 @@ async def get_current_user(
 async def get_current_user_optional(
     request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer),
-    db: AsyncSession = Depends(None),  # Will be injected properly
 ):
     """Get current authenticated user optionally (returns None if not authenticated).
     
     This is useful for GraphQL endpoints where some queries may be public
     but can provide additional data when authenticated.
+    
+    Note: The database session should be obtained from the GraphQL context,
+    not from dependency injection here. This function only extracts and validates
+    the token to get the user_id.
     """
     if credentials is None:
         return None
@@ -221,10 +224,6 @@ async def get_current_user_optional(
         from app.database import get_async_session
         from app.models import User
 
-        if db is None:
-            async with get_async_session() as session:
-                db = session
-
         token = credentials.credentials
         payload = verify_token(token)
         user_id = payload.get("sub")
@@ -232,10 +231,12 @@ async def get_current_user_optional(
         if user_id is None:
             return None
 
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-
-        return user
+        # Use a new session to fetch the user
+        # This is acceptable because we're just reading user data once
+        async with get_async_session() as session:
+            result = await session.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+            return user
 
     except (ValueError, Exception):
         return None
