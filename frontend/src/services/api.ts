@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { User } from '../types/user';
 import { Job } from '../types/job';
+import { debugLog } from '../utils/debugLogger';
 
 // API Response Types
 interface UserResponse {
@@ -271,6 +272,11 @@ export const authAPI = {
   },
 
   getUserProfile: async (identifier: string | number): Promise<UserResponse> => {
+    // Debug logging for user profile API calls (only in development)
+    debugLog.log('[API] getUserProfile called with identifier:', identifier, 
+      '| Type:', typeof identifier,
+      '| URL:', `/api/users/${identifier}`);
+    
     const response = await api.get(`/api/users/${identifier}`);
     return response.data;
   },
