@@ -17,11 +17,30 @@
 
 ---
 
-### Option 2: Free Tier - Use External Pinger (Keep Service Awake)
+### Option 2: Free Tier - Use Render Cron Job (RECOMMENDED)
 
-If you want to stay on the free tier, set up one of these free pingers:
+Create a native Render Cron Job that pings your service every 5 minutes:
 
-#### UptimeRobot (Recommended - 5 min interval, FREE forever)
+1. Go to https://dashboard.render.com → **New** → **Cron Job**
+2. Configure these **exact settings**:
+   - **Name:** `keepalive-ping`
+   - **Region:** Oregon
+   - **Schedule:** `*/5 * * * *`
+   - **Docker Image:** `curlimages/curl:latest`
+   - **Command:** `curl -f -L https://hiremebahamas.onrender.com/health || exit 1`
+3. Click **Create Cron Job**
+
+✅ Your backend will be pinged every 5 minutes and will **never sleep again**!
+
+📖 See [RENDER_CRON_JOB_SETUP.md](./RENDER_CRON_JOB_SETUP.md) for the complete guide.
+
+---
+
+### Option 3: Free Tier - Use External Pinger (Alternative)
+
+If you prefer an external service:
+
+#### UptimeRobot (5 min interval, FREE forever)
 
 1. Go to https://uptimerobot.com → **Register for FREE**
 2. Click **Add New Monitor**

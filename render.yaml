@@ -208,3 +208,34 @@ services:
         value: "true"
       - key: RENDER_EXTERNAL_URL
         value: https://hiremebahamas.onrender.com
+
+  # ==========================================================================
+  # CRON JOB - ALTERNATIVE KEEPALIVE (Recommended for 2025)
+  # ==========================================================================
+  # 
+  # This cron job pings the /health endpoint every 5 minutes to prevent the
+  # web service from sleeping. It's simpler and more reliable than the
+  # background worker approach.
+  # 
+  # Benefits over background worker:
+  # - Uses minimal Docker image (curlimages/curl ~5MB vs full Python runtime)
+  # - Guaranteed execution schedule by Render
+  # - No Python code to maintain
+  # - Can also be used for real scheduled tasks (daily, hourly, etc.)
+  # 
+  # Dashboard Setup (if not using render.yaml):
+  # 1. Render Dashboard → New → Cron Job
+  # 2. Name: keepalive-ping
+  # 3. Schedule: */5 * * * *
+  # 4. Docker Image: curlimages/curl:latest
+  # 5. Command: curl -f -L https://hiremebahamas.onrender.com/health || exit 1
+  # 
+  # See docs/RENDER_CRON_JOB_SETUP.md for complete guide
+  # ==========================================================================
+  - type: cron
+    name: keepalive-ping
+    region: oregon
+    plan: free
+    schedule: "*/5 * * * *"
+    dockerImage: curlimages/curl:latest
+    dockerCommand: curl -f -L https://hiremebahamas.onrender.com/health || exit 1
