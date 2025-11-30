@@ -8,7 +8,8 @@ import {
   HomeIcon,
   BriefcaseIcon,
   PlusIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 import { HomeIcon as HomeIconSolid } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
@@ -77,6 +78,14 @@ const Navbar: React.FC = () => {
               {isConnected && (
                 <span className="absolute -top-1 -right-1 h-2 w-2 bg-green-400 rounded-full"></span>
               )}
+            </Link>
+
+            <Link
+              to="/friends"
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors text-gray-700 hover:text-blue-600"
+            >
+              <UserGroupIcon className="w-5 h-5" />
+              <span>Discover Users</span>
             </Link>
 
             {isAuthenticated ? (
@@ -212,6 +221,14 @@ const Navbar: React.FC = () => {
             >
               <ChatBubbleLeftRightIcon className="w-5 h-5" />
               <span>Messages</span>
+            </Link>
+            <Link
+              to="/friends"
+              className="flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <UserGroupIcon className="w-5 h-5" />
+              <span>Discover Users</span>
             </Link>
 
             {isAuthenticated ? (
