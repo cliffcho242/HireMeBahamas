@@ -55,6 +55,8 @@ jobs:
           echo "🔍 Checking Railway backend health..."
           
           # Check main health endpoint
+          # Note: Flask backend uses /api/health, FastAPI backend uses /health
+          # The deployed production backend (Railway) uses Flask, so /api/health is correct
           health_response=$(curl -s -w "\n%{http_code}" \
             --max-time 30 \
             "$RAILWAY_BACKEND_URL/api/health" 2>/dev/null) || true

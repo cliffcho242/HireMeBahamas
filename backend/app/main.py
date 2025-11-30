@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 import uuid
 import json
@@ -14,6 +15,7 @@ import socketio
 # Import APIs
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
 from .database import init_db, close_db, get_db
+from .core.metrics import get_metrics_response, set_app_info
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -365,16 +367,12 @@ async def metrics():
     - Authentication attempt counts
     - Application uptime
     """
-    from starlette.responses import Response
-    from .core.metrics import get_metrics_response, set_app_info
-    import os
-    
     # Set app info on each request (idempotent)
     environment = os.getenv("ENVIRONMENT", "development")
     set_app_info(version="1.0.0", environment=environment)
     
     metrics_data, content_type = get_metrics_response()
-    return Response(content=metrics_data, media_type=content_type)
+    return StarletteResponse(content=metrics_data, media_type=content_type)
 
 
 if __name__ == "__main__":

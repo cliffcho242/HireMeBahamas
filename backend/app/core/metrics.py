@@ -187,19 +187,20 @@ def track_request_duration(endpoint: str):
     """
     def decorator(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args, method: str = "UNKNOWN", **kwargs):
+            """Track request duration.
+            
+            Args:
+                method: HTTP method, passed explicitly or extracted from framework context
+                *args: Positional arguments for the wrapped function
+                **kwargs: Keyword arguments for the wrapped function
+            """
             start_time = time.time()
             try:
                 result = func(*args, **kwargs)
                 return result
             finally:
                 duration = time.time() - start_time
-                # Get method from request context if available
-                try:
-                    from flask import request
-                    method = request.method
-                except (ImportError, RuntimeError):
-                    method = "UNKNOWN"
                 request_duration.labels(method=method, endpoint=endpoint).observe(duration)
         return wrapper
     return decorator
