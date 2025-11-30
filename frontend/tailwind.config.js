@@ -4,8 +4,14 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
+      // Inter Variable font family
+      fontFamily: {
+        'sans': ['Inter Variable', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        'display': ['Inter Variable', 'Inter', 'system-ui', 'sans-serif'],
+      },
       // Enhanced breakpoints for all devices - Mobile, Tablet, Desktop, 4K, 5K displays
       screens: {
         'xs': '320px',      // Extra small phones (iPhone SE, older Android)
@@ -60,7 +66,7 @@ export default {
         'touch': '44px',
         'touch-android': '48px',
       },
-      // Animations optimized for smooth 60fps on all displays including 5K
+      // Premium animations optimized for smooth 60fps on all displays including 5K
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',
         'fade-in-fast': 'fadeIn 0.15s ease-out',
@@ -78,6 +84,23 @@ export default {
         'shimmer': 'shimmer 2s linear infinite',
         'glow': 'glow 2s ease-in-out infinite alternate',
         'float': 'float 3s ease-in-out infinite',
+        // Premium micro-animations
+        'heart-burst': 'heartBurst 0.45s cubic-bezier(0.17, 0.89, 0.32, 1.28)',
+        'ripple-out': 'rippleOut 0.6s ease-out',
+        'checkmark-fly': 'checkmarkFly 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'card-lift': 'cardLift 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        'text-reveal': 'textReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+        'skeleton-pulse': 'skeletonPulse 1.5s ease-in-out infinite',
+        'neon-pulse': 'neonPulse 2s ease-in-out infinite',
+        'gradient-shift': 'gradientShift 8s ease infinite',
+        'cursor-glow': 'cursorGlow 1.5s ease-in-out infinite',
+        'page-transition': 'pageTransition 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        'pull-refresh': 'pullRefresh 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        'bottom-sheet': 'bottomSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+        'story-ring': 'storyRing 3s linear infinite',
+        'verified-badge': 'verifiedBadge 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'particle-float': 'particleFloat 4s ease-in-out infinite',
+        'tilt-3d': 'tilt3d 0.3s ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -130,6 +153,80 @@ export default {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-10px)' },
         },
+        // Premium keyframes
+        heartBurst: {
+          '0%': { transform: 'scale(1)' },
+          '15%': { transform: 'scale(1.35)' },
+          '30%': { transform: 'scale(0.9)' },
+          '45%': { transform: 'scale(1.15)' },
+          '60%': { transform: 'scale(0.95)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        rippleOut: {
+          '0%': { transform: 'scale(0)', opacity: '0.6' },
+          '100%': { transform: 'scale(4)', opacity: '0' },
+        },
+        checkmarkFly: {
+          '0%': { transform: 'translateY(0) scale(0)', opacity: '0' },
+          '50%': { transform: 'translateY(-15px) scale(1.2)', opacity: '1' },
+          '100%': { transform: 'translateY(-30px) scale(1)', opacity: '0' },
+        },
+        cardLift: {
+          '0%': { transform: 'translateY(0) scale(1)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' },
+          '100%': { transform: 'translateY(-8px) scale(1.02)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
+        },
+        textReveal: {
+          '0%': { transform: 'translateY(100%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        skeletonPulse: {
+          '0%, 100%': { opacity: '1', backgroundPosition: '-200% 0' },
+          '50%': { opacity: '0.6', backgroundPosition: '200% 0' },
+        },
+        neonPulse: {
+          '0%, 100%': { boxShadow: '0 0 5px currentColor, 0 0 10px currentColor, 0 0 20px currentColor' },
+          '50%': { boxShadow: '0 0 10px currentColor, 0 0 20px currentColor, 0 0 40px currentColor' },
+        },
+        gradientShift: {
+          '0%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' },
+        },
+        cursorGlow: {
+          '0%, 100%': { opacity: '0.8', transform: 'scale(1)' },
+          '50%': { opacity: '1', transform: 'scale(1.1)' },
+        },
+        pageTransition: {
+          '0%': { opacity: '0', filter: 'blur(10px)', transform: 'scale(0.98)' },
+          '100%': { opacity: '1', filter: 'blur(0)', transform: 'scale(1)' },
+        },
+        pullRefresh: {
+          '0%': { transform: 'translateY(-100%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        bottomSheet: {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
+        },
+        storyRing: {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '200% 50%' },
+        },
+        verifiedBadge: {
+          '0%': { transform: 'scale(0) rotate(-180deg)', opacity: '0' },
+          '70%': { transform: 'scale(1.2) rotate(10deg)', opacity: '1' },
+          '100%': { transform: 'scale(1) rotate(0)', opacity: '1' },
+        },
+        particleFloat: {
+          '0%, 100%': { transform: 'translateY(0) translateX(0) rotate(0deg)', opacity: '0.7' },
+          '25%': { transform: 'translateY(-20px) translateX(10px) rotate(90deg)', opacity: '1' },
+          '50%': { transform: 'translateY(-10px) translateX(20px) rotate(180deg)', opacity: '0.7' },
+          '75%': { transform: 'translateY(-30px) translateX(5px) rotate(270deg)', opacity: '1' },
+        },
+        tilt3d: {
+          '0%': { transform: 'perspective(1000px) rotateX(0) rotateY(0)' },
+          '100%': { transform: 'perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))' },
+        },
       },
       // Safe area for mobile devices (notch support)
       padding: {
@@ -139,7 +236,7 @@ export default {
         'safe-left': 'env(safe-area-inset-left)',
         'safe-right': 'env(safe-area-inset-right)',
       },
-      // Brand colors with enhanced 5K-optimized gradients
+      // Premium brand colors with glass-morphism + neon gradients
       colors: {
         'bahamas-blue': {
           50: '#eff6ff',
@@ -153,16 +250,50 @@ export default {
           800: '#1e40af',
           900: '#1e3a8a',
         },
-        // Semantic social interaction colors for consistent UX
-        // Using explicit values for clear intent (maps to red-500, blue-500, emerald-500)
-        'social': {
-          'like': '#ef4444',        // red-500
-          'like-hover': '#dc2626',  // red-600
-          'comment': '#3b82f6',     // blue-500
-          'comment-hover': '#2563eb', // blue-600
-          'share': '#10b981',       // emerald-500
-          'share-hover': '#059669', // emerald-600
+        // Premium neon accent colors
+        'neon': {
+          'blue': '#00d4ff',
+          'purple': '#a855f7',
+          'pink': '#ec4899',
+          'cyan': '#22d3ee',
+          'green': '#10b981',
+          'orange': '#f97316',
         },
+        // Glass morphism surface colors
+        'glass': {
+          'light': 'rgba(255, 255, 255, 0.8)',
+          'dark': 'rgba(15, 23, 42, 0.8)',
+          'overlay': 'rgba(255, 255, 255, 0.1)',
+        },
+        // Premium dark theme
+        'dark': {
+          'bg': '#0a0a0f',
+          'surface': '#111118',
+          'card': '#1a1a24',
+          'border': '#2a2a3a',
+          'text': '#e4e4e7',
+          'muted': '#a1a1aa',
+        },
+        // Semantic social interaction colors for consistent UX
+        'social': {
+          'like': '#ef4444',
+          'like-hover': '#dc2626',
+          'comment': '#3b82f6',
+          'comment-hover': '#2563eb',
+          'share': '#10b981',
+          'share-hover': '#059669',
+        },
+      },
+      // Premium gradient backgrounds
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+        'gradient-premium': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'gradient-neon': 'linear-gradient(135deg, #00d4ff 0%, #a855f7 50%, #ec4899 100%)',
+        'gradient-glass': 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+        'gradient-dark': 'linear-gradient(180deg, #0a0a0f 0%, #1a1a24 100%)',
+        'shimmer-gradient': 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
+        'story-ring': 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #f09433, #e6683c)',
       },
       // Enhanced 5K-optimized backdrop blur values
       backdropBlur: {
@@ -170,7 +301,7 @@ export default {
         '4xl': '72px',
         '5xl': '100px',
       },
-      // Smooth box shadows for high-resolution displays
+      // Premium box shadows for high-resolution displays
       boxShadow: {
         'social': '0 2px 8px -2px rgba(0, 0, 0, 0.1), 0 4px 16px -4px rgba(0, 0, 0, 0.15)',
         'social-hover': '0 4px 12px -2px rgba(0, 0, 0, 0.15), 0 8px 24px -6px rgba(0, 0, 0, 0.2)',
@@ -178,6 +309,14 @@ export default {
         'card-5k-hover': '0 4px 8px rgba(0, 0, 0, 0.1), 0 8px 24px rgba(0, 0, 0, 0.1)',
         'glow-blue': '0 0 20px rgba(59, 130, 246, 0.35)',
         'glow-purple': '0 0 20px rgba(139, 92, 246, 0.35)',
+        // Premium neon glow shadows
+        'neon-blue': '0 0 20px rgba(0, 212, 255, 0.4), 0 0 40px rgba(0, 212, 255, 0.2)',
+        'neon-purple': '0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2)',
+        'neon-pink': '0 0 20px rgba(236, 72, 153, 0.4), 0 0 40px rgba(236, 72, 153, 0.2)',
+        'glass': '0 8px 32px rgba(0, 0, 0, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
+        'glass-dark': '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05)',
+        'card-lift': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        'premium': '0 20px 60px -10px rgba(0, 0, 0, 0.2), 0 10px 20px -5px rgba(0, 0, 0, 0.1)',
       },
       // GPU-accelerated transitions for smooth 5K performance
       transitionTimingFunction: {
