@@ -9,6 +9,10 @@ import { SocketProvider } from './contexts/SocketContext';
 import { MessageNotificationProvider } from './contexts/MessageNotificationContext';
 import { AIMonitoringProvider } from './contexts/AIMonitoringContext';
 
+// Premium UI Components
+import { AppLayout } from './components/premium';
+import { PremiumSkeletonFeed } from './components/premium';
+
 // Core pages - eagerly loaded for fast initial render
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
@@ -49,7 +53,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// Fast loading spinner component with accessibility
+// Fast loading spinner component with accessibility - now premium
 const LoadingSpinner = () => (
   <div 
     className="flex items-center justify-center min-h-[50vh]"
@@ -57,7 +61,7 @@ const LoadingSpinner = () => (
     aria-label="Loading"
     aria-live="polite"
   >
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    <PremiumSkeletonFeed count={2} />
     <span className="sr-only">Loading page...</span>
   </div>
 );
@@ -86,7 +90,14 @@ function App() {
               <AuthProvider>
                 <SocketProvider>
                   <MessageNotificationProvider>
-                    <AppContent />
+                    <AppLayout 
+                      enableCustomCursor={true}
+                      enableSmoothScroll={true}
+                      enablePageTransitions={true}
+                      defaultTheme="system"
+                    >
+                      <AppContent />
+                    </AppLayout>
                     <SpeedInsightsWrapper />
                   </MessageNotificationProvider>
                 </SocketProvider>
@@ -104,7 +115,7 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="app-layout bg-gray-50 overflow-x-hidden">
+    <div className="app-layout overflow-x-hidden">
       {/* Connection status banner - shows when backend is slow/unavailable */}
       <ConnectionStatus />
 

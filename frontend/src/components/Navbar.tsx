@@ -16,6 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import { useMessageNotifications } from '../contexts/MessageNotificationContext';
 import Notifications from './Notifications';
+import { ThemeToggle } from './premium';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -32,16 +33,16 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30">
                 <span className="text-white font-bold text-sm">HB</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">HireMeBahamas</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-white">HireMeBahamas</span>
             </Link>
           </div>
 
@@ -49,15 +50,15 @@ const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center space-x-1">
             <Link
               to="/"
-              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors text-gray-700 hover:text-blue-600"
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
             >
-              <HomeIconSolid className="w-5 h-5 text-blue-600" />
+              <HomeIconSolid className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               <span className="font-medium">Home</span>
             </Link>
 
             <Link
               to="/hireme"
-              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors text-gray-700 hover:text-blue-600"
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
             >
               <UserIcon className="w-5 h-5" />
               <span>HireMe</span>
@@ -65,7 +66,7 @@ const Navbar: React.FC = () => {
 
             <Link
               to="/jobs"
-              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors text-gray-700 hover:text-blue-600"
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
             >
               <BriefcaseIcon className="w-5 h-5" />
               <span>Jobs</span>
@@ -73,23 +74,23 @@ const Navbar: React.FC = () => {
 
             <Link
               to="/messages"
-              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors text-gray-700 hover:text-blue-600 relative"
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 relative"
             >
               <ChatBubbleLeftRightIcon className="w-5 h-5" />
               <span>Messages</span>
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse-soft">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
               {isConnected && unreadCount === 0 && (
-                <span className="absolute -top-1 -right-1 h-2 w-2 bg-green-400 rounded-full"></span>
+                <span className="absolute -top-1 -right-1 h-2 w-2 bg-green-400 rounded-full shadow-lg shadow-green-400/50"></span>
               )}
             </Link>
 
             <Link
               to="/friends"
-              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors text-gray-700 hover:text-blue-600"
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
             >
               <UserGroupIcon className="w-5 h-5" />
               <span>Discover Users</span>
@@ -97,6 +98,9 @@ const Navbar: React.FC = () => {
 
             {isAuthenticated ? (
               <>
+                {/* Theme Toggle */}
+                <ThemeToggle className="mr-2" />
+                
                 {/* Notifications */}
                 <Notifications />
 
