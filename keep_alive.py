@@ -1,21 +1,20 @@
-import os
-import time
-import requests
+#!/usr/bin/env python3
+"""Render Keep-Alive: Pings /health every 40s with exponential backoff."""
+import os, time, requests
 
-# MASTER FIX – hard-coded full URL + env fallback
-BASE_URL = os.getenv("RENDER_EXTERNAL_URL", "https://hiremebahamas.onrender.com")
-HEALTH_URL = f"{BASE_URL.rstrip('/')}/health"
-
-print(f"Keep-alive started → pinging {HEALTH_URL} every 40s")
+APP_URL = os.getenv("RENDER_EXTERNAL_URL", "https://hiremebahamas.onrender.com")
+delay, max_delay = 40, 300
 
 while True:
     try:
-        resp = requests.get(HEALTH_URL, timeout=15, headers={"User-Agent": "KeepAliveBot/1.0"})
-        if resp.status_code == 200:
-            print("PING OK – Render is awake")
+        r = requests.get(f"{APP_URL}/health", timeout=10, headers={"User-Agent": "KeepAlive/1.0"})
+        if r.status_code == 200:
+            print("PING OK – Render awake", flush=True)
+            delay = 40
         else:
-            print(f"PING FAILED – status {resp.status_code}")
+            print(f"PING FAILED {r.status_code}", flush=True)
+            delay = min(delay * 2, max_delay)
     except Exception as e:
-        print(f"PING FAILED – {e}")
-    
-    time.sleep(40)
+        print(f"PING FAILED – {e}", flush=True)
+        delay = min(delay * 2, max_delay)
+    time.sleep(delay)
