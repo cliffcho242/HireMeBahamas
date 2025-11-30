@@ -4584,12 +4584,12 @@ def health_check():
     """
     Lightning-fast health check endpoint for Render/Railway.
     
-    Returns 200 OK with {"status":"alive"} in <10ms.
+    Returns 200 OK with {"status":"healthy"} in <10ms.
     No database access, no logging overhead - just a quick response.
     Supports both GET and HEAD methods for maximum compatibility.
     Exempt from rate limiting to allow monitoring services to check frequently.
     """
-    return jsonify({"status": "alive"}), 200
+    return jsonify({"status": "healthy"}), 200
 
 
 @app.route("/ready", methods=["GET"])
