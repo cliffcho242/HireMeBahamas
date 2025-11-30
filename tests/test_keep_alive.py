@@ -22,19 +22,16 @@ class TestKeepAliveConfiguration(unittest.TestCase):
 
     def test_environment_variable_required(self):
         """Test that RENDER_EXTERNAL_URL environment variable is required."""
-        # Clear the environment variable if set
-        render_url = os.environ.pop("RENDER_EXTERNAL_URL", None)
+        # Verify the script uses os.environ.get() for better error handling
+        with open("keep_alive.py", "r") as f:
+            content = f.read()
         
-        try:
-            # Import should not fail (environment variable read at runtime)
-            with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "https://test.onrender.com"}):
-                # Simulate the import and URL access
-                url = os.environ.get("RENDER_EXTERNAL_URL")
-                self.assertEqual(url, "https://test.onrender.com")
-        finally:
-            # Restore the environment variable if it was set
-            if render_url:
-                os.environ["RENDER_EXTERNAL_URL"] = render_url
+        # Verify it uses .get() method for safer access
+        self.assertIn('os.environ.get("RENDER_EXTERNAL_URL")', content)
+        
+        # Verify it has error handling for missing variable
+        self.assertIn("if not url:", content)
+        self.assertIn("sys.exit(1)", content)
 
     def test_ping_interval_is_70_seconds(self):
         """Test that the ping interval is 70 seconds as specified."""

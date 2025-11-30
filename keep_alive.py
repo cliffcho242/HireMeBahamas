@@ -20,11 +20,18 @@ Usage:
       startCommand: python keep_alive.py
 """
 import os
+import sys
 import time
 
 import requests
 
-url = os.environ["RENDER_EXTERNAL_URL"]  # https://hiremebahamas.onrender.com
+# Get the Render external URL from environment
+url = os.environ.get("RENDER_EXTERNAL_URL")
+if not url:
+    print("ERROR: RENDER_EXTERNAL_URL environment variable is not set.", file=sys.stderr)
+    print("Please set RENDER_EXTERNAL_URL to your Render service URL", file=sys.stderr)
+    print("Example: RENDER_EXTERNAL_URL=https://hiremebahamas.onrender.com", file=sys.stderr)
+    sys.exit(1)
 
 while True:
     try:
