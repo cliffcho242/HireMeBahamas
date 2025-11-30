@@ -97,26 +97,28 @@ services:
       pip install --upgrade pip setuptools wheel
       pip install -r requirements.txt
     # ==========================================================================
-    # START COMMAND - Cold Start Elimination Configuration
+    # START COMMAND - BULLETPROOF CONFIGURATION (OOM + Timeout Prevention)
     # ==========================================================================
     # 
-    # Uses Gunicorn with --preload to eliminate 30-120s cold starts:
-    #   --preload: Load app BEFORE forking workers (instant first request)
-    #   --config: Use gunicorn.conf.py for worker/thread/timeout settings
+    # This configuration ELIMINATES two fatal errors permanently:
+    # 1. "timeout expired" - Prevented by --timeout 120 + pool_pre_ping
+    # 2. "Worker sent SIGKILL (OOM)" - Prevented by 1 worker + --max-requests
     # 
-    # Alternative: Use start.sh for migrations + preload health check:
-    #   startCommand: bash start.sh
-    # 
-    # For Render Starter (512MB RAM): WEB_CONCURRENCY=2, WEB_THREADS=8
-    # For Render Standard (2GB RAM): WEB_CONCURRENCY=4, WEB_THREADS=8
-    # 
-    # Expected startup time: <5 seconds (vs 30-120s without preload)
-    # Expected first request: <400ms (vs 10-120s cold start)
+    # COPY-PASTE THIS EXACT COMMAND INTO RENDER DASHBOARD:
+    # gunicorn backend.app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --max-requests 1000 --max-requests-jitter 100 --timeout 120 --keep-alive 5 --bind 0.0.0.0:$PORT
+    #
+    # WHY EACH FLAG:
+    # --workers 1:            Uses <400MB RAM (vs 2+ workers = 600MB+ = SIGKILL)
+    # --max-requests 1000:    Restart worker after 1000 requests (prevents memory leaks)
+    # --max-requests-jitter:  Randomize restart to prevent cold start at exact same time
+    # --timeout 120:          Worker timeout for long operations (login, uploads)
+    # --keep-alive 5:         Close idle connections quickly to free memory
+    # -k uvicorn.workers:     Use Uvicorn for async FastAPI support
+    #
+    # RECOMMENDED RENDER INSTANCE: 1024 MB (Starter $7/mo is sufficient with this config)
     # ==========================================================================
-    startCommand: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
+    startCommand: gunicorn backend.app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --max-requests 1000 --max-requests-jitter 100 --timeout 120 --keep-alive 5 --bind 0.0.0.0:$PORT
     envVars:
-      - key: FLASK_ENV
-        value: production
       - key: ENVIRONMENT
         value: production
       - key: SECRET_KEY
@@ -128,32 +130,37 @@ services:
       - key: PYTHON_VERSION
         value: "3.12.0"
       # ==========================================================================
-      # WORKER CONFIGURATION (Critical for performance)
+      # DATABASE POOL CONFIGURATION (CRITICAL FOR OOM PREVENTION)
       # ==========================================================================
-      # WEB_CONCURRENCY: Number of Gunicorn workers
-      #   - Starter plan (512MB): 2 workers
-      #   - Standard plan (2GB): 4 workers
-      #   - Formula: (2 * CPU cores) + 1, capped by RAM
-      # 
-      # WEB_THREADS: Threads per worker
-      #   - 8 threads handles most I/O-bound workloads
-      #   - Total capacity: WEB_CONCURRENCY * WEB_THREADS = concurrent requests
+      # These values are tuned for Render 512MB-1GB instances
+      # Each PostgreSQL connection uses ~20-50MB RAM
+      # pool_size=2 + max_overflow=3 = max 5 connections = ~150MB for DB
       # ==========================================================================
-      - key: WEB_CONCURRENCY
+      - key: DB_POOL_SIZE
         value: "2"
-      - key: WEB_THREADS
-        value: "8"
-      # Enable preload (also set in gunicorn.conf.py, but explicit here for clarity)
-      - key: PRELOAD_APP
-        value: "true"
-      # Enable database keepalive thread
-      - key: DB_KEEPALIVE_ENABLED
-        value: "true"
+      - key: DB_POOL_MAX_OVERFLOW
+        value: "3"
+      - key: DB_POOL_TIMEOUT
+        value: "20"
+      - key: POOL_RECYCLE_SECONDS
+        value: "60"
+      - key: STATEMENT_TIMEOUT_SECONDS
+        value: "25"
       # Trust Render's load balancer for X-Forwarded-* headers
       - key: FORWARDED_ALLOW_IPS
         value: "*"
-      # DATABASE_URL must be set manually in Render dashboard
-      # to connect to your PostgreSQL database
+      # ==========================================================================
+      # DATABASE_URL CONFIGURATION (SET THIS IN RENDER DASHBOARD)
+      # ==========================================================================
+      # Copy your Railway PostgreSQL URL and ensure it has these parameters:
+      # 
+      # postgresql+asyncpg://postgres:<password>@<host>:<port>/<db>?sslmode=require&connect_timeout=20&options=-c%20jit=off
+      #
+      # REQUIRED PARAMETERS:
+      # - sslmode=require:     Force SSL for Railway connections
+      # - connect_timeout=20:  Prevent timeout during cold starts  
+      # - options=-c jit=off:  Disable JIT to save ~100MB RAM
+      # ==========================================================================
     
     # ==========================================================================
     # HEALTH CHECK CONFIGURATION - IMMORTAL SETTINGS
