@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -107,6 +108,59 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+# =============================================================================
+# BULLETPROOF HEALTH ENDPOINT - MUST BE REGISTERED FIRST
+# =============================================================================
+# Returns 200 INSTANTLY — no DB, no auth, no async dependencies
+# This endpoint is designed to pass health checks even during cold boot
+# Render also sends HEAD requests, so we support both GET and HEAD
+# =============================================================================
+
+
+@app.get("/health", tags=["health"])
+@app.head("/health", tags=["health"])
+async def health_check():
+    """Bulletproof health check endpoint - returns 200 instantly
+    
+    This endpoint is designed to pass health checks even during cold boot.
+    It has NO dependencies (no DB, no auth, no middleware processing delays).
+    Supports both GET and HEAD requests (Render sends HEAD).
+    
+    For detailed health with DB status, use /ready or /health/detailed
+    """
+    return JSONResponse(content={"status": "ok"}, status_code=200)
+
+
+@app.get("/ready", tags=["health"])
+async def readiness_check(db: AsyncSession = Depends(get_db)):
+    """Readiness probe with database connectivity check
+    
+    K8s-style readiness probe that checks if the application is ready to
+    receive traffic. Checks database connectivity.
+    
+    Returns 200 if the app is ready, 503 if database is unavailable.
+    """
+    from .core.db_health import check_database_health
+    
+    try:
+        db_health = await check_database_health(db)
+        if db_health["status"] == "healthy":
+            return JSONResponse(
+                content={"status": "ready", "database": "connected"},
+                status_code=200
+            )
+        else:
+            return JSONResponse(
+                content={"status": "not_ready", "database": db_health},
+                status_code=503
+            )
+    except Exception as e:
+        return JSONResponse(
+            content={"status": "not_ready", "error": str(e)},
+            status_code=503
+        )
 
 # Configure CORS - Allow development and production origins
 app.add_middleware(
@@ -335,15 +389,19 @@ async def api_health():
     return {"status": "ok"}
 
 
-# Health check endpoint
-@app.get("/health")
-async def health_check(db: AsyncSession = Depends(get_db)):
-    """Health check endpoint with database connectivity check
+# Detailed health check endpoint for monitoring
+@app.get("/health/detailed")
+async def detailed_health_check(db: AsyncSession = Depends(get_db)):
+    """Detailed health check with database statistics
     
-    Returns the health status of the API and database connection.
-    Useful for monitoring and debugging production issues.
+    Provides additional database statistics for monitoring.
+    May require admin permissions in production environments.
+    
+    For quick health checks, use /health (no DB dependency).
+    For readiness probes, use /ready (checks DB connectivity).
     """
-    from .core.db_health import check_database_health
+    from .core.db_health import check_database_health, get_database_stats
+    from .database import get_pool_status
     
     # Check API health
     api_status = {
@@ -358,26 +416,11 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     # Determine overall health status
     overall_status = "healthy" if db_health["status"] == "healthy" else "degraded"
     
-    return {
+    health_response = {
         "status": overall_status,
         "api": api_status,
         "database": db_health
     }
-
-
-# Detailed health check endpoint for monitoring
-@app.get("/health/detailed")
-async def detailed_health_check(db: AsyncSession = Depends(get_db)):
-    """Detailed health check with database statistics
-    
-    Provides additional database statistics for monitoring.
-    May require admin permissions in production environments.
-    """
-    from .core.db_health import check_database_health, get_database_stats
-    from .database import get_pool_status
-    
-    # Basic health check
-    health_response = await health_check(db)
     
     # Get database statistics
     db_stats = await get_database_stats(db)
