@@ -7203,11 +7203,15 @@ def send_friend_request(user_id):
             cursor.execute("SELECT id, is_active FROM users WHERE id IN (?, ?)", (sender_id, user_id))
         users = cursor.fetchall()
         if len(users) != 2:
+            cursor.close()
+            return_db_connection(conn)
             return jsonify({"success": False, "message": "User not found"}), 404
         
         # Check if both users are active
         for u in users:
             if not u["is_active"]:
+                cursor.close()
+                return_db_connection(conn)
                 return jsonify({"success": False, "message": "User account is not active"}), 404
 
         # Check if friendship already exists
@@ -7934,9 +7938,13 @@ def create_conversation():
         
         participant = cursor.fetchone()
         if not participant:
+            cursor.close()
+            return_db_connection(conn)
             return jsonify({"success": False, "message": "User not found"}), 404
         
         if not participant["is_active"]:
+            cursor.close()
+            return_db_connection(conn)
             return jsonify({"success": False, "message": "User account is not active"}), 404
 
         # Check if conversation already exists (check both orderings)
