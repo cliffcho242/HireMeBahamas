@@ -22,19 +22,22 @@ python remove_fake_posts.py
 
 The cleanup script (`remove_fake_posts.py`) removes:
 
-1. **Posts from test users (IDs 1-5)**
-   - These are the initial sample users created by setup scripts
-
-2. **Posts from fake email addresses:**
+1. **Posts from fake/test email addresses:**
    - john@hirebahamas.com
    - sarah@hirebahamas.com
    - mike@hirebahamas.com
    - lisa@hirebahamas.com
+   - admin@hirebahamas.com
+   - emma@hirebahamas.com
 
-3. **Posts containing test/sample keywords:**
+2. **Posts containing test/sample keywords:**
    - "test", "sample", "demo", "fake"
    - "Welcome to HireBahamas"
    - "Just launched our new job board"
+
+**IMPORTANT:** The script no longer deletes posts based on user IDs (1-5) to avoid
+accidentally deleting posts from real users (like cliffyv24@gmail.com or cliff242@gmail.com)
+who may have been assigned these IDs when they registered.
 
 ## Scripts That Previously Created Fake Data
 

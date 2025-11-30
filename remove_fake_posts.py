@@ -3,9 +3,13 @@
 Remove fake/sample/test posts from the HireMeBahamas database.
 
 This script removes:
-1. Posts from test users (IDs 1-5)
+1. Posts from test/sample email addresses (e.g., john@hirebahamas.com, admin@hirebahamas.com)
 2. Posts containing test/sample keywords
-3. Posts from fake email addresses (john@, sarah@, mike@, lisa@hirebahamas.com)
+
+IMPORTANT: This script no longer removes posts based on user IDs (1-5) to avoid
+accidentally deleting posts from real users who may have been assigned these IDs.
+Instead, it identifies test users by their email addresses which are clearly
+fake/sample data.
 
 Usage:
     python remove_fake_posts.py [--dry-run]
@@ -74,26 +78,26 @@ def remove_fake_posts(dry_run=False):
 
     deleted_count = 0
 
-    # 1. Delete posts from test users (IDs 1-5)
-    print("🗑️  Step 1: Removing posts from test users (IDs 1-5)...")
-    cursor.execute("SELECT COUNT(*) FROM posts WHERE user_id BETWEEN 1 AND 5")
-    count = cursor.fetchone()[0]
-    print(f"   Found {count} posts from test users")
-
-    if not dry_run and count > 0:
-        cursor.execute("DELETE FROM posts WHERE user_id BETWEEN 1 AND 5")
-        deleted_count += count
-        print(f"   ✅ Deleted {count} posts")
-    print()
-
-    # 2. Delete posts from fake email addresses
-    print("🗑️  Step 2: Removing posts from fake email addresses...")
+    # 1. Delete posts from fake/test email addresses
+    # NOTE: We no longer delete by user ID (1-5) to avoid accidentally deleting
+    # posts from real users like cliffyv24@gmail.com or cliff242@gmail.com who
+    # may have been assigned these IDs when they registered.
+    print("🗑️  Step 1: Removing posts from fake/test email addresses...")
     fake_emails = [
         "john@hirebahamas.com",
         "sarah@hirebahamas.com",
         "mike@hirebahamas.com",
         "lisa@hirebahamas.com",
+        "admin@hirebahamas.com",
+        "emma@hirebahamas.com",
+        # Sample/test emails from seed_data.py
+        "john@hirebahamas.com",
+        "sarah@hirebahamas.com",
+        "mike@hirebahamas.com",
+        "emma@hirebahamas.com",
     ]
+    # Remove duplicates while preserving order
+    fake_emails = list(dict.fromkeys(fake_emails))
 
     for email in fake_emails:
         cursor.execute(
@@ -119,8 +123,8 @@ def remove_fake_posts(dry_run=False):
 
     print()
 
-    # 3. Delete posts containing test/sample keywords
-    print("🗑️  Step 3: Removing posts with test/sample keywords...")
+    # 2. Delete posts containing test/sample keywords
+    print("🗑️  Step 2: Removing posts with test/sample keywords...")
     keywords = [
         "%test%",
         "%sample%",
