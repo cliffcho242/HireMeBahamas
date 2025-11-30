@@ -3,39 +3,140 @@
 Keep-Alive Background Worker for Render
 
 This script runs as a background worker on Render to prevent the backend
-from going to sleep due to inactivity. It pings the health endpoint
-every 70 seconds.
+from going to sleep due to inactivity. It pings multiple health endpoints
+every 60 seconds.
 
 Render's free tier sleeps services after 15 minutes of inactivity.
-By pinging every 70 seconds, we ensure the service stays awake.
+By pinging every 60 seconds, we ensure the service stays awake permanently.
 
-Usage:
-    Set RENDER_EXTERNAL_URL environment variable to your service's URL
-    (e.g., https://hiremebahamas.onrender.com)
+Setup Instructions:
+===================
 
-    Add to render.yaml as a background worker:
-    - type: worker
-      name: keep-alive
-      runtime: python
-      startCommand: python keep_alive.py
+1. ENVIRONMENT VARIABLE (set in Render Background Worker dashboard):
+   Name:  RENDER_EXTERNAL_URL
+   Value: https://hiremebahamas.onrender.com
+
+2. BUILD COMMAND (in Render dashboard for the Background Worker):
+   pip install requests
+
+3. START COMMAND (in Render dashboard for the Background Worker):
+   python keep_alive.py
+
+4. Add to render.yaml as a background worker (already configured):
+   - type: worker
+     name: keep-alive
+     runtime: python
+     plan: free
+     buildCommand: pip install requests
+     startCommand: python keep_alive.py
+     envVars:
+       - key: RENDER_EXTERNAL_URL
+         value: https://hiremebahamas.onrender.com
+
+This costs $0 on Render's free tier for background workers.
 """
 import os
 import sys
 import time
+from datetime import datetime, timezone
 
 import requests
 
-# Get the Render external URL from environment
-url = os.environ.get("RENDER_EXTERNAL_URL")
-if not url:
-    print("ERROR: RENDER_EXTERNAL_URL environment variable is not set.", file=sys.stderr)
-    print("Please set RENDER_EXTERNAL_URL to your Render service URL", file=sys.stderr)
-    print("Example: RENDER_EXTERNAL_URL=https://hiremebahamas.onrender.com", file=sys.stderr)
-    sys.exit(1)
+# Configuration
+PING_INTERVAL_SECONDS = 60  # Ping every 60 seconds to prevent sleep
+REQUEST_TIMEOUT_SECONDS = 30  # Timeout for each request
+MAX_CONSECUTIVE_FAILURES = 10  # Log warning after this many failures
 
-while True:
+# Primary endpoint for keepalive - this is the main endpoint we ping
+# Only this endpoint is used to keep the service alive
+# Additional endpoints could be added for redundancy if needed
+PRIMARY_ENDPOINT = "/health/ping"
+
+
+def log(message: str, is_error: bool = False) -> None:
+    """Log a message with timestamp."""
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    prefix = "❌" if is_error else "✅"
+    output = sys.stderr if is_error else sys.stdout
+    print(f"[{timestamp}] {prefix} {message}", file=output, flush=True)
+
+
+def ping_endpoint(base_url: str, endpoint: str) -> bool:
+    """
+    Ping a single endpoint and return success status.
+    
+    Args:
+        base_url: The base URL of the service
+        endpoint: The endpoint path to ping
+        
+    Returns:
+        True if ping succeeded (200 OK), False otherwise
+    """
+    url = f"{base_url}{endpoint}"
     try:
-        requests.get(f"{url}/health/ping", timeout=10)
-    except Exception:
-        pass
-    time.sleep(70)  # every 70 seconds
+        response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
+        if response.status_code == 200:
+            return True
+        log(f"Unexpected status {response.status_code} from {endpoint}", is_error=True)
+        return False
+    except requests.exceptions.Timeout:
+        log(f"Timeout pinging {endpoint} (>{REQUEST_TIMEOUT_SECONDS}s)", is_error=True)
+        return False
+    except requests.exceptions.ConnectionError:
+        log(f"Connection error pinging {endpoint}", is_error=True)
+        return False
+    except Exception as e:
+        log(f"Error pinging {endpoint}: {type(e).__name__}: {e}", is_error=True)
+        return False
+
+
+def main() -> None:
+    """Main keep-alive loop."""
+    # Get the Render external URL from environment
+    raw_url = os.environ.get("RENDER_EXTERNAL_URL")
+    
+    if not raw_url:
+        log("ERROR: RENDER_EXTERNAL_URL environment variable is not set.", is_error=True)
+        log("Please set RENDER_EXTERNAL_URL to your Render service URL", is_error=True)
+        log("Example: RENDER_EXTERNAL_URL=https://hiremebahamas.onrender.com", is_error=True)
+        sys.exit(1)
+    
+    base_url = raw_url.rstrip("/")
+    
+    log(f"Keep-alive worker started for {base_url}")
+    log(f"Ping interval: {PING_INTERVAL_SECONDS} seconds")
+    log(f"Primary endpoint: {PRIMARY_ENDPOINT}")
+    
+    consecutive_failures = 0
+    ping_count = 0
+    
+    while True:
+        ping_count += 1
+        
+        # Ping the primary endpoint
+        success = ping_endpoint(base_url, PRIMARY_ENDPOINT)
+        
+        if success:
+            consecutive_failures = 0
+            # Log success every 10 pings (approximately every 10 minutes)
+            if ping_count % 10 == 0:
+                log(f"Ping #{ping_count} successful")
+        else:
+            consecutive_failures += 1
+            log(f"Ping failed (attempt {consecutive_failures})", is_error=True)
+            
+            if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                log(
+                    f"WARNING: {MAX_CONSECUTIVE_FAILURES} consecutive failures. "
+                    f"Service may be unhealthy at {base_url}",
+                    is_error=True
+                )
+                # Reset counter to avoid spamming logs
+                consecutive_failures = 0
+        
+        # Wait before next ping
+        time.sleep(PING_INTERVAL_SECONDS)
+
+
+if __name__ == "__main__":
+    main()
