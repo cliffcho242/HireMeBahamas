@@ -71,7 +71,7 @@ async function checkServerHealth(retryAttempt: number): Promise<{
     
     // Accept various healthy status responses from the backend
     const status = response.data?.status;
-    const isHealthyStatus = VALID_HEALTH_STATUSES.includes(status);
+    const isHealthyStatus = typeof status === 'string' && VALID_HEALTH_STATUSES.includes(status);
     
     if (response.status === 200 && isHealthyStatus) {
       return {
