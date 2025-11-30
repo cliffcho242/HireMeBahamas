@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Test suite for keep_alive.py background worker.
-Tests the optimal keep-alive functionality that prevents Render services from sleeping.
+Tests the hardcoded keep-alive functionality that prevents Render services from sleeping.
 """
 import os
 import unittest
@@ -20,37 +20,19 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         except py_compile.PyCompileError as e:
             self.fail(f"keep_alive.py has syntax errors: {e}")
 
-    def test_environment_variable_optional_with_default(self):
-        """Test that RENDER_EXTERNAL_URL environment variable is optional with default URL."""
-        # Verify the script uses os.getenv() with default fallback
+    def test_hardcoded_url(self):
+        """Test that the health URL is hardcoded (no os.getenv for the URL)."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify it uses os.getenv() with default fallback
-        self.assertIn('os.getenv("RENDER_EXTERNAL_URL"', content)
+        # Verify it has hardcoded URL
+        self.assertIn('HEALTH_URL = "https://hiremebahamas.onrender.com/health"', content)
         
-        # Verify it has default URL fallback
-        self.assertIn("https://hiremebahamas.onrender.com", content)
+        # Verify it does NOT use os.getenv() for URL construction
+        self.assertNotIn('os.getenv("RENDER_EXTERNAL_URL"', content)
         
-        # Verify it does NOT exit on missing env var (since we have a default)
+        # Verify it does NOT exit on missing env var
         self.assertNotIn("sys.exit(1)", content)
-
-    def test_optimal_intervals_defined(self):
-        """Test that the script has optimal interval modes defined."""
-        with open("keep_alive.py", "r") as f:
-            content = f.read()
-        
-        # Verify warmup interval (20s for first 5 minutes)
-        self.assertIn("interval = 20", content)
-        self.assertIn("WARMUP 20s", content)
-        
-        # Verify normal interval (55s after warmup)
-        self.assertIn("interval = 55", content)
-        self.assertIn("NORMAL 55s", content)
-        
-        # Verify aggressive interval (15s on failures)
-        self.assertIn("interval = 15", content)
-        self.assertIn("AGGRESSIVE 15s", content)
 
     def test_uses_health_endpoint(self):
         """Test that the script uses the /health endpoint."""
@@ -60,13 +42,13 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         # Verify the script uses the /health endpoint
         self.assertIn("/health", content)
 
-    def test_timeout_is_12_seconds(self):
-        """Test that the request timeout is 12 seconds."""
+    def test_timeout_is_15_seconds(self):
+        """Test that the request timeout is 15 seconds."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify the script uses a 12 second timeout
-        self.assertIn("timeout=12", content)
+        # Verify the script uses a 15 second timeout
+        self.assertIn("timeout=15", content)
 
     def test_exception_handling(self):
         """Test that exceptions are caught and don't stop the loop."""
@@ -75,18 +57,16 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         
         # Verify the script has exception handling
         self.assertIn("except Exception as e:", content)
-        # Verify it continues running after exception (sleep with interval)
-        self.assertIn("time.sleep(interval)", content)
+        # Verify it continues running after exception (sleep)
+        self.assertIn("time.sleep(55)", content)
 
-    def test_aggressive_mode_on_failure(self):
-        """Test that the script enters aggressive mode on ping failure."""
+    def test_fixed_55_second_interval(self):
+        """Test that the script uses a fixed 55 second interval."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify aggressive mode is triggered on failure
-        self.assertIn("aggressive_until", content)
-        self.assertIn("timedelta(minutes=2)", content)
-        self.assertIn("AGGRESSIVE 15s for 2 min", content)
+        # Verify fixed 55 second interval
+        self.assertIn("time.sleep(55)", content)
 
 
 class TestKeepAliveBehavior(unittest.TestCase):
@@ -97,19 +77,17 @@ class TestKeepAliveBehavior(unittest.TestCase):
         """Test that a GET request is made to the health endpoint."""
         mock_get.return_value.status_code = 200
         
-        # Set up environment
-        with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "https://test.onrender.com"}):
-            import requests
-            
-            # Simulate the ping
-            url = os.environ["RENDER_EXTERNAL_URL"]
-            response = requests.get(f"{url}/health", timeout=12)
-            
-            # Verify the request was made correctly
-            mock_get.assert_called_once_with(
-                "https://test.onrender.com/health",
-                timeout=12
-            )
+        import requests
+        
+        # Simulate the ping with hardcoded URL
+        url = "https://hiremebahamas.onrender.com/health"
+        response = requests.get(url, timeout=15)
+        
+        # Verify the request was made correctly
+        mock_get.assert_called_once_with(
+            "https://hiremebahamas.onrender.com/health",
+            timeout=15
+        )
 
     @patch("requests.get")
     def test_ping_handles_timeout(self, mock_get):
@@ -118,16 +96,15 @@ class TestKeepAliveBehavior(unittest.TestCase):
         mock_get.side_effect = requests.exceptions.Timeout("Connection timed out")
         
         # Simulate the ping with exception handling
-        with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "https://test.onrender.com"}):
-            url = os.environ["RENDER_EXTERNAL_URL"]
-            
-            try:
-                requests.get(f"{url}/health", timeout=12)
-            except Exception:
-                pass  # This should be caught like in keep_alive.py
-            
-            # Verify the exception was raised and handled
-            mock_get.assert_called_once()
+        url = "https://hiremebahamas.onrender.com/health"
+        
+        try:
+            requests.get(url, timeout=15)
+        except Exception:
+            pass  # This should be caught like in keep_alive.py
+        
+        # Verify the exception was raised and handled
+        mock_get.assert_called_once()
 
     @patch("requests.get")
     def test_ping_handles_connection_error(self, mock_get):
@@ -136,16 +113,15 @@ class TestKeepAliveBehavior(unittest.TestCase):
         mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
         
         # Simulate the ping with exception handling
-        with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "https://test.onrender.com"}):
-            url = os.environ["RENDER_EXTERNAL_URL"]
-            
-            try:
-                requests.get(f"{url}/health", timeout=12)
-            except Exception:
-                pass  # This should be caught like in keep_alive.py
-            
-            # Verify the exception was raised and handled
-            mock_get.assert_called_once()
+        url = "https://hiremebahamas.onrender.com/health"
+        
+        try:
+            requests.get(url, timeout=15)
+        except Exception:
+            pass  # This should be caught like in keep_alive.py
+        
+        # Verify the exception was raised and handled
+        mock_get.assert_called_once()
 
 
 class TestRenderYamlConfiguration(unittest.TestCase):
