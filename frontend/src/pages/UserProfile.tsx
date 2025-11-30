@@ -18,7 +18,7 @@ import { authAPI, postsAPI, usersAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { ApiError } from '../types';
-import { getApiErrorMessage } from '../utils/errorHandler';
+import { getApiErrorMessage, parseUserId } from '../utils/errorHandler';
 
 interface UserProfile {
   id: number;
@@ -96,12 +96,18 @@ const UserProfile: React.FC = () => {
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchUserProfile = useCallback(async () => {
-    if (!userId) return;
+    // Safely validate the userId
+    const parsedUserId = parseUserId(userId);
+    if (!parsedUserId) {
+      setError('Invalid user ID');
+      setIsLoading(false);
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
     try {
-      const response = await authAPI.getUserProfile(userId);
+      const response = await authAPI.getUserProfile(String(parsedUserId));
       const userData = response.user as unknown as Record<string, unknown>; // API response may have additional fields
       
       // Normalize user data with safe defaults
@@ -134,7 +140,7 @@ const UserProfile: React.FC = () => {
       setFollowingCount(normalizedProfile.following_count);
 
       // Fetch user's posts using the dedicated endpoint
-      const userPosts = await postsAPI.getUserPosts(parseInt(userId));
+      const userPosts = await postsAPI.getUserPosts(parsedUserId);
       setUserPosts(userPosts);
     } catch (error: unknown) {
       console.error('Failed to fetch user profile:', error);
@@ -212,17 +218,21 @@ const UserProfile: React.FC = () => {
   };
 
   const handleFollowToggle = async () => {
-    if (!userId) return;
+    const parsedUserId = parseUserId(userId);
+    if (!parsedUserId) {
+      toast.error('Invalid user ID');
+      return;
+    }
     
     setIsFollowLoading(true);
     try {
       if (isFollowing) {
-        await usersAPI.unfollowUser(parseInt(userId));
+        await usersAPI.unfollowUser(parsedUserId);
         setIsFollowing(false);
         setFollowersCount(prev => Math.max(0, prev - 1));
         toast.success('User unfollowed');
       } else {
-        await usersAPI.followUser(parseInt(userId));
+        await usersAPI.followUser(parsedUserId);
         setIsFollowing(true);
         setFollowersCount(prev => prev + 1);
         toast.success('User followed');
@@ -237,14 +247,19 @@ const UserProfile: React.FC = () => {
   };
 
   const fetchFollowers = async (forceRefresh = false) => {
-    if (!userId) return;
+    // Safely parse the userId to ensure it's a valid positive integer
+    const parsedUserId = parseUserId(userId);
+    if (!parsedUserId) {
+      console.error('Invalid user ID for fetching followers:', userId);
+      return;
+    }
     
     // Don't refetch if already loaded successfully (unless force refresh)
     if (followersLoaded && !forceRefresh) return;
     
     setIsLoadingFollowers(true);
     try {
-      const response = await usersAPI.getUserFollowers(parseInt(userId));
+      const response = await usersAPI.getUserFollowers(parsedUserId);
       // Ensure we always get an array, even if API response is malformed
       const followers = Array.isArray(response?.followers) ? response.followers : [];
       setFollowersList(followers);
@@ -259,14 +274,19 @@ const UserProfile: React.FC = () => {
   };
 
   const fetchFollowing = async (forceRefresh = false) => {
-    if (!userId) return;
+    // Safely parse the userId to ensure it's a valid positive integer
+    const parsedUserId = parseUserId(userId);
+    if (!parsedUserId) {
+      console.error('Invalid user ID for fetching following:', userId);
+      return;
+    }
     
     // Don't refetch if already loaded successfully (unless force refresh)
     if (followingLoaded && !forceRefresh) return;
     
     setIsLoadingFollowing(true);
     try {
-      const response = await usersAPI.getUserFollowing(parseInt(userId));
+      const response = await usersAPI.getUserFollowing(parsedUserId);
       // Ensure we always get an array, even if API response is malformed
       const following = Array.isArray(response?.following) ? response.following : [];
       setFollowingList(following);

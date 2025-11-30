@@ -1,5 +1,5 @@
 from app.database import Base
-from sqlalchemy import Boolean, Column, DateTime, Enum as SQLEnum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Enum as SQLEnum, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -216,6 +216,14 @@ class UploadedFile(Base):
 
 class Follow(Base):
     __tablename__ = "follows"
+    __table_args__ = (
+        # Index for efficient follower lookups (who follows this user)
+        Index('ix_follows_followed_id', 'followed_id'),
+        # Index for efficient following lookups (who does this user follow)
+        Index('ix_follows_follower_id', 'follower_id'),
+        # Composite index for checking if a specific follow relationship exists
+        Index('ix_follows_follower_followed', 'follower_id', 'followed_id', unique=True),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     follower_id = Column(Integer, ForeignKey("users.id"), nullable=False)

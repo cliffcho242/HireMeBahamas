@@ -48,6 +48,11 @@ export function getApiErrorMessage(
   }
   
   if (apiError.response?.status === 404) {
+    // For followers/following, a 404 likely means the user doesn't exist
+    // Not that the list is empty (empty lists return 200 with an empty array)
+    if (resourceType === 'followers' || resourceType === 'following') {
+      return 'User not found';
+    }
     return `The requested ${resourceType} could not be found`;
   }
   
@@ -61,4 +66,38 @@ export function getApiErrorMessage(
   
   // Use default message or a generic retry message
   return defaultMessage || `Failed to load ${resourceType}. Click again to retry.`;
+}
+
+/**
+ * Safely parse an ID value to ensure it's a valid positive integer.
+ * Works with both string and number inputs.
+ * 
+ * @param id - The ID value to parse (string or number)
+ * @returns A valid positive integer, or null if parsing fails
+ */
+export function parseUserId(id: string | number | undefined | null): number | null {
+  if (id === undefined || id === null) {
+    return null;
+  }
+  
+  // If already a number, validate it's a positive integer
+  if (typeof id === 'number') {
+    if (!Number.isFinite(id) || id <= 0 || !Number.isInteger(id)) {
+      return null;
+    }
+    return id;
+  }
+  
+  // Parse string to integer
+  const trimmed = id.trim();
+  if (!trimmed || !/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  
+  const parsed = parseInt(trimmed, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > Number.MAX_SAFE_INTEGER) {
+    return null;
+  }
+  
+  return parsed;
 }
