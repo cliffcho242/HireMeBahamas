@@ -259,6 +259,49 @@ Sentry.init({
 2. **Nginx**: HTTP/2 ready configuration with resource hints
 3. **Vite Build**: Module preload polyfill enabled for broader browser support
 
+## CDN Configuration (Vercel Edge Network)
+
+The application is deployed on Vercel's global Edge Network, providing:
+
+### CDN Benefits
+- ✅ **Global edge caching** - Assets served from 100+ edge locations worldwide
+- ✅ **Automatic HTTPS** - SSL/TLS certificates provisioned automatically
+- ✅ **HTTP/2 by default** - Multiplexed connections for parallel asset loading
+- ✅ **Brotli compression** - Smaller asset sizes for faster downloads
+- ✅ **Cache-Control headers** - Long-term caching for immutable assets
+
+### CDN Caching Headers
+| Asset Type | Cache-Control | Duration |
+|------------|---------------|----------|
+| JS/CSS bundles | `public, max-age=31536000, immutable` | 1 year |
+| Images (PNG, JPG, WebP) | `public, max-age=604800, stale-while-revalidate=86400` | 7 days + SWR |
+| Fonts (woff2) | `public, max-age=31536000, immutable` | 1 year |
+| Service Worker | `public, max-age=0, must-revalidate` | No cache |
+| Manifest | `public, max-age=86400, stale-while-revalidate=3600` | 1 day + SWR |
+
+## SSL/TLS Security
+
+### Security Headers (Frontend & Backend)
+All responses include comprehensive security headers:
+
+| Header | Value | Purpose |
+|--------|-------|---------|
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` | Enforce HTTPS for 1 year |
+| `X-Content-Type-Options` | `nosniff` | Prevent MIME-type sniffing |
+| `X-Frame-Options` | `DENY` | Prevent clickjacking |
+| `X-XSS-Protection` | `1; mode=block` | Enable XSS filter |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Control referrer information |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=(self), payment=()` | Restrict browser features |
+| `X-DNS-Prefetch-Control` | `on` | Enable DNS prefetching |
+
+### SSL/TLS Configuration (Nginx)
+For self-hosted deployments, nginx is configured with:
+- ✅ TLS 1.2 and 1.3 only (older protocols disabled)
+- ✅ Strong cipher suites (ECDHE, AES-GCM, ChaCha20)
+- ✅ HTTPS redirect for all HTTP traffic
+- ✅ OCSP stapling for faster certificate validation
+- ✅ Session resumption for reduced handshake overhead
+
 ## SSR-like Optimizations
 
 Since this is a client-side React application (not using Next.js/Remix), we implement
@@ -294,6 +337,7 @@ SSR-like optimizations to improve initial page load times:
 - [x] Redis for caching
 - [x] Celery for background tasks
 - [x] Gunicorn for production deployment
+- [x] Security headers middleware (HSTS, CSP)
 
 ### Frontend ✅
 - [x] Vite for fast builds
@@ -305,6 +349,13 @@ SSR-like optimizations to improve initial page load times:
 - [x] Socket.IO for real-time communication
 - [x] HTTP/2 resource hints
 - [x] SSR-like HTML shell prerendering
+
+### CDN & Security ✅
+- [x] Vercel Edge Network CDN for global distribution
+- [x] HSTS (HTTP Strict Transport Security) with preload
+- [x] Comprehensive security headers
+- [x] Long-term caching for immutable assets
+- [x] Stale-while-revalidate for dynamic content
 
 ### System ✅
 - [x] Build tools for native extensions
@@ -334,5 +385,7 @@ All performance optimizations have been implemented:
 - ✅ **Top-notch performance** with uvloop, orjson, compression, and caching
 - ✅ **HTTP/2 optimizations** for multiplexed parallel loading
 - ✅ **SSR-like prerendering** for instant visual feedback
+- ✅ **CDN via Vercel Edge Network** for global content delivery
+- ✅ **SSL/TLS security headers** for secure connections
 
 The application is now optimized for maximum performance and scalability.

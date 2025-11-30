@@ -109,6 +109,37 @@ async def add_cache_headers(request: Request, call_next):
     return response
 
 
+# Add security headers middleware for SSL/TLS and CDN security
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all API responses.
+    
+    These headers enhance security by:
+    - Enforcing HTTPS via HSTS
+    - Preventing clickjacking with X-Frame-Options
+    - Blocking XSS attacks with X-XSS-Protection
+    - Preventing MIME-type sniffing with X-Content-Type-Options
+    - Controlling referrer information
+    - Restricting browser features via Permissions-Policy
+    """
+    response = await call_next(request)
+    
+    # SSL/TLS Security headers
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+    
+    # Security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self), payment=()"
+    
+    # DNS prefetch control for performance
+    response.headers["X-DNS-Prefetch-Control"] = "on"
+    
+    return response
+
+
 # Add request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
