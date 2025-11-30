@@ -5,13 +5,14 @@ import {
   ChatBubbleLeftIcon,
   UserPlusIcon,
   BriefcaseIcon,
+  EnvelopeIcon,
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { notificationsAPI } from '../services/api';
 
 interface NotificationItem {
   id: number;
-  type: 'like' | 'comment' | 'friend_request' | 'mention' | 'follow' | 'job_application' | 'job_post';
+  type: 'like' | 'comment' | 'friend_request' | 'mention' | 'follow' | 'job_application' | 'job_post' | 'message';
   content: string;
   is_read: boolean;
   created_at: string;
@@ -97,6 +98,8 @@ const Notifications: React.FC = () => {
         return <BriefcaseIcon className="w-5 h-5 text-blue-500" />;
       case 'mention':
         return <span className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">@</span>;
+      case 'message':
+        return <EnvelopeIcon className="w-5 h-5 text-green-500" />;
       default:
         return <BellIcon className="w-5 h-5 text-gray-500" />;
     }

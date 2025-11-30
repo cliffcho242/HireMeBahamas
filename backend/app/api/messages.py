@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from app.core.security import get_current_user
 from app.database import get_db
-from app.models import Conversation, Message, User
+from app.models import Conversation, Message, Notification, NotificationType, User
 from app.schemas.message import (
     ConversationCreate,
     ConversationResponse,
@@ -191,6 +191,27 @@ async def send_message(
     db.add(db_message)
     await db.commit()
     await db.refresh(db_message)
+
+    # Create notification for the receiver
+    # Use sender name with fallback values for null safety
+    sender_first_name = current_user.first_name or "Someone"
+    sender_last_name = current_user.last_name or ""
+    sender_display_name = f"{sender_first_name} {sender_last_name}".strip()
+    
+    try:
+        notification = Notification(
+            user_id=receiver_id,
+            actor_id=current_user.id,
+            notification_type=NotificationType.MESSAGE,
+            content=f"{sender_display_name} sent you a message",
+            related_id=conversation_id,
+        )
+        db.add(notification)
+        await db.commit()
+    except Exception:
+        # Log notification failure but don't fail the message send
+        # The message was already saved successfully
+        pass
 
     # Load relationships
     result = await db.execute(
