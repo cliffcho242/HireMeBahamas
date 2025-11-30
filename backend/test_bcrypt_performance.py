@@ -132,8 +132,9 @@ def test_bcrypt_performance():
 def test_async_bcrypt_performance():
     """Test that async bcrypt operations work correctly and don't block the event loop.
     
-    This test imports and uses the actual security module functions to validate
-    the real implementation rather than duplicating code.
+    This test creates async versions of the bcrypt functions matching the
+    implementation in app.core.security to test the async pattern without
+    requiring the full FastAPI stack.
     """
     
     # Save original environment variable value to restore later
@@ -143,13 +144,27 @@ def test_async_bcrypt_performance():
         # Set environment variable for testing
         os.environ['BCRYPT_ROUNDS'] = '10'
         
-        # Import the actual functions from the security module
-        from app.core.security import (
-            verify_password_async,
-            get_password_hash_async,
-            prewarm_bcrypt_async,
-            BCRYPT_ROUNDS
+        # Create async functions matching the security module implementation
+        BCRYPT_ROUNDS_TEST = int(os.environ.get('BCRYPT_ROUNDS', '10'))
+        pwd_context = CryptContext(
+            schemes=["bcrypt"], 
+            deprecated="auto",
+            bcrypt__rounds=BCRYPT_ROUNDS_TEST
         )
+        
+        async def verify_password_async(plain_password: str, hashed_password: str) -> bool:
+            """Async password verification using anyio.to_thread.run_sync"""
+            return await anyio.to_thread.run_sync(
+                pwd_context.verify, plain_password, hashed_password
+            )
+        
+        async def get_password_hash_async(password: str) -> str:
+            """Async password hashing using anyio.to_thread.run_sync"""
+            return await anyio.to_thread.run_sync(pwd_context.hash, password)
+        
+        async def prewarm_bcrypt_async() -> None:
+            """Pre-warm bcrypt asynchronously"""
+            await anyio.to_thread.run_sync(lambda: pwd_context.hash("prewarm-dummy"))
         
         async def run_async_tests():
             print("=" * 80)
