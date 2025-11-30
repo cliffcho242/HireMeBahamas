@@ -84,20 +84,13 @@ def remove_fake_posts(dry_run=False):
     # may have been assigned these IDs when they registered.
     print("🗑️  Step 1: Removing posts from fake/test email addresses...")
     fake_emails = [
+        "admin@hirebahamas.com",
         "john@hirebahamas.com",
         "sarah@hirebahamas.com",
         "mike@hirebahamas.com",
         "lisa@hirebahamas.com",
-        "admin@hirebahamas.com",
-        "emma@hirebahamas.com",
-        # Sample/test emails from seed_data.py
-        "john@hirebahamas.com",
-        "sarah@hirebahamas.com",
-        "mike@hirebahamas.com",
         "emma@hirebahamas.com",
     ]
-    # Remove duplicates while preserving order
-    fake_emails = list(dict.fromkeys(fake_emails))
 
     for email in fake_emails:
         cursor.execute(
