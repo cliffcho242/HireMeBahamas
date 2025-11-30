@@ -522,6 +522,12 @@ USE_POSTGRESQL = DATABASE_URL is not None
 # Note: Extensions like pg_stat_statements require server-side configuration
 # (shared_preload_libraries) which is not available on managed database services
 # like Railway. Only add extensions that don't require server-side configuration.
+# 
+# For pg_stat_statements setup on Railway PostgreSQL, see:
+# RAILWAY_PG_STAT_STATEMENTS_SETUP.md for comprehensive setup instructions.
+# 
+# The /api/query-stats endpoint provides graceful error handling when 
+# pg_stat_statements is not available, with alternative solutions.
 POSTGRESQL_EXTENSIONS = {
     # Empty - all previously listed extensions required shared_preload_libraries
     # configuration which is not available on Railway and similar managed services.
@@ -8826,6 +8832,348 @@ def get_unread_message_count():
             jsonify({"success": False, "message": "Failed to get unread count"}),
             500,
         )
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
+
+
+# ==========================================
+# DATABASE PERFORMANCE MONITORING ENDPOINTS
+# ==========================================
+
+
+@app.route("/api/query-stats", methods=["GET", "OPTIONS"])
+def get_query_stats():
+    """
+    Get PostgreSQL query performance statistics from pg_stat_statements.
+    
+    This endpoint provides insights into slow queries for performance monitoring.
+    Requires pg_stat_statements extension to be enabled on the PostgreSQL server.
+    
+    Query Parameters:
+        - limit: Maximum number of queries to return (default: 20, max: 100)
+        - min_avg_time_ms: Filter queries with average time >= this value (default: 0)
+        - order_by: Sort field - 'total_time', 'avg_time', 'calls' (default: 'total_time')
+    
+    Returns:
+        - success: Boolean indicating if the request was successful
+        - query_stats: List of query statistics
+        - extension_available: Boolean indicating if pg_stat_statements is available
+        - message: Status message or error details
+        
+    Note: If pg_stat_statements is not available, returns a helpful error with
+    extension_available: false and instructions for enabling it.
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    conn = None
+    cursor = None
+    try:
+        # Get token from Authorization header (required for security)
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return (
+                jsonify({
+                    "success": False,
+                    "message": "Authorization token required. This endpoint requires authentication.",
+                    "extension_available": None
+                }),
+                401,
+            )
+
+        token = auth_header.split(" ")[1]
+
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload["user_id"]
+        except jwt.ExpiredSignatureError:
+            return jsonify({
+                "success": False,
+                "message": "Token expired",
+                "extension_available": None
+            }), 401
+        except jwt.InvalidTokenError:
+            return jsonify({
+                "success": False,
+                "message": "Invalid token",
+                "extension_available": None
+            }), 401
+
+        # Only PostgreSQL supports pg_stat_statements
+        if not USE_POSTGRESQL:
+            return jsonify({
+                "success": False,
+                "message": "Query statistics are only available with PostgreSQL. SQLite does not support pg_stat_statements.",
+                "extension_available": False,
+                "query_stats": []
+            }), 200
+
+        # Parse query parameters
+        limit = request.args.get('limit', type=int, default=20)
+        min_avg_time_ms = request.args.get('min_avg_time_ms', type=float, default=0)
+        order_by = request.args.get('order_by', default='total_time')
+        
+        # Validate parameters
+        if limit < 1:
+            limit = 1
+        elif limit > 100:
+            limit = 100
+        
+        # Map order_by to SQL column
+        order_by_map = {
+            'total_time': 'total_exec_time',
+            'avg_time': 'mean_exec_time',
+            'calls': 'calls'
+        }
+        order_column = order_by_map.get(order_by, 'total_exec_time')
+
+        conn = get_db_connection()
+        if conn is None:
+            return jsonify({
+                "success": False,
+                "message": "Database connection unavailable",
+                "extension_available": None,
+                "query_stats": []
+            }), 503
+            
+        cursor = conn.cursor()
+
+        # First, check if pg_stat_statements extension is available
+        try:
+            cursor.execute("""
+                SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements'
+            """)
+            extension_exists = cursor.fetchone() is not None
+        except Exception as ext_check_error:
+            # Error checking extension - likely permission issue
+            return jsonify({
+                "success": False,
+                "message": f"Error checking pg_stat_statements extension: {str(ext_check_error)}",
+                "extension_available": False,
+                "query_stats": [],
+                "setup_guide": "See RAILWAY_PG_STAT_STATEMENTS_SETUP.md for setup instructions"
+            }), 200
+
+        if not extension_exists:
+            return jsonify({
+                "success": False,
+                "message": "pg_stat_statements extension is not installed. See setup guide for instructions.",
+                "extension_available": False,
+                "query_stats": [],
+                "setup_guide": "See RAILWAY_PG_STAT_STATEMENTS_SETUP.md for setup instructions",
+                "alternative": "Use PgHero (https://railway.app/template/pghero) for query monitoring"
+            }), 200
+
+        # Query pg_stat_statements for performance data
+        # Use parameterized query for limit, but order column is from whitelist
+        try:
+            query = f"""
+                SELECT 
+                    LEFT(query, 500) as query,
+                    calls,
+                    total_exec_time as total_time_ms,
+                    mean_exec_time as avg_time_ms,
+                    rows,
+                    CASE 
+                        WHEN (shared_blks_hit + shared_blks_read) = 0 THEN 0
+                        ELSE 100.0 * shared_blks_hit / (shared_blks_hit + shared_blks_read)
+                    END as hit_percent
+                FROM pg_stat_statements
+                WHERE mean_exec_time >= %s
+                ORDER BY {order_column} DESC
+                LIMIT %s
+            """
+            cursor.execute(query, (min_avg_time_ms, limit))
+            
+            rows = cursor.fetchall()
+            query_stats = []
+            for row in rows:
+                query_stats.append({
+                    "query": row["query"],
+                    "calls": row["calls"],
+                    "total_time_ms": round(row["total_time_ms"], 2) if row["total_time_ms"] else 0,
+                    "avg_time_ms": round(row["avg_time_ms"], 2) if row["avg_time_ms"] else 0,
+                    "rows": row["rows"],
+                    "hit_percent": round(row["hit_percent"], 2) if row["hit_percent"] else 0
+                })
+
+            return jsonify({
+                "success": True,
+                "query_stats": query_stats,
+                "extension_available": True,
+                "message": f"Retrieved {len(query_stats)} query statistics",
+                "parameters": {
+                    "limit": limit,
+                    "min_avg_time_ms": min_avg_time_ms,
+                    "order_by": order_by
+                }
+            }), 200
+
+        except Exception as query_error:
+            error_msg = str(query_error).lower()
+            
+            # Check if the error is about shared_preload_libraries
+            if "shared_preload_libraries" in error_msg:
+                return jsonify({
+                    "success": False,
+                    "message": "pg_stat_statements must be loaded via shared_preload_libraries. The extension is installed but not loaded at server startup.",
+                    "error": str(query_error),
+                    "extension_available": False,
+                    "query_stats": [],
+                    "setup_guide": "See RAILWAY_PG_STAT_STATEMENTS_SETUP.md for setup instructions",
+                    "solutions": [
+                        "Use a custom PostgreSQL image with shared_preload_libraries configured",
+                        "Use Neon or Supabase which have pg_stat_statements enabled by default",
+                        "Deploy PgHero (https://railway.app/template/pghero) for query monitoring"
+                    ]
+                }), 200
+            
+            # Other query errors
+            return jsonify({
+                "success": False,
+                "message": f"Error querying pg_stat_statements: {str(query_error)}",
+                "extension_available": True,
+                "query_stats": []
+            }), 500
+
+    except Exception as e:
+        logger.error(f"Error getting query stats: {str(e)}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "message": f"Failed to get query statistics: {str(e)}",
+            "extension_available": None,
+            "query_stats": []
+        }), 500
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            return_db_connection(conn)
+
+
+@app.route("/api/database-health", methods=["GET", "OPTIONS"])
+def get_database_health():
+    """
+    Get comprehensive database health metrics including connection pool status,
+    slow query detection, and extension availability.
+    
+    This endpoint provides a quick overview of database health for monitoring.
+    
+    Returns:
+        - status: 'healthy', 'degraded', or 'unhealthy'
+        - connection_pool: Pool statistics
+        - extensions: Available PostgreSQL extensions
+        - slow_query_alert: True if there are queries averaging >500ms
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    conn = None
+    cursor = None
+    try:
+        if not USE_POSTGRESQL:
+            return jsonify({
+                "status": "healthy",
+                "database_type": "sqlite",
+                "message": "SQLite database is in use (development mode)",
+                "connection_pool": None,
+                "extensions": [],
+                "slow_query_alert": False
+            }), 200
+
+        conn = get_db_connection()
+        if conn is None:
+            return jsonify({
+                "status": "unhealthy",
+                "database_type": "postgresql",
+                "message": "Unable to connect to database",
+                "connection_pool": None,
+                "extensions": [],
+                "slow_query_alert": False
+            }), 503
+            
+        cursor = conn.cursor()
+
+        # Check database connectivity with a simple query
+        cursor.execute("SELECT 1")
+        
+        # Get available extensions
+        cursor.execute("""
+            SELECT extname, extversion 
+            FROM pg_extension 
+            WHERE extname IN ('pg_stat_statements', 'pg_trgm', 'uuid-ossp')
+        """)
+        extensions = [{"name": row["extname"], "version": row["extversion"]} for row in cursor.fetchall()]
+
+        # Check for slow queries if pg_stat_statements is available
+        slow_query_alert = False
+        slow_query_count = 0
+        pg_stat_available = any(ext["name"] == "pg_stat_statements" for ext in extensions)
+        
+        if pg_stat_available:
+            try:
+                cursor.execute("""
+                    SELECT COUNT(*) as slow_count
+                    FROM pg_stat_statements
+                    WHERE mean_exec_time > 500
+                """)
+                result = cursor.fetchone()
+                slow_query_count = result["slow_count"] if result else 0
+                slow_query_alert = slow_query_count > 0
+            except Exception:
+                # pg_stat_statements might be installed but not loaded
+                pg_stat_available = False
+
+        # Get connection pool stats (if available)
+        pool_stats = None
+        if _connection_pool is not None:
+            try:
+                pool_stats = {
+                    "min_connections": 2,
+                    "max_connections": DB_POOL_MAX_CONNECTIONS,
+                    "status": "active"
+                }
+            except Exception:
+                pass
+
+        status = "healthy"
+        if slow_query_alert:
+            status = "degraded"
+
+        return jsonify({
+            "status": status,
+            "database_type": "postgresql",
+            "message": "Database is operational",
+            "connection_pool": pool_stats,
+            "extensions": extensions,
+            "pg_stat_statements_available": pg_stat_available,
+            "slow_query_alert": slow_query_alert,
+            "slow_query_count": slow_query_count,
+            "monitoring_tips": {
+                "pghero": "Deploy PgHero for comprehensive query monitoring: https://railway.app/template/pghero",
+                "api_endpoint": "/api/query-stats - Query performance statistics (requires auth)"
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting database health: {str(e)}", exc_info=True)
+        return jsonify({
+            "status": "unhealthy",
+            "database_type": "postgresql" if USE_POSTGRESQL else "sqlite",
+            "message": f"Error checking database health: {str(e)}",
+            "connection_pool": None,
+            "extensions": [],
+            "slow_query_alert": False
+        }), 500
     finally:
         if cursor:
             try:
