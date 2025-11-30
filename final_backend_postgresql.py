@@ -202,7 +202,7 @@ def invalidate_cache_pattern(pattern: str):
         logger.warning(f"Cache invalidation failed for pattern '{pattern}': {e}")
 
 
-def make_user_cache_key():
+def make_user_cache_key(identifier: str = '') -> str:
     """
     Generate a cache key for user profile endpoints.
     
@@ -210,11 +210,17 @@ def make_user_cache_key():
     - The user identifier (ID or username) from the URL
     - Current user ID from the JWT token (for personalized data like is_following)
     
-    Returns a unique cache key or None if caching should be skipped.
+    Args:
+        identifier: User ID (as string) or username. Passed by Flask-Caching
+                    from the decorated function's arguments.
+    
+    Returns:
+        A unique cache key string, or None if caching should be skipped.
     """
     try:
-        # Get the identifier from URL
-        identifier = request.view_args.get('identifier', '')
+        # Use passed identifier if provided, otherwise get from URL for backward compatibility
+        if not identifier:
+            identifier = request.view_args.get('identifier', '')
         
         # Get current user from token for personalized data
         auth_header = request.headers.get("Authorization", "")
