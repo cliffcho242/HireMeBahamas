@@ -250,6 +250,16 @@ async def health_ping():
     return {"status": "ok", "message": "pong"}
 
 
+# API health check endpoint (simple status check)
+@app.get("/api/health")
+async def api_health():
+    """Simple API health check endpoint
+    
+    Returns a simple status response for basic health verification.
+    """
+    return {"status": "ok"}
+
+
 # Health check endpoint
 @app.get("/health")
 async def health_check(db: AsyncSession = Depends(get_db)):
