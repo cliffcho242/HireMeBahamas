@@ -6343,19 +6343,26 @@ def follow_user(user_id):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Check if user exists
+        # Check if user exists and is active
         cursor.execute(
             """
-            SELECT id FROM users WHERE id = %s
+            SELECT id, is_active FROM users WHERE id = %s
             """ if USE_POSTGRESQL else """
-            SELECT id FROM users WHERE id = ?
+            SELECT id, is_active FROM users WHERE id = ?
             """,
             (user_id,)
         )
-        if not cursor.fetchone():
+        target_user = cursor.fetchone()
+        if not target_user:
             cursor.close()
             return_db_connection(conn)
             return jsonify({"success": False, "message": "User not found"}), 404
+        
+        # Check if user is active
+        if not target_user["is_active"]:
+            cursor.close()
+            return_db_connection(conn)
+            return jsonify({"success": False, "message": "User account is not active"}), 404
 
         # Check if already following
         cursor.execute(
@@ -7002,13 +7009,14 @@ def create_job():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Verify user exists
+        # Verify user exists and is active
         if USE_POSTGRESQL:
-            cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+            cursor.execute("SELECT id, is_active FROM users WHERE id = %s", (user_id,))
         else:
-            cursor.execute("SELECT id FROM users WHERE id = ?", (user_id,))
+            cursor.execute("SELECT id, is_active FROM users WHERE id = ?", (user_id,))
         
-        if not cursor.fetchone():
+        current_user = cursor.fetchone()
+        if not current_user:
             cursor.close()
             return_db_connection(conn)
             return jsonify({
@@ -7017,6 +7025,16 @@ def create_job():
                 "error_code": "USER_NOT_FOUND",
                 "action": "logout"
             }), 401
+        
+        if not current_user["is_active"]:
+            cursor.close()
+            return_db_connection(conn)
+            return jsonify({
+                "success": False, 
+                "message": "Your account is not active. Please contact support.",
+                "error_code": "USER_INACTIVE",
+                "action": "logout"
+            }), 403
 
         # Insert job
         now = datetime.now(timezone.utc)
@@ -7178,14 +7196,19 @@ def send_friend_request(user_id):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Check if users exist
+        # Check if users exist and are active
         if USE_POSTGRESQL:
-            cursor.execute("SELECT id FROM users WHERE id IN (%s, %s)", (sender_id, user_id))
+            cursor.execute("SELECT id, is_active FROM users WHERE id IN (%s, %s)", (sender_id, user_id))
         else:
-            cursor.execute("SELECT id FROM users WHERE id IN (?, ?)", (sender_id, user_id))
+            cursor.execute("SELECT id, is_active FROM users WHERE id IN (?, ?)", (sender_id, user_id))
         users = cursor.fetchall()
         if len(users) != 2:
             return jsonify({"success": False, "message": "User not found"}), 404
+        
+        # Check if both users are active
+        for u in users:
+            if not u["is_active"]:
+                return jsonify({"success": False, "message": "User account is not active"}), 404
 
         # Check if friendship already exists
         if USE_POSTGRESQL:
@@ -7903,14 +7926,18 @@ def create_conversation():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Check if participant exists
+        # Check if participant exists and is active
         if USE_POSTGRESQL:
-            cursor.execute("SELECT id FROM users WHERE id = %s", (participant_id,))
+            cursor.execute("SELECT id, is_active FROM users WHERE id = %s", (participant_id,))
         else:
-            cursor.execute("SELECT id FROM users WHERE id = ?", (participant_id,))
+            cursor.execute("SELECT id, is_active FROM users WHERE id = ?", (participant_id,))
         
-        if not cursor.fetchone():
+        participant = cursor.fetchone()
+        if not participant:
             return jsonify({"success": False, "message": "User not found"}), 404
+        
+        if not participant["is_active"]:
+            return jsonify({"success": False, "message": "User account is not active"}), 404
 
         # Check if conversation already exists (check both orderings)
         if USE_POSTGRESQL:

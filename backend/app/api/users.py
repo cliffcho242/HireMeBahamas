@@ -312,6 +312,14 @@ async def get_user(
             detail="User not found"
         )
     
+    # Check if user is active
+    if not user.is_active:
+        logger.info(f"User account inactive: id={user.id}, requester={current_user.id}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account is not active"
+        )
+    
     logger.info(f"User found: id={user.id}, username={user.username}, requester={current_user.id}")
 
     # Check if current user follows this user
@@ -377,13 +385,18 @@ async def follow_user(
     db: AsyncSession = Depends(get_db),
 ):
     """Follow a user"""
-    # Check if user exists
+    # Check if user exists and is active
     user_result = await db.execute(select(User).where(User.id == user_id))
     target_user = user_result.scalar_one_or_none()
 
     if not target_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    
+    if not target_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User account is not active"
         )
 
     if target_user.id == current_user.id:
@@ -468,13 +481,19 @@ async def get_user_followers(
             detail="Invalid user ID"
         )
     
-    # Check if target user exists
+    # Check if target user exists and is active
     target_user_result = await db.execute(select(User).where(User.id == user_id))
     target_user = target_user_result.scalar_one_or_none()
     if not target_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
+        )
+    
+    if not target_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account is not active"
         )
     
     result = await db.execute(
@@ -547,13 +566,19 @@ async def get_user_following(
             detail="Invalid user ID"
         )
     
-    # Check if target user exists
+    # Check if target user exists and is active
     target_user_result = await db.execute(select(User).where(User.id == user_id))
     target_user = target_user_result.scalar_one_or_none()
     if not target_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
+        )
+    
+    if not target_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account is not active"
         )
     
     result = await db.execute(
