@@ -82,7 +82,8 @@ CACHE_CONTROL_RULES = {
     "/api/jobs": {"GET": "public, max-age=60, stale-while-revalidate=120"},
     "/api/posts": {"GET": "private, max-age=30, stale-while-revalidate=60"},
     "/api/jobs/stats": {"GET": "public, max-age=300, stale-while-revalidate=600"},
-    # Health endpoints can be cached
+    # Health endpoints - ping is ultra-fast, no caching needed
+    "/health/ping": {"GET": "no-cache"},
     "/health": {"GET": "public, max-age=10"},
 }
 
@@ -203,6 +204,17 @@ async def log_requests(request: Request, call_next):
             f"in {duration_ms}ms from {client_ip} | {type(e).__name__}: {str(e)}"
         )
         raise
+
+
+# Quick health check endpoint (no database dependency - faster for cold starts)
+@app.get("/health/ping")
+async def health_ping():
+    """Ultra-fast health ping endpoint
+    
+    Returns immediately without database check.
+    Use this for load balancer health checks and quick availability tests.
+    """
+    return {"status": "ok", "message": "pong"}
 
 
 # Health check endpoint
