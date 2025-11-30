@@ -1,4 +1,5 @@
 import atexit
+import json
 import logging
 import os
 import random
@@ -281,8 +282,6 @@ def _get_cached_user_for_login(email: str) -> dict | None:
     Returns:
         User dict if found in cache, None otherwise
     """
-    import json
-    
     redis_client = _get_redis_client()
     if redis_client is None:
         return None
@@ -323,8 +322,6 @@ def _cache_user_for_login(email: str, user_data: dict) -> bool:
     Returns:
         True if cached successfully, False otherwise
     """
-    import json
-    
     redis_client = _get_redis_client()
     if redis_client is None:
         return False
@@ -5553,7 +5550,12 @@ def login():
         if cursor is None:
             # We got user from cache, need to update last_login in background
             # to avoid slowing down the login response
-            def _update_last_login_async():
+            # Capture values as parameters to avoid race conditions
+            user_id_for_update = user["id"]
+            login_time = now
+            
+            def _update_last_login_async(uid, ltime):
+                """Update last_login in background thread with proper error handling."""
                 update_conn = None
                 update_cursor = None
                 try:
@@ -5562,15 +5564,15 @@ def login():
                         update_cursor = update_conn.cursor()
                         if USE_POSTGRESQL:
                             update_cursor.execute(
-                                "UPDATE users SET last_login = %s WHERE id = %s", (now, user["id"])
+                                "UPDATE users SET last_login = %s WHERE id = %s", (ltime, uid)
                             )
                         else:
                             update_cursor.execute(
-                                "UPDATE users SET last_login = ? WHERE id = ?", (now, user["id"])
+                                "UPDATE users SET last_login = ? WHERE id = ?", (ltime, uid)
                             )
                         update_conn.commit()
                 except Exception as e:
-                    logger.warning(f"Failed to update last_login: {e}")
+                    logger.warning(f"Failed to update last_login for user {uid}: {e}")
                 finally:
                     if update_cursor:
                         try:
@@ -5580,8 +5582,13 @@ def login():
                     if update_conn:
                         return_db_connection(update_conn)
             
-            # Run in background thread
-            threading.Thread(target=_update_last_login_async, daemon=True).start()
+            # Run in background thread with captured parameters
+            thread = threading.Thread(
+                target=_update_last_login_async, 
+                args=(user_id_for_update, login_time),
+                daemon=True
+            )
+            thread.start()
         else:
             # Update directly if we already have a connection
             if USE_POSTGRESQL:
