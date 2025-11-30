@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Test suite for keep_alive.py background worker.
-Tests the keep-alive functionality that prevents Render services from sleeping.
+Tests the optimal keep-alive functionality that prevents Render services from sleeping.
 """
 import os
 import unittest
@@ -35,16 +35,22 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         # Verify it does NOT exit on missing env var (since we have a default)
         self.assertNotIn("sys.exit(1)", content)
 
-    def test_ping_interval_is_40_seconds(self):
-        """Test that the ping interval is 40 seconds as specified."""
-        # Read the keep_alive.py script and verify the sleep interval
+    def test_optimal_intervals_defined(self):
+        """Test that the script has optimal interval modes defined."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify the script sets delay to 40 seconds
-        # The delay is set in the tuple assignment and reset after successful ping
-        self.assertIn("40, 300", content)  # Initial: delay=40, max_delay=300
-        self.assertIn("delay = 40", content)  # Reset after successful ping
+        # Verify warmup interval (20s for first 5 minutes)
+        self.assertIn("interval = 20", content)
+        self.assertIn("WARMUP 20s", content)
+        
+        # Verify normal interval (55s after warmup)
+        self.assertIn("interval = 55", content)
+        self.assertIn("NORMAL 55s", content)
+        
+        # Verify aggressive interval (15s on failures)
+        self.assertIn("interval = 15", content)
+        self.assertIn("AGGRESSIVE 15s", content)
 
     def test_uses_health_endpoint(self):
         """Test that the script uses the /health endpoint."""
@@ -54,13 +60,13 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         # Verify the script uses the /health endpoint
         self.assertIn("/health", content)
 
-    def test_timeout_is_10_seconds(self):
-        """Test that the request timeout is 10 seconds."""
+    def test_timeout_is_12_seconds(self):
+        """Test that the request timeout is 12 seconds."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify the script uses a 10 second timeout
-        self.assertIn("timeout=10", content)
+        # Verify the script uses a 12 second timeout
+        self.assertIn("timeout=12", content)
 
     def test_exception_handling(self):
         """Test that exceptions are caught and don't stop the loop."""
@@ -69,8 +75,18 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         
         # Verify the script has exception handling
         self.assertIn("except Exception as e:", content)
-        # Verify it continues running after exception (sleep is inside the loop)
-        self.assertIn("time.sleep(delay)", content)
+        # Verify it continues running after exception (sleep with interval)
+        self.assertIn("time.sleep(interval)", content)
+
+    def test_aggressive_mode_on_failure(self):
+        """Test that the script enters aggressive mode on ping failure."""
+        with open("keep_alive.py", "r") as f:
+            content = f.read()
+        
+        # Verify aggressive mode is triggered on failure
+        self.assertIn("aggressive_until", content)
+        self.assertIn("timedelta(minutes=2)", content)
+        self.assertIn("AGGRESSIVE 15s for 2 min", content)
 
 
 class TestKeepAliveBehavior(unittest.TestCase):
@@ -87,12 +103,12 @@ class TestKeepAliveBehavior(unittest.TestCase):
             
             # Simulate the ping
             url = os.environ["RENDER_EXTERNAL_URL"]
-            response = requests.get(f"{url}/health", timeout=10)
+            response = requests.get(f"{url}/health", timeout=12)
             
             # Verify the request was made correctly
             mock_get.assert_called_once_with(
                 "https://test.onrender.com/health",
-                timeout=10
+                timeout=12
             )
 
     @patch("requests.get")
@@ -106,7 +122,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
             url = os.environ["RENDER_EXTERNAL_URL"]
             
             try:
-                requests.get(f"{url}/health", timeout=10)
+                requests.get(f"{url}/health", timeout=12)
             except Exception:
                 pass  # This should be caught like in keep_alive.py
             
@@ -124,7 +140,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
             url = os.environ["RENDER_EXTERNAL_URL"]
             
             try:
-                requests.get(f"{url}/health", timeout=10)
+                requests.get(f"{url}/health", timeout=12)
             except Exception:
                 pass  # This should be caught like in keep_alive.py
             
