@@ -4598,15 +4598,15 @@ def health_ping():
     
     This lightweight endpoint is specifically designed for background workers
     that need to ping the service to prevent it from sleeping. It returns
-    a minimal response with a 200 status code.
+    a minimal JSON response with a 200 status code.
     
     Features:
-    - Minimal response payload (returns 200 OK with "pong")
+    - Returns {"status": "ok"} for JSON compatibility
     - Supports both GET and HEAD methods
     - Exempt from rate limiting for monitoring services
     - No database access required (app-level health only)
     """
-    return "pong", 200
+    return jsonify({"status": "ok"}), 200
 
 
 @app.route("/api/auth/ping", methods=["GET", "HEAD"])

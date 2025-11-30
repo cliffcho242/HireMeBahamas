@@ -2,6 +2,11 @@
 """
 Test suite for keep_alive.py background worker.
 Tests the keep-alive functionality that prevents Render services from sleeping.
+
+Updated to match the master solution requirements:
+- Pings /health every 40 seconds
+- Uses APP_URL environment variable
+- Includes retry logic with exponential backoff
 """
 import os
 import unittest
@@ -20,35 +25,44 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         except py_compile.PyCompileError as e:
             self.fail(f"keep_alive.py has syntax errors: {e}")
 
+    def test_keep_alive_script_line_count(self):
+        """Test that keep_alive.py is ≤14 lines as specified."""
+        with open("keep_alive.py", "r") as f:
+            lines = f.readlines()
+        
+        self.assertLessEqual(len(lines), 14, f"keep_alive.py has {len(lines)} lines, should be ≤14")
+
     def test_environment_variable_required(self):
-        """Test that RENDER_EXTERNAL_URL environment variable is required."""
+        """Test that APP_URL environment variable is required."""
         # Verify the script uses os.environ.get() for better error handling
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify it uses .get() method for safer access
-        self.assertIn('os.environ.get("RENDER_EXTERNAL_URL")', content)
+        # Verify it uses .get() method for safer access and supports APP_URL
+        self.assertIn('os.environ.get("APP_URL")', content)
         
         # Verify it has error handling for missing variable
         self.assertIn("if not url:", content)
         self.assertIn("sys.exit(1)", content)
 
-    def test_ping_interval_is_70_seconds(self):
-        """Test that the ping interval is 70 seconds as specified."""
+    def test_ping_interval_is_40_seconds(self):
+        """Test that the ping interval is 40 seconds as specified."""
         # Read the keep_alive.py script and verify the sleep interval
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify the script contains time.sleep(70)
-        self.assertIn("time.sleep(70)", content)
+        # Verify the script uses 40 second delay
+        self.assertIn("40", content)
+        self.assertIn("delay", content)
+        self.assertIn("time.sleep(delay)", content)
 
-    def test_uses_health_ping_endpoint(self):
-        """Test that the script uses the /health/ping endpoint."""
+    def test_uses_health_endpoint(self):
+        """Test that the script uses the /health endpoint."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify the script uses the /health/ping endpoint
-        self.assertIn("/health/ping", content)
+        # Verify the script uses the /health endpoint
+        self.assertIn("/health", content)
 
     def test_timeout_is_10_seconds(self):
         """Test that the request timeout is 10 seconds."""
@@ -58,14 +72,16 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         # Verify the script uses a 10 second timeout
         self.assertIn("timeout=10", content)
 
-    def test_exception_handling(self):
-        """Test that exceptions are caught and don't stop the loop."""
+    def test_has_retry_logic(self):
+        """Test that retry logic with exponential backoff is present."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
         # Verify the script has exception handling
         self.assertIn("except", content)
-        self.assertIn("pass", content)
+        # Verify exponential backoff
+        self.assertIn("max_delay", content)
+        self.assertIn("delay * 2", content)
 
 
 class TestKeepAliveBehavior(unittest.TestCase):
@@ -77,16 +93,16 @@ class TestKeepAliveBehavior(unittest.TestCase):
         mock_get.return_value.status_code = 200
         
         # Set up environment
-        with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "https://test.onrender.com"}):
+        with patch.dict(os.environ, {"APP_URL": "https://test.onrender.com"}):
             import requests
             
             # Simulate the ping
-            url = os.environ["RENDER_EXTERNAL_URL"]
-            response = requests.get(f"{url}/health/ping", timeout=10)
+            url = os.environ["APP_URL"]
+            response = requests.get(f"{url}/health", timeout=10)
             
             # Verify the request was made correctly
             mock_get.assert_called_once_with(
-                "https://test.onrender.com/health/ping",
+                "https://test.onrender.com/health",
                 timeout=10
             )
 
@@ -97,11 +113,11 @@ class TestKeepAliveBehavior(unittest.TestCase):
         mock_get.side_effect = requests.exceptions.Timeout("Connection timed out")
         
         # Simulate the ping with exception handling
-        with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "https://test.onrender.com"}):
-            url = os.environ["RENDER_EXTERNAL_URL"]
+        with patch.dict(os.environ, {"APP_URL": "https://test.onrender.com"}):
+            url = os.environ["APP_URL"]
             
             try:
-                requests.get(f"{url}/health/ping", timeout=10)
+                requests.get(f"{url}/health", timeout=10)
             except Exception:
                 pass  # This should be caught like in keep_alive.py
             
@@ -115,11 +131,11 @@ class TestKeepAliveBehavior(unittest.TestCase):
         mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
         
         # Simulate the ping with exception handling
-        with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "https://test.onrender.com"}):
-            url = os.environ["RENDER_EXTERNAL_URL"]
+        with patch.dict(os.environ, {"APP_URL": "https://test.onrender.com"}):
+            url = os.environ["APP_URL"]
             
             try:
-                requests.get(f"{url}/health/ping", timeout=10)
+                requests.get(f"{url}/health", timeout=10)
             except Exception:
                 pass  # This should be caught like in keep_alive.py
             
@@ -152,8 +168,8 @@ class TestRenderYamlConfiguration(unittest.TestCase):
         self.assertEqual(worker.get("runtime"), "python")
         self.assertEqual(worker.get("startCommand"), "python keep_alive.py")
 
-    def test_render_yaml_worker_has_env_var(self):
-        """Test that render.yaml worker has RENDER_EXTERNAL_URL configured."""
+    def test_render_yaml_worker_has_app_url_env_var(self):
+        """Test that render.yaml worker has APP_URL configured."""
         import yaml
         
         with open("render.yaml", "r") as f:
@@ -166,13 +182,28 @@ class TestRenderYamlConfiguration(unittest.TestCase):
         worker = workers[0]
         env_vars = worker.get("envVars", [])
         
-        # Find RENDER_EXTERNAL_URL
-        render_url_vars = [v for v in env_vars if v.get("key") == "RENDER_EXTERNAL_URL"]
-        self.assertTrue(len(render_url_vars) > 0, "RENDER_EXTERNAL_URL not configured")
+        # Find APP_URL
+        app_url_vars = [v for v in env_vars if v.get("key") == "APP_URL"]
+        self.assertTrue(len(app_url_vars) > 0, "APP_URL not configured")
         
         # Verify the URL is set correctly
-        render_url = render_url_vars[0]
-        self.assertEqual(render_url.get("value"), "https://hiremebahamas.onrender.com")
+        app_url = app_url_vars[0]
+        self.assertEqual(app_url.get("value"), "https://hiremebahamas.onrender.com")
+
+    def test_render_yaml_worker_build_command(self):
+        """Test that render.yaml worker has correct build command."""
+        import yaml
+        
+        with open("render.yaml", "r") as f:
+            config = yaml.safe_load(f)
+        
+        # Find the keep-alive worker
+        workers = [s for s in config["services"] if s.get("name") == "keep-alive"]
+        self.assertTrue(len(workers) > 0, "keep-alive worker not found")
+        
+        worker = workers[0]
+        # Build command should install requests
+        self.assertIn("pip install requests", worker.get("buildCommand", ""))
 
 
 if __name__ == "__main__":
