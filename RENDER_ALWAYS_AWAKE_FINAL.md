@@ -4,20 +4,27 @@
 
 ---
 
-## 1. KEEP_ALIVE.PY (12 lines, with retry + logging)
+## 1. KEEP_ALIVE.PY (15 lines, idiot-proof)
 
 ```python
 #!/usr/bin/env python3
-"""Render Keep-Alive: Pings /health every 40s with retry + exponential backoff."""
+"""Render Keep-Alive: Pings /health every 40s with exponential backoff."""
 import os, time, requests
-url, delay, max_delay = os.getenv("RENDER_EXTERNAL_URL", os.getenv("APP_URL", "https://hiremebahamas.onrender.com")), 40, 300
-print(f"Keep-alive: {url}/health every {delay}s", flush=True)
+
+APP_URL = os.getenv("RENDER_EXTERNAL_URL", "https://hiremebahamas.onrender.com")
+delay, max_delay = 40, 300
+
 while True:
     try:
-        r = requests.get(f"{url}/health", timeout=10)
-        print(f"[OK] {r.status_code} {r.elapsed.total_seconds()*1000:.0f}ms", flush=True); delay = 40
+        r = requests.get(f"{APP_URL}/health", timeout=10, headers={"User-Agent": "KeepAlive/1.0"})
+        if r.status_code == 200:
+            print("PING OK – Render awake", flush=True)
+        else:
+            print(f"PING FAILED {r.status_code}", flush=True)
+        delay = 40
     except Exception as e:
-        print(f"[FAIL] {type(e).__name__} retry:{delay}s", flush=True); delay = min(delay * 2, max_delay)
+        print(f"PING FAILED – {e}", flush=True)
+        delay = min(delay * 2, max_delay)
     time.sleep(delay)
 ```
 
@@ -36,10 +43,10 @@ while True:
 | **Plan** | Free |
 
 ### Environment Variables:
-| Name | Value |
+| Key | Value |
 |------|-------|
 | `PYTHONUNBUFFERED` | `true` |
-| `APP_URL` | `https://hiremebahamas.onrender.com` |
+| `RENDER_EXTERNAL_URL` | `https://hiremebahamas.onrender.com` |
 
 ---
 
@@ -91,7 +98,7 @@ def health_ping():
    - **Start Command**: `python keep_alive.py`
 4. Add Environment Variables:
    - `PYTHONUNBUFFERED` = `true`
-   - `APP_URL` = `https://hiremebahamas.onrender.com`
+   - `RENDER_EXTERNAL_URL` = `https://hiremebahamas.onrender.com`
 5. Click **Create Background Worker**
 
 ---
@@ -100,7 +107,7 @@ def health_ping():
 
 After deploying both services:
 
-1. **Check Background Worker Logs** — Should show `[OK] 200 XXms` every 40 seconds
+1. **Check Background Worker Logs** — Should show `PING OK – Render awake` every 40 seconds
 2. **Test Login Speed**:
    ```bash
    time curl -X POST https://hiremebahamas.onrender.com/api/auth/login \
