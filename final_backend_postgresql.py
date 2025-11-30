@@ -8575,14 +8575,23 @@ def _format_sse_event(data: dict, event_type: str = None) -> str:
     return "\n".join(lines) + "\n"
 
 
+# Use threading.Event for efficient waiting instead of busy-wait
+# Each user gets their own event for wakeup
+_user_events: dict = {}  # user_id -> threading.Event
+
+
 def _generate_sse_stream(user_id: int, request_id: str):
     """
     Generator function for SSE stream.
     
     Yields SSE events for the authenticated user.
+    Uses threading.Event for efficient waiting instead of busy-wait.
     Includes periodic heartbeat to keep connection alive.
     """
-    import json
+    # Create event for this user
+    user_event = threading.Event()
+    with _sse_lock:
+        _user_events[user_id] = user_event
     
     # Send initial connection confirmation
     yield _format_sse_event({
@@ -8593,21 +8602,23 @@ def _generate_sse_stream(user_id: int, request_id: str):
     
     # Heartbeat interval in seconds
     heartbeat_interval = 30
-    last_heartbeat = time.time()
     
     try:
         while True:
-            # Send heartbeat every 30 seconds to keep connection alive
-            current_time = time.time()
-            if current_time - last_heartbeat >= heartbeat_interval:
-                yield _format_sse_event({
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }, event_type="ping")
-                last_heartbeat = current_time
+            # Wait for either an event or timeout for heartbeat
+            # This is efficient - the thread sleeps until woken
+            triggered = user_event.wait(timeout=heartbeat_interval)
             
-            # Check for new notifications (would be implemented with a queue)
-            # For now, just sleep to avoid busy-waiting
-            time.sleep(1)
+            if triggered:
+                # Event was triggered - clear it for next time
+                user_event.clear()
+                # In a full implementation, we would check a queue for notifications
+                # For now, the heartbeat will keep the connection alive
+            
+            # Send heartbeat to keep connection alive
+            yield _format_sse_event({
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }, event_type="ping")
             
     except GeneratorExit:
         # Client disconnected
@@ -8617,6 +8628,8 @@ def _generate_sse_stream(user_id: int, request_id: str):
         with _sse_lock:
             if user_id in _sse_clients:
                 del _sse_clients[user_id]
+            if user_id in _user_events:
+                del _user_events[user_id]
 
 
 @app.route("/api/notifications/stream", methods=["GET"])

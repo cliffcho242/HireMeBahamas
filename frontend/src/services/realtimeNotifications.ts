@@ -17,34 +17,37 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { create } from 'zustand';
 
+// Base notification interface with read state
+interface BaseNotification {
+  timestamp: string;
+  read?: boolean;
+}
+
 // Types for notification events
-export interface JobNotification {
+export interface JobNotification extends BaseNotification {
   type: 'new_job';
   id: number;
   title: string;
   company: string;
   location: string;
-  timestamp: string;
 }
 
-export interface MessageNotification {
+export interface MessageNotification extends BaseNotification {
   type: 'new_message';
   conversationId: number;
   senderId: number;
   senderName: string;
   preview: string;
-  timestamp: string;
 }
 
-export interface ApplicationNotification {
+export interface ApplicationNotification extends BaseNotification {
   type: 'application_update';
   jobId: number;
   jobTitle: string;
   status: 'viewed' | 'shortlisted' | 'interview' | 'rejected' | 'accepted';
-  timestamp: string;
 }
 
-export interface SystemNotification {
+export interface SystemNotification extends BaseNotification {
   type: 'system';
   message: string;
   level: 'info' | 'warning' | 'error';

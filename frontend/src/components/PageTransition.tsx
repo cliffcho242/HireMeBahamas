@@ -119,7 +119,7 @@ export const PageTransition = forwardRef<HTMLDivElement, PageTransitionProps>(
         exit="exit"
         variants={customVariants}
         transition={{ delay }}
-        className={`gpu-accelerated ${className}`}
+        className={`transform-gpu ${className}`}
       >
         {children}
       </motion.div>
@@ -209,7 +209,7 @@ export function FadeInView({
       whileInView="animate"
       viewport={{ once, amount: threshold }}
       variants={variants}
-      className={`gpu-accelerated ${className}`}
+      className={`transform-gpu ${className}`}
     >
       {children}
     </motion.div>

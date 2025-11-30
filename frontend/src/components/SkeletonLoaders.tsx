@@ -38,8 +38,6 @@ export const SkeletonBase = memo(function SkeletonBase({
       className={`
         animate-pulse
         bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200
-        bg-[length:200%_100%]
-        animate-shimmer
         ${roundedClasses[rounded]}
         ${className}
       `}
@@ -53,7 +51,7 @@ export const SkeletonBase = memo(function SkeletonBase({
  */
 export const PostCardSkeleton = memo(function PostCardSkeleton() {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 mb-4 gpu-accelerated">
+    <div className="bg-white rounded-xl shadow-sm p-4 mb-4 transform-gpu">
       {/* Header with avatar and name */}
       <div className="flex items-center gap-3 mb-4">
         <SkeletonBase className="w-10 h-10" rounded="full" />
@@ -88,7 +86,7 @@ export const PostCardSkeleton = memo(function PostCardSkeleton() {
  */
 export const JobCardSkeleton = memo(function JobCardSkeleton() {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 mb-3 gpu-accelerated">
+    <div className="bg-white rounded-xl shadow-sm p-4 mb-3 transform-gpu">
       {/* Company logo and info */}
       <div className="flex items-start gap-4">
         <SkeletonBase className="w-12 h-12 flex-shrink-0" rounded="lg" />
@@ -111,7 +109,7 @@ export const JobCardSkeleton = memo(function JobCardSkeleton() {
  */
 export const UserCardSkeleton = memo(function UserCardSkeleton() {
   return (
-    <div className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm gpu-accelerated">
+    <div className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm transform-gpu">
       <SkeletonBase className="w-12 h-12 flex-shrink-0" rounded="full" />
       <div className="flex-1 min-w-0">
         <SkeletonBase className="h-4 w-28 mb-2" />
@@ -153,7 +151,7 @@ export const JobListSkeleton = memo(function JobListSkeleton({ count = 5 }: { co
  */
 export const ProfileSkeleton = memo(function ProfileSkeleton() {
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden gpu-accelerated">
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden transform-gpu">
       {/* Cover photo */}
       <SkeletonBase className="h-32 sm:h-48 w-full" rounded="none" />
       
@@ -197,7 +195,7 @@ export const MessageListSkeleton = memo(function MessageListSkeleton({ count = 6
   return (
     <div className="divide-y divide-gray-100">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 p-4 gpu-accelerated">
+        <div key={i} className="flex items-center gap-3 p-4 transform-gpu">
           <SkeletonBase className="w-12 h-12 flex-shrink-0" rounded="full" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
@@ -219,7 +217,7 @@ export const NotificationSkeleton = memo(function NotificationSkeleton({ count =
   return (
     <div className="divide-y divide-gray-100">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex items-start gap-3 p-4 gpu-accelerated">
+        <div key={i} className="flex items-start gap-3 p-4 transform-gpu">
           <SkeletonBase className="w-10 h-10 flex-shrink-0" rounded="full" />
           <div className="flex-1 min-w-0">
             <SkeletonBase className="h-4 w-full mb-2" />
@@ -239,7 +237,7 @@ export const StorySkeleton = memo(function StorySkeleton({ count = 6 }: { count?
   return (
     <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex flex-col items-center gap-1 flex-shrink-0 gpu-accelerated">
+        <div key={i} className="flex flex-col items-center gap-1 flex-shrink-0 transform-gpu">
           <SkeletonBase className="w-16 h-16" rounded="full" />
           <SkeletonBase className="h-3 w-12" />
         </div>
@@ -282,7 +280,7 @@ export const CardGridSkeleton = memo(function CardGridSkeleton({
   return (
     <div className={`grid gap-4 ${gridCols[columns]}`}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="bg-white rounded-xl shadow-sm p-4 gpu-accelerated">
+        <div key={i} className="bg-white rounded-xl shadow-sm p-4 transform-gpu">
           <SkeletonBase className="h-32 w-full mb-4" rounded="lg" />
           <SkeletonBase className="h-5 w-3/4 mb-2" />
           <SkeletonBase className="h-4 w-full mb-2" />

@@ -129,10 +129,9 @@ export default function AppLayout({
     'flex-col',
     backgroundClasses[background],
     'overflow-x-hidden',
-    // GPU-accelerated scrolling
+    // Smooth scrolling
     'scroll-smooth',
-    '-webkit-overflow-scrolling-touch',
-    'overscroll-behavior-contain',
+    'overscroll-y-contain',
   ]
     .filter(Boolean)
     .join(' ');
