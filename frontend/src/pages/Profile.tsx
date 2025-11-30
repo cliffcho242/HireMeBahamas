@@ -59,6 +59,8 @@ interface FollowUser {
   followers_count?: number;
 }
 
+type ProfileTab = 'posts' | 'about' | 'photos' | 'videos' | 'followers' | 'following' | 'gallery';
+
 const Profile: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -70,7 +72,7 @@ const Profile: React.FC = () => {
   const [togglingAvailability, setTogglingAvailability] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-  const [activeTab, setActiveTab] = useState<'posts' | 'about' | 'photos' | 'videos' | 'followers' | 'following' | 'gallery'>('posts');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [followersList, setFollowersList] = useState<FollowUser[]>([]);
   const [followingList, setFollowingList] = useState<FollowUser[]>([]);
@@ -185,13 +187,17 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleTabChange = (tab: 'posts' | 'about' | 'photos' | 'videos' | 'followers' | 'following' | 'gallery') => {
+  const handleTabChange = (tab: ProfileTab) => {
     setActiveTab(tab);
     if (tab === 'followers' && !followersLoaded && !isLoadingFollowers) {
       fetchFollowers();
     } else if (tab === 'following' && !followingLoaded && !isLoadingFollowing) {
       fetchFollowing();
     }
+  };
+
+  const formatUserType = (userType: string): string => {
+    return userType.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   };
 
   const toggleAvailability = async () => {
@@ -815,7 +821,7 @@ const Profile: React.FC = () => {
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Account Type</h3>
                     <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                      {profile.user_type.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                      {formatUserType(profile.user_type)}
                     </span>
                   </div>
                 )}
