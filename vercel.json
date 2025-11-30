@@ -4,6 +4,7 @@
   "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/dist",
   "installCommand": "cd frontend && npm ci",
+  "regions": ["iad1", "sfo1", "cdg1", "hnd1"],
   "rewrites": [
     {
       "source": "/((?!api/.*).*)",
@@ -29,6 +30,10 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
         }
       ]
     },
@@ -59,6 +64,10 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
         }
       ]
     }

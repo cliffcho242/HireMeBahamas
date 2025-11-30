@@ -4,6 +4,13 @@ services:
     env: python
     region: oregon
     plan: free
+    # High Availability Configuration
+    # For production, upgrade to 'standard' or 'pro' plan for:
+    # - Auto-scaling support
+    # - Multiple instances
+    # - Zero-downtime deploys
+    # numInstances: 2  # Uncomment when on paid plan
+    autoDeploy: true
     buildCommand: |
       apt-get update
       apt-get install -y --no-install-recommends \
@@ -61,9 +68,16 @@ services:
       - key: FRONTEND_URL
         value: https://hiremebahamas.vercel.app
       - key: PYTHONUNBUFFERED
-        value: true
+        value: "true"
       - key: PYTHON_VERSION
-        value: 3.12.0
+        value: "3.12.0"
+      # Gunicorn worker configuration for high availability
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: WEB_THREADS
+        value: "8"
+      - key: GUNICORN_TIMEOUT
+        value: "55"
       # DATABASE_URL must be set manually in Render dashboard
       # to connect to your PostgreSQL database
     healthCheckPath: /health

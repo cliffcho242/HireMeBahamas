@@ -64,6 +64,19 @@ This repository is configured with **automated deployments** via GitHub Actions:
 
 👉 **[View Auto-Deploy Setup Guide](./AUTO_DEPLOY_SETUP.md)** for configuration instructions.
 
+### 🔄 High Availability Architecture
+
+HireMeBahamas is built for reliability and scale with a multi-platform deployment strategy:
+
+- **Multi-Instance Deployment**: Backend runs with multiple Gunicorn workers
+- **Load Balancing**: Railway and Render provide built-in load balancing
+- **Auto-Scaling**: Configurable horizontal scaling on paid plans
+- **Health Monitoring**: Comprehensive health checks every 5 minutes
+- **Database Keepalive**: Prevents PostgreSQL from sleeping on free tiers
+- **Edge CDN**: Vercel Edge Network for global frontend distribution
+
+📖 **[View High Availability Guide](./HIGH_AVAILABILITY.md)** for architecture details and scaling configuration.
+
 ### ⚡ Deployment Speed Improvements
 
 **New**: Docker deployments now use **pre-built base images** for significantly faster builds:

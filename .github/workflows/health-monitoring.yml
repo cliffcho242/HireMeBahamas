@@ -1,0 +1,224 @@
+name: Health Monitoring
+
+# Comprehensive health monitoring workflow for high availability
+# Runs every 5 minutes to monitor all services and report status
+# Provides detailed metrics and alerts for service health
+
+on:
+  schedule:
+    # Run every 5 minutes for comprehensive monitoring
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    # Allow manual trigger for testing
+
+concurrency:
+  group: health-monitoring
+  cancel-in-progress: true
+
+jobs:
+  monitor-services:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Monitor Railway Backend
+        id: railway-monitor
+        continue-on-error: true
+        env:
+          RAILWAY_BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
+        run: |
+          if [ -z "$RAILWAY_BACKEND_URL" ]; then
+            echo "ℹ️ RAILWAY_BACKEND_URL not configured"
+            echo "railway_status=not_configured" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "🔍 Comprehensive health check for Railway backend..."
+          
+          # Measure response time
+          start_time=$(date +%s%N)
+          response=$(curl -s -w "\n%{http_code}\n%{time_total}" \
+            --max-time 30 \
+            "$RAILWAY_BACKEND_URL/api/health" 2>/dev/null) || true
+          
+          time_total=$(echo "$response" | tail -n1)
+          http_code=$(echo "$response" | tail -n2 | head -n1)
+          body=$(echo "$response" | head -n -2)
+          
+          echo "railway_response_time=$time_total" >> $GITHUB_OUTPUT
+          echo "railway_http_code=$http_code" >> $GITHUB_OUTPUT
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Railway backend is healthy"
+            echo "📊 Response time: ${time_total}s"
+            
+            # Parse health details
+            db_status=$(echo "$body" | jq -r '.database.status // "unknown"' 2>/dev/null || echo "unknown")
+            keepalive=$(echo "$body" | jq -r '.keepalive.running // false' 2>/dev/null || echo "false")
+            
+            echo "   Database: $db_status"
+            echo "   Keepalive: $keepalive"
+            
+            echo "railway_status=healthy" >> $GITHUB_OUTPUT
+            echo "railway_db_status=$db_status" >> $GITHUB_OUTPUT
+            echo "railway_keepalive=$keepalive" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Railway backend health check failed (HTTP $http_code)"
+            echo "railway_status=unhealthy" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Monitor Render Backend
+        id: render-monitor
+        continue-on-error: true
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+        run: |
+          if [ -z "$RENDER_BACKEND_URL" ]; then
+            echo "ℹ️ RENDER_BACKEND_URL not configured"
+            echo "render_status=not_configured" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "🔍 Comprehensive health check for Render backend..."
+          
+          # Measure response time
+          response=$(curl -s -w "\n%{http_code}\n%{time_total}" \
+            --max-time 30 \
+            "$RENDER_BACKEND_URL/api/health" 2>/dev/null) || true
+          
+          time_total=$(echo "$response" | tail -n1)
+          http_code=$(echo "$response" | tail -n2 | head -n1)
+          body=$(echo "$response" | head -n -2)
+          
+          echo "render_response_time=$time_total" >> $GITHUB_OUTPUT
+          echo "render_http_code=$http_code" >> $GITHUB_OUTPUT
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Render backend is healthy"
+            echo "📊 Response time: ${time_total}s"
+            
+            # Parse health details
+            db_status=$(echo "$body" | jq -r '.database.status // "unknown"' 2>/dev/null || echo "unknown")
+            keepalive=$(echo "$body" | jq -r '.keepalive.running // false' 2>/dev/null || echo "false")
+            
+            echo "   Database: $db_status"
+            echo "   Keepalive: $keepalive"
+            
+            echo "render_status=healthy" >> $GITHUB_OUTPUT
+            echo "render_db_status=$db_status" >> $GITHUB_OUTPUT
+            echo "render_keepalive=$keepalive" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Render backend health check failed (HTTP $http_code)"
+            echo "render_status=unhealthy" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Monitor Frontend (Vercel)
+        id: frontend-monitor
+        continue-on-error: true
+        env:
+          FRONTEND_URL: ${{ vars.FRONTEND_URL || 'https://hiremebahamas.vercel.app' }}
+        run: |
+          echo "🔍 Checking frontend availability..."
+          
+          response=$(curl -s -w "\n%{http_code}\n%{time_total}" \
+            --max-time 15 \
+            "$FRONTEND_URL" 2>/dev/null) || true
+          
+          time_total=$(echo "$response" | tail -n1)
+          http_code=$(echo "$response" | tail -n2 | head -n1)
+          
+          echo "frontend_response_time=$time_total" >> $GITHUB_OUTPUT
+          echo "frontend_http_code=$http_code" >> $GITHUB_OUTPUT
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Frontend is accessible"
+            echo "📊 Response time: ${time_total}s"
+            echo "frontend_status=healthy" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Frontend check failed (HTTP $http_code)"
+            echo "frontend_status=unhealthy" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Health Report
+        run: |
+          echo "## 🏥 Health Monitoring Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Service Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status | Response Time | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|---------------|---------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Railway status
+          railway_status="${{ steps.railway-monitor.outputs.railway_status }}"
+          railway_time="${{ steps.railway-monitor.outputs.railway_response_time }}"
+          railway_db="${{ steps.railway-monitor.outputs.railway_db_status }}"
+          railway_keepalive="${{ steps.railway-monitor.outputs.railway_keepalive }}"
+          
+          if [ "$railway_status" = "healthy" ]; then
+            railway_icon="✅"
+            railway_details="DB: $railway_db, Keepalive: $railway_keepalive"
+          elif [ "$railway_status" = "not_configured" ]; then
+            railway_icon="⏭️"
+            railway_details="Not configured"
+            railway_time="-"
+          else
+            railway_icon="❌"
+            railway_details="Health check failed"
+          fi
+          echo "| Railway Backend | $railway_icon $railway_status | ${railway_time}s | $railway_details |" >> $GITHUB_STEP_SUMMARY
+          
+          # Render status
+          render_status="${{ steps.render-monitor.outputs.render_status }}"
+          render_time="${{ steps.render-monitor.outputs.render_response_time }}"
+          render_db="${{ steps.render-monitor.outputs.render_db_status }}"
+          render_keepalive="${{ steps.render-monitor.outputs.render_keepalive }}"
+          
+          if [ "$render_status" = "healthy" ]; then
+            render_icon="✅"
+            render_details="DB: $render_db, Keepalive: $render_keepalive"
+          elif [ "$render_status" = "not_configured" ]; then
+            render_icon="⏭️"
+            render_details="Not configured"
+            render_time="-"
+          else
+            render_icon="❌"
+            render_details="Health check failed"
+          fi
+          echo "| Render Backend | $render_icon $render_status | ${render_time}s | $render_details |" >> $GITHUB_STEP_SUMMARY
+          
+          # Frontend status
+          frontend_status="${{ steps.frontend-monitor.outputs.frontend_status }}"
+          frontend_time="${{ steps.frontend-monitor.outputs.frontend_response_time }}"
+          
+          if [ "$frontend_status" = "healthy" ]; then
+            frontend_icon="✅"
+          else
+            frontend_icon="❌"
+          fi
+          echo "| Frontend (Vercel) | $frontend_icon $frontend_status | ${frontend_time}s | - |" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### High Availability Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Determine overall HA status
+          healthy_backends=0
+          [ "$railway_status" = "healthy" ] && healthy_backends=$((healthy_backends + 1))
+          [ "$render_status" = "healthy" ] && healthy_backends=$((healthy_backends + 1))
+          
+          if [ $healthy_backends -ge 2 ]; then
+            echo "🟢 **Fully Redundant**: All configured backends are healthy" >> $GITHUB_STEP_SUMMARY
+          elif [ $healthy_backends -eq 1 ]; then
+            echo "🟡 **Partially Available**: One backend is healthy (failover available)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "🔴 **Degraded**: No healthy backends detected!" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This monitoring runs **every 5 minutes** to ensure high availability." >> $GITHUB_STEP_SUMMARY
