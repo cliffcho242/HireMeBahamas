@@ -1791,6 +1791,7 @@ def execute_queries_concurrent(queries: list, timeout_seconds: int = 10) -> list
             cursor = conn.cursor()
             
             # Convert SQLite ? placeholders to PostgreSQL %s if using PostgreSQL
+            # This allows writing queries with ? placeholders which works for both databases
             executed_query = query_sql.replace("?", "%s") if USE_POSTGRESQL else query_sql
             
             if params:
@@ -1823,17 +1824,24 @@ def execute_queries_concurrent(queries: list, timeout_seconds: int = 10) -> list
         future = _query_executor.submit(execute_single_query, query_info)
         futures.append(future)
     
-    # Collect results with timeout
+    # Wait for all futures with a global timeout using concurrent.futures.wait
+    # This applies the timeout to all queries collectively rather than per-query
+    from concurrent.futures import wait, FIRST_EXCEPTION
+    done, not_done = wait(futures, timeout=timeout_seconds, return_when=FIRST_EXCEPTION)
+    
+    # Collect results in original order
     results = []
     for future in futures:
-        try:
-            result = future.result(timeout=timeout_seconds)
-            results.append(result)
-        except FuturesTimeoutError:
+        if future in done:
+            try:
+                result = future.result()  # No timeout needed, already done
+                results.append(result)
+            except Exception as e:
+                logger.warning("Concurrent query error: %s", e)
+                results.append(None)
+        else:
+            # Query timed out
             logger.warning("Concurrent query timed out after %ds", timeout_seconds)
-            results.append(None)
-        except Exception as e:
-            logger.warning("Concurrent query error: %s", e)
             results.append(None)
     
     return results
