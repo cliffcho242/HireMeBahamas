@@ -1,10 +1,35 @@
+import socket
 from decouple import config
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# IPv4 SOCKET CONFIGURATION
+# =============================================================================
+# Force IPv4 connections to avoid Railway/Render IPv6 timeout issues.
+# Some cloud providers (Railway, Render) have intermittent IPv6 connectivity
+# issues that cause connection timeouts. Setting the default socket family to
+# IPv4 ensures consistent connectivity.
+_original_getaddrinfo = socket.getaddrinfo
+
+
+def _ipv4_getaddrinfo(host, port, family=socket.AF_UNSPEC, type=0, proto=0, flags=0):
+    """Override getaddrinfo to prefer IPv4 when family is unspecified."""
+    if family == socket.AF_UNSPEC:
+        family = socket.AF_INET
+    return _original_getaddrinfo(host, port, family, type, proto, flags)
+
+
+# Apply IPv4 preference for production environments
+FORCE_IPV4 = config("DB_FORCE_IPV4", default=True, cast=bool)
+if FORCE_IPV4:
+    socket.getaddrinfo = _ipv4_getaddrinfo
+    logger.info("IPv4 preference enabled for database connections")
 
 # Database configuration - PostgreSQL for production mode
 # For local development: docker-compose up postgres redis
@@ -83,6 +108,11 @@ POOL_RECYCLE_SECONDS = config("POOL_RECYCLE_SECONDS", default=300, cast=int)
 # This value is used for both asyncpg's command_timeout and PostgreSQL's statement_timeout
 STATEMENT_TIMEOUT_SECONDS = config("STATEMENT_TIMEOUT_SECONDS", default=30, cast=int)
 
+# Connect timeout in seconds for establishing new connections
+# This is the maximum time asyncpg will wait to establish a connection to PostgreSQL
+# Set to 15 seconds to handle slow network conditions in cloud environments
+CONNECT_TIMEOUT_SECONDS = config("DB_CONNECT_TIMEOUT", default=15, cast=int)
+
 # Create async engine with appropriate settings for the environment
 engine_kwargs = {
     "echo": config("DB_ECHO", default=False, cast=bool),
@@ -91,7 +121,7 @@ engine_kwargs = {
     "max_overflow": POOL_MAX_OVERFLOW,
     "pool_pre_ping": True,  # Enable connection health checks
     "pool_timeout": POOL_TIMEOUT,
-    "poolclass": QueuePool,  # Use QueuePool for connection reuse
+    "poolclass": AsyncAdaptedQueuePool,  # Use AsyncAdaptedQueuePool for async connection reuse
 }
 
 # Add production-specific connection settings
@@ -105,21 +135,30 @@ if IS_PRODUCTION_DATABASE:
     # asyncpg connect_args for connection health and timeouts
     # See: https://magicstack.github.io/asyncpg/current/api/index.html#connection
     #
+    # timeout: Connection establishment timeout in seconds
+    #   - Maximum time to wait for the TCP connection and PostgreSQL handshake
+    #   - Set to 15 seconds to handle slow cloud network conditions
+    #   - Prevents indefinite hangs during connection establishment
+    #
     # command_timeout: Client-side timeout for asyncpg operations (in seconds)
     #   - Applied at the asyncpg library level
     #   - Cancels operations if they exceed this time
     #   - Protects against hung connections from the client side
     #
-    # statement_timeout: Server-side timeout for PostgreSQL queries (in milliseconds)
-    #   - Applied at the PostgreSQL server level
-    #   - Cancels queries if they exceed this time
-    #   - Protects against runaway queries on the server side
+    # server_settings: PostgreSQL server-side configuration
+    #   - statement_timeout: Cancels queries exceeding this time (in milliseconds)
+    #   - jit: Disabled ("off") for Railway compatibility
+    #     Railway PostgreSQL instances may have JIT compilation issues that
+    #     cause timeouts or performance problems. Disabling JIT ensures
+    #     consistent query execution across cloud environments.
     #
-    # Both are set to the same effective duration for consistent behavior
+    # Both timeouts are set to the same effective duration for consistent behavior
     connect_args = {
+        "timeout": CONNECT_TIMEOUT_SECONDS,
         "command_timeout": STATEMENT_TIMEOUT_SECONDS,
         "server_settings": {
             "statement_timeout": str(STATEMENT_TIMEOUT_SECONDS * 1000),
+            "jit": "off",
         },
     }
     engine_kwargs["connect_args"] = connect_args
@@ -128,7 +167,9 @@ if IS_PRODUCTION_DATABASE:
         f"Database pool configured: pool_size={POOL_SIZE}, "
         f"max_overflow={POOL_MAX_OVERFLOW}, "
         f"pool_recycle={POOL_RECYCLE_SECONDS}s, "
-        f"statement_timeout={STATEMENT_TIMEOUT_SECONDS}s"
+        f"connect_timeout={CONNECT_TIMEOUT_SECONDS}s, "
+        f"statement_timeout={STATEMENT_TIMEOUT_SECONDS}s, "
+        f"jit=off"
     )
 
 engine = create_async_engine(DATABASE_URL, **engine_kwargs)
