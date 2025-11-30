@@ -103,7 +103,7 @@ def test_production_connection_settings():
 
 
 def test_ipv4_preference():
-    """Test that IPv4 preference correctly overrides getaddrinfo."""
+    """Test that IPv4 preference correctly affects address resolution behavior."""
     import socket
     
     # Clear any cached modules
@@ -116,17 +116,22 @@ def test_ipv4_preference():
     try:
         from app import database
         
-        # Test that getaddrinfo now prefers IPv4
-        # When family is AF_UNSPEC, it should be changed to AF_INET
+        # Test that FORCE_IPV4 setting is enabled
         assert database.FORCE_IPV4 is True, "Expected FORCE_IPV4=True"
         print("✓ IPv4 preference is enabled")
         
-        # The socket.getaddrinfo should now be our patched version
-        # We can verify it's patched by checking it's different from the original
-        assert socket.getaddrinfo != database._original_getaddrinfo, (
-            "Expected socket.getaddrinfo to be patched"
-        )
-        print("✓ socket.getaddrinfo is patched to prefer IPv4")
+        # Test the behavior: when getaddrinfo is called with AF_UNSPEC,
+        # it should return IPv4 addresses (AF_INET family = 2)
+        # Using localhost which is guaranteed to resolve
+        results = socket.getaddrinfo("localhost", 5432, socket.AF_UNSPEC)
+        
+        # All results should be IPv4 (family = 2 = AF_INET)
+        for result in results:
+            family = result[0]
+            assert family == socket.AF_INET, (
+                f"Expected IPv4 (AF_INET={socket.AF_INET}), got family={family}"
+            )
+        print("✓ getaddrinfo returns only IPv4 addresses when AF_UNSPEC is used")
         
         print("\n✅ IPv4 preference test passed!")
         
