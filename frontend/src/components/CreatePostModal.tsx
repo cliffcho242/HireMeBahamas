@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import type { EmojiClickData } from 'emoji-picker-react';
+import LazyEmojiPicker from './LazyEmojiPicker';
 import {
   XMarkIcon,
   PhotoIcon,
@@ -381,7 +382,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                     {/* Emoji Picker */}
                     {showEmojiPicker && (
                       <div ref={emojiPickerRef} className="absolute bottom-12 left-0 z-50">
-                        <EmojiPicker onEmojiClick={handleEmojiClick} />
+                        <LazyEmojiPicker onEmojiClick={handleEmojiClick} />
                       </div>
                     )}
                   </div>
