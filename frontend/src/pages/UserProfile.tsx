@@ -252,12 +252,14 @@ const UserProfile: React.FC = () => {
     setIsFollowLoading(true);
     try {
       if (isFollowing) {
-        await usersAPI.unfollowUser(parseInt(userId));
+        // Pass userId directly as string - the API now handles both string and number
+        await usersAPI.unfollowUser(userId);
         setIsFollowing(false);
         setFollowersCount(prev => Math.max(0, prev - 1));
         toast.success('User unfollowed');
       } else {
-        await usersAPI.followUser(parseInt(userId));
+        // Pass userId directly as string - the API now handles both string and number
+        await usersAPI.followUser(userId);
         setIsFollowing(true);
         setFollowersCount(prev => prev + 1);
         toast.success('User followed');
@@ -279,7 +281,8 @@ const UserProfile: React.FC = () => {
     
     setIsLoadingFollowers(true);
     try {
-      const response = await usersAPI.getUserFollowers(parseInt(userId));
+      // Pass userId directly as string - the API now handles both string and number
+      const response = await usersAPI.getUserFollowers(userId);
       // Ensure we always get an array, even if API response is malformed
       const followers = Array.isArray(response?.followers) ? response.followers : [];
       setFollowersList(followers);
@@ -301,7 +304,8 @@ const UserProfile: React.FC = () => {
     
     setIsLoadingFollowing(true);
     try {
-      const response = await usersAPI.getUserFollowing(parseInt(userId));
+      // Pass userId directly as string - the API now handles both string and number
+      const response = await usersAPI.getUserFollowing(userId);
       // Ensure we always get an array, even if API response is malformed
       const following = Array.isArray(response?.following) ? response.following : [];
       setFollowingList(following);

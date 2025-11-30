@@ -17,6 +17,20 @@ export interface ApiErrorResponse {
 }
 
 /**
+ * User-friendly messages for different resource types
+ */
+const RESOURCE_MESSAGES: Record<string, { empty: string; notFound: string }> = {
+  followers: {
+    empty: 'This user has no followers yet',
+    notFound: 'Could not load followers. The user may not exist.',
+  },
+  following: {
+    empty: 'This user is not following anyone yet',
+    notFound: 'Could not load following list. The user may not exist.',
+  },
+};
+
+/**
  * Get a user-friendly error message based on the error response.
  * Prioritizes specific error messages from the API, then falls back to status code messages.
  * 
@@ -32,6 +46,11 @@ export function getApiErrorMessage(
 ): string {
   const apiError = error as ApiErrorResponse;
   
+  // Check for client-side validation errors first
+  if (apiError.message === 'Invalid user ID') {
+    return 'Invalid user profile. Please try a different user.';
+  }
+  
   // First, check for specific error messages from the API response
   // These are more helpful than generic status code messages
   if (apiError.response?.data?.detail) {
@@ -42,13 +61,21 @@ export function getApiErrorMessage(
     return apiError.response.data.message;
   }
   
+  // Get resource-specific messages if available
+  const resourceMessages = RESOURCE_MESSAGES[resourceType];
+  
   // Fall back to status code-based messages if no specific message is available
   if (apiError.response?.status === 401) {
     return `Please log in to view ${resourceType}`;
   }
   
   if (apiError.response?.status === 404) {
-    return `The requested ${resourceType} could not be found`;
+    // Use resource-specific message if available
+    return resourceMessages?.notFound || `User not found`;
+  }
+  
+  if (apiError.response?.status === 400) {
+    return 'Invalid request. Please try again.';
   }
   
   if (apiError.response?.status === 403) {
