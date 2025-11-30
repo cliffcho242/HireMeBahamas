@@ -3,7 +3,8 @@ services:
     name: hiremebahamas-backend
     env: python
     region: oregon
-    plan: free
+    plan: starter
+    autoDeploy: true
     buildCommand: |
       apt-get update
       apt-get install -y --no-install-recommends \
@@ -64,6 +65,25 @@ services:
         value: true
       - key: PYTHON_VERSION
         value: 3.12.0
+      # Gunicorn worker settings for always-on behavior
+      - key: WEB_CONCURRENCY
+        value: 2
+      - key: WEB_THREADS
+        value: 8
+      - key: GUNICORN_TIMEOUT
+        value: 55
+      - key: GUNICORN_KEEPALIVE
+        value: 5
+      # Database keepalive for preventing sleep
+      - key: DB_KEEPALIVE_ENABLED
+        value: true
+      - key: DB_KEEPALIVE_INTERVAL
+        value: 120
       # DATABASE_URL must be set manually in Render dashboard
       # to connect to your PostgreSQL database
     healthCheckPath: /health
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetMemoryPercent: 80
+      targetCPUPercent: 70

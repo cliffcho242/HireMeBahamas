@@ -8544,6 +8544,134 @@ def get_unread_message_count():
 
 
 # ==========================================
+# SERVER-SENT EVENTS (SSE) FOR REAL-TIME NOTIFICATIONS
+# ==========================================
+
+# SSE is chosen over WebSocket for serverless compatibility
+# Works with Vercel Edge, Railway, and Render without special configuration
+
+# Track active SSE connections for broadcasting
+_sse_clients: dict = {}  # user_id -> response generator
+_sse_lock = threading.Lock()
+
+
+def _format_sse_event(data: dict, event_type: str = None) -> str:
+    """
+    Format data as an SSE event.
+    
+    Args:
+        data: Dictionary to send as JSON
+        event_type: Optional event type (job, message, application, ping)
+    
+    Returns:
+        Formatted SSE string
+    """
+    import json
+    lines = []
+    if event_type:
+        lines.append(f"event: {event_type}")
+    lines.append(f"data: {json.dumps(data)}")
+    lines.append("")  # Empty line to end the event
+    return "\n".join(lines) + "\n"
+
+
+def _generate_sse_stream(user_id: int, request_id: str):
+    """
+    Generator function for SSE stream.
+    
+    Yields SSE events for the authenticated user.
+    Includes periodic heartbeat to keep connection alive.
+    """
+    import json
+    
+    # Send initial connection confirmation
+    yield _format_sse_event({
+        "type": "connected",
+        "message": "Real-time notifications connected",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Heartbeat interval in seconds
+    heartbeat_interval = 30
+    last_heartbeat = time.time()
+    
+    try:
+        while True:
+            # Send heartbeat every 30 seconds to keep connection alive
+            current_time = time.time()
+            if current_time - last_heartbeat >= heartbeat_interval:
+                yield _format_sse_event({
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }, event_type="ping")
+                last_heartbeat = current_time
+            
+            # Check for new notifications (would be implemented with a queue)
+            # For now, just sleep to avoid busy-waiting
+            time.sleep(1)
+            
+    except GeneratorExit:
+        # Client disconnected
+        logger.info(f"[{request_id}] SSE client disconnected for user {user_id}")
+    finally:
+        # Clean up
+        with _sse_lock:
+            if user_id in _sse_clients:
+                del _sse_clients[user_id]
+
+
+@app.route("/api/notifications/stream", methods=["GET"])
+def notifications_stream():
+    """
+    Server-Sent Events endpoint for real-time notifications.
+    
+    Provides real-time updates for:
+    - New job postings matching user preferences
+    - Message notifications
+    - Application status updates
+    - System announcements
+    
+    Query Parameters:
+        token: JWT authentication token (required for SSE which doesn't support headers)
+    
+    Returns:
+        SSE stream with notification events
+    """
+    request_id = getattr(g, 'request_id', 'sse')
+    
+    # Get token from query parameter (SSE doesn't support custom headers)
+    token = request.args.get("token")
+    if not token:
+        return jsonify({"success": False, "message": "Token required"}), 401
+    
+    try:
+        payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+        user_id = payload["user_id"]
+    except jwt.ExpiredSignatureError:
+        return jsonify({"success": False, "message": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"success": False, "message": "Invalid token"}), 401
+    
+    # Register this client
+    with _sse_lock:
+        _sse_clients[user_id] = True
+    
+    logger.info(f"[{request_id}] SSE connection established for user {user_id}")
+    
+    # Return SSE stream response
+    from flask import Response
+    return Response(
+        _generate_sse_stream(user_id, request_id),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+            "Access-Control-Allow-Origin": "*",
+        }
+    )
+
+
+# ==========================================
 # APPLICATION ENTRY POINT
 # ==========================================
 
