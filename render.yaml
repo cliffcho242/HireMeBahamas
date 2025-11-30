@@ -7,11 +7,9 @@ services:
     name: hiremebahamas-backend
     runtime: python
     region: oregon
-    # IMPORTANT: Use "starter" or higher to prevent 502 cold start errors
-    # Free tier services sleep after 15 minutes of inactivity
-    # Paid tiers (starter, standard, pro) are ALWAYS ON - no sleep, no cold starts
-    # See docs/RENDER_502_FIX_GUIDE.md for details
-    plan: starter  # $7/month - Always On, eliminates 502 cold start errors
+    # Use "starter" ($7/mo) or higher for Always On - no sleep, no 502 cold starts
+    # Free tier sleeps after 15 min of inactivity causing 502 errors
+    plan: starter
     
     # Auto-scaling configuration for high availability
     # Render automatically manages scaling based on these thresholds:
@@ -19,9 +17,7 @@ services:
     # - When memory exceeds targetMemoryPercent, new instances are added
     # - Scaling down occurs after ~5 minutes of reduced load
     # - New instances are warmed up before receiving traffic
-    # Note: Requires Standard plan or higher for auto-scaling
-    # Starter plan ($7/mo) = Always On but no auto-scaling
-    # Standard plan ($25/mo) = Always On + auto-scaling
+    # Note: Requires Standard plan ($25/mo) or higher for auto-scaling
     scaling:
       minInstances: 1        # Minimum instances (always running)
       maxInstances: 10       # Maximum instances during peak load

@@ -3653,25 +3653,24 @@ print(f"✅ Application ready to serve requests (startup time: {_startup_time_ms
 # ==========================================
 
 # Database keepalive configuration
-# Prevents Railway/Render PostgreSQL from sleeping after 15 minutes of inactivity
+# Keeps database connections alive to prevent connection pool timeout issues
+# when web services restart from sleep (Railway/Render free tier sleep after 15 min)
+#
 # Enabled when:
 # - Running on Railway (IS_RAILWAY=True, detected via RAILWAY_PROJECT_ID), OR
 # - Running on Render (IS_RENDER=True, detected via RENDER env var), OR
 # - Running in production environment (IS_PRODUCTION=True)
 # AND PostgreSQL is configured (USE_POSTGRESQL=True)
 #
-# This ensures keepalive runs on Railway/Render even if ENVIRONMENT is not explicitly
-# set to "production", since these are inherently production platforms and database
-# sleeping is a platform-specific issue.
+# This ensures the keepalive runs on production platforms to maintain
+# fresh database connections after any cold start or restart event.
 #
 # Note: For Render free tier, the web service itself also sleeps after 15 minutes.
 # Use an external pinger (UptimeRobot, Healthchecks.io) or upgrade to paid plan.
 # See docs/RENDER_502_FIX_GUIDE.md for complete instructions.
 DB_KEEPALIVE_ENABLED = (IS_PRODUCTION or IS_RAILWAY or IS_RENDER) and USE_POSTGRESQL
-# Railway/Render databases sleep after 15 minutes of inactivity. Using 2 minutes (120s)
-# provides a very aggressive safety margin to prevent database from sleeping.
-# This is the same as aggressive mode to ensure maximum reliability.
-# Previous value of 5 minutes (300s) was still allowing database to sleep.
+# Ping database every 2 minutes (120s) to keep connections fresh
+# This provides a safety margin for maintaining connection pool health
 DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "120"))  # 2 minutes
 DB_KEEPALIVE_FAILURE_THRESHOLD = 3  # Number of consecutive failures before warning
 DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS = 60  # Delay before retrying after unexpected error

@@ -9,7 +9,7 @@ When your HireMeBahamas backend is deployed on Render, you may experience:
 - **Very slow login times** (10-120+ seconds) due to cold starts
 - **iPhone Safari showing 123+ second response times**
 
-This happens because Render automatically spins down free and hobby tier web services after approximately 15 minutes of inactivity to conserve resources.
+This happens because Render automatically spins down free tier web services after approximately 15 minutes of inactivity to conserve resources.
 
 ## Solution Overview
 
