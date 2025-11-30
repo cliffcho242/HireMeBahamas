@@ -4051,6 +4051,7 @@ except Exception as e:
 _APP_IMPORT_COMPLETE_TIME = time.time()
 _startup_time_ms = int((_APP_IMPORT_COMPLETE_TIME - _APP_START_TIME) * 1000)
 print(f"✅ Application ready to serve requests (startup time: {_startup_time_ms}ms)")
+print("🏥 IMMORTAL HEALTH ENDPOINTS LOADED — /health (GET+HEAD), /ready, /ping — RENDER CANNOT STOP ME")
 
 
 # ==========================================
@@ -4577,17 +4578,18 @@ def root():
     )
 
 
-@app.route("/health", methods=["GET"])
+@app.route("/health", methods=["GET", "HEAD"])
 @limiter.exempt
 def health_check():
     """
     Lightning-fast health check endpoint for Render/Railway.
     
-    Returns 200 OK with {"status":"ok"} in <20ms.
+    Returns 200 OK with {"status":"alive"} in <10ms.
     No database access, no logging overhead - just a quick response.
+    Supports both GET and HEAD methods for maximum compatibility.
     Exempt from rate limiting to allow monitoring services to check frequently.
     """
-    return jsonify({"status": "ok"}), 200
+    return jsonify({"status": "alive"}), 200
 
 
 @app.route("/ready", methods=["GET"])
