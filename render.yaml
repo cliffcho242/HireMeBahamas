@@ -239,3 +239,23 @@ services:
     schedule: "*/5 * * * *"
     dockerImage: curlimages/curl:latest
     dockerCommand: curl -f -s -o /dev/null https://hiremebahamas.onrender.com/health
+
+  # ==========================================================================
+  # CACHE WARMING CRON JOB - Meta-style Hot Path Caching
+  # ==========================================================================
+  # 
+  # This cron job pre-warms the cache every 5 minutes to ensure
+  # sub-100ms response times for frequently accessed data.
+  # 
+  # Benefits:
+  # - Eliminates cache miss latency on popular endpoints
+  # - Keeps hot data in Redis/memory for instant access
+  # - Improves user experience with faster page loads
+  # ==========================================================================
+  - type: cron
+    name: cache-warmer
+    region: oregon
+    plan: free
+    schedule: "*/5 * * * *"
+    dockerImage: curlimages/curl:latest
+    dockerCommand: curl -f -s -X POST https://hiremebahamas.onrender.com/warm-cache

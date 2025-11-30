@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import time
@@ -17,6 +18,7 @@ from .api import auth, hireme, jobs, messages, notifications, posts, profile_pic
 from .database import init_db, close_db, get_db
 from .core.metrics import get_metrics_response, set_app_info
 from .core.security import prewarm_bcrypt_async
+from .core.redis_cache import redis_cache, warm_cache
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -44,6 +46,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Failed to pre-warm bcrypt (non-critical): {e}")
     
+    # Initialize Redis cache connection
+    logger.info("Connecting to Redis cache...")
+    try:
+        redis_available = await redis_cache.connect()
+        if redis_available:
+            logger.info("Redis cache connected successfully")
+        else:
+            logger.info("Using in-memory cache fallback")
+    except Exception as e:
+        logger.warning(f"Redis connection failed (non-critical): {e}")
+    
     # Initialize database tables
     logger.info("Initializing database tables...")
     try:
@@ -52,9 +65,22 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to initialize database tables: {e}")
         raise
+    
+    # Pre-warm cache with hot data (async, don't block startup)
+    logger.info("Scheduling cache warm-up...")
+    asyncio.create_task(warm_cache())
+    
     yield
     # Shutdown
     logger.info("Shutting down HireMeBahamas API...")
+    
+    # Close Redis connection
+    try:
+        await redis_cache.disconnect()
+        logger.info("Redis cache disconnected")
+    except Exception as e:
+        logger.warning(f"Error disconnecting Redis cache: {e}")
+    
     try:
         await close_db()
         logger.info("Database connections closed")
@@ -260,6 +286,33 @@ async def health_ping():
     return {"status": "ok", "message": "pong"}
 
 
+# Cache warming endpoint for cron jobs
+@app.post("/warm-cache")
+async def warm_cache_endpoint():
+    """
+    Warm up cache with frequently accessed data.
+    
+    This endpoint should be called by a cron job every 5 minutes
+    to keep the cache hot and ensure sub-100ms response times.
+    
+    Example Render cron: */5 * * * * curl -X POST https://hiremebahamas.onrender.com/warm-cache
+    """
+    result = await warm_cache()
+    return result
+
+
+# Cache health and stats endpoint
+@app.get("/health/cache")
+async def cache_health():
+    """
+    Get cache health status and statistics.
+    
+    Returns cache hit rates, backend status, and performance metrics.
+    """
+    health = await redis_cache.health_check()
+    return health
+
+
 # API health check endpoint (simple status check)
 @app.get("/api/health")
 async def api_health():
@@ -309,6 +362,7 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
     May require admin permissions in production environments.
     """
     from .core.db_health import check_database_health, get_database_stats
+    from .database import get_pool_status
     
     # Basic health check
     health_response = await health_check(db)
@@ -318,6 +372,17 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
     
     if db_stats:
         health_response["database"]["statistics"] = db_stats
+    
+    # Add pool status
+    try:
+        pool_status = await get_pool_status()
+        health_response["database"]["pool"] = pool_status
+    except Exception as e:
+        health_response["database"]["pool"] = {"error": str(e)}
+    
+    # Add cache stats
+    cache_health = await redis_cache.health_check()
+    health_response["cache"] = cache_health
     
     return health_response
 
