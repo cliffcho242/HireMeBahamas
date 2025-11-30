@@ -135,11 +135,31 @@ services:
     healthCheckPath: /health
 
   # ==========================================================================
-  # KEEP-ALIVE BACKGROUND WORKER
+  # KEEP-ALIVE BACKGROUND WORKER - PERMANENT ZERO-COST FIX FOR 502 ERRORS
   # ==========================================================================
   # 
-  # This background worker pings the web service every 70 seconds to prevent
+  # This background worker pings the web service every 60 seconds to prevent
   # it from sleeping due to inactivity on Render's free tier.
+  # 
+  # Benefits:
+  # - Costs $0 (uses Render's free tier for background workers)
+  # - Prevents 502 Bad Gateway errors from cold starts
+  # - Keeps the service always responsive (<1 second response times)
+  # - Runs forever without manual intervention
+  # 
+  # Manual Setup in Render Dashboard:
+  # 1. Go to Render Dashboard → New → Background Worker
+  # 2. Connect your GitHub repository
+  # 3. Set the following:
+  #    - Name: keep-alive
+  #    - Runtime: Python 3
+  #    - Region: Oregon (same as your web service)
+  #    - Build Command: pip install requests
+  #    - Start Command: python keep_alive.py
+  # 4. Add Environment Variable:
+  #    - Key: RENDER_EXTERNAL_URL
+  #    - Value: https://hiremebahamas.onrender.com
+  # 5. Deploy!
   # 
   # Note: If using the Starter plan ($7/mo), this worker is not necessary
   # as the service is always on. However, it provides additional reliability.

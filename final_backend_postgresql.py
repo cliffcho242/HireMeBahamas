@@ -4315,6 +4315,26 @@ def health_ping():
     return "pong", 200
 
 
+@app.route("/api/auth/ping", methods=["GET", "HEAD"])
+@limiter.exempt
+def auth_ping():
+    """
+    Simple auth ping endpoint for keep-alive workers.
+    
+    This lightweight endpoint is specifically designed for background workers
+    that need to ping the service to prevent it from sleeping. It returns
+    a minimal JSON response with a 200 status code.
+    
+    Features:
+    - Returns {"status": "ok"} for JSON compatibility
+    - Supports both GET and HEAD methods
+    - Exempt from rate limiting for monitoring services
+    - No database access required (app-level health only)
+    - Located under /api/auth/ for consistency with other auth endpoints
+    """
+    return jsonify({"status": "ok"}), 200
+
+
 @app.route("/api/health", methods=["GET"])
 @limiter.exempt
 def api_health_check():
