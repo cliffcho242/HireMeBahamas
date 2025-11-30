@@ -6222,20 +6222,48 @@ def get_user(identifier):
     to ensure is_following status is accurate for each user.
     
     Args:
-        identifier: Can be either a numeric user ID or a username string
+        identifier: Can be either a numeric user ID (integer) or a username string.
+                   The endpoint handles both formats automatically:
+                   - /api/users/1 -> looks up user with ID 1
+                   - /api/users/johndoe -> looks up user with username "johndoe"
+                   - /api/users/123abc -> tries ID first, falls back to username
     """
     if request.method == "OPTIONS":
         return "", 200
 
     # Track request timing for timeout detection
     request_start = time.time()
+    request_id = getattr(g, 'request_id', 'unknown')
 
     conn = None
     cursor = None
     try:
+        # Input validation - strip whitespace and validate
+        if not identifier:
+            logger.warning("[%s] User lookup failed: empty identifier", request_id)
+            return jsonify({
+                "success": False,
+                "message": "User identifier is required",
+                "error_code": "INVALID_INPUT"
+            }), 400
+        
+        identifier = str(identifier).strip()
+        if not identifier:
+            logger.warning("[%s] User lookup failed: whitespace-only identifier", request_id)
+            return jsonify({
+                "success": False,
+                "message": "User identifier cannot be empty",
+                "error_code": "INVALID_INPUT"
+            }), 400
+        
+        # Log the lookup attempt for debugging
+        logger.info("[%s] User profile lookup: identifier='%s', type=%s", 
+                   request_id, identifier, 'numeric' if identifier.isdigit() else 'username')
+
         # Verify authentication
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
+            logger.warning("[%s] User lookup failed: missing auth token", request_id)
             return jsonify({"success": False, "message": "Authentication required"}), 401
 
         token = auth_header.split(" ")[1]
@@ -6243,7 +6271,10 @@ def get_user(identifier):
         try:
             payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
             current_user_id = payload["user_id"]
-        except jwt.InvalidTokenError:
+            logger.info("[%s] Authenticated user ID: %s looking up user: '%s'", 
+                       request_id, current_user_id, identifier)
+        except jwt.InvalidTokenError as e:
+            logger.warning("[%s] User lookup failed: invalid token - %s", request_id, str(e))
             return jsonify({"success": False, "message": "Invalid token"}), 401
 
         # Check for timeout before database query
@@ -6255,6 +6286,13 @@ def get_user(identifier):
             }), 504
 
         conn = get_db_connection()
+        if conn is None:
+            logger.error("[%s] User lookup failed: database connection unavailable", request_id)
+            return jsonify({
+                "success": False,
+                "message": "Database temporarily unavailable. Please try again.",
+                "error_code": "DB_UNAVAILABLE"
+            }), 503
         cursor = conn.cursor()
 
         # Determine if identifier is a numeric ID or username
@@ -6309,12 +6347,22 @@ def get_user(identifier):
             user = cursor.fetchone()
         
         if not user:
+            # Log detailed info for debugging "user not found" issues
+            logger.warning(
+                "[%s] User not found: identifier='%s', lookup_type='%s', "
+                "searched_by_id=%s, searched_by_username=%s",
+                request_id, identifier, 
+                'numeric' if str(identifier).isdigit() else 'username',
+                str(identifier).isdigit(), True
+            )
             cursor.close()
             return_db_connection(conn)
             return jsonify({
                 "success": False, 
                 "message": f"User not found. The user '{identifier}' may have been deleted or does not exist.",
-                "error_code": "USER_NOT_FOUND"
+                "error_code": "USER_NOT_FOUND",
+                "identifier_received": identifier,
+                "identifier_type": "numeric" if str(identifier).isdigit() else "username"
             }), 404
 
         # Get the user's ID for follow queries (in case we looked up by username)

@@ -271,6 +271,11 @@ export const authAPI = {
   },
 
   getUserProfile: async (identifier: string | number): Promise<UserResponse> => {
+    // Debug logging for user profile API calls
+    console.log('[API] getUserProfile called with identifier:', identifier, 
+      '| Type:', typeof identifier,
+      '| URL:', `/api/users/${identifier}`);
+    
     const response = await api.get(`/api/users/${identifier}`);
     return response.data;
   },

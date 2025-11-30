@@ -96,12 +96,21 @@ const UserProfile: React.FC = () => {
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchUserProfile = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      console.warn('[UserProfile] No userId provided in URL params');
+      return;
+    }
+    
+    // Debug logging for user profile lookup
+    console.log('[UserProfile] Fetching profile for userId:', userId, 
+      '| Type:', typeof userId, 
+      '| Is numeric:', /^\d+$/.test(userId));
     
     setIsLoading(true);
     setError(null);
     try {
       const response = await authAPI.getUserProfile(userId);
+      console.log('[UserProfile] Profile fetch successful for userId:', userId);
       const userData = response.user as unknown as Record<string, unknown>; // API response may have additional fields
       
       // Normalize user data with safe defaults
@@ -137,11 +146,35 @@ const UserProfile: React.FC = () => {
       const userPosts = await postsAPI.getUserPosts(parseInt(userId));
       setUserPosts(userPosts);
     } catch (error: unknown) {
-      console.error('Failed to fetch user profile:', error);
+      // Enhanced error logging for debugging "user not found" issues
+      console.error('[UserProfile] Failed to fetch profile:', {
+        userId,
+        userIdType: typeof userId,
+        isNumeric: /^\d+$/.test(userId),
+        error
+      });
       
       // Extract error message with more detail
       let errorMessage = 'Failed to load user profile';
-      const errorObj = error as { response?: { data?: { detail?: string; message?: string }; status?: number }; message?: string };
+      const errorObj = error as { 
+        response?: { 
+          data?: { 
+            detail?: string; 
+            message?: string;
+            identifier_received?: string;
+            identifier_type?: string;
+            error_code?: string;
+          }; 
+          status?: number 
+        }; 
+        message?: string 
+      };
+      
+      // Log detailed error info for debugging
+      if (errorObj.response?.data) {
+        console.error('[UserProfile] Error details from API:', errorObj.response.data);
+      }
+      
       if (errorObj.response?.data?.detail) {
         errorMessage = errorObj.response.data.detail;
       } else if (errorObj.response?.data?.message) {
@@ -157,7 +190,7 @@ const UserProfile: React.FC = () => {
       
       // Auto-redirect to users page after 3 seconds for 404 errors
       if (errorObj.response?.status === 404) {
-        console.log(`User not found. Auto-redirecting to users page in ${REDIRECT_DELAY_SECONDS} seconds...`);
+        console.log(`[UserProfile] User not found. Auto-redirecting to users page in ${REDIRECT_DELAY_SECONDS} seconds...`);
         setRedirectCountdown(REDIRECT_DELAY_SECONDS);
         
         // Clear any existing interval
