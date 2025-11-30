@@ -1,6 +1,6 @@
-# Eliminating Cold Starts on Render (2025 Battle-Tested Configuration)
+# Eliminating Cold Starts on Render (Production Best Practice)
 
-> **Last Updated:** 2025 | **Tested with:** Render Starter/Standard plans, Gunicorn 23.0+
+> **Last Updated:** November 2025 | **Tested with:** Render Starter/Standard plans, Gunicorn 23.0+
 
 This guide provides the **exact, battle-tested configuration** to eliminate 30-120 second cold starts on Render, even after 10+ hours of no traffic.
 

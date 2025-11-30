@@ -40,7 +40,6 @@ See docs/HIGH_AVAILABILITY.md for detailed documentation.
 See docs/RENDER_COLD_START_FIX.md for preload configuration details.
 """
 import os
-import sys
 import time
 
 # =============================================================================

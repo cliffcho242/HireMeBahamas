@@ -74,8 +74,8 @@ echo "   Bind: 0.0.0.0:${PORT:-8080}"
 echo ""
 
 # Using gunicorn.conf.py which has preload_app=True by default
-# The --preload flag is redundant when preload_app=True in config,
-# but we include it explicitly for clarity and to ensure it's enabled
+# The --preload flag overrides config file settings, ensuring preload is always enabled
+# even if PRELOAD_APP=false is accidentally set in the environment
 exec gunicorn final_backend_postgresql:application \
     --config gunicorn.conf.py \
     --preload
