@@ -2741,7 +2741,8 @@ def create_database_indexes(cursor, conn):
             # Composite index for user profile queries (created_at for sorting new users)
             ("users_created_at_idx", "CREATE INDEX IF NOT EXISTS users_created_at_idx ON users (created_at DESC) WHERE is_active = TRUE"),
             # Full-text search index for job title and description (GIN index for text search)
-            ("jobs_search_idx", "CREATE INDEX IF NOT EXISTS jobs_search_idx ON jobs USING GIN (to_tsvector('english', title || ' ' || description)) WHERE is_active = TRUE"),
+            # Uses COALESCE to handle null values in title or description
+            ("jobs_search_idx", "CREATE INDEX IF NOT EXISTS jobs_search_idx ON jobs USING GIN (to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(description, ''))) WHERE is_active = TRUE"),
             # Index for stories expiration (speeds up cleanup queries)
             ("stories_expires_at_idx", "CREATE INDEX IF NOT EXISTS stories_expires_at_idx ON stories (expires_at) WHERE expires_at > NOW()"),
             # Composite index for friendship status lookups (both directions)

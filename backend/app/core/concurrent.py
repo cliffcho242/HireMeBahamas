@@ -6,7 +6,7 @@ concurrently using asyncio, improving performance for endpoints that need to
 aggregate data from multiple sources.
 
 Usage example:
-    from app.core.concurrent import gather_async, run_concurrent
+    from app.core.concurrent import gather_async, ConcurrentBatcher
 
     # Run multiple async functions concurrently
     results = await gather_async(
