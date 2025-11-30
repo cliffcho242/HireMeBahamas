@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
+import { useMessageNotifications } from '../contexts/MessageNotificationContext';
 import { messagesAPI } from '../services/api';
 import { PaperAirplaneIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useSearchParams } from 'react-router-dom';
@@ -40,6 +41,7 @@ interface Conversation {
 const Messages: React.FC = () => {
   const { user } = useAuth();
   const { socket } = useSocket();
+  const { refreshUnreadCount } = useMessageNotifications();
   const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -84,6 +86,15 @@ const Messages: React.FC = () => {
     }
   }, [user, fetchConversations]);
 
+  // Refresh unread count when page is visited or when user opens/closes conversations
+  useEffect(() => {
+    // Refresh after a short delay to allow marking messages as read
+    const timer = setTimeout(() => {
+      refreshUnreadCount();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [selectedConversation, refreshUnreadCount]);
+
   useEffect(() => {
     scrollToBottom();
   }, [selectedConversation?.messages]);
@@ -91,7 +102,10 @@ const Messages: React.FC = () => {
   useEffect(() => {
     if (socket && user) {
       socket.on('new_message', (message: Message) => {
-        if (selectedConversation && message.conversation_id === selectedConversation.id) {
+        // Check if this message is for the current conversation
+        const isCurrentConversation = selectedConversation && message.conversation_id === selectedConversation.id;
+        
+        if (isCurrentConversation) {
           setSelectedConversation(prev => prev ? {
             ...prev,
             messages: [...prev.messages, message]
@@ -106,13 +120,20 @@ const Messages: React.FC = () => {
               : conv
           )
         );
+        
+        // Note: Sound notification is handled globally by MessageNotificationContext
+        // Only refresh unread count here if we're viewing the current conversation
+        // (because we'll mark messages as read)
+        if (isCurrentConversation) {
+          refreshUnreadCount();
+        }
       });
 
       return () => {
         socket.off('new_message');
       };
     }
-  }, [socket, user, selectedConversation]);
+  }, [socket, user, selectedConversation, refreshUnreadCount]);
 
   // Reset query parameter processing flag on unmount
   useEffect(() => {

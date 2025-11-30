@@ -14,6 +14,7 @@ import {
 import { HomeIcon as HomeIconSolid } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
+import { useMessageNotifications } from '../contexts/MessageNotificationContext';
 import Notifications from './Notifications';
 
 const Navbar: React.FC = () => {
@@ -21,6 +22,7 @@ const Navbar: React.FC = () => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
   const { isConnected } = useSocket();
+  const { unreadCount } = useMessageNotifications();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -75,7 +77,12 @@ const Navbar: React.FC = () => {
             >
               <ChatBubbleLeftRightIcon className="w-5 h-5" />
               <span>Messages</span>
-              {isConnected && (
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+              {isConnected && unreadCount === 0 && (
                 <span className="absolute -top-1 -right-1 h-2 w-2 bg-green-400 rounded-full"></span>
               )}
             </Link>
@@ -216,11 +223,16 @@ const Navbar: React.FC = () => {
             </Link>
             <Link
               to="/messages"
-              className="flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              className="flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 relative"
               onClick={() => setIsMenuOpen(false)}
             >
               <ChatBubbleLeftRightIcon className="w-5 h-5" />
               <span>Messages</span>
+              {unreadCount > 0 && (
+                <span className="ml-auto min-w-5 h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </Link>
             <Link
               to="/friends"

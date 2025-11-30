@@ -17,6 +17,7 @@ import {
   ChatBubbleLeftRightIcon as ChatIconSolid,
 } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
+import { useMessageNotifications } from '../contexts/MessageNotificationContext';
 import { notificationsAPI } from '../services/api';
 
 interface MobileNavigationProps {
@@ -26,6 +27,7 @@ interface MobileNavigationProps {
 const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = '' }) => {
   const location = useLocation();
   const { user } = useAuth();
+  const { unreadCount: unreadMessages } = useMessageNotifications();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
@@ -65,7 +67,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = '' }) =
     { path: '/', icon: HomeIcon, iconSolid: HomeIconSolid, label: 'Home', badge: null },
     { path: '/friends', icon: UserGroupIcon, iconSolid: UserGroupIconSolid, label: 'Discover', badge: null },
     { path: '/jobs', icon: BriefcaseIcon, iconSolid: BriefcaseIconSolid, label: 'Jobs', badge: null },
-    { path: '/messages', icon: ChatBubbleLeftRightIcon, iconSolid: ChatIconSolid, label: 'Messages', badge: null },
+    { path: '/messages', icon: ChatBubbleLeftRightIcon, iconSolid: ChatIconSolid, label: 'Messages', badge: unreadMessages },
   ];
 
   const isActive = (path: string) => location.pathname === path;

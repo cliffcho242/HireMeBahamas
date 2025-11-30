@@ -41,6 +41,21 @@ export interface ImportMetaEnv {
   VITE_APPLE_CLIENT_ID?: string;
 }
 
+// Message type matching the backend API response (snake_case)
+export interface BackendMessage {
+  id: number;
+  content: string;
+  sender_id: number;
+  conversation_id: number;
+  created_at: string;
+  is_read?: boolean;
+  sender: {
+    first_name: string;
+    last_name: string;
+  };
+}
+
+// Frontend-normalized Message type (camelCase)
 export interface Message {
   id: string;
   content: string;
