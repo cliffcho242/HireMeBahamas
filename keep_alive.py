@@ -15,7 +15,7 @@ while True:
         try:
             r = requests.get(
                 HEALTH_URL,
-                timeout=(6, 20 + attempt * 10),  # connect 6s, read 20–40s
+                timeout=(6, 20 + attempt * 10),  # connect 6s, read 30–50s
                 headers={"User-Agent": "ImmortalKeepAlive/2025"}
             )
             if r.status_code == 200:
