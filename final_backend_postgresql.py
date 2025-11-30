@@ -202,7 +202,7 @@ def invalidate_cache_pattern(pattern: str):
         logger.warning(f"Cache invalidation failed for pattern '{pattern}': {e}")
 
 
-def make_user_cache_key(identifier: str = '') -> str:
+def make_user_cache_key(identifier: str = None) -> str:
     """
     Generate a cache key for user profile endpoints.
     
@@ -219,7 +219,8 @@ def make_user_cache_key(identifier: str = '') -> str:
     """
     try:
         # Use passed identifier if provided, otherwise get from URL for backward compatibility
-        if not identifier:
+        # Using 'is None' check to handle edge case where empty string is explicitly passed
+        if identifier is None:
             identifier = request.view_args.get('identifier', '')
         
         # Get current user from token for personalized data
