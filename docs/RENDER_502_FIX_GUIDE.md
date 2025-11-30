@@ -31,10 +31,13 @@ This "cold start" takes 10-120+ seconds, causing 502 errors or timeouts.
 | Approach | Cost | Effectiveness | Setup Time |
 |----------|------|---------------|------------|
 | **1. Render Starter Plan** | $7/month | ✅ 100% effective | 5 minutes |
-| **2. External Pinger (Free)** | Free | ✅ 95%+ effective | 10 minutes |
-| **3. Both Combined** | $7+/month | ✅ 100% effective | 15 minutes |
+| **2. Render Cron Job** ✨ | Free | ✅ 100% effective | 5 minutes |
+| **3. External Pinger** | Free | ✅ 95%+ effective | 10 minutes |
+| **4. Both Combined** | $7+/month | ✅ 100% effective | 15 minutes |
 
 **👉 Quick Start:** See [RENDER_QUICK_START.md](./RENDER_QUICK_START.md) for step-by-step instructions
+
+**👉 Cron Job Setup:** See [RENDER_CRON_JOB_SETUP.md](./RENDER_CRON_JOB_SETUP.md) for the new recommended approach
 
 ---
 
@@ -83,11 +86,47 @@ Upgrading to a paid plan completely eliminates cold starts because your service 
 
 ---
 
-## Approach 2: Free External Pinger (If Staying on Free Tier)
+## Approach 2: Render Cron Job (RECOMMENDED for Free Tier)
 
-If you want to stay on the free tier, you can use an external service to ping your backend every 4-5 minutes to prevent it from sleeping.
+Render's native Cron Job feature is the **best free option** to prevent your service from sleeping. It's more reliable than external pingers and requires no external dependencies.
 
-### Option A: UptimeRobot (Recommended - Free)
+### Step-by-Step Setup
+
+1. **Go to Render Dashboard**
+   - Navigate to https://dashboard.render.com
+   - Click **New** → **Cron Job**
+
+2. **Configure the Cron Job**
+   Use these exact settings:
+   
+   | Setting | Value |
+   |---------|-------|
+   | **Name** | `keepalive-ping` |
+   | **Region** | Oregon (same as your web service) |
+   | **Schedule** | `*/5 * * * *` (every 5 minutes) |
+   | **Docker Image** | `curlimages/curl:latest` |
+   | **Command** | See command below* |
+
+   *Command (copy this exactly):
+   ```bash
+   curl -f -L https://hiremebahamas.onrender.com/health || exit 1
+   ```
+
+3. **Click "Create Cron Job"**
+
+4. **Verify It's Working**
+   - Check the cron job **Logs** tab
+   - You should see successful pings every 5 minutes
+
+📖 **Full Guide:** See [RENDER_CRON_JOB_SETUP.md](./RENDER_CRON_JOB_SETUP.md) for complete documentation.
+
+---
+
+## Approach 3: Free External Pinger (Alternative)
+
+If you prefer an external service, you can use one of these free pingers:
+
+### Option A: UptimeRobot (Free)
 
 UptimeRobot offers 50 free monitors with 5-minute intervals.
 
