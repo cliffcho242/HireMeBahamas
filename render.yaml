@@ -206,5 +206,5 @@ services:
     envVars:
       - key: PYTHONUNBUFFERED
         value: "true"
-      - key: RENDER_EXTERNAL_URL
+      - key: APP_URL
         value: https://hiremebahamas.onrender.com
