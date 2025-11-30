@@ -6353,12 +6353,14 @@ def get_user(identifier):
         
         if not user:
             # Log detailed info for debugging "user not found" issues
+            # We always try ID first if numeric, then fall back to username
+            is_numeric_id = str(identifier).isdigit()
             logger.warning(
                 "[%s] User not found: identifier='%s', lookup_type='%s', "
                 "searched_by_id=%s, searched_by_username=%s",
                 request_id, masked_identifier, 
-                'numeric' if str(identifier).isdigit() else 'username',
-                str(identifier).isdigit(), True
+                'numeric' if is_numeric_id else 'username',
+                is_numeric_id, True  # Always try username as fallback
             )
             cursor.close()
             return_db_connection(conn)
@@ -6367,7 +6369,7 @@ def get_user(identifier):
                 "message": f"User not found. The user '{identifier}' may have been deleted or does not exist.",
                 "error_code": "USER_NOT_FOUND",
                 "identifier_received": identifier,
-                "identifier_type": "numeric" if str(identifier).isdigit() else "username"
+                "identifier_type": "numeric" if is_numeric_id else "username"
             }), 404
 
         # Get the user's ID for follow queries (in case we looked up by username)

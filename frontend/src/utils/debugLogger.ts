@@ -36,8 +36,7 @@ export const debugLog = {
   
   /**
    * Log error information (only in development)
-   * Note: Errors are also logged in production for debugging,
-   * but sensitive data should be masked before logging.
+   * This function only logs in development mode for privacy/security.
    */
   error: (...args: unknown[]) => {
     if (isDevelopment) {

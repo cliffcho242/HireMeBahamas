@@ -147,7 +147,8 @@ const UserProfile: React.FC = () => {
       const userPosts = await postsAPI.getUserPosts(parseInt(userId));
       setUserPosts(userPosts);
     } catch (error: unknown) {
-      // Enhanced error logging for debugging "user not found" issues (only in development)
+      // Enhanced error logging for debugging "user not found" issues
+      // (debugLog conditionally logs only in development mode)
       debugLog.error('[UserProfile] Failed to fetch profile:', {
         userId,
         userIdType: typeof userId,
@@ -171,7 +172,7 @@ const UserProfile: React.FC = () => {
         message?: string 
       };
       
-      // Log detailed error info for debugging (only in development)
+      // Log detailed error info for debugging
       if (errorObj.response?.data) {
         debugLog.error('[UserProfile] Error details from API:', errorObj.response.data);
       }
