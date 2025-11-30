@@ -105,11 +105,7 @@ if IS_PRODUCTION_DATABASE:
     }
     engine_kwargs["connect_args"] = connect_args
 
-logger.info(
-    f"Database pool configured: pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
-    f"pool_pre_ping=True, pool_recycle={POOL_RECYCLE_SECONDS}s"
-)
-
+# Create engine (logging is deferred to avoid module-level log before config)
 engine = create_async_engine(DATABASE_URL, **engine_kwargs)
 
 # Create session factory
@@ -117,6 +113,14 @@ AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=F
 
 # Create declarative base
 Base = declarative_base()
+
+
+def log_pool_config():
+    """Log pool configuration. Call after logging is configured."""
+    logger.info(
+        f"Database pool configured: pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
+        f"pool_pre_ping=True, pool_recycle={POOL_RECYCLE_SECONDS}s"
+    )
 
 
 # Dependency to get database session

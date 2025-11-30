@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import time
@@ -5,16 +6,15 @@ import uuid
 import json
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response, Depends
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import socketio
 
 # Import APIs
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
-from .database import init_db, close_db, get_db, engine, POOL_SIZE, MAX_OVERFLOW
+from .database import init_db, close_db, get_db, engine, POOL_SIZE, MAX_OVERFLOW, log_pool_config
 from .core.metrics import get_metrics_response, set_app_info
 from .core.redis_cache import warmup_redis_connection, is_redis_available
 
@@ -30,6 +30,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Log database pool configuration (now that logging is configured)
+log_pool_config()
+
 
 async def warmup_database_pool():
     """
@@ -37,6 +40,8 @@ async def warmup_database_pool():
 
     This establishes initial connections before user requests arrive,
     reducing first-request latency from ~5000ms to <300ms.
+
+    Creates 3 concurrent connections to properly populate the pool.
     """
     from sqlalchemy import text
 
@@ -44,14 +49,20 @@ async def warmup_database_pool():
         logger.info("Warming up database connection pool...")
         start_time = time.time()
 
-        # Create a few connections to populate the pool
-        # SQLAlchemy 2.0 with asyncpg will establish connections when needed
-        # We force a simple query to establish the connection
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
+        # Create multiple concurrent connections to populate the pool
+        # This ensures the pool is pre-populated before user requests arrive
+        warmup_count = min(3, POOL_SIZE)
+
+        async def warmup_single():
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+
+        # Run warmup connections concurrently
+        tasks = [warmup_single() for _ in range(warmup_count)]
+        await asyncio.gather(*tasks)
 
         elapsed_ms = int((time.time() - start_time) * 1000)
-        logger.info(f"Database connection pool warmed up in {elapsed_ms}ms")
+        logger.info(f"Database pool warmed up: {warmup_count} connections in {elapsed_ms}ms")
         logger.info(f"Pool configuration: pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}")
         return True
     except Exception as e:
@@ -222,8 +233,8 @@ async def log_requests(request: Request, call_next):
             # For authentication endpoints, capture the error body to help debug login issues
             # Only read body for JSON responses to avoid processing large files
             error_detail = ""
-            if (request.url.path.startswith(AUTH_ENDPOINTS_PREFIX) and
-                response.media_type == 'application/json'):
+            if (request.url.path.startswith(AUTH_ENDPOINTS_PREFIX)
+                    and response.media_type == 'application/json'):
                 try:
                     # Read response body with size limit to prevent memory issues
                     body = b""

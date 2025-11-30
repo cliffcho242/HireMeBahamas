@@ -62,12 +62,40 @@ def run_migration():
     """Run the index migration."""
     # Add parent directory to path for imports
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    
-    from final_backend_postgresql import (
-        get_db_connection,
-        return_db_connection,
-        USE_POSTGRESQL,
-    )
+
+    # Import from the Flask backend which has PostgreSQL support
+    try:
+        from final_backend_postgresql import (
+            get_db_connection,
+            return_db_connection,
+            USE_POSTGRESQL,
+        )
+    except ImportError:
+        # Fallback: try to use environment variables directly
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        from urllib.parse import urlparse
+
+        DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
+        if not DATABASE_URL:
+            print("ERROR: DATABASE_URL not set. Cannot run migration.")
+            return False
+
+        USE_POSTGRESQL = True
+
+        def get_db_connection():
+            parsed = urlparse(DATABASE_URL)
+            return psycopg2.connect(
+                host=parsed.hostname,
+                port=parsed.port or 5432,
+                database=parsed.path[1:] if parsed.path else None,
+                user=parsed.username,
+                password=parsed.password,
+                cursor_factory=RealDictCursor,
+            )
+
+        def return_db_connection(conn):
+            conn.close()
     
     print("=" * 80)
     print("Running login performance index migration...")

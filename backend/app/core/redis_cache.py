@@ -9,7 +9,12 @@ login latency from 5000+ ms to <300 ms by:
 
 Uses Upstash Redis or Railway Redis via REDIS_URL environment variable.
 Falls back gracefully to no caching if Redis is unavailable.
+
+Note: Uses synchronous Redis client wrapped with asyncio.to_thread() for
+async compatibility. This is safe because Redis operations are fast (<10ms)
+and we want to avoid adding aioredis as a dependency.
 """
+import asyncio
 import json
 import logging
 from datetime import datetime
@@ -32,9 +37,9 @@ _redis_client = None
 _redis_available: Optional[bool] = None  # None = not checked yet
 
 
-def _get_redis_client():
+def _get_redis_client_sync():
     """
-    Get or create a Redis client for cache operations.
+    Get or create a Redis client for cache operations (synchronous).
 
     Uses connection pooling and lazy initialization.
     Returns None if Redis is not configured or unavailable.
@@ -107,17 +112,9 @@ def _deserialize_user_from_cache(data: str) -> Dict[str, Any]:
     return json.loads(data)
 
 
-async def get_cached_user(email: str) -> Optional[Dict[str, Any]]:
-    """
-    Retrieve a user record from Redis cache.
-
-    Args:
-        email: User's email address
-
-    Returns:
-        User data dict if found in cache, None otherwise
-    """
-    client = _get_redis_client()
+def _get_cached_user_sync(email: str) -> Optional[Dict[str, Any]]:
+    """Retrieve a user record from Redis cache (synchronous)."""
+    client = _get_redis_client_sync()
     if client is None:
         return None
 
@@ -136,19 +133,9 @@ async def get_cached_user(email: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-async def set_cached_user(email: str, user_data: Dict[str, Any], ttl: int = None) -> bool:
-    """
-    Store a user record in Redis cache.
-
-    Args:
-        email: User's email address
-        user_data: User data dict to cache
-        ttl: Time to live in seconds (defaults to USER_CACHE_TTL)
-
-    Returns:
-        True if cached successfully, False otherwise
-    """
-    client = _get_redis_client()
+def _set_cached_user_sync(email: str, user_data: Dict[str, Any], ttl: int = None) -> bool:
+    """Store a user record in Redis cache (synchronous)."""
+    client = _get_redis_client_sync()
     if client is None:
         return False
 
@@ -166,19 +153,9 @@ async def set_cached_user(email: str, user_data: Dict[str, Any], ttl: int = None
         return False
 
 
-async def invalidate_user_cache(email: str) -> bool:
-    """
-    Remove a user record from Redis cache.
-
-    Call this when user data changes (profile update, password change, etc.)
-
-    Args:
-        email: User's email address
-
-    Returns:
-        True if invalidated successfully, False otherwise
-    """
-    client = _get_redis_client()
+def _invalidate_user_cache_sync(email: str) -> bool:
+    """Remove a user record from Redis cache (synchronous)."""
+    client = _get_redis_client_sync()
     if client is None:
         return False
 
@@ -189,6 +166,66 @@ async def invalidate_user_cache(email: str) -> bool:
         return True
     except Exception as e:
         logger.warning(f"Redis delete failed: {e}")
+        return False
+
+
+async def get_cached_user(email: str) -> Optional[Dict[str, Any]]:
+    """
+    Retrieve a user record from Redis cache (async-safe).
+
+    Uses asyncio.to_thread to avoid blocking the event loop.
+
+    Args:
+        email: User's email address
+
+    Returns:
+        User data dict if found in cache, None otherwise
+    """
+    try:
+        return await asyncio.to_thread(_get_cached_user_sync, email)
+    except Exception as e:
+        logger.warning(f"Async Redis get failed: {e}")
+        return None
+
+
+async def set_cached_user(email: str, user_data: Dict[str, Any], ttl: int = None) -> bool:
+    """
+    Store a user record in Redis cache (async-safe).
+
+    Uses asyncio.to_thread to avoid blocking the event loop.
+
+    Args:
+        email: User's email address
+        user_data: User data dict to cache
+        ttl: Time to live in seconds (defaults to USER_CACHE_TTL)
+
+    Returns:
+        True if cached successfully, False otherwise
+    """
+    try:
+        return await asyncio.to_thread(_set_cached_user_sync, email, user_data, ttl)
+    except Exception as e:
+        logger.warning(f"Async Redis set failed: {e}")
+        return False
+
+
+async def invalidate_user_cache(email: str) -> bool:
+    """
+    Remove a user record from Redis cache (async-safe).
+
+    Uses asyncio.to_thread to avoid blocking the event loop.
+    Call this when user data changes (profile update, password change, etc.)
+
+    Args:
+        email: User's email address
+
+    Returns:
+        True if invalidated successfully, False otherwise
+    """
+    try:
+        return await asyncio.to_thread(_invalidate_user_cache_sync, email)
+    except Exception as e:
+        logger.warning(f"Async Redis delete failed: {e}")
         return False
 
 
@@ -216,13 +253,13 @@ def is_redis_available() -> bool:
     Returns:
         True if Redis is configured and responsive, False otherwise
     """
-    client = _get_redis_client()
+    client = _get_redis_client_sync()
     return client is not None
 
 
 async def warmup_redis_connection() -> bool:
     """
-    Warm up Redis connection on startup.
+    Warm up Redis connection on startup (async-safe).
 
     Call this during application startup to establish Redis connection
     before the first login request arrives.
@@ -230,13 +267,20 @@ async def warmup_redis_connection() -> bool:
     Returns:
         True if Redis is available, False otherwise
     """
-    client = _get_redis_client()
-    if client is not None:
-        try:
-            client.ping()
-            logger.info("Redis connection warmed up successfully")
-            return True
-        except Exception as e:
-            logger.warning(f"Redis warmup failed: {e}")
-            return False
-    return False
+    def _warmup():
+        client = _get_redis_client_sync()
+        if client is not None:
+            try:
+                client.ping()
+                logger.info("Redis connection warmed up successfully")
+                return True
+            except Exception as e:
+                logger.warning(f"Redis warmup failed: {e}")
+                return False
+        return False
+
+    try:
+        return await asyncio.to_thread(_warmup)
+    except Exception as e:
+        logger.warning(f"Async Redis warmup failed: {e}")
+        return False
