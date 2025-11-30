@@ -65,7 +65,8 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         
         # Verify the script has exception handling
         self.assertIn("except", content)
-        self.assertIn("pass", content)
+        # Verify exceptions log messages instead of crashing
+        self.assertIn("Ping", content)
 
 
 class TestKeepAliveBehavior(unittest.TestCase):

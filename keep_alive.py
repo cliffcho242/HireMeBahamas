@@ -48,13 +48,10 @@ while True:
         print(f"Ping {ping_url}: {response.status_code}", flush=True)
     except requests.exceptions.Timeout:
         print(f"Ping timeout after 10 seconds", flush=True)
-        pass
     except requests.exceptions.ConnectionError:
         print(f"Connection error - service may be starting up", flush=True)
-        pass
     except Exception as e:
         print(f"Ping failed: {e}", flush=True)
-        pass
     
     # Sleep for 70 seconds between pings
     # Render free tier sleeps after 15 minutes of inactivity
