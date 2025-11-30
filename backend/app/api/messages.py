@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from app.core.security import get_current_user
 from app.database import get_db
-from app.models import Conversation, Message, User
+from app.models import Conversation, Message, Notification, NotificationType, User
 from app.schemas.message import (
     ConversationCreate,
     ConversationResponse,
@@ -191,6 +191,19 @@ async def send_message(
     db.add(db_message)
     await db.commit()
     await db.refresh(db_message)
+
+    # Create notification for the receiver
+    # Truncate message content for notification preview
+    content_preview = message.content[:50] + "..." if len(message.content) > 50 else message.content
+    notification = Notification(
+        user_id=receiver_id,
+        actor_id=current_user.id,
+        notification_type=NotificationType.MESSAGE,
+        content=f"{current_user.first_name} {current_user.last_name} sent you a message: {content_preview}",
+        related_id=conversation_id,
+    )
+    db.add(notification)
+    await db.commit()
 
     # Load relationships
     result = await db.execute(

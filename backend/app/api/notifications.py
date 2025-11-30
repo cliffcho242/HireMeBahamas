@@ -78,12 +78,13 @@ async def get_unread_count(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get count of unread notifications for user interactions only (likes, comments, mentions)"""
+    """Get count of unread notifications for user interactions only (likes, comments, mentions, messages)"""
     # Define notification types that represent direct user interactions
     interaction_types = [
         NotificationType.LIKE,
         NotificationType.COMMENT,
         NotificationType.MENTION,
+        NotificationType.MESSAGE,
     ]
     
     result = await db.execute(

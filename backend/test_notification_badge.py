@@ -44,6 +44,7 @@ async def test_notification_badge_count():
                 (NotificationType.LIKE, "Someone liked your post", True),
                 (NotificationType.COMMENT, "Someone commented on your post", True),
                 (NotificationType.MENTION, "Someone mentioned you", True),
+                (NotificationType.MESSAGE, "Someone sent you a message", True),
                 # Non-interaction notifications (should NOT be counted in badge)
                 (NotificationType.FOLLOW, "Someone followed you", False),
                 (NotificationType.JOB_APPLICATION, "Someone applied to your job", False),
@@ -60,7 +61,7 @@ async def test_notification_badge_count():
                 session.add(notification)
             
             await session.commit()
-            print(f"✅ Created 6 unread notifications (3 interaction, 3 non-interaction)")
+            print(f"✅ Created 7 unread notifications (4 interaction, 3 non-interaction)")
             
             # Test 1: Count all unread notifications
             all_unread = await session.execute(
@@ -72,7 +73,7 @@ async def test_notification_badge_count():
                 )
             )
             all_count = all_unread.scalar()
-            assert all_count == 6, f"Expected 6 total unread notifications, got {all_count}"
+            assert all_count == 7, f"Expected 7 total unread notifications, got {all_count}"
             print(f"✅ All unread notifications count: {all_count}")
             
             # Test 2: Count only interaction notifications (badge count)
@@ -80,6 +81,7 @@ async def test_notification_badge_count():
                 NotificationType.LIKE,
                 NotificationType.COMMENT,
                 NotificationType.MENTION,
+                NotificationType.MESSAGE,
             ]
             
             interaction_unread = await session.execute(
@@ -92,7 +94,7 @@ async def test_notification_badge_count():
                 )
             )
             badge_count = interaction_unread.scalar()
-            assert badge_count == 3, f"Expected 3 interaction notifications for badge, got {badge_count}"
+            assert badge_count == 4, f"Expected 4 interaction notifications for badge, got {badge_count}"
             print(f"✅ Badge notification count (interactions only): {badge_count}")
             
             # Test 3: Verify follow and job notifications are excluded
@@ -137,7 +139,7 @@ async def test_notification_badge_count():
                 )
             )
             badge_count_after = interaction_unread_after.scalar()
-            assert badge_count_after == 2, f"Expected 2 interaction notifications after marking one read, got {badge_count_after}"
+            assert badge_count_after == 3, f"Expected 3 interaction notifications after marking one read, got {badge_count_after}"
             print(f"✅ Badge count after marking LIKE as read: {badge_count_after}")
             
             # Cleanup
@@ -165,7 +167,7 @@ async def main():
     print("TESTING NOTIFICATION BADGE FUNCTIONALITY")
     print("=" * 60)
     print("Testing that badge only shows for user interaction notifications")
-    print("(likes, comments, mentions - NOT follows or job notifications)")
+    print("(likes, comments, mentions, messages - NOT follows or job notifications)")
     
     result = await test_notification_badge_count()
     
@@ -175,7 +177,7 @@ async def main():
     
     if result:
         print("✅ PASSED: Notification badge correctly filters interaction types")
-        print("\n🎉 Badge will now only highlight likes, comments, and mentions!")
+        print("\n🎉 Badge will now highlight likes, comments, mentions, and messages!")
         return 0
     else:
         print("❌ FAILED: Notification badge test failed")
