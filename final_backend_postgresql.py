@@ -5303,100 +5303,110 @@ def profile():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Handle PUT request (update profile)
-        if request.method == "PUT":
-            data = request.get_json()
-            if not data:
-                cursor.close()
-                return_db_connection(conn)
+        try:
+            # Handle PUT request (update profile)
+            if request.method == "PUT":
+                data = request.get_json()
+                if not data:
+                    cursor.close()
+                    return_db_connection(conn)
+                    return (
+                        jsonify({"success": False, "message": "No data provided"}),
+                        400,
+                    )
+
+                # Define allowed fields for update (prevents SQL injection and unauthorized field updates)
+                allowed_fields = [
+                    "first_name", "last_name", "username", "phone", "location",
+                    "bio", "occupation", "company_name", "skills", "experience", "education"
+                ]
+
+                # Build update query dynamically based on provided fields
+                update_fields = []
+                update_values = []
+                for field in allowed_fields:
+                    if field in data:
+                        update_fields.append(field)
+                        update_values.append(data[field])
+
+                if update_fields:
+                    # Build SET clause with parameterized queries
+                    if USE_POSTGRESQL:
+                        set_clause = ", ".join([f"{field} = %s" for field in update_fields])
+                        update_values.append(user_id)
+                        cursor.execute(
+                            f"UPDATE users SET {set_clause} WHERE id = %s",
+                            tuple(update_values)
+                        )
+                    else:
+                        set_clause = ", ".join([f"{field} = ?" for field in update_fields])
+                        update_values.append(user_id)
+                        cursor.execute(
+                            f"UPDATE users SET {set_clause} WHERE id = ?",
+                            tuple(update_values)
+                        )
+                    conn.commit()
+
+            # Get user from database (for both GET and after PUT update)
+            if USE_POSTGRESQL:
+                cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+            else:
+                cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+
+            user = cursor.fetchone()
+            cursor.close()
+            return_db_connection(conn)
+
+            if not user:
+                # User ID from token doesn't exist in database anymore
+                # This can happen if the database was reset or user was deleted
+                # Return 401 to force the client to clear the invalid token and re-login
                 return (
-                    jsonify({"success": False, "message": "No data provided"}),
-                    400,
+                    jsonify({
+                        "success": False, 
+                        "message": "Your account was not found. Please log in again.",
+                        "error_code": "USER_NOT_FOUND",
+                        "action": "logout"
+                    }),
+                    401,
                 )
 
-            # Define allowed fields for update (prevents SQL injection and unauthorized field updates)
-            allowed_fields = [
-                "first_name", "last_name", "username", "phone", "location",
-                "bio", "occupation", "company_name", "skills", "experience", "education"
-            ]
-
-            # Build update query dynamically based on provided fields
-            update_fields = []
-            update_values = []
-            for field in allowed_fields:
-                if field in data:
-                    update_fields.append(field)
-                    update_values.append(data[field])
-
-            if update_fields:
-                # Build SET clause with parameterized queries
-                if USE_POSTGRESQL:
-                    set_clause = ", ".join([f"{field} = %s" for field in update_fields])
-                    update_values.append(user_id)
-                    cursor.execute(
-                        f"UPDATE users SET {set_clause} WHERE id = %s",
-                        tuple(update_values)
-                    )
-                else:
-                    set_clause = ", ".join([f"{field} = ?" for field in update_fields])
-                    update_values.append(user_id)
-                    cursor.execute(
-                        f"UPDATE users SET {set_clause} WHERE id = ?",
-                        tuple(update_values)
-                    )
-                conn.commit()
-
-        # Get user from database (for both GET and after PUT update)
-        if USE_POSTGRESQL:
-            cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-        else:
-            cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-
-        user = cursor.fetchone()
-        cursor.close()
-        return_db_connection(conn)
-
-        if not user:
-            # User ID from token doesn't exist in database anymore
-            # This can happen if the database was reset or user was deleted
-            # Return 401 to force the client to clear the invalid token and re-login
             return (
-                jsonify({
-                    "success": False, 
-                    "message": "Your account was not found. Please log in again.",
-                    "error_code": "USER_NOT_FOUND",
-                    "action": "logout"
-                }),
-                401,
+                jsonify(
+                    {
+                        "id": user["id"],
+                        "email": user["email"],
+                        "first_name": user["first_name"] or "",
+                        "last_name": user["last_name"] or "",
+                        "username": user.get("username") or "",
+                        "role": user["user_type"] or "user",
+                        "user_type": user["user_type"] or "user",
+                        "location": user["location"] or "",
+                        "phone": user["phone"] or "",
+                        "bio": user["bio"] or "",
+                        "occupation": user.get("occupation") or "",
+                        "company_name": user.get("company_name") or "",
+                        "skills": user.get("skills") or "",
+                        "experience": user.get("experience") or "",
+                        "education": user.get("education") or "",
+                        "avatar_url": user["avatar_url"] or "",
+                        "is_available_for_hire": bool(user["is_available_for_hire"]),
+                        "is_active": bool(user.get("is_active", True)),
+                        "created_at": str(user["created_at"]) if user.get("created_at") else "",
+                        "updated_at": str(user.get("last_login")) if user.get("last_login") else "",
+                    }
+                ),
+                200,
             )
 
-        return (
-            jsonify(
-                {
-                    "id": user["id"],
-                    "email": user["email"],
-                    "first_name": user["first_name"] or "",
-                    "last_name": user["last_name"] or "",
-                    "username": user.get("username") or "",
-                    "role": user["user_type"] or "user",
-                    "user_type": user["user_type"] or "user",
-                    "location": user["location"] or "",
-                    "phone": user["phone"] or "",
-                    "bio": user["bio"] or "",
-                    "occupation": user.get("occupation") or "",
-                    "company_name": user.get("company_name") or "",
-                    "skills": user.get("skills") or "",
-                    "experience": user.get("experience") or "",
-                    "education": user.get("education") or "",
-                    "avatar_url": user["avatar_url"] or "",
-                    "is_available_for_hire": bool(user["is_available_for_hire"]),
-                    "is_active": bool(user.get("is_active", True)),
-                    "created_at": str(user["created_at"]) if user.get("created_at") else "",
-                    "updated_at": str(user.get("last_login")) if user.get("last_login") else "",
-                }
-            ),
-            200,
-        )
+        except Exception as db_error:
+            # Ensure database resources are properly cleaned up
+            try:
+                cursor.close()
+                return_db_connection(conn)
+            except Exception:
+                pass
+            raise db_error
 
     except Exception as e:
         import traceback
