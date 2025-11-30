@@ -4251,22 +4251,13 @@ def root():
 @limiter.exempt
 def health_check():
     """
-    Health check endpoint for Railway
-    Returns 200 OK immediately to ensure Railway healthcheck passes
+    Health check endpoint for Render/Railway
+    Returns 200 OK immediately to ensure platform healthcheck passes
     The app is healthy if this endpoint responds - database initialization
     happens asynchronously and doesn't need to block the healthcheck
     Exempt from rate limiting to allow monitoring services to check frequently
     """
-    return (
-        jsonify(
-            {
-                "status": "healthy",
-                "message": "HireMeBahamas API is running",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
-        ),
-        200,
-    )
+    return jsonify({"status": "alive"}), 200
 
 
 @app.route("/ping", methods=["GET", "HEAD"])
