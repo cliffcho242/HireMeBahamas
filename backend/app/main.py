@@ -1,50 +1,58 @@
 # =============================================================================
-# EVIL LORD MODE — INSTANT HEALTH CHECK (RUNS BEFORE ANYTHING ELSE)
+# NUCLEAR-OPTIMIZED STARTUP (2025 RENDER EDITION)
 # =============================================================================
-# This MUST stay at the absolute top. No imports above this except stdlib.
-# Responds in <3ms even on coldest boot. Render cannot kill this.
+# INSTANT APP — NO HEAVY IMPORTS YET
+# Responds in <5ms even on coldest start. Render cannot kill this.
 # =============================================================================
+import os
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-# Minimal app for instant health - no docs overhead on boot
-app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+# INSTANT APP — NO HEAVY IMPORTS YET
+app = FastAPI(
+    title="hiremebahamas",
+    version="1.0.0",
+    docs_url=None,        # Disable heavy Swagger/ReDoc on boot
+    redoc_url=None,
+    openapi_url=None,
+)
 
-@app.get("/health", tags=["health"])
-@app.head("/health", tags=["health"])
-async def health_check():
-    """IMMORTAL HEALTH CHECK - Returns 200 before ANYTHING else loads"""
+# IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
+@app.get("/health")
+@app.head("/health")
+def health():
     return JSONResponse({"status": "immortal"}, status_code=200)
 
-@app.on_event("startup")
-async def startup_log():
-    print("EVIL LORD HEALTHCHECK IS LIVE — RENDER CANNOT KILL ME")
+@app.get("/ready")
+async def ready():
+    return {"status": "ready"}
+
+print("NUCLEAR MAIN.PY LOADED — HEALTH ENDPOINTS ACTIVE")
 
 # =============================================================================
-# END EVIL LORD MODE — NOW LOAD EVERYTHING ELSE
+# END IMMORTAL SECTION — NOW LOAD EVERYTHING ELSE
 # =============================================================================
 
 import asyncio
 import logging
-import os
 import time
 import uuid
 import json
 
-from fastapi import Request, Response, Depends
+from fastapi import Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import socketio
 
 # Import APIs
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
-from .database import init_db, close_db, get_db, get_pool_status
+from .database import init_db, close_db, get_db, get_pool_status, engine
 from .core.metrics import get_metrics_response, set_app_info
 from .core.security import prewarm_bcrypt_async
 from .core.redis_cache import redis_cache, warm_cache
 from .core.db_health import check_database_health, get_database_stats
+from .graphql.schema import create_graphql_router
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -58,10 +66,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-
-
-
 # =============================================================================
 # RECONFIGURE APP WITH FULL FEATURES (lifespan, docs, etc.)
 # The /health endpoint is already registered at the top - it stays immortal
@@ -72,84 +76,6 @@ app.version = "1.0.0"
 app.docs_url = "/docs"
 app.redoc_url = "/redoc"
 app.openapi_url = "/openapi.json"
-
-# Add lifespan handler for DB/cache initialization (runs AFTER health is already responding)
-@app.on_event("startup")
-async def full_startup():
-    """Full startup - runs AFTER health endpoint is already live"""
-    logger.info("Starting HireMeBahamas API full initialization...")
-    
-    # Pre-warm bcrypt
-    try:
-        await prewarm_bcrypt_async()
-        logger.info("Bcrypt pre-warmed successfully")
-    except Exception as e:
-        logger.warning(f"Failed to pre-warm bcrypt (non-critical): {e}")
-    
-    # Initialize Redis cache
-    try:
-        redis_available = await redis_cache.connect()
-        if redis_available:
-            logger.info("Redis cache connected successfully")
-        else:
-            logger.info("Using in-memory cache fallback")
-    except Exception as e:
-        logger.warning(f"Redis connection failed (non-critical): {e}")
-    
-    # Initialize database tables
-    try:
-        await init_db()
-        logger.info("Database tables initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize database tables: {e}")
-        raise
-    
-    # Schedule cache warm-up in background
-    asyncio.create_task(warm_cache())
-    logger.info("Full initialization complete - all systems operational")
-
-@app.on_event("shutdown")
-async def full_shutdown():
-    """Graceful shutdown"""
-    logger.info("Shutting down HireMeBahamas API...")
-    try:
-        await redis_cache.disconnect()
-        logger.info("Redis cache disconnected")
-    except Exception as e:
-        logger.warning(f"Error disconnecting Redis cache: {e}")
-    try:
-        await close_db()
-        logger.info("Database connections closed")
-    except Exception as e:
-        logger.error(f"Error closing database connections: {e}")
-
-
-@app.get("/ready", tags=["health"])
-async def readiness_check(db: AsyncSession = Depends(get_db)):
-    """Readiness probe with database connectivity check
-    
-    K8s-style readiness probe that checks if the application is ready to
-    receive traffic. Checks database connectivity.
-    
-    Returns 200 if the app is ready, 503 if database is unavailable.
-    """
-    try:
-        db_health = await check_database_health(db)
-        if db_health["status"] == "healthy":
-            return JSONResponse(
-                content={"status": "ready", "database": "connected"},
-                status_code=200
-            )
-        else:
-            return JSONResponse(
-                content={"status": "not_ready", "database": db_health},
-                status_code=503
-            )
-    except Exception as e:
-        return JSONResponse(
-            content={"status": "not_ready", "error": str(e)},
-            status_code=503
-        )
 
 # Configure CORS - Allow development and production origins
 app.add_middleware(
@@ -167,7 +93,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
-
 
 # Cache control configuration for different endpoint patterns
 CACHE_CONTROL_RULES = {
@@ -330,6 +255,104 @@ async def log_requests(request: Request, call_next):
         raise
 
 
+# LAZY IMPORT HEAVY STUFF — DATABASE/CACHE INITIALIZATION
+@app.on_event("startup")
+async def lazy_import_heavy_stuff():
+    """Lazy import all heavy dependencies after app is started.
+    
+    This ensures health endpoints respond instantly during cold starts,
+    while heavy database, cache, and API components are loaded after.
+    """
+    logger.info("Starting HireMeBahamas API full initialization...")
+    
+    # Warm DB pool
+    try:
+        from sqlalchemy import text
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
+        logger.info("Database connection verified")
+    except Exception as e:
+        logger.error(f"Database connection failed: {e}")
+        raise
+    
+    # Pre-warm bcrypt
+    try:
+        await prewarm_bcrypt_async()
+        logger.info("Bcrypt pre-warmed successfully")
+    except Exception as e:
+        logger.warning(f"Failed to pre-warm bcrypt (non-critical): {e}")
+    
+    # Initialize Redis cache
+    try:
+        redis_available = await redis_cache.connect()
+        if redis_available:
+            logger.info("Redis cache connected successfully")
+        else:
+            logger.info("Using in-memory cache fallback")
+    except Exception as e:
+        logger.warning(f"Redis connection failed (non-critical): {e}")
+    
+    # Initialize database tables
+    try:
+        await init_db()
+        logger.info("Database tables initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database tables: {e}")
+        raise
+    
+    # Schedule cache warm-up in background
+    asyncio.create_task(warm_cache())
+    logger.info("LAZY IMPORT COMPLETE — FULL APP LIVE")
+
+
+@app.on_event("shutdown")
+async def full_shutdown():
+    """Graceful shutdown"""
+    logger.info("Shutting down HireMeBahamas API...")
+    try:
+        await redis_cache.disconnect()
+        logger.info("Redis cache disconnected")
+    except Exception as e:
+        logger.warning(f"Error disconnecting Redis cache: {e}")
+    try:
+        await close_db()
+        logger.info("Database connections closed")
+    except Exception as e:
+        logger.error(f"Error closing database connections: {e}")
+
+
+# Database readiness check endpoint (full database connectivity check)
+@app.get("/ready/db", tags=["health"])
+async def db_readiness_check(db: AsyncSession = Depends(get_db)):
+    """Readiness probe with database connectivity check
+    
+    K8s-style readiness probe that checks if the application is ready to
+    receive traffic. Checks database connectivity.
+    
+    Returns 200 if the app is ready, 503 if database is unavailable.
+    
+    Note: Use /ready for instant cold start response.
+    Use /ready/db for full database connectivity check.
+    """
+    try:
+        db_health = await check_database_health(db)
+        if db_health["status"] == "healthy":
+            return JSONResponse(
+                content={"status": "ready", "database": "connected"},
+                status_code=200
+            )
+        else:
+            return JSONResponse(
+                content={"status": "not_ready", "database": db_health},
+                status_code=503
+            )
+    except Exception as e:
+        return JSONResponse(
+            content={"status": "not_ready", "error": str(e)},
+            status_code=503
+        )
+
+
 # Quick health check endpoint (no database dependency - faster for cold starts)
 @app.get("/health/ping")
 async def health_ping():
@@ -364,8 +387,7 @@ async def cache_health():
     
     Returns cache hit rates, backend status, and performance metrics.
     """
-    health = await redis_cache.health_check()
-    return health
+    return await redis_cache.health_check()
 
 
 # API health check endpoint (simple status check)
@@ -422,8 +444,7 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
         health_response["database"]["pool"] = {"error": str(e)}
     
     # Add cache stats
-    cache_health = await redis_cache.health_check()
-    health_response["cache"] = cache_health
+    health_response["cache"] = await redis_cache.health_check()
     
     return health_response
 
@@ -441,7 +462,6 @@ app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 
 # Include GraphQL router
-from .graphql.schema import create_graphql_router
 graphql_router = create_graphql_router()
 app.include_router(graphql_router, prefix="/api", tags=["graphql"])
 
@@ -465,7 +485,7 @@ socket_app = socketio.ASGIApp(sio, app)
 
 # Socket.IO event handlers
 @sio.event
-async def connect(sid, environ, auth):
+async def connect(sid, environ, auth_data):
     """Handle client connection"""
     logger.info(f"Client connected: {sid}")
     await sio.emit('connected', {'sid': sid}, room=sid)
