@@ -1,23 +1,49 @@
-# High Availability Configuration for HireMeBahamas
-# See docs/HIGH_AVAILABILITY.md for detailed documentation
-# See docs/RENDER_502_FIX_GUIDE.md for fixing 502 cold start issues
+# =============================================================================
+# HireMeBahamas Backend - Render Deployment Configuration
+# =============================================================================
+# 
+# QUICK FIX FOR 502 ERRORS:
+# The "starter" plan ($7/mo) keeps your service ALWAYS ON - no sleep, no 502s.
+# For free tier: Use external pinger (UptimeRobot) to ping /ping every 5 min.
+#
+# See docs/RENDER_QUICK_START.md for step-by-step instructions
+# See docs/RENDER_502_FIX_GUIDE.md for detailed troubleshooting
+# See docs/HIGH_AVAILABILITY.md for advanced configuration
+# =============================================================================
 
 services:
   - type: web
     name: hiremebahamas-backend
     runtime: python
     region: oregon
-    # Use "starter" ($7/mo) or higher for Always On - no sleep, no 502 cold starts
-    # Free tier sleeps after 15 min of inactivity causing 502 errors
+    
+    # ==========================================================================
+    # PLAN SELECTION - Critical for 502 Prevention
+    # ==========================================================================
+    # 
+    # FREE TIER ($0):
+    #   - Sleeps after 15 minutes of inactivity
+    #   - Causes 502 Bad Gateway on cold start (10-120+ seconds)
+    #   - WORKAROUND: Use external pinger (UptimeRobot free tier)
+    #
+    # STARTER PLAN ($7/month) - RECOMMENDED:
+    #   - ALWAYS ON - Never sleeps, no 502 errors ever
+    #   - Instant response times (<1 second) even after hours of inactivity
+    #   - Best for production job platforms
+    #
+    # STANDARD PLAN ($25/month):
+    #   - Always On + Auto-scaling support
+    #   - Best for high-traffic applications
+    #
+    # To change: Render Dashboard → Your Service → Settings → Instance Type
+    # ==========================================================================
     plan: starter
     
-    # Auto-scaling configuration for high availability
+    # Auto-scaling configuration (requires Standard plan $25/mo or higher)
     # Render automatically manages scaling based on these thresholds:
     # - When CPU exceeds targetCPUPercent, new instances are added
     # - When memory exceeds targetMemoryPercent, new instances are added
     # - Scaling down occurs after ~5 minutes of reduced load
-    # - New instances are warmed up before receiving traffic
-    # Note: Requires Standard plan ($25/mo) or higher for auto-scaling
     scaling:
       minInstances: 1        # Minimum instances (always running)
       maxInstances: 10       # Maximum instances during peak load
@@ -89,9 +115,21 @@ services:
         value: "2"
       - key: WEB_THREADS
         value: "8"
+      # Enable database keepalive thread
+      - key: DB_KEEPALIVE_ENABLED
+        value: "true"
       # DATABASE_URL must be set manually in Render dashboard
       # to connect to your PostgreSQL database
     
-    # Health check configuration for load balancer integration
-    # Faster health checks enable quicker failover
+    # ==========================================================================
+    # HEALTH CHECK CONFIGURATION
+    # ==========================================================================
+    # 
+    # Available endpoints:
+    #   /ping          - Lightweight ping (fastest, no DB, for external pingers)
+    #   /health        - Basic health (fast, no DB, used by Render health checks)
+    #   /api/health    - Detailed health (includes DB status, for monitoring)
+    #
+    # External pinger URL: https://hiremebahamas.onrender.com/ping
+    # ==========================================================================
     healthCheckPath: /health
