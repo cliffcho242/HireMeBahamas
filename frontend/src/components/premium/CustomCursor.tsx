@@ -24,13 +24,14 @@ export function CustomCursor({
   const [isVisible, setIsVisible] = useState(false);
   const [isTouch, setIsTouch] = useState(false);
 
-  // Detect touch device
+  // Detect touch device - robust detection using multiple methods
   useEffect(() => {
     const checkTouch = () => {
       setIsTouch(
         'ontouchstart' in window ||
           navigator.maxTouchPoints > 0 ||
-          window.matchMedia('(hover: none)').matches
+          window.matchMedia('(hover: none)').matches ||
+          window.matchMedia('(pointer: coarse)').matches
       );
     };
     
@@ -66,15 +67,14 @@ export function CustomCursor({
     document.addEventListener('mousemove', updateCursorType);
     document.addEventListener('mouseleave', handleMouseLeave);
 
-    // Hide default cursor on the document
+    // Hide default cursor on the document - use less aggressive approach
     document.body.style.cursor = 'none';
     
-    // Add cursor: none to all clickable elements
+    // Add cursor: none to interactive elements only (not forcing with !important)
     const style = document.createElement('style');
     style.id = 'custom-cursor-style';
     style.textContent = `
-      * { cursor: none !important; }
-      a, button, [role="button"], input, select, textarea { cursor: none !important; }
+      body, a, button, [role="button"], input[type="button"], input[type="submit"] { cursor: none; }
     `;
     document.head.appendChild(style);
 

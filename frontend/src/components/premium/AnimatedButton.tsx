@@ -37,7 +37,11 @@ export function AnimatedButton({
 
   const triggerHaptic = useCallback(() => {
     if (haptic && 'vibrate' in navigator) {
-      navigator.vibrate(10);
+      try {
+        navigator.vibrate(10);
+      } catch {
+        // Vibration may fail silently on some devices
+      }
     }
   }, [haptic]);
 

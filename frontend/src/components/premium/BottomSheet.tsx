@@ -12,6 +12,10 @@ interface BottomSheetProps {
   initialSnap?: number;
   className?: string;
   showHandle?: boolean;
+  /** Velocity threshold for swipe-to-dismiss (default: 500) */
+  dismissVelocityThreshold?: number;
+  /** Offset threshold for swipe-to-dismiss in pixels (default: 100) */
+  dismissOffsetThreshold?: number;
 }
 
 /**
@@ -30,6 +34,8 @@ export function BottomSheet({
   initialSnap = 0,
   className,
   showHandle = true,
+  dismissVelocityThreshold = 500,
+  dismissOffsetThreshold = 100,
 }: BottomSheetProps) {
   const dragControls = useDragControls();
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -48,11 +54,11 @@ export function BottomSheet({
       const offset = info.offset.y;
 
       // If dragged down fast or far enough, close
-      if (velocity > 500 || offset > 100) {
+      if (velocity > dismissVelocityThreshold || offset > dismissOffsetThreshold) {
         onClose();
       }
     },
-    [onClose]
+    [onClose, dismissVelocityThreshold, dismissOffsetThreshold]
   );
 
   // Close on escape key
