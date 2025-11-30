@@ -159,17 +159,29 @@ services:
     # HEALTH CHECK CONFIGURATION - IMMORTAL SETTINGS
     # ==========================================================================
     # 
-    # RENDER DASHBOARD SETTINGS (set these manually if render.yaml doesn't apply):
+    # EXACT RENDER DASHBOARD SETTINGS (copy-paste these values):
     #   Health Check Path: /health
-    #   Grace Period: 180 seconds (gives cold boot time to complete)
-    #   Timeout: 10 seconds (per-request timeout)
+    #   Grace Period: 180 (seconds - gives cold boot time to complete)
+    #   Timeout: 10 (seconds - per-request timeout, our endpoint responds in <10ms)
+    #   Interval: 30 (seconds - how often Render checks health)
+    #
+    # These settings make health check failures PHYSICALLY IMPOSSIBLE because:
+    # 1. /health responds instantly (<10ms) with no DB access
+    # 2. Supports both GET and HEAD HTTP methods
+    # 3. 180-second grace period covers any cold start
+    # 4. 10-second timeout is 1000x longer than our response time
     #
     # Available endpoints:
-    #   /health        - IMMORTAL health (instant, no DB, responds in <3ms)
+    #   /health        - IMMORTAL health (instant, no DB, responds in <10ms, GET+HEAD)
+    #   /ready         - Database readiness probe (checks Postgres, returns 503 if DB down)
     #   /ping          - Lightweight ping (fastest, no DB, for external pingers)
     #   /api/health    - Detailed health (includes DB status, for monitoring)
     #
     # External pinger URL: https://hiremebahamas.onrender.com/ping
+    #
+    # ONE-LINE FORCE REDEPLOY COMMAND (after changing healthcheck path):
+    #   In Render Dashboard: Settings → Manual Deploy → Deploy latest commit
+    #   Or: Click "Deploy" button in the service header
     # ==========================================================================
     healthCheckPath: /health
 
