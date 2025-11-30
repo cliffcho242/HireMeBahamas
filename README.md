@@ -464,6 +464,16 @@ For production deployments requiring high availability:
 
 📚 **Complete Guide**: [docs/HIGH_AVAILABILITY.md](./docs/HIGH_AVAILABILITY.md)
 
+### 🔧 Fixing 502 Bad Gateway on Render
+
+If you're experiencing 502 errors after periods of inactivity on Render, this is because Render free tier services sleep after 15 minutes. Solutions:
+
+1. **Upgrade to Paid Plan** ($7/month) - Service stays always on, no cold starts
+2. **External Pinger** (Free) - Use UptimeRobot to ping `/ping` every 5 minutes
+3. **Both Combined** - Maximum reliability with monitoring
+
+📚 **Complete Guide**: [docs/RENDER_502_FIX_GUIDE.md](./docs/RENDER_502_FIX_GUIDE.md)
+
 ### Manual Deployment
 
 #### Development

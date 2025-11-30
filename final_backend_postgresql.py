@@ -537,16 +537,24 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT", "").lower()
 IS_RAILWAY = os.getenv("RAILWAY_PROJECT_ID") is not None
 
+# Detect Render environment using Render-specific variables:
+# - RENDER: Set to "true" by Render in all web services
+# - RENDER_SERVICE_ID: Set by Render to identify the service
+# See: https://render.com/docs/environment-variables
+IS_RENDER = os.getenv("RENDER") == "true" or os.getenv("RENDER_SERVICE_ID") is not None
+
 # Production is determined by:
 # 1. Explicit ENVIRONMENT=production setting, OR
-# 2. Running on Railway (Railway is inherently a production platform)
-# Railway deployments automatically enable production mode to ensure:
-# - Database keepalive is active (prevents Railway PostgreSQL from sleeping)
+# 2. Running on Railway (Railway is inherently a production platform), OR
+# 3. Running on Render (Render is inherently a production platform)
+# Deployments on these platforms automatically enable production mode to ensure:
+# - Database keepalive is active (prevents PostgreSQL from sleeping)
 # - Production-level logging and error handling
 # - Proper data persistence with PostgreSQL
 IS_PRODUCTION = (
     ENVIRONMENT in ["production", "prod"] or 
-    IS_RAILWAY  # Railway deployments are always considered production
+    IS_RAILWAY or  # Railway deployments are always considered production
+    IS_RENDER      # Render deployments are always considered production
 )
 
 # Track if database configuration is valid for production
@@ -3705,20 +3713,24 @@ print(f"✅ Application ready to serve requests (startup time: {_startup_time_ms
 # ==========================================
 
 # Database keepalive configuration
-# Prevents Railway PostgreSQL from sleeping after 15 minutes of inactivity
+# Keeps database connections alive to prevent connection pool timeout issues
+# when web services restart from sleep (Railway/Render free tier sleep after 15 min)
+#
 # Enabled when:
 # - Running on Railway (IS_RAILWAY=True, detected via RAILWAY_PROJECT_ID), OR
+# - Running on Render (IS_RENDER=True, detected via RENDER env var), OR
 # - Running in production environment (IS_PRODUCTION=True)
 # AND PostgreSQL is configured (USE_POSTGRESQL=True)
 #
-# This ensures keepalive runs on Railway even if RAILWAY_ENVIRONMENT is not explicitly
-# set to "production", since Railway is inherently a production platform and database
-# sleeping is a Railway-specific issue.
-DB_KEEPALIVE_ENABLED = (IS_PRODUCTION or IS_RAILWAY) and USE_POSTGRESQL
-# Railway databases sleep after 15 minutes of inactivity. Using 2 minutes (120s)
-# provides a very aggressive safety margin to prevent database from sleeping.
-# This is the same as aggressive mode to ensure maximum reliability.
-# Previous value of 5 minutes (300s) was still allowing database to sleep.
+# This ensures the keepalive runs on production platforms to maintain
+# fresh database connections after any cold start or restart event.
+#
+# Note: For Render free tier, the web service itself also sleeps after 15 minutes.
+# Use an external pinger (UptimeRobot, Healthchecks.io) or upgrade to paid plan.
+# See docs/RENDER_502_FIX_GUIDE.md for complete instructions.
+DB_KEEPALIVE_ENABLED = (IS_PRODUCTION or IS_RAILWAY or IS_RENDER) and USE_POSTGRESQL
+# Ping database every 2 minutes (120s) to keep connections fresh
+# This provides a safety margin for maintaining connection pool health
 DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "120"))  # 2 minutes
 DB_KEEPALIVE_FAILURE_THRESHOLD = 3  # Number of consecutive failures before warning
 DB_KEEPALIVE_ERROR_RETRY_DELAY_SECONDS = 60  # Delay before retrying after unexpected error
@@ -4274,7 +4286,7 @@ def ping():
 def api_health_check():
     """
     Detailed health check endpoint with database status
-    This can be used for monitoring but won't block Railway healthcheck
+    This can be used for monitoring but won't block Railway/Render healthcheck
     Attempts to retry database initialization if it failed on startup
     Exempt from rate limiting to allow monitoring services to check frequently
     """
@@ -4291,6 +4303,7 @@ def api_health_check():
         "environment": ENVIRONMENT,
         "is_production": IS_PRODUCTION,
         "is_railway": IS_RAILWAY,
+        "is_render": IS_RENDER,
         "database_url_configured": USE_POSTGRESQL,
     }
 

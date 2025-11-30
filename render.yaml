@@ -1,12 +1,15 @@
 # High Availability Configuration for HireMeBahamas
 # See docs/HIGH_AVAILABILITY.md for detailed documentation
+# See docs/RENDER_502_FIX_GUIDE.md for fixing 502 cold start issues
 
 services:
   - type: web
     name: hiremebahamas-backend
     runtime: python
     region: oregon
-    plan: standard  # Required for auto-scaling (upgrade from free for production HA)
+    # Use "starter" ($7/mo) or higher for Always On - no sleep, no 502 cold starts
+    # Free tier sleeps after 15 min of inactivity causing 502 errors
+    plan: starter
     
     # Auto-scaling configuration for high availability
     # Render automatically manages scaling based on these thresholds:
@@ -14,7 +17,7 @@ services:
     # - When memory exceeds targetMemoryPercent, new instances are added
     # - Scaling down occurs after ~5 minutes of reduced load
     # - New instances are warmed up before receiving traffic
-    # Note: Requires Standard plan or higher
+    # Note: Requires Standard plan ($25/mo) or higher for auto-scaling
     scaling:
       minInstances: 1        # Minimum instances (always running)
       maxInstances: 10       # Maximum instances during peak load
