@@ -22,6 +22,14 @@ from typing import Any, Dict, Optional
 
 from decouple import config
 
+# Try to import redis, gracefully handle if not installed
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    redis = None
+    REDIS_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # Redis configuration
@@ -46,6 +54,10 @@ def _get_redis_client_sync():
     """
     global _redis_client, _redis_available
 
+    # Check if redis package is available
+    if not REDIS_AVAILABLE:
+        return None
+
     if not REDIS_URL:
         return None
 
@@ -58,13 +70,15 @@ def _get_redis_client_sync():
         try:
             _redis_client.ping()
             return _redis_client
-        except Exception:
+        except (redis.ConnectionError, redis.TimeoutError):
             # Connection lost, try to reconnect
+            _redis_client = None
+        except Exception:
+            # Unknown error, also try to reconnect
             _redis_client = None
 
     # Try to create a new connection
     try:
-        import redis
         _redis_client = redis.from_url(
             REDIS_URL,
             socket_timeout=2,
@@ -75,8 +89,13 @@ def _get_redis_client_sync():
         _redis_available = True
         logger.info("Redis cache connected successfully")
         return _redis_client
-    except Exception as e:
+    except (redis.ConnectionError, redis.TimeoutError) as e:
         logger.warning(f"Redis connection failed: {e}")
+        _redis_available = False
+        _redis_client = None
+        return None
+    except Exception as e:
+        logger.warning(f"Redis connection failed (unexpected): {e}")
         _redis_available = False
         _redis_client = None
         return None

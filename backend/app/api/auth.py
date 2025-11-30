@@ -268,17 +268,25 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     total_db_ms = 0
 
     if cached_user_data:
-        # CACHE HIT - Skip database query entirely!
+        # CACHE HIT - Validate and use cached ID for faster DB lookup
         cache_hit = True
         logger.info(
             f"[{request_id}] Redis cache HIT for {user_data.email} in {cache_ms}ms"
         )
 
-        # Reconstruct user object from cached data
-        # We still need to query the DB to get the ORM object for ORM-based operations
-        # but this validates the cache entry exists
+        # Validate cached user ID before using in query
+        cached_id = cached_user_data.get('id')
+        if cached_id is None or not isinstance(cached_id, int):
+            logger.warning(
+                f"[{request_id}] Invalid cached user ID: {cached_id}, falling back to email query"
+            )
+            cache_hit = False
+            cached_user_data = None
+
+    if cached_user_data:
+        # Use cached user ID for faster indexed lookup
         db_query_start = time.time()
-        result = await db.execute(select(User).where(User.id == cached_user_data.get('id')))
+        result = await db.execute(select(User).where(User.id == cached_user_data['id']))
         user = result.scalar_one_or_none()
         db_query_ms = int((time.time() - db_query_start) * 1000)
         total_db_ms = db_query_ms
@@ -402,12 +410,13 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     record_login_attempt(user_data.email, True)
 
     # OPTIMIZATION: Cache user record in Redis for faster future logins
-    # This ensures subsequent logins skip the DB query entirely
+    # NOTE: We only cache non-sensitive metadata (no password hash)
+    # The cache is used to quickly find the user ID for a targeted DB query
     try:
         user_cache_data = {
             "id": user.id,
             "email": user.email,
-            "hashed_password": user.hashed_password,
+            # DO NOT cache hashed_password - security risk
             "first_name": user.first_name,
             "last_name": user.last_name,
             "is_active": user.is_active,
