@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
-import type { EmojiClickData, Theme } from 'emoji-picker-react';
+import type { EmojiClickData } from 'emoji-picker-react';
+import { Theme } from 'emoji-picker-react';
 
 // Lazy load the heavy emoji picker component (270KB+)
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
@@ -27,7 +28,7 @@ const EmojiPickerSkeleton = () => (
  */
 const LazyEmojiPicker: React.FC<LazyEmojiPickerProps> = ({
   onEmojiClick,
-  theme = 'light' as Theme,
+  theme = Theme.LIGHT,
   width = 350,
   height = 400,
 }) => {

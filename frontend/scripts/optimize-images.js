@@ -29,6 +29,8 @@ const CONFIG = {
   jpegQuality: 85,       // JPEG quality (0-100)
   avifQuality: 80,       // AVIF quality (0-100)
   minFileSizeForWebp: 1024, // Only create WebP for files > 1KB
+  pngPaletteThreshold: 256, // Use palette mode for images <= this size (width/height)
+  useMozjpeg: true,      // Use mozjpeg for better JPEG compression
 };
 
 /**
@@ -99,7 +101,7 @@ async function optimizeImage(imagePath) {
       await sharp(imagePath)
         .png({ 
           compressionLevel: CONFIG.pngCompressionLevel,
-          palette: metadata.width <= 256 && metadata.height <= 256
+          palette: metadata.width <= CONFIG.pngPaletteThreshold && metadata.height <= CONFIG.pngPaletteThreshold
         })
         .toFile(tempPath);
       
@@ -114,7 +116,7 @@ async function optimizeImage(imagePath) {
       // Optimize JPEG
       const tempPath = imagePath + '.tmp';
       await sharp(imagePath)
-        .jpeg({ quality: CONFIG.jpegQuality, mozjpeg: true })
+        .jpeg({ quality: CONFIG.jpegQuality, mozjpeg: CONFIG.useMozjpeg })
         .toFile(tempPath);
       
       const newSize = fs.statSync(tempPath).size;
