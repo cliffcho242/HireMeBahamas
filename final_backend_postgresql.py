@@ -4296,6 +4296,25 @@ def ping():
     return "pong", 200
 
 
+@app.route("/health/ping", methods=["GET", "HEAD"])
+@limiter.exempt
+def health_ping():
+    """
+    Simple health ping endpoint for keep-alive workers.
+    
+    This lightweight endpoint is specifically designed for background workers
+    that need to ping the service to prevent it from sleeping. It returns
+    a minimal response with a 200 status code.
+    
+    Features:
+    - Minimal response payload (returns 200 OK with "pong")
+    - Supports both GET and HEAD methods
+    - Exempt from rate limiting for monitoring services
+    - No database access required (app-level health only)
+    """
+    return "pong", 200
+
+
 @app.route("/api/health", methods=["GET"])
 @limiter.exempt
 def api_health_check():
