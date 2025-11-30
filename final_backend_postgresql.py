@@ -201,6 +201,49 @@ def invalidate_cache_pattern(pattern: str):
     except Exception as e:
         logger.warning(f"Cache invalidation failed for pattern '{pattern}': {e}")
 
+
+def make_user_cache_key():
+    """
+    Generate a cache key for user profile endpoints.
+    
+    The key includes:
+    - The user identifier (ID or username) from the URL
+    - Current user ID from the JWT token (for personalized data like is_following)
+    
+    Returns a unique cache key or None if caching should be skipped.
+    """
+    try:
+        # Get the identifier from URL
+        identifier = request.view_args.get('identifier', '')
+        
+        # Get current user from token for personalized data
+        auth_header = request.headers.get("Authorization", "")
+        current_user_id = 0
+        if auth_header.startswith("Bearer "):
+            try:
+                token = auth_header.split(" ")[1]
+                payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+                current_user_id = payload.get("user_id", 0)
+            except Exception:
+                pass
+        
+        return f"user_profile:{identifier}:{current_user_id}"
+    except Exception:
+        return None
+
+
+def invalidate_user_cache(user_id: int):
+    """
+    Invalidate cached user profile for a specific user.
+    
+    Called when user profile is updated to ensure fresh data is returned.
+    
+    Args:
+        user_id: The ID of the user whose cache should be invalidated
+    """
+    invalidate_cache_pattern(f"user_profile:{user_id}:*")
+
+
 # Enhanced CORS configuration
 CORS(
     app,
@@ -2695,6 +2738,16 @@ def create_database_indexes(cursor, conn):
             ("likes_post_id_idx", "CREATE INDEX IF NOT EXISTS likes_post_id_idx ON likes (post_id)"),
             # Speeds up comments count queries
             ("comments_post_id_idx", "CREATE INDEX IF NOT EXISTS comments_post_id_idx ON comments (post_id)"),
+            # Composite index for user profile queries (created_at for sorting new users)
+            ("users_created_at_idx", "CREATE INDEX IF NOT EXISTS users_created_at_idx ON users (created_at DESC) WHERE is_active = TRUE"),
+            # Full-text search index for job title and description (GIN index for text search)
+            ("jobs_search_idx", "CREATE INDEX IF NOT EXISTS jobs_search_idx ON jobs USING GIN (to_tsvector('english', title || ' ' || description)) WHERE is_active = TRUE"),
+            # Index for stories expiration (speeds up cleanup queries)
+            ("stories_expires_at_idx", "CREATE INDEX IF NOT EXISTS stories_expires_at_idx ON stories (expires_at) WHERE expires_at > NOW()"),
+            # Composite index for friendship status lookups (both directions)
+            ("friendships_receiver_sender_idx", "CREATE INDEX IF NOT EXISTS friendships_receiver_sender_idx ON friendships (receiver_id, sender_id)"),
+            # Index for pending friendship requests (partial index for efficiency)
+            ("friendships_pending_idx", "CREATE INDEX IF NOT EXISTS friendships_pending_idx ON friendships (receiver_id, status) WHERE status = 'pending'"),
         ]
         
         for index_name, index_sql in indexes:
@@ -2726,6 +2779,12 @@ def create_database_indexes(cursor, conn):
             cursor.execute("CREATE INDEX IF NOT EXISTS messages_conversation_idx ON messages (conversation_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS likes_post_id_idx ON likes (post_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS comments_post_id_idx ON comments (post_id)")
+            # Additional indexes matching PostgreSQL for consistency
+            cursor.execute("CREATE INDEX IF NOT EXISTS users_created_at_idx ON users (created_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS friendships_sender_receiver_idx ON friendships (sender_id, receiver_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS friendships_receiver_sender_idx ON friendships (receiver_id, sender_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS friendships_pending_idx ON friendships (receiver_id, status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS stories_expires_at_idx ON stories (expires_at)")
             conn.commit()
             print("✅ SQLite indexes created or already exist")
         except Exception as e:
@@ -5346,6 +5405,9 @@ def profile():
                             tuple(update_values)
                         )
                     conn.commit()
+                    
+                    # Invalidate user profile cache after update
+                    invalidate_user_cache(user_id)
 
             # Get user from database (for both GET and after PUT update)
             if USE_POSTGRESQL:
@@ -5945,14 +6007,19 @@ def delete_post(post_id):
 # ==========================================
 
 @app.route("/api/users/<identifier>", methods=["GET", "OPTIONS"])
+@cache.cached(timeout=CACHE_TIMEOUT_PROFILE, key_prefix="user_profile", make_cache_key=make_user_cache_key)
 def get_user(identifier):
     """
     Get a specific user's profile by ID or username.
     
     Performance optimizations to prevent HTTP 499/502 timeouts:
+    - Cached for 60 seconds to reduce database load
     - Request timeout detection returns error before client disconnects
     - Single connection used for all queries
     - Indexed queries on primary keys
+    
+    Cache is personalized per viewer (includes current user ID in key)
+    to ensure is_following status is accurate for each user.
     
     Args:
         identifier: Can be either a numeric user ID or a username string
