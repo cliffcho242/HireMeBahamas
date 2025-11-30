@@ -4475,13 +4475,13 @@ def root():
 @limiter.exempt
 def health_check():
     """
-    Health check endpoint for Render/Railway
-    Returns 200 OK immediately to ensure platform healthcheck passes
-    The app is healthy if this endpoint responds - database initialization
-    happens asynchronously and doesn't need to block the healthcheck
-    Exempt from rate limiting to allow monitoring services to check frequently
+    Lightning-fast health check endpoint for Render/Railway.
+    
+    Returns 200 OK with {"status":"ok"} in <20ms.
+    No database access, no logging overhead - just a quick response.
+    Exempt from rate limiting to allow monitoring services to check frequently.
     """
-    return jsonify({"status": "alive"}), 200
+    return jsonify({"status": "ok"}), 200
 
 
 @app.route("/ping", methods=["GET", "HEAD"])
@@ -9597,6 +9597,41 @@ def get_database_health():
                 pass
         if conn:
             return_db_connection(conn)
+
+
+
+# ==========================================
+# GLOBAL API FALLBACK HANDLER
+# ==========================================
+# This route MUST be defined last to ensure all explicit API routes
+# are registered first. Flask routes by specificity, so explicit routes
+# like /api/users/<identifier> will match before /api/<path:path>.
+
+
+@app.route("/api/<path:path>", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+@limiter.exempt
+def api_fallback(path):
+    """
+    Global fallback handler for unknown /api/* routes.
+    
+    Returns 200 OK with {"error":"not_implemented"} instead of 404/502.
+    This prevents mobile clients from seeing blank screens when hitting
+    routes that haven't been implemented yet.
+    
+    For OPTIONS requests (CORS preflight), return 200 with empty body.
+    
+    Note: This route must be defined after all other API routes to ensure
+    it only catches requests that don't match any explicit route.
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+    
+    return jsonify({
+        "error": "not_implemented",
+        "path": f"/api/{path}",
+        "method": request.method,
+        "message": "This endpoint is not yet implemented"
+    }), 200
 
 
 # ==========================================
