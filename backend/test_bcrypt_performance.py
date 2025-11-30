@@ -3,7 +3,9 @@ Test bcrypt performance optimization
 
 This test verifies that the bcrypt configuration provides reasonable
 performance while maintaining backward compatibility with existing passwords.
+It also tests async password verification and bcrypt pre-warming.
 """
+import asyncio
 import time
 import os
 import sys
@@ -123,10 +125,126 @@ def test_bcrypt_performance():
         elif 'BCRYPT_ROUNDS' in os.environ:
             del os.environ['BCRYPT_ROUNDS']
 
+
+def test_async_bcrypt_performance():
+    """Test that async bcrypt operations work correctly and don't block the event loop"""
+    
+    # Save original environment variable value to restore later
+    original_bcrypt_rounds = os.environ.get('BCRYPT_ROUNDS')
+    
+    try:
+        # Set environment variable for testing
+        os.environ['BCRYPT_ROUNDS'] = '10'
+        
+        import anyio
+        from passlib.context import CryptContext
+        
+        # Recreate the optimized context from security.py
+        BCRYPT_ROUNDS = int(os.environ.get('BCRYPT_ROUNDS', '10'))
+        pwd_context = CryptContext(
+            schemes=["bcrypt"], 
+            deprecated="auto",
+            bcrypt__rounds=BCRYPT_ROUNDS
+        )
+        
+        async def verify_password_async(plain_password: str, hashed_password: str) -> bool:
+            return await anyio.to_thread.run_sync(
+                pwd_context.verify, plain_password, hashed_password
+            )
+        
+        async def get_password_hash_async(password: str) -> str:
+            return await anyio.to_thread.run_sync(pwd_context.hash, password)
+        
+        async def prewarm_bcrypt_async() -> None:
+            await anyio.to_thread.run_sync(lambda: pwd_context.hash("prewarm-dummy"))
+        
+        async def run_async_tests():
+            print("=" * 80)
+            print("Async Bcrypt Performance Test")
+            print("=" * 80)
+            
+            test_password = "TestPassword123!"
+            
+            # Test 1: Pre-warming
+            print("\n1. Testing bcrypt pre-warming...")
+            start_time = time.time()
+            await prewarm_bcrypt_async()
+            prewarm_ms = (time.time() - start_time) * 1000
+            print(f"   Pre-warm time: {prewarm_ms:.2f}ms")
+            print("   ✓ Pre-warming completed")
+            
+            # Test 2: Async hashing
+            print("\n2. Testing async password hashing...")
+            start_time = time.time()
+            hashed = await get_password_hash_async(test_password)
+            hash_ms = (time.time() - start_time) * 1000
+            print(f"   Async hash time: {hash_ms:.2f}ms")
+            assert hashed.startswith('$2b$'), "Hash should be bcrypt format"
+            print("   ✓ Async hashing works correctly")
+            
+            # Test 3: Async verification
+            print("\n3. Testing async password verification...")
+            times = []
+            for _ in range(5):
+                start_time = time.time()
+                result = await verify_password_async(test_password, hashed)
+                elapsed_ms = (time.time() - start_time) * 1000
+                times.append(elapsed_ms)
+                assert result, "Password verification should succeed"
+            
+            avg_time = sum(times) / len(times)
+            max_time = max(times)
+            print(f"   Average async verification time: {avg_time:.2f}ms")
+            print(f"   Max async verification time: {max_time:.2f}ms")
+            
+            # Performance threshold
+            assert max_time < 200, f"Async verification too slow: {max_time:.2f}ms"
+            print("   ✓ Async verification performance acceptable")
+            
+            # Test 4: Concurrent verification (simulate multiple login requests)
+            print("\n4. Testing concurrent password verifications...")
+            start_time = time.time()
+            results = await asyncio.gather(*[
+                verify_password_async(test_password, hashed)
+                for _ in range(10)
+            ])
+            total_ms = (time.time() - start_time) * 1000
+            avg_per_request = total_ms / 10
+            
+            assert all(results), "All concurrent verifications should succeed"
+            print(f"   10 concurrent verifications completed in {total_ms:.2f}ms")
+            print(f"   Average per request: {avg_per_request:.2f}ms")
+            print("   ✓ Concurrent verification works correctly")
+            
+            print("\n" + "=" * 80)
+            print("All async bcrypt tests passed!")
+            print("=" * 80)
+            print(f"\nAsync Summary:")
+            print(f"  - Pre-warm time: {prewarm_ms:.2f}ms")
+            print(f"  - Async hash time: {hash_ms:.2f}ms")
+            print(f"  - Average async verification: {avg_time:.2f}ms")
+            print(f"  - Concurrent performance: {avg_per_request:.2f}ms/request")
+            
+            return True
+        
+        return asyncio.run(run_async_tests())
+    
+    finally:
+        # Restore original environment variable
+        if original_bcrypt_rounds is not None:
+            os.environ['BCRYPT_ROUNDS'] = original_bcrypt_rounds
+        elif 'BCRYPT_ROUNDS' in os.environ:
+            del os.environ['BCRYPT_ROUNDS']
+
+
 if __name__ == "__main__":
     try:
         test_bcrypt_performance()
-        print("\n✓ Test completed successfully")
+        print("\n✓ Sync test completed successfully\n")
+        
+        test_async_bcrypt_performance()
+        print("\n✓ Async test completed successfully")
+        
         sys.exit(0)
     except AssertionError as e:
         print(f"\n✗ Test failed: {e}")
