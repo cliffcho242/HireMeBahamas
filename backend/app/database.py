@@ -1,6 +1,9 @@
+import logging
 from decouple import config
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+logger = logging.getLogger(__name__)
 
 # Database configuration - PostgreSQL for production mode
 # For local development: docker-compose up postgres redis
@@ -13,7 +16,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 DATABASE_URL = config(
     "DATABASE_PRIVATE_URL",
     default=config(
-        "DATABASE_URL", 
+        "DATABASE_URL",
         default="postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
     )
 )
@@ -34,7 +37,7 @@ if DATABASE_URL.startswith("postgresql://"):
 # in actual production environments, not during local development.
 _environment = config("ENVIRONMENT", default="development").lower()
 _is_railway = (
-    config("RAILWAY_ENVIRONMENT", default="") != "" or 
+    config("RAILWAY_ENVIRONMENT", default="") != "" or
     config("RAILWAY_PROJECT_ID", default="") != ""
 )
 IS_PRODUCTION_DATABASE = (
@@ -48,35 +51,38 @@ if IS_PRODUCTION_DATABASE:
     if "sslmode" not in DATABASE_URL:
         DATABASE_URL = f"{DATABASE_URL}?sslmode=prefer"
 
-# Connection pool configuration
+# Connection pool configuration - OPTIMIZED FOR PERFORMANCE
+# pool_size: Number of connections to keep open at all times
+# max_overflow: Additional connections allowed during peak load
 # pool_recycle: Maximum age of connections in seconds before they are recycled
-# This prevents "SSL error: unexpected eof while reading" errors caused by
-# network intermediaries (load balancers, firewalls) silently dropping idle connections.
-# Set to 300 seconds (5 minutes) which is well under typical cloud idle timeouts.
-# Only applied in production to avoid unnecessary connection cycling in development.
+# pool_pre_ping: Test connections before use to ensure they are healthy
+#
+# These settings are optimized to prevent the 5000+ ms login latency issue:
+# - pool_size=20: Maintain 20 persistent connections for fast access
+# - max_overflow=40: Allow up to 60 total connections during spikes
+# - pool_pre_ping=True: Validate connections before use (prevents stale connections)
+# - pool_recycle=300: Recycle connections every 5 minutes
+POOL_SIZE = config("DB_POOL_SIZE", default=20, cast=int)
+MAX_OVERFLOW = config("DB_MAX_OVERFLOW", default=40, cast=int)
 POOL_RECYCLE_SECONDS = config("POOL_RECYCLE_SECONDS", default=300, cast=int)
 
 # Statement timeout in seconds to prevent long-running queries from blocking connections
 # This value is used for both asyncpg's command_timeout and PostgreSQL's statement_timeout
 STATEMENT_TIMEOUT_SECONDS = config("STATEMENT_TIMEOUT_SECONDS", default=30, cast=int)
 
-# Create async engine with appropriate settings for the environment
+# Create async engine with OPTIMIZED settings for the environment
 engine_kwargs = {
     "echo": config("DB_ECHO", default=False, cast=bool),
     "future": True,
-    "pool_size": 5,  # Reduced for local development
-    "max_overflow": 10,  # Reduced for local development
-    "pool_pre_ping": True,  # Enable connection health checks
+    "pool_size": POOL_SIZE,  # Optimized: 20 persistent connections
+    "max_overflow": MAX_OVERFLOW,  # Optimized: allow up to 60 total
+    "pool_pre_ping": True,  # CRITICAL: Validate connections before use
+    "pool_recycle": POOL_RECYCLE_SECONDS,  # Recycle stale connections
 }
 
 # Add production-specific connection settings
 # These settings help prevent SSL EOF errors in cloud environments
 if IS_PRODUCTION_DATABASE:
-    # Recycle connections in production to prevent stale SSL connections
-    # This is critical for cloud environments where network intermediaries
-    # may silently drop idle TCP connections
-    engine_kwargs["pool_recycle"] = POOL_RECYCLE_SECONDS
-    
     # asyncpg connect_args for connection health and timeouts
     # See: https://magicstack.github.io/asyncpg/current/api/index.html#connection
     #
@@ -98,6 +104,11 @@ if IS_PRODUCTION_DATABASE:
         },
     }
     engine_kwargs["connect_args"] = connect_args
+
+logger.info(
+    f"Database pool configured: pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
+    f"pool_pre_ping=True, pool_recycle={POOL_RECYCLE_SECONDS}s"
+)
 
 engine = create_async_engine(DATABASE_URL, **engine_kwargs)
 
