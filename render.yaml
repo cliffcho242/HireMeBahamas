@@ -156,12 +156,17 @@ services:
       # to connect to your PostgreSQL database
     
     # ==========================================================================
-    # HEALTH CHECK CONFIGURATION
+    # HEALTH CHECK CONFIGURATION - IMMORTAL SETTINGS
     # ==========================================================================
     # 
+    # RENDER DASHBOARD SETTINGS (set these manually if render.yaml doesn't apply):
+    #   Health Check Path: /health
+    #   Grace Period: 180 seconds (gives cold boot time to complete)
+    #   Timeout: 10 seconds (per-request timeout)
+    #
     # Available endpoints:
+    #   /health        - IMMORTAL health (instant, no DB, responds in <3ms)
     #   /ping          - Lightweight ping (fastest, no DB, for external pingers)
-    #   /health        - Basic health (fast, no DB, used by Render health checks)
     #   /api/health    - Detailed health (includes DB status, for monitoring)
     #
     # External pinger URL: https://hiremebahamas.onrender.com/ping
