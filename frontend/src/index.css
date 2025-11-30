@@ -8,6 +8,9 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    /* Ensure full viewport coverage */
+    height: 100%;
+    width: 100%;
   }
 
   body {
@@ -15,6 +18,27 @@
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    /* Full viewport height/width with fallbacks */
+    min-height: 100vh;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+    width: 100%;
+    /* Prevent horizontal scroll */
+    overflow-x: hidden;
+    /* Center content by default */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Root element fills and centers content */
+  #root {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
   }
 
   /* Safe area support for notched devices */
@@ -53,6 +77,24 @@
   
   .card {
     @apply bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200;
+  }
+  
+  /* Auto-centered responsive container - adapts to all devices */
+  .responsive-container {
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Full-viewport centered layout wrapper */
+  .app-layout {
+    @apply flex flex-col w-full;
+    min-height: 100vh;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Centered main content area that adapts to all screens */
+  .main-content {
+    @apply flex-1 w-full mx-auto max-w-screen-2xl;
   }
 }
 

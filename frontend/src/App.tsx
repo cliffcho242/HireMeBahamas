@@ -101,14 +101,14 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-gray-50 flex flex-col overflow-x-hidden">
+    <div className="app-layout bg-gray-50 overflow-x-hidden">
       {/* Connection status banner - shows when backend is slow/unavailable */}
       <ConnectionStatus />
 
       {/* Only show navbar and footer for authenticated users */}
       {isAuthenticated && <Navbar />}
 
-      <main className="flex-grow w-full">
+      <main className="main-content flex-grow">
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             {/* Public Routes - Only Login and Register (redirect authenticated users) */}
