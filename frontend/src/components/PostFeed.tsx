@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import type { EmojiClickData } from 'emoji-picker-react';
+import LazyEmojiPicker from './LazyEmojiPicker';
 import {
   HeartIcon,
   ChatBubbleLeftIcon,
@@ -885,7 +886,7 @@ const PostFeed: React.FC = () => {
                     {/* Emoji Picker */}
                     {showEmojiPicker[post.id] && (
                       <div className="emoji-picker-container absolute z-50 mt-2">
-                        <EmojiPicker
+                        <LazyEmojiPicker
                           onEmojiClick={(emojiData) => handleEmojiClick(post.id, emojiData)}
                           width={300}
                           height={400}

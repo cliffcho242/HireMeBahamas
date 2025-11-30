@@ -12,6 +12,7 @@
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "setup": "node setup-and-fix.js",
     "generate-assets": "node scripts/generate-pwa-assets.js",
+    "optimize-images": "node scripts/optimize-images.js",
     "verify:user-page": "node verify-user-page-deps.js"
   },
   "dependencies": {

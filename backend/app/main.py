@@ -76,6 +76,38 @@ app.add_middleware(
 )
 
 
+# Cache control configuration for different endpoint patterns
+CACHE_CONTROL_RULES = {
+    # Read-only list endpoints can be cached briefly
+    "/api/jobs": {"GET": "public, max-age=60, stale-while-revalidate=120"},
+    "/api/posts": {"GET": "private, max-age=30, stale-while-revalidate=60"},
+    "/api/jobs/stats": {"GET": "public, max-age=300, stale-while-revalidate=600"},
+    # Health endpoints can be cached
+    "/health": {"GET": "public, max-age=10"},
+}
+
+
+# Add cache control middleware
+@app.middleware("http")
+async def add_cache_headers(request: Request, call_next):
+    """Add Cache-Control headers to API responses for browser caching."""
+    response = await call_next(request)
+    
+    # Only add cache headers to successful GET requests
+    if request.method == "GET" and 200 <= response.status_code < 300:
+        path = request.url.path
+        
+        # Check if this path matches any cache rules
+        for pattern, methods in CACHE_CONTROL_RULES.items():
+            if path.startswith(pattern) and request.method in methods:
+                # Don't override if already set
+                if "cache-control" not in response.headers:
+                    response.headers["Cache-Control"] = methods[request.method]
+                break
+    
+    return response
+
+
 # Add request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
