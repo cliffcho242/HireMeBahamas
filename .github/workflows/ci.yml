@@ -122,6 +122,131 @@ jobs:
         run: |
           python test_registration_fastapi.py
 
+      - name: Run security headers tests
+        run: |
+          cd backend && python -m pytest test_security_headers.py -v --tb=short
+
       - name: Test upload directories
         run: |
           cd backend && python3 test_upload_directories.py
+
+  performance-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: lint-frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+        env:
+          VITE_API_URL: https://hiremebahamas.onrender.com
+
+      - name: Verify build output
+        working-directory: ./frontend
+        run: |
+          echo "=== Build Output Verification ==="
+          ls -la dist/
+          echo ""
+          echo "=== Checking for compressed assets ==="
+          find dist -name "*.gz" | head -10
+          find dist -name "*.br" | head -10
+          echo ""
+          echo "=== Asset sizes ==="
+          du -sh dist/assets/
+
+      - name: Verify security headers in vercel.json
+        run: |
+          echo "=== Verifying CDN/SSL security headers in vercel.json ==="
+          # Check for HSTS header
+          if grep -q "Strict-Transport-Security" vercel.json; then
+            echo "✅ HSTS header present"
+          else
+            echo "❌ HSTS header missing"
+            exit 1
+          fi
+          # Check for security headers
+          if grep -q "X-Content-Type-Options" vercel.json; then
+            echo "✅ X-Content-Type-Options header present"
+          else
+            echo "❌ X-Content-Type-Options header missing"
+            exit 1
+          fi
+          if grep -q "X-Frame-Options" vercel.json; then
+            echo "✅ X-Frame-Options header present"
+          else
+            echo "❌ X-Frame-Options header missing"
+            exit 1
+          fi
+          if grep -q "Permissions-Policy" vercel.json; then
+            echo "✅ Permissions-Policy header present"
+          else
+            echo "❌ Permissions-Policy header missing"
+            exit 1
+          fi
+          echo ""
+          echo "=== All security headers verified ==="
+
+      - name: Verify CDN caching headers
+        run: |
+          echo "=== Verifying CDN caching headers in vercel.json ==="
+          # Check for proper cache control on assets
+          if grep -q "immutable" vercel.json; then
+            echo "✅ Immutable caching for assets present"
+          else
+            echo "❌ Immutable caching for assets missing"
+            exit 1
+          fi
+          # Check for stale-while-revalidate
+          if grep -q "stale-while-revalidate" vercel.json; then
+            echo "✅ Stale-while-revalidate caching present"
+          else
+            echo "❌ Stale-while-revalidate caching missing"
+            exit 1
+          fi
+          echo ""
+          echo "=== All CDN caching headers verified ==="
+
+      - name: Bundle size analysis
+        working-directory: ./frontend
+        run: |
+          echo "=== Bundle Size Analysis ==="
+          # Calculate total size of all JS chunks
+          total_js=$(find dist/assets -name "*.js" -exec stat -f%z {} + 2>/dev/null | awk '{sum+=$1}END{print sum}' || find dist/assets -name "*.js" -exec stat --format=%s {} + | awk '{sum+=$1}END{print sum}')
+          total_css=$(find dist/assets -name "*.css" -exec stat -f%z {} + 2>/dev/null | awk '{sum+=$1}END{print sum}' || find dist/assets -name "*.css" -exec stat --format=%s {} + | awk '{sum+=$1}END{print sum}')
+          total_gz=$(find dist/assets -name "*.js.gz" -exec stat -f%z {} + 2>/dev/null | awk '{sum+=$1}END{print sum}' || find dist/assets -name "*.js.gz" -exec stat --format=%s {} + | awk '{sum+=$1}END{print sum}')
+          
+          echo "Total JS (uncompressed): $(echo "scale=2; $total_js / 1024" | bc) KB"
+          echo "Total CSS (uncompressed): $(echo "scale=2; $total_css / 1024" | bc) KB"
+          echo "Total JS (gzipped): $(echo "scale=2; $total_gz / 1024" | bc) KB"
+          echo ""
+          
+          # Check if vendor chunk is under 200KB gzipped (performance target)
+          vendor_gz_size=$(find dist/assets -name "vendor*.js.gz" -exec stat -f%z {} + 2>/dev/null | head -1 || find dist/assets -name "vendor*.js.gz" -exec stat --format=%s {} + | head -1)
+          vendor_kb=$(echo "scale=2; ${vendor_gz_size:-0} / 1024" | bc)
+          echo "Vendor bundle (gzipped): ${vendor_kb} KB"
+          
+          if [ "${vendor_gz_size:-0}" -gt 204800 ]; then
+            echo "⚠️ Vendor bundle exceeds 200KB target but build is acceptable"
+          else
+            echo "✅ Vendor bundle is within target size"
+          fi
