@@ -6,11 +6,13 @@ Keep-alive Background Worker for Render (Zero Cold-Start Solution)
 Pings the backend every 40 seconds to prevent Render from sleeping.
 Uses exponential backoff on failures to handle service restarts gracefully.
 
-Environment Variables:
-    APP_URL: The external URL of the Render web service
-             (e.g., https://hiremebahamas.onrender.com)
+Works even if environment variable is missing – defaults to the real Render URL.
+
+Environment Variables (optional):
+    RENDER_EXTERNAL_URL: The external URL of the Render web service
+    APP_URL: Alternative URL variable (fallback if RENDER_EXTERNAL_URL not set)
     
-    (Also supports RENDER_EXTERNAL_URL for backward compatibility)
+    Default: https://hiremebahamas.onrender.com
 
 Render Dashboard Setup:
     1. New → Background Worker
@@ -20,19 +22,16 @@ Render Dashboard Setup:
     5. Region: Oregon (same as web service)
     6. Build Command: pip install requests
     7. Start Command: python keep_alive.py
-    8. Environment Variables:
-       - APP_URL = https://hiremebahamas.onrender.com
+    8. Environment Variables (optional):
+       - RENDER_EXTERNAL_URL = https://hiremebahamas.onrender.com
        - PYTHONUNBUFFERED = true
 """
 import os
-import sys
 import time
 import requests
 
-url = os.environ.get("APP_URL") or os.environ.get("RENDER_EXTERNAL_URL")
-if not url:
-    print("ERROR: APP_URL not set", flush=True)
-    sys.exit(1)
+# Works even if env var missing – defaults to the real Render URL
+url = os.getenv("RENDER_EXTERNAL_URL", os.getenv("APP_URL", "https://hiremebahamas.onrender.com"))
 
 ping_url, delay, max_delay = f"{url}/health", 40, 300
 print(f"Keep-alive started: {ping_url} every {delay}s", flush=True)

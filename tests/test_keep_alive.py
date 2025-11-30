@@ -20,35 +20,37 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         except py_compile.PyCompileError as e:
             self.fail(f"keep_alive.py has syntax errors: {e}")
 
-    def test_environment_variable_required(self):
-        """Test that RENDER_EXTERNAL_URL environment variable is required."""
-        # Verify the script uses os.environ.get() for better error handling
+    def test_environment_variable_optional_with_default(self):
+        """Test that RENDER_EXTERNAL_URL environment variable is optional with default URL."""
+        # Verify the script uses os.getenv() with default fallback
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify it uses .get() method for safer access
-        self.assertIn('os.environ.get("RENDER_EXTERNAL_URL")', content)
+        # Verify it uses os.getenv() with default fallback
+        self.assertIn('os.getenv("RENDER_EXTERNAL_URL"', content)
         
-        # Verify it has error handling for missing variable
-        self.assertIn("if not url:", content)
-        self.assertIn("sys.exit(1)", content)
+        # Verify it has default URL fallback
+        self.assertIn("https://hiremebahamas.onrender.com", content)
+        
+        # Verify it does NOT exit on missing env var (since we have a default)
+        self.assertNotIn("sys.exit(1)", content)
 
-    def test_ping_interval_is_70_seconds(self):
-        """Test that the ping interval is 70 seconds as specified."""
+    def test_ping_interval_is_40_seconds(self):
+        """Test that the ping interval is 40 seconds as specified."""
         # Read the keep_alive.py script and verify the sleep interval
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify the script contains time.sleep(70)
-        self.assertIn("time.sleep(70)", content)
+        # Verify the script contains delay = 40 (ping interval)
+        self.assertIn("delay = 40", content)
 
-    def test_uses_health_ping_endpoint(self):
-        """Test that the script uses the /health/ping endpoint."""
+    def test_uses_health_endpoint(self):
+        """Test that the script uses the /health endpoint."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
         
-        # Verify the script uses the /health/ping endpoint
-        self.assertIn("/health/ping", content)
+        # Verify the script uses the /health endpoint
+        self.assertIn("/health", content)
 
     def test_timeout_is_10_seconds(self):
         """Test that the request timeout is 10 seconds."""
@@ -64,8 +66,9 @@ class TestKeepAliveConfiguration(unittest.TestCase):
             content = f.read()
         
         # Verify the script has exception handling
-        self.assertIn("except", content)
-        self.assertIn("pass", content)
+        self.assertIn("except Exception as e:", content)
+        # Verify it continues running after exception (sleep is inside the loop)
+        self.assertIn("time.sleep(delay)", content)
 
 
 class TestKeepAliveBehavior(unittest.TestCase):
@@ -82,11 +85,11 @@ class TestKeepAliveBehavior(unittest.TestCase):
             
             # Simulate the ping
             url = os.environ["RENDER_EXTERNAL_URL"]
-            response = requests.get(f"{url}/health/ping", timeout=10)
+            response = requests.get(f"{url}/health", timeout=10)
             
             # Verify the request was made correctly
             mock_get.assert_called_once_with(
-                "https://test.onrender.com/health/ping",
+                "https://test.onrender.com/health",
                 timeout=10
             )
 
@@ -101,7 +104,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
             url = os.environ["RENDER_EXTERNAL_URL"]
             
             try:
-                requests.get(f"{url}/health/ping", timeout=10)
+                requests.get(f"{url}/health", timeout=10)
             except Exception:
                 pass  # This should be caught like in keep_alive.py
             
@@ -119,7 +122,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
             url = os.environ["RENDER_EXTERNAL_URL"]
             
             try:
-                requests.get(f"{url}/health/ping", timeout=10)
+                requests.get(f"{url}/health", timeout=10)
             except Exception:
                 pass  # This should be caught like in keep_alive.py
             
@@ -153,7 +156,7 @@ class TestRenderYamlConfiguration(unittest.TestCase):
         self.assertEqual(worker.get("startCommand"), "python keep_alive.py")
 
     def test_render_yaml_worker_has_env_var(self):
-        """Test that render.yaml worker has RENDER_EXTERNAL_URL configured."""
+        """Test that render.yaml worker has APP_URL or RENDER_EXTERNAL_URL configured."""
         import yaml
         
         with open("render.yaml", "r") as f:
@@ -166,13 +169,13 @@ class TestRenderYamlConfiguration(unittest.TestCase):
         worker = workers[0]
         env_vars = worker.get("envVars", [])
         
-        # Find RENDER_EXTERNAL_URL
-        render_url_vars = [v for v in env_vars if v.get("key") == "RENDER_EXTERNAL_URL"]
-        self.assertTrue(len(render_url_vars) > 0, "RENDER_EXTERNAL_URL not configured")
+        # Find APP_URL or RENDER_EXTERNAL_URL
+        url_vars = [v for v in env_vars if v.get("key") in ("APP_URL", "RENDER_EXTERNAL_URL")]
+        self.assertTrue(len(url_vars) > 0, "APP_URL or RENDER_EXTERNAL_URL not configured")
         
         # Verify the URL is set correctly
-        render_url = render_url_vars[0]
-        self.assertEqual(render_url.get("value"), "https://hiremebahamas.onrender.com")
+        url_var = url_vars[0]
+        self.assertEqual(url_var.get("value"), "https://hiremebahamas.onrender.com")
 
 
 if __name__ == "__main__":
