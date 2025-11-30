@@ -109,7 +109,11 @@ group = None
 tmp_upload_dir = None
 
 # Forward X-Forwarded-* headers from load balancer
-forwarded_allow_ips = os.environ.get("FORWARDED_ALLOW_IPS", "*")
+# Security: By default, only accept forwarded headers from localhost
+# In production with a load balancer, set FORWARDED_ALLOW_IPS to the load balancer IP
+# Use "*" only in trusted network environments (e.g., Railway, Render internal networks)
+# Example: FORWARDED_ALLOW_IPS="10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+forwarded_allow_ips = os.environ.get("FORWARDED_ALLOW_IPS", "127.0.0.1")
 
 # =============================================================================
 # GRACEFUL SHUTDOWN HOOKS (Zero-Downtime Deployments)

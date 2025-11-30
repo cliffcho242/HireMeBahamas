@@ -9,12 +9,17 @@ services:
     plan: standard  # Required for auto-scaling (upgrade from free for production HA)
     
     # Auto-scaling configuration for high availability
-    # Automatically scales instances based on CPU and memory usage
+    # Render automatically manages scaling based on these thresholds:
+    # - When CPU exceeds targetCPUPercent, new instances are added
+    # - When memory exceeds targetMemoryPercent, new instances are added
+    # - Scaling down occurs after ~5 minutes of reduced load
+    # - New instances are warmed up before receiving traffic
+    # Note: Requires Standard plan or higher
     scaling:
-      minInstances: 1
-      maxInstances: 10
-      targetCPUPercent: 70
-      targetMemoryPercent: 80
+      minInstances: 1        # Minimum instances (always running)
+      maxInstances: 10       # Maximum instances during peak load
+      targetCPUPercent: 70   # Scale up when average CPU > 70%
+      targetMemoryPercent: 80 # Scale up when average memory > 80%
     
     buildCommand: |
       apt-get update

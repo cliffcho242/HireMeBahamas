@@ -95,12 +95,14 @@ Render supports automatic scaling based on resource usage. Configure in `render.
 services:
   - type: web
     name: hiremebahamas-backend
-    autoscaling:
+    scaling:
       minInstances: 1
       maxInstances: 10
       targetCPUPercent: 70
       targetMemoryPercent: 80
 ```
+
+> **Note**: Scaling requires a paid plan (Standard or higher). When CPU usage exceeds 70% or memory exceeds 80%, Render will automatically add instances up to maxInstances. When usage drops, it will scale down after a cooldown period (typically 5 minutes).
 
 ### Railway Auto-Scaling
 
