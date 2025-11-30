@@ -44,7 +44,8 @@ while True:
     try:
         response = requests.get(ping_url, timeout=10)
         print(f"[KEEPALIVE] Ping {ping_url}: {response.status_code}", flush=True)
-    except Exception:
-        # Silently continue on error - the main web service may be restarting
+    except Exception as e:
+        # Log error type but continue - the main web service may be restarting
+        print(f"[KEEPALIVE] Ping failed ({type(e).__name__}), will retry in 70s", flush=True)
         pass
     time.sleep(70)

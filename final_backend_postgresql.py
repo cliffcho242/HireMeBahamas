@@ -9603,6 +9603,9 @@ def get_database_health():
 # ==========================================
 # GLOBAL API FALLBACK HANDLER
 # ==========================================
+# This route MUST be defined last to ensure all explicit API routes
+# are registered first. Flask routes by specificity, so explicit routes
+# like /api/users/<identifier> will match before /api/<path:path>.
 
 
 @app.route("/api/<path:path>", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
@@ -9616,6 +9619,9 @@ def api_fallback(path):
     routes that haven't been implemented yet.
     
     For OPTIONS requests (CORS preflight), return 200 with empty body.
+    
+    Note: This route must be defined after all other API routes to ensure
+    it only catches requests that don't match any explicit route.
     """
     if request.method == "OPTIONS":
         return "", 200
