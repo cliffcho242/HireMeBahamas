@@ -118,8 +118,14 @@ jobs:
         id: frontend-monitor
         continue-on-error: true
         env:
-          FRONTEND_URL: ${{ vars.FRONTEND_URL || 'https://hiremebahamas.vercel.app' }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
         run: |
+          if [ -z "$FRONTEND_URL" ]; then
+            echo "ℹ️ FRONTEND_URL not configured"
+            echo "frontend_status=not_configured" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           echo "🔍 Checking frontend availability..."
           
           response=$(curl -s -w "\n%{http_code}\n%{time_total}" \
@@ -196,10 +202,16 @@ jobs:
           
           if [ "$frontend_status" = "healthy" ]; then
             frontend_icon="✅"
+            frontend_details="-"
+          elif [ "$frontend_status" = "not_configured" ]; then
+            frontend_icon="⏭️"
+            frontend_details="Not configured"
+            frontend_time="-"
           else
             frontend_icon="❌"
+            frontend_details="Health check failed"
           fi
-          echo "| Frontend (Vercel) | $frontend_icon $frontend_status | ${frontend_time}s | - |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend (Vercel) | $frontend_icon $frontend_status | ${frontend_time}s | $frontend_details |" >> $GITHUB_STEP_SUMMARY
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY

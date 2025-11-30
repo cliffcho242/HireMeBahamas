@@ -228,6 +228,20 @@ Render provides auto-scaling on Team and Enterprise plans:
 
 ### Monitoring Workflows
 
+The application uses a layered monitoring approach with different intervals:
+
+| Workflow | Interval | Purpose |
+|----------|----------|---------|
+| **Health Monitoring** | Every 5 min | Comprehensive service health (backends + frontend) |
+| **Scheduled Ping** | Every 10 min | Keep application active on free-tier platforms |
+| **Database Keepalive** | Every 2 min | Prevent PostgreSQL from sleeping (Railway/Render) |
+
+**Health Monitoring (every 5 minutes):**
+- Comprehensive health check across all services
+- Monitors response times and database status
+- Generates status reports in GitHub Actions
+- See: `.github/workflows/health-monitoring.yml`
+
 **Scheduled Ping (every 10 minutes):**
 - Keeps application active on free-tier platforms
 - Prevents cold starts
