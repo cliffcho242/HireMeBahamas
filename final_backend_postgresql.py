@@ -7201,15 +7201,15 @@ def send_friend_request(user_id):
             cursor.execute("SELECT id, is_active FROM users WHERE id IN (%s, %s)", (sender_id, user_id))
         else:
             cursor.execute("SELECT id, is_active FROM users WHERE id IN (?, ?)", (sender_id, user_id))
-        users = cursor.fetchall()
-        if len(users) != 2:
+        found_users = cursor.fetchall()
+        if len(found_users) != 2:
             cursor.close()
             return_db_connection(conn)
             return jsonify({"success": False, "message": "User not found"}), 404
         
         # Check if both users are active
-        for u in users:
-            if not u["is_active"]:
+        for found_user in found_users:
+            if not found_user["is_active"]:
                 cursor.close()
                 return_db_connection(conn)
                 return jsonify({"success": False, "message": "User account is not active"}), 404
