@@ -14,6 +14,17 @@ interface ConnectionStatusProps {
 const COLD_START_DURATION_MS = 60000;
 
 /**
+ * Tips to show while the server is waking up
+ */
+const WAKE_UP_TIPS = [
+  "☕ Server is brewing... almost ready!",
+  "🌅 Waking up from sleep mode...",
+  "⚡ Initializing services...",
+  "🔄 Loading your experience...",
+  "🚀 Preparing for launch...",
+];
+
+/**
  * Internal banner component that handles its own dismissed state.
  * Using a separate component with key prop allows resetting state on health changes.
  */
@@ -21,14 +32,22 @@ interface BannerContentProps {
   isWaking: boolean;
   message: string;
   onDismiss: () => void;
+  onRetry?: () => void;
+  retryCount: number;
+  maxRetries: number;
 }
 
 const BannerContent: React.FC<BannerContentProps> = ({
   isWaking,
   message,
   onDismiss,
+  onRetry,
+  retryCount,
+  maxRetries,
 }) => {
   const [progress, setProgress] = useState(0);
+  const [tipIndex, setTipIndex] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Simulate progress during wake-up
   useEffect(() => {
@@ -45,10 +64,32 @@ const BannerContent: React.FC<BannerContentProps> = ({
       const rawProgress = Math.min(elapsed / COLD_START_DURATION_MS, 0.95);
       const easedProgress = 1 - Math.pow(1 - rawProgress, 3); // Ease out cubic
       setProgress(Math.round(easedProgress * 100));
+      setElapsedSeconds(Math.floor(elapsed / 1000));
     }, 200);
 
     return () => clearInterval(interval);
   }, [isWaking]);
+
+  // Rotate tips every 8 seconds
+  useEffect(() => {
+    if (!isWaking) {
+      return;
+    }
+
+    const tipInterval = setInterval(() => {
+      setTipIndex((prev) => (prev + 1) % WAKE_UP_TIPS.length);
+    }, 8000);
+
+    return () => clearInterval(tipInterval);
+  }, [isWaking]);
+
+  // Calculate estimated remaining time
+  const getEstimatedTime = () => {
+    if (elapsedSeconds < 10) return "Less than a minute";
+    if (elapsedSeconds < 30) return "About 30 seconds";
+    if (elapsedSeconds < 45) return "Almost there...";
+    return "Just a moment...";
+  };
 
   return (
     <motion.div
@@ -61,7 +102,7 @@ const BannerContent: React.FC<BannerContentProps> = ({
       <div
         className={`px-4 py-3 ${
           isWaking
-            ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+            ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
             : 'bg-gradient-to-r from-red-500 to-red-600'
         } text-white shadow-lg`}
       >
@@ -70,35 +111,22 @@ const BannerContent: React.FC<BannerContentProps> = ({
             <div className="flex items-center gap-3 flex-1">
               {isWaking ? (
                 <>
-                  {/* Animated spinner */}
-                  <div className="relative">
-                    <svg
-                      className="animate-spin h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
+                  {/* Animated pulse icon */}
+                  <div className="relative flex-shrink-0">
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="text-2xl"
                     >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
+                      🌐
+                    </motion.div>
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm sm:text-base">
-                      Connecting to server...
+                      {WAKE_UP_TIPS[tipIndex]}
                     </p>
-                    <p className="text-xs sm:text-sm opacity-90">
-                      {message || 'This may take up to a minute on first request.'}
+                    <p className="text-xs sm:text-sm opacity-90 truncate">
+                      {message || `${getEstimatedTime()} • Attempt ${retryCount}/${maxRetries}`}
                     </p>
                   </div>
                 </>
@@ -127,6 +155,15 @@ const BannerContent: React.FC<BannerContentProps> = ({
                       {message || 'Unable to connect to server. Please check your connection.'}
                     </p>
                   </div>
+                  {/* Retry button for error state */}
+                  {onRetry && (
+                    <button
+                      onClick={onRetry}
+                      className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-md transition-colors text-sm font-medium flex-shrink-0"
+                    >
+                      Retry
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -158,7 +195,15 @@ const BannerContent: React.FC<BannerContentProps> = ({
           {isWaking && (
             <div className="mt-2">
               <div className="flex items-center justify-between text-xs mb-1">
-                <span>Establishing connection...</span>
+                <span className="flex items-center gap-1">
+                  <motion.span
+                    animate={{ opacity: [1, 0.5, 1] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                  >
+                    ●
+                  </motion.span>
+                  Connecting...
+                </span>
                 <span>{progress}%</span>
               </div>
               <div className="h-1.5 bg-white/30 rounded-full overflow-hidden">
@@ -226,6 +271,9 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ show = true }) => {
         isWaking={health.isWaking}
         message={health.message}
         onDismiss={handleDismiss}
+        onRetry={health.retry}
+        retryCount={health.retryCount}
+        maxRetries={health.maxRetries}
       />
     </AnimatePresence>
   );
