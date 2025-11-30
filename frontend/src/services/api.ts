@@ -183,12 +183,23 @@ api.interceptors.response.use(
     
     // Handle auth errors
     if (error.response?.status === 401) {
-      // Only auto-logout for auth endpoints or profile endpoints
+      // Check if this is a USER_NOT_FOUND error (user account deleted or database reset)
+      const errorData = error.response?.data;
+      const isUserNotFound = errorData?.error_code === 'USER_NOT_FOUND' || 
+                             errorData?.action === 'logout';
+      
+      // Auto-logout for auth endpoints, profile endpoints, or when user is not found
       const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/profile');
       
-      if (isAuthEndpoint) {
-        console.log('Authentication failed - logging out');
+      if (isAuthEndpoint || isUserNotFound) {
+        console.log('Authentication failed - logging out', isUserNotFound ? '(user not found in database)' : '');
         localStorage.removeItem('token');
+        // Clear session storage as well
+        try {
+          sessionStorage.removeItem('hiremebahamas_session');
+        } catch {
+          // Ignore errors when clearing session (e.g., in private browsing)
+        }
         window.location.href = '/login';
       } else {
         // For other endpoints, just log the error but don't force logout
