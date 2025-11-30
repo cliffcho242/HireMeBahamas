@@ -20,7 +20,7 @@ import asyncio
 import time
 import logging
 from typing import Any, Callable, Coroutine, List, TypeVar, Optional
-from functools import wraps
+from functools import wraps, partial
 from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
@@ -141,8 +141,7 @@ async def run_in_thread(func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
     
     # Create a partial function with kwargs
     if kwargs:
-        import functools
-        func_with_kwargs = functools.partial(func, **kwargs)
+        func_with_kwargs = partial(func, **kwargs)
         return await loop.run_in_executor(executor, func_with_kwargs, *args)
     else:
         return await loop.run_in_executor(executor, func, *args)
@@ -213,12 +212,13 @@ class ConcurrentBatcher:
         self._operations[key] = coroutine
         return self
     
-    async def execute(self) -> dict[str, Any]:
+    async def execute(self) -> dict[str, Optional[Any]]:
         """
         Execute all batched operations concurrently.
         
         Returns:
-            Dictionary mapping keys to their results
+            Dictionary mapping keys to their results. Results may be None
+            if using timeout and an operation timed out.
         """
         if not self._operations:
             return {}
