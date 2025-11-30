@@ -625,13 +625,23 @@ export const hireMeAPI = {
 
 // Users API
 export const usersAPI = {
-  followUser: async (userId: number) => {
-    const response = await api.post(`/api/users/follow/${userId}`);
+  followUser: async (userId: number | string) => {
+    // Validate userId before making the request
+    const id = typeof userId === 'string' ? userId : String(userId);
+    if (!id || id === 'NaN' || id === 'undefined' || id === 'null') {
+      throw new Error('Invalid user ID');
+    }
+    const response = await api.post(`/api/users/follow/${id}`);
     return response.data;
   },
 
-  unfollowUser: async (userId: number) => {
-    const response = await api.post(`/api/users/unfollow/${userId}`);
+  unfollowUser: async (userId: number | string) => {
+    // Validate userId before making the request
+    const id = typeof userId === 'string' ? userId : String(userId);
+    if (!id || id === 'NaN' || id === 'undefined' || id === 'null') {
+      throw new Error('Invalid user ID');
+    }
+    const response = await api.post(`/api/users/unfollow/${id}`);
     return response.data;
   },
 
@@ -645,13 +655,31 @@ export const usersAPI = {
     return response.data;
   },
 
-  getUserFollowers: async (userId: number): Promise<FollowersResponse> => {
-    const response = await api.get(`/api/users/${userId}/followers`);
+  getUserFollowers: async (userId: number | string): Promise<FollowersResponse> => {
+    // Validate userId before making the request
+    const id = typeof userId === 'string' ? userId : String(userId);
+    if (!id || id === 'NaN' || id === 'undefined' || id === 'null') {
+      throw new Error('Invalid user ID');
+    }
+    const response = await api.get(`/api/users/${id}/followers`);
     return response.data;
   },
 
-  getUserFollowing: async (userId: number): Promise<FollowingResponse> => {
-    const response = await api.get(`/api/users/${userId}/following`);
+  getUserFollowing: async (userId: number | string): Promise<FollowingResponse> => {
+    // Validate userId before making the request
+    const id = typeof userId === 'string' ? userId : String(userId);
+    if (!id || id === 'NaN' || id === 'undefined' || id === 'null') {
+      throw new Error('Invalid user ID');
+    }
+    const response = await api.get(`/api/users/${id}/following`);
+    return response.data;
+  },
+
+  /**
+   * Get list of users with optional search
+   */
+  getUsers: async (params?: { search?: string; skip?: number; limit?: number }) => {
+    const response = await api.get('/api/users/list', { params });
     return response.data;
   },
 };
