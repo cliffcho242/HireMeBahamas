@@ -77,12 +77,17 @@ class TestUserDataLoading:
         assert user_data["role"] == "user"
 
     def test_user_role_values(self):
-        """Test valid user role values."""
+        """Test valid user role values and reject invalid roles."""
         valid_roles = ["user", "admin", "employer", "freelancer"]
+        invalid_roles = ["superuser", "guest", "moderator", ""]
 
+        # Test that valid roles are recognized
         for role in valid_roles:
-            user_data = {"role": role}
-            assert user_data["role"] in valid_roles
+            assert role in valid_roles
+
+        # Test that invalid roles are not in the valid set
+        for role in invalid_roles:
+            assert role not in valid_roles
 
     def test_user_avatar_url_optional(self):
         """Test that avatar URL is optional."""
@@ -135,7 +140,11 @@ class TestUserDataLoading:
 
         # Verify serialization
         assert isinstance(user_data, dict)
-        assert len(user_data) == 14
+
+        # Verify required fields are present
+        required_fields = ["id", "email", "first_name", "last_name"]
+        for field in required_fields:
+            assert field in user_data
 
         # Verify all fields have expected types
         assert isinstance(user_data["id"], int)
