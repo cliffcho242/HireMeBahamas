@@ -6,6 +6,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { useMemo, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
+import { MessageNotificationProvider } from './contexts/MessageNotificationContext';
 import { AIMonitoringProvider } from './contexts/AIMonitoringContext';
 
 // Core pages - eagerly loaded for fast initial render
@@ -84,8 +85,10 @@ function App() {
             <Router>
               <AuthProvider>
                 <SocketProvider>
-                  <AppContent />
-                  <SpeedInsightsWrapper />
+                  <MessageNotificationProvider>
+                    <AppContent />
+                    <SpeedInsightsWrapper />
+                  </MessageNotificationProvider>
                 </SocketProvider>
               </AuthProvider>
             </Router>

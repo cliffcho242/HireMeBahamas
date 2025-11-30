@@ -1,11 +1,12 @@
 // Service Worker for HireMeBahamas PWA
-const CACHE_NAME = 'hiremebahamas-v1';
+const CACHE_NAME = 'hiremebahamas-v2';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/pwa-192x192.png',
+  '/pwa-512x512.png',
+  '/sounds/notification.mp3'
 ];
 
 // Install event - cache resources
@@ -14,7 +15,16 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Opened cache');
-        return cache.addAll(urlsToCache);
+        // Use addAll with catch to handle missing files gracefully
+        return cache.addAll(urlsToCache).catch((error) => {
+          console.warn('Some cache files may not have been cached:', error);
+          // Still proceed with what we can cache
+          return Promise.allSettled(
+            urlsToCache.map(url => 
+              cache.add(url).catch(e => console.warn(`Failed to cache ${url}:`, e))
+            )
+          );
+        });
       })
       .catch((error) => {
         console.error('Cache install failed:', error);
@@ -81,55 +91,143 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Push notification event
+// Push notification event - handles incoming push messages
 self.addEventListener('push', (event) => {
-  const options = {
-    body: event.data ? event.data.text() : 'New notification from HireMeBahamas',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
-    vibrate: [200, 100, 200],
+  let notificationData = {
+    title: 'HireMeBahamas',
+    body: 'You have a new notification',
+    icon: '/pwa-192x192.png',
+    badge: '/pwa-192x192.png',
+    tag: 'default',
     data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 1
-    },
+      url: '/'
+    }
+  };
+
+  // Try to parse push data
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      notificationData = {
+        title: data.title || 'HireMeBahamas',
+        body: data.body || data.message || 'You have a new notification',
+        icon: data.icon || '/pwa-192x192.png',
+        badge: data.badge || '/pwa-192x192.png',
+        tag: data.tag || 'message-' + Date.now(),
+        data: {
+          url: data.url || data.click_action || '/messages',
+          messageId: data.messageId,
+          conversationId: data.conversationId,
+          senderId: data.senderId
+        }
+      };
+    } catch {
+      // Use text data if JSON parsing fails
+      notificationData.body = event.data.text() || 'You have a new notification';
+    }
+  }
+
+  const options = {
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
+    tag: notificationData.tag,
+    vibrate: [200, 100, 200],
+    renotify: true,
+    requireInteraction: false,
+    data: notificationData.data,
     actions: [
       {
-        action: 'explore',
-        title: 'View',
-        icon: '/icons/icon-96x96.png'
+        action: 'view',
+        title: 'View Message'
       },
       {
-        action: 'close',
-        title: 'Close',
-        icon: '/icons/icon-96x96.png'
+        action: 'dismiss',
+        title: 'Dismiss'
       }
     ]
   };
 
   event.waitUntil(
-    self.registration.showNotification('HireMeBahamas', options)
+    self.registration.showNotification(notificationData.title, options)
   );
 });
 
-// Notification click event
+// Notification click event - handles user clicking on notification
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  if (event.action === 'explore') {
-    event.waitUntil(
-      clients.openWindow('/')
-    );
+  // Handle action buttons
+  if (event.action === 'dismiss') {
+    return;
   }
+
+  // Get the URL to open (from notification data or default to messages)
+  const urlToOpen = event.notification.data?.url || '/messages';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windowClients) => {
+        // Check if there is already a window/tab open with the target URL
+        for (let i = 0; i < windowClients.length; i++) {
+          const client = windowClients[i];
+          // If so, focus it
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            client.focus();
+            // Navigate to the messages page
+            if (client.navigate) {
+              return client.navigate(urlToOpen);
+            }
+            return client;
+          }
+        }
+        // If not, open a new window/tab
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});
+
+// Handle notification close event
+self.addEventListener('notificationclose', (event) => {
+  console.log('Notification closed:', event.notification.tag);
 });
 
 // Background sync event
 self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-data') {
+  if (event.tag === 'sync-messages') {
+    event.waitUntil(syncMessages());
+  } else if (event.tag === 'sync-data') {
     event.waitUntil(syncData());
   }
 });
+
+// Sync messages in background
+async function syncMessages() {
+  console.log('Background sync: syncing messages');
+  // This would be implemented to sync pending messages
+  // when network connectivity is restored
+}
 
 async function syncData() {
   // Implement your sync logic here
   console.log('Background sync triggered');
 }
+
+// Handle message from main thread (for custom notifications)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, options } = event.data;
+    self.registration.showNotification(title, {
+      ...options,
+      icon: options.icon || '/pwa-192x192.png',
+      badge: options.badge || '/pwa-192x192.png',
+    });
+  }
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
