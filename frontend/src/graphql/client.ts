@@ -24,13 +24,13 @@ import { onError } from '@apollo/client/link/error';
 import { get, set, del } from 'idb-keyval';
 
 // API URL configuration
-// Updated to Vercel API - Render is deprecated
+// NOTE: Update DEFAULT_PROD_API to your backend URL (Railway, Vercel Serverless, etc.)
 const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
-const DEFAULT_PROD_API = 'https://hiremebahamas.vercel.app';
+const DEFAULT_PROD_API = ENV_API || 'https://hiremebahamas-backend.up.railway.app';
 
 let API_BASE_URL = ENV_API || 'http://127.0.0.1:9999';
 
-// If no env is set and we're on the hiremebahamas.com or vercel domain, use the Vercel backend
+// If no env is set and we're on the hiremebahamas.com or vercel domain, use the production backend
 // Use strict hostname matching to prevent URL manipulation attacks
 if (!ENV_API && typeof window !== 'undefined') {
   const hostname = window.location.hostname;
