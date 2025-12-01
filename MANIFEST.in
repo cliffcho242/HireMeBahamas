@@ -1,0 +1,31 @@
+# Include package metadata and documentation
+include README.md
+include LICENSE
+include requirements.txt
+include pyproject.toml
+
+# Include all Python files in the package
+recursive-include backend *.py
+recursive-include tests *.py
+recursive-include examples *.py
+
+# Include configuration files
+include *.toml
+include *.yaml
+include *.yml
+
+# Exclude build artifacts and cache
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *$py.class
+global-exclude .DS_Store
+
+# Exclude development and deployment files
+# Note: These directories exist in the repository but should not be included
+# in the Python backend package distribution
+prune .git
+prune .github
+prune node_modules
+prune frontend
+prune dist
+prune build
