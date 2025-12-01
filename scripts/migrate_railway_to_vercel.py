@@ -4,6 +4,7 @@ ZERO-DOWNTIME MIGRATION SCRIPT
 Railway Postgres → Vercel Postgres (Neon)
 
 Usage: python migrate_railway_to_vercel.py
+       python migrate_railway_to_vercel.py --set-readonly
 
 Requirements:
 - RAILWAY_DATABASE_URL environment variable set
@@ -12,9 +13,11 @@ Requirements:
 """
 
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
+from urllib.parse import urlparse
 
 
 class Colors:
@@ -46,6 +49,19 @@ def print_warning(msg: str) -> None:
 def print_error(msg: str) -> None:
     """Print an error message"""
     print(f"{Colors.RED}✗ {msg}{Colors.NC}")
+
+
+def get_db_name_from_url(url: str) -> str:
+    """Extract database name from PostgreSQL URL"""
+    try:
+        parsed = urlparse(url)
+        db_name = parsed.path.lstrip('/')
+        # Remove any query parameters
+        if '?' in db_name:
+            db_name = db_name.split('?')[0]
+        return db_name
+    except Exception:
+        return ''
 
 
 def run_command(cmd: list, check: bool = True, capture_output: bool = False) -> subprocess.CompletedProcess:
@@ -248,7 +264,8 @@ def print_next_steps() -> None:
    - Create a post
    - Send a message
 
-5. Keep Railway running for 7 days as backup
+5. Set Railway to read-only (optional, for 7-day backup):
+   python scripts/migrate_railway_to_vercel.py --set-readonly
 
 6. After 7 days, delete Railway Postgres service
 """)
@@ -258,8 +275,58 @@ def print_next_steps() -> None:
     print()
 
 
+def set_railway_readonly(railway_url: str) -> None:
+    """Set Railway database to read-only mode"""
+    print_header("SETTING RAILWAY TO READ-ONLY (7-DAY BACKUP)")
+
+    print("Setting Railway database to read-only mode...")
+
+    db_name = get_db_name_from_url(railway_url)
+    if not db_name:
+        print_warning("Could not extract database name from URL")
+        return
+
+    query = f'ALTER DATABASE "{db_name}" SET default_transaction_read_only = on;'
+    try:
+        subprocess.run(
+            ['psql', railway_url, '-c', query],
+            check=True,
+            capture_output=True
+        )
+        print_success("Railway database is now read-only")
+    except subprocess.CalledProcessError:
+        print_warning("Could not set read-only (may require superuser)")
+
+    print()
+
+
+def show_usage() -> None:
+    """Show usage information"""
+    print("Usage: python migrate_railway_to_vercel.py [OPTIONS]")
+    print()
+    print("Options:")
+    print("  --help          Show this help message")
+    print("  --set-readonly  Set Railway database to read-only mode")
+    print()
+    print("Environment Variables Required:")
+    print("  RAILWAY_DATABASE_URL   Source database URL")
+    print("  VERCEL_POSTGRES_URL    Target database URL")
+    print()
+
+
 def main() -> None:
     """Main migration function"""
+    # Handle command line arguments
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        if arg == '--help':
+            show_usage()
+            sys.exit(0)
+        elif arg == '--set-readonly':
+            railway_url, _ = check_prerequisites()
+            set_railway_readonly(railway_url)
+            sys.exit(0)
+
     print_header("ZERO-DOWNTIME MIGRATION")
     print("Railway Postgres → Vercel Postgres (Neon)")
     print()

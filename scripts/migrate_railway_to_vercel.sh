@@ -24,6 +24,13 @@ NC='\033[0m' # No Color
 BACKUP_FILE="railway_backup_$(date +%Y%m%d_%H%M%S).dump"
 JOBS=8
 
+# Extract database name from URL
+get_db_name_from_url() {
+    local url="$1"
+    # Extract database name from postgresql://user:pass@host:port/dbname
+    echo "$url" | sed -E 's|.*://[^/]+/([^?]+).*|\1|'
+}
+
 print_header() {
     echo -e "${BLUE}============================================${NC}"
     echo -e "${BLUE}$1${NC}"
@@ -216,10 +223,19 @@ set_railway_readonly() {
 
     echo "Setting Railway database to read-only mode..."
 
+    # Extract database name from URL
+    local db_name
+    db_name=$(get_db_name_from_url "$RAILWAY_DATABASE_URL")
+    
+    if [ -z "$db_name" ]; then
+        print_warning "Could not extract database name from URL"
+        return
+    fi
+
     # Note: This requires superuser privileges which may not be available
     # In that case, rely on switching DATABASE_URL as the cutover mechanism
     psql "$RAILWAY_DATABASE_URL" -c "
-        ALTER DATABASE railway SET default_transaction_read_only = on;
+        ALTER DATABASE \"$db_name\" SET default_transaction_read_only = on;
     " 2>/dev/null || print_warning "Could not set read-only (may require superuser)"
 
     print_success "Railway database is now read-only"
@@ -243,7 +259,8 @@ print_next_steps() {
     echo "   - Create a post"
     echo "   - Send a message"
     echo ""
-    echo "5. Keep Railway running for 7 days as backup"
+    echo "5. Set Railway to read-only (optional, for 7-day backup):"
+    echo "   ./scripts/migrate_railway_to_vercel.sh --set-readonly"
     echo ""
     echo "6. After 7 days, delete Railway Postgres service"
     echo ""
@@ -253,8 +270,35 @@ print_next_steps() {
     echo ""
 }
 
+# Show usage
+show_usage() {
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --help          Show this help message"
+    echo "  --set-readonly  Set Railway database to read-only mode"
+    echo ""
+    echo "Environment Variables Required:"
+    echo "  RAILWAY_DATABASE_URL   Source database URL"
+    echo "  VERCEL_POSTGRES_URL    Target database URL"
+    echo ""
+}
+
 # Main execution
 main() {
+    # Handle command line arguments
+    case "${1:-}" in
+        --help)
+            show_usage
+            exit 0
+            ;;
+        --set-readonly)
+            check_prerequisites
+            set_railway_readonly
+            exit 0
+            ;;
+    esac
+
     print_header "ZERO-DOWNTIME MIGRATION"
     echo "Railway Postgres → Vercel Postgres (Neon)"
     echo ""

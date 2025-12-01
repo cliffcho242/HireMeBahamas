@@ -43,18 +43,21 @@ UNION ALL SELECT 'notifications', COUNT(*) FROM notifications;
 
 ### COMMAND 5: Set Railway to Read-Only (7-day backup)
 ```bash
-psql "$RAILWAY_DATABASE_URL" -c "
-ALTER DATABASE railway SET default_transaction_read_only = on;
-"
+# Extract database name from your RAILWAY_DATABASE_URL
+# Example: postgresql://user:pass@host:5432/railway → database name is "railway"
+DB_NAME=$(echo "$RAILWAY_DATABASE_URL" | sed -E 's|.*://[^/]+/([^?]+).*|\1|')
+psql "$RAILWAY_DATABASE_URL" -c "ALTER DATABASE \"$DB_NAME\" SET default_transaction_read_only = on;"
+
+# Or use the automated script:
+./scripts/migrate_railway_to_vercel.sh --set-readonly
 ```
 
 ### COMMAND 6: Rollback (if needed)
 ```bash
 # Revert DATABASE_URL in Vercel Dashboard to Railway URL
 # Then remove read-only from Railway:
-psql "$RAILWAY_DATABASE_URL" -c "
-ALTER DATABASE railway SET default_transaction_read_only = off;
-"
+DB_NAME=$(echo "$RAILWAY_DATABASE_URL" | sed -E 's|.*://[^/]+/([^?]+).*|\1|')
+psql "$RAILWAY_DATABASE_URL" -c "ALTER DATABASE \"$DB_NAME\" SET default_transaction_read_only = off;"
 ```
 
 ### COMMAND 7: Cleanup (after 7 days)
