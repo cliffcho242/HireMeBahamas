@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -13,6 +13,13 @@ interface AnimatedButtonProps {
   size?: 'sm' | 'md' | 'lg';
   haptic?: boolean;
 }
+
+// Heart burst particle positions (pre-calculated for 6 particles at 60-degree intervals)
+const HEART_BURST_PARTICLES = [0, 1, 2, 3, 4, 5].map((i) => ({
+  key: i,
+  x: Math.cos((i * 60 * Math.PI) / 180) * 30,
+  y: Math.sin((i * 60 * Math.PI) / 180) * 30,
+}));
 
 /**
  * Animated button with micro-interactions
@@ -81,7 +88,7 @@ export function AnimatedButton({
     lg: 'px-6 py-3 text-lg',
   };
 
-  const variantClasses = {
+  const variantClasses = useMemo(() => ({
     like: clsx(
       'relative overflow-hidden rounded-full transition-all duration-300',
       isActive
@@ -103,16 +110,16 @@ export function AnimatedButton({
       'border border-gray-200 dark:border-gray-700 transition-all duration-300',
       'hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600'
     ),
-  };
+  }), [isActive]);
 
-  // Heart burst particles for like button
-  const HeartBurst = () => (
+  // Render heart burst particles inline
+  const renderHeartBurst = () => (
     <AnimatePresence>
       {isAnimating && variant === 'like' && (
         <>
-          {[...Array(6)].map((_, i) => (
+          {HEART_BURST_PARTICLES.map((particle) => (
             <motion.span
-              key={i}
+              key={particle.key}
               className="absolute text-red-500 text-xs pointer-events-none"
               initial={{
                 opacity: 1,
@@ -123,8 +130,8 @@ export function AnimatedButton({
               animate={{
                 opacity: 0,
                 scale: 1,
-                x: Math.cos((i * 60 * Math.PI) / 180) * 30,
-                y: Math.sin((i * 60 * Math.PI) / 180) * 30,
+                x: particle.x,
+                y: particle.y,
               }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
@@ -138,8 +145,8 @@ export function AnimatedButton({
     </AnimatePresence>
   );
 
-  // Ripple effect
-  const Ripple = () => (
+  // Render ripple effect inline
+  const renderRipple = () => (
     <AnimatePresence>
       {showRipple && (
         <motion.span
@@ -157,8 +164,8 @@ export function AnimatedButton({
     </AnimatePresence>
   );
 
-  // Flying checkmark for send button
-  const FlyingCheckmark = () => (
+  // Render flying checkmark inline
+  const renderFlyingCheckmark = () => (
     <AnimatePresence>
       {showCheckmark && (
         <motion.span
@@ -198,9 +205,9 @@ export function AnimatedButton({
           : undefined
       }
     >
-      <Ripple />
-      <HeartBurst />
-      <FlyingCheckmark />
+      {renderRipple()}
+      {renderHeartBurst()}
+      {renderFlyingCheckmark()}
       <span className="relative z-10 flex items-center gap-2">{children}</span>
     </motion.button>
   );

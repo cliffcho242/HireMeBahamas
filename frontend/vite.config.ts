@@ -21,7 +21,13 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'sounds/notification.mp3'],
+      // Inject register for prompt-based updates
+      injectRegister: 'auto',
+      // Enable development mode for testing
+      devOptions: {
+        enabled: false, // Set to true for PWA testing in dev
+      },
       manifest: {
         name: 'HireMeBahamas - Caribbean Job Platform',
         short_name: 'HireMeBahamas',
@@ -32,6 +38,32 @@ export default defineConfig({
         orientation: 'any',
         scope: '/',
         start_url: '/',
+        // iOS specific
+        categories: ['business', 'social', 'productivity'],
+        // Shortcuts for quick access (addictive feature!)
+        shortcuts: [
+          {
+            name: 'Messages',
+            short_name: 'Messages',
+            description: 'Check your messages',
+            url: '/messages',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Jobs',
+            short_name: 'Jobs',
+            description: 'Browse job listings',
+            url: '/jobs',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Post',
+            short_name: 'Post',
+            description: 'Create a new post',
+            url: '/create-post',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }],
+          },
+        ],
         icons: [
           {
             src: '/pwa-192x192.png',
@@ -45,11 +77,25 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'any',
           },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
       workbox: {
         // Increase the maximum file size to be precached (default is 2MB)
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB
+        // Skip waiting for immediate activation
+        skipWaiting: true,
+        clientsClaim: true,
+        // Precache navigation routes for instant loading
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api/],
+        // Clean old caches
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -85,6 +131,18 @@ export default defineConfig({
             },
           },
           {
+            // Cache audio files for notification sounds
+            urlPattern: /\.(?:mp3|wav|ogg)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'audio-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+            },
+          },
+          {
             // Cache JS/CSS chunks for offline access
             urlPattern: /\.(?:js|css)$/i,
             handler: 'StaleWhileRevalidate',
@@ -97,6 +155,7 @@ export default defineConfig({
             },
           },
           {
+            // API with network-first for fresh data
             urlPattern: /\/api\/.*/,
             handler: 'NetworkFirst',
             options: {
@@ -105,6 +164,40 @@ export default defineConfig({
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 60, // 1 hour
+              },
+              // Enable background sync for failed requests
+              backgroundSync: {
+                name: 'api-queue',
+                options: {
+                  // maxRetentionTime is specified in minutes for workbox
+                  maxRetentionTime: 24 * 60, // 24 hours = 1440 minutes
+                },
+              },
+            },
+          },
+          {
+            // Posts API with shorter cache for freshness
+            urlPattern: /\/api\/posts.*/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'posts-cache',
+              networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 5, // 5 minutes
+              },
+            },
+          },
+          {
+            // Messages API - always fresh
+            urlPattern: /\/api\/messages.*/,
+            handler: 'NetworkOnly',
+            options: {
+              backgroundSync: {
+                name: 'messages-queue',
+                options: {
+                  maxRetentionTime: 60, // 1 hour in minutes
+                },
               },
             },
           },
