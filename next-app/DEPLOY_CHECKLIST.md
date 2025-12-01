@@ -28,8 +28,13 @@ npx vercel link
 # 2. Connect to your project
 # 3. Copy connection strings
 
-# Run migrations:
+# Deploy database schema:
 npm run db:push
+
+# OR use the deployment script:
+./deploy-schema.sh
+
+# For detailed instructions, see DATABASE_SCHEMA_DEPLOYMENT.md
 ```
 
 ### Step 3: Setup Vercel KV (Redis)
@@ -60,11 +65,23 @@ VAPID_EMAIL=admin@hiremebahamas.com
 npx vercel --prod
 ```
 
-### Step 6: Migrate Database (First Deploy Only)
+### Step 6: Deploy Database Schema (First Deploy Only)
 ```bash
-# After first deploy, run migrations:
+# Method 1: Manual deployment (recommended)
 npx vercel env pull .env.local
+source .env.local  # Load environment variables
 npm run db:push
+
+# Method 2: Using deployment script
+npx vercel env pull .env.local
+source .env.local
+./deploy-schema.sh
+
+# Method 3: GitHub Actions (automated)
+# Trigger the "Deploy Database Schema" workflow manually from:
+# Actions → Deploy Database Schema → Run workflow
+
+# For detailed instructions, see DATABASE_SCHEMA_DEPLOYMENT.md
 ```
 
 ### Step 7: Configure Custom Domain

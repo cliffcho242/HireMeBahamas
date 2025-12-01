@@ -48,6 +48,9 @@ jobs:
 
       - name: Install dependencies
         working-directory: next-app
+        # Note: --legacy-peer-deps is required due to React 19 peer dependency
+        # conflict with lucide-react. This is a known issue and will be resolved
+        # when lucide-react updates to support React 19.
         run: npm ci --legacy-peer-deps
 
       - name: Verify schema file exists
@@ -65,7 +68,7 @@ jobs:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: |
           echo "📝 Generating migration preview..."
-          npm run db:generate || true
+          npm run db:generate
           
           if [ -d "drizzle" ]; then
             echo ""

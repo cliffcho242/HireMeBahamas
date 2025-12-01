@@ -1,6 +1,9 @@
 #!/bin/bash
 # Deploy Database Schema using Drizzle Kit
 # This script generates and pushes the database schema to PostgreSQL
+#
+# Usage: ./deploy-schema.sh
+# Note: Ensure this script is executable: chmod +x deploy-schema.sh
 
 set -e  # Exit on error
 
