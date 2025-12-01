@@ -3,7 +3,7 @@
   "name": "hiremebahamas-backend",
   "builds": [
     {
-      "src": "api/index.py",
+      "src": "final_backend.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb"
