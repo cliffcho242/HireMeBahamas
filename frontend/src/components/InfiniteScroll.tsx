@@ -48,12 +48,15 @@ export function SkeletonShimmer({
     full: 'rounded-full',
   };
 
+  // Normalize width to a valid CSS value
+  const normalizedWidth = typeof width === 'number' ? `${width}px` : width;
+
   return (
     <div
       className={`animate-shimmer bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 
         dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 
         bg-[length:200%_100%] ${roundedClasses[rounded]} ${className}`}
-      style={{ width, height }}
+      style={{ width: normalizedWidth, height }}
     />
   );
 }

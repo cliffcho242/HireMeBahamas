@@ -78,38 +78,91 @@ interface RealtimeState {
   onlineUsers: Set<string>;
 }
 
-// Singleton audio player for smooth playback
-let notificationAudio: HTMLAudioElement | null = null;
-let messageAudio: HTMLAudioElement | null = null;
+/**
+ * Audio service for managing notification sounds
+ * Uses a singleton pattern to prevent memory leaks and ensure consistent playback
+ */
+class AudioService {
+  private static instance: AudioService;
+  private notificationAudio: HTMLAudioElement | null = null;
+  private messageAudio: HTMLAudioElement | null = null;
+  private initialized = false;
+
+  private constructor() {
+    // Private constructor for singleton
+  }
+
+  static getInstance(): AudioService {
+    if (!AudioService.instance) {
+      AudioService.instance = new AudioService();
+    }
+    return AudioService.instance;
+  }
+
+  private initializeAudio(): void {
+    if (this.initialized || typeof window === 'undefined') return;
+    
+    try {
+      this.notificationAudio = new Audio(NOTIFICATION_SOUND);
+      this.notificationAudio.volume = 0.5;
+      this.messageAudio = new Audio(MESSAGE_SOUND);
+      this.messageAudio.volume = 0.6;
+      this.initialized = true;
+    } catch {
+      // Audio not supported
+    }
+  }
+
+  playNotificationSound(): void {
+    this.initializeAudio();
+    try {
+      if (this.notificationAudio) {
+        this.notificationAudio.currentTime = 0;
+        this.notificationAudio.play().catch(() => {
+          // User hasn't interacted yet, ignore
+        });
+      }
+    } catch {
+      // Audio playback failed
+    }
+  }
+
+  playMessageSound(): void {
+    this.initializeAudio();
+    try {
+      if (this.messageAudio) {
+        this.messageAudio.currentTime = 0;
+        this.messageAudio.play().catch(() => {
+          // User hasn't interacted yet, ignore
+        });
+      }
+    } catch {
+      // Audio playback failed
+    }
+  }
+
+  cleanup(): void {
+    if (this.notificationAudio) {
+      this.notificationAudio.pause();
+      this.notificationAudio = null;
+    }
+    if (this.messageAudio) {
+      this.messageAudio.pause();
+      this.messageAudio = null;
+    }
+    this.initialized = false;
+  }
+}
+
+// Singleton audio service instance
+const audioService = AudioService.getInstance();
 
 const playNotificationSound = () => {
-  try {
-    if (!notificationAudio) {
-      notificationAudio = new Audio(NOTIFICATION_SOUND);
-      notificationAudio.volume = 0.5;
-    }
-    notificationAudio.currentTime = 0;
-    notificationAudio.play().catch(() => {
-      // User hasn't interacted yet, ignore
-    });
-  } catch {
-    // Audio not supported
-  }
+  audioService.playNotificationSound();
 };
 
 const playMessageSound = () => {
-  try {
-    if (!messageAudio) {
-      messageAudio = new Audio(MESSAGE_SOUND);
-      messageAudio.volume = 0.6;
-    }
-    messageAudio.currentTime = 0;
-    messageAudio.play().catch(() => {
-      // User hasn't interacted yet, ignore
-    });
-  } catch {
-    // Audio not supported
-  }
+  audioService.playMessageSound();
 };
 
 // Show browser notification with badge
@@ -158,40 +211,61 @@ const updateTitleBadge = (count: number) => {
   }
 };
 
-// Favicon badge helper
+// Cache for favicon badge to avoid repeated image loading
+let cachedFaviconImage: HTMLImageElement | null = null;
+let cachedCanvas: HTMLCanvasElement | null = null;
+
+// Favicon badge helper with caching
 const updateFaviconBadge = (count: number) => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 32;
-  canvas.height = 32;
-  const ctx = canvas.getContext('2d');
+  // Reuse cached canvas or create new one
+  if (!cachedCanvas) {
+    cachedCanvas = document.createElement('canvas');
+    cachedCanvas.width = 32;
+    cachedCanvas.height = 32;
+  }
+  
+  const ctx = cachedCanvas.getContext('2d');
   if (!ctx) return;
 
-  const img = new Image();
-  img.src = '/favicon-32x32.png';
-  img.onload = () => {
-    ctx.drawImage(img, 0, 0);
+  const drawBadge = () => {
+    if (!cachedFaviconImage || !ctx) return;
     
-    // Draw badge
+    // Clear and redraw
+    ctx.clearRect(0, 0, 32, 32);
+    ctx.drawImage(cachedFaviconImage, 0, 0, 32, 32);
+    
+    // Draw badge circle
     ctx.fillStyle = '#ef4444';
     ctx.beginPath();
     ctx.arc(24, 8, 8, 0, 2 * Math.PI);
     ctx.fill();
     
-    // Draw count
+    // Draw count text
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 10px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(count > 99 ? '99+' : String(count), 24, 8);
     
-    // Update favicon
+    // Update favicon link
     const link = document.querySelector<HTMLLinkElement>("link[rel*='icon']") 
       || document.createElement('link');
     link.type = 'image/x-icon';
     link.rel = 'shortcut icon';
-    link.href = canvas.toDataURL();
-    document.head.appendChild(link);
+    link.href = cachedCanvas!.toDataURL();
+    if (!link.parentNode) {
+      document.head.appendChild(link);
+    }
   };
+
+  // Load and cache favicon image if not already cached
+  if (!cachedFaviconImage) {
+    cachedFaviconImage = new Image();
+    cachedFaviconImage.onload = drawBadge;
+    cachedFaviconImage.src = '/favicon-32x32.png';
+  } else {
+    drawBadge();
+  }
 };
 
 const resetFavicon = () => {
@@ -199,6 +273,45 @@ const resetFavicon = () => {
   if (link) {
     link.href = '/favicon.ico';
   }
+};
+
+/**
+ * Sanitize message content for safe display in notifications
+ * Uses a whitelist approach - only allows safe alphanumeric and basic punctuation
+ * This is the safest approach for untrusted content
+ */
+const sanitizeMessageContent = (content: string, maxLength = 100): string => {
+  if (!content || typeof content !== 'string') return '';
+  
+  // Use a whitelist approach: only allow safe characters
+  // This includes letters, numbers, spaces, and basic punctuation
+  // This is safer than trying to blacklist dangerous patterns
+  const allowedChars = /[^a-zA-Z0-9\s.,!?@#$%^&*()\-_+=[\]{}|\\:;~]/g;
+  
+  let sanitized = content
+    // First, normalize whitespace
+    .replace(/\s+/g, ' ')
+    // Remove any characters not in the whitelist
+    .replace(allowedChars, '')
+    // Remove any remaining angle brackets (double check)
+    .replace(/[<>]/g, '')
+    // Trim whitespace
+    .trim();
+  
+  // Double-check: encode any remaining special HTML entities
+  // This is a fallback in case something slipped through
+  sanitized = sanitized
+    .replace(/&/g, '')
+    .replace(/"/g, '')
+    .replace(/'/g, '')
+    .replace(/`/g, '');
+  
+  // Truncate to max length
+  if (sanitized.length > maxLength) {
+    return sanitized.substring(0, maxLength) + '...';
+  }
+  
+  return sanitized || '';
 };
 
 /**
@@ -271,9 +384,13 @@ export function useRealtime(userId?: string | number) {
       
       // Show browser notification if tab not focused
       if (document.hidden) {
+        // Sanitize message content for safe display
+        const sanitizedContent = sanitizeMessageContent(message.content);
+        const sanitizedSenderName = sanitizeMessageContent(message.sender.fullName, 50);
+        
         showBrowserNotification(
-          `New message from ${message.sender.fullName}`,
-          message.content.substring(0, 100),
+          `New message from ${sanitizedSenderName}`,
+          sanitizedContent,
           { url: `/messages?conversation=${message.conversationId}` }
         );
       }
@@ -298,9 +415,11 @@ export function useRealtime(userId?: string | number) {
         };
       });
       
-      // Show browser notification
+      // Show browser notification with sanitized content
       if (document.hidden) {
-        showBrowserNotification(notification.title, notification.body, notification.data);
+        const sanitizedTitle = sanitizeMessageContent(notification.title, 50);
+        const sanitizedBody = sanitizeMessageContent(notification.body, 150);
+        showBrowserNotification(sanitizedTitle, sanitizedBody, notification.data);
       }
     });
 

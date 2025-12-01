@@ -169,7 +169,8 @@ export default defineConfig({
               backgroundSync: {
                 name: 'api-queue',
                 options: {
-                  maxRetentionTime: 24 * 60, // 24 hours in minutes
+                  // maxRetentionTime is specified in minutes for workbox
+                  maxRetentionTime: 24 * 60, // 24 hours = 1440 minutes
                 },
               },
             },
