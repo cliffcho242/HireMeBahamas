@@ -1,18 +1,27 @@
 """
 =============================================================================
-UNBREAKABLE KEEP-ALIVE WORKER FOR RENDER BACKGROUND SERVICE (2025 EDITION)
+DEPRECATED: KEEP-ALIVE WORKER (No longer needed after Vercel migration)
 =============================================================================
-This worker pings the web service every 45 seconds to prevent cold starts.
+This file was used for Render Background Service to prevent cold starts.
 
-Deploy as Render Background Worker:
+After migrating to Vercel + Railway:
+- Vercel Edge: No cold starts (edge functions are always warm)
+- Railway: Use Railway's built-in health checks or Vercel Cron Jobs
+
+For legacy reference only. See RENDER_TO_VERCEL_MIGRATION.md for details.
+
+OLD DEPLOYMENT (Render - DEPRECATED):
   - Name: keep-alive
   - Runtime: Python 3
   - Build Command: pip install requests
   - Start Command: python keep_alive.py
   - Environment: RENDER_EXTERNAL_URL=https://hiremebahamas.onrender.com
 
-Cost: $0 on Render Free tier for Background Workers
-Effect: Eliminates 502 Bad Gateway and 2+ minute cold starts
+NEW ALTERNATIVES:
+  1. Railway Cron Jobs (built-in)
+  2. Vercel Cron Jobs (free, in vercel.json)
+  3. UptimeRobot (free monitoring + pings)
+  4. Cron-job.org (free scheduled pings)
 =============================================================================
 """
 import os

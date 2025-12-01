@@ -1,20 +1,23 @@
 # =============================================================================
-# HireMeBahamas Backend - Render Deployment Configuration
+# DEPRECATED: HireMeBahamas Backend - Render Deployment Configuration
 # =============================================================================
 # 
-# NUCLEAR FIX FOR 502 BAD GATEWAY + 173-SECOND LOGINS (2025)
+# ⚠️  THIS FILE IS DEPRECATED - MIGRATION TO VERCEL + RAILWAY COMPLETE
+# 
+# See RENDER_TO_VERCEL_MIGRATION.md for the new architecture:
+# - Frontend: Vercel (Edge + Static)
+# - Backend: Railway (Python/Flask)
+# - Database: Railway PostgreSQL
+# - Cost: $0-7/month (vs $25-50/month on Render)
 #
-# This configuration eliminates cold start timeouts with:
-# 1. Standard plan ($25/mo) with 1GB RAM - prevents OOM
-# 2. Single worker + 180s timeout - survives Railway DB cold starts
-# 3. Health check at /health with 300s grace period
-# 4. Keep-alive background worker pinging every 45s
+# This file is kept for historical reference only.
+# DO NOT deploy to Render - all services should be deleted.
 #
-# COPY-PASTE THESE DASHBOARD VALUES:
-# - Plan: Standard ($25/mo) or Starter ($7/mo minimum)
-# - Health Check Path: /health
-# - Grace Period: 300 seconds
-# - Health Check Timeout: 30 seconds
+# OLD CONFIGURATION (for reference):
+# - Standard plan ($25/mo) with 1GB RAM
+# - Single worker + 180s timeout
+# - Health check at /health with 300s grace period
+# - Keep-alive background worker pinging every 45s
 # =============================================================================
 
 services:
