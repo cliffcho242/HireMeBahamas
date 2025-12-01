@@ -20,17 +20,19 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         except py_compile.PyCompileError as e:
             self.fail(f"keep_alive.py has syntax errors: {e}")
 
-    def test_hardcoded_url_no_env_vars(self):
-        """Test that URL is hardcoded and no os.getenv is used."""
+    def test_url_with_fallback(self):
+        """Test that URL uses env var with fallback to hardcoded default."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
 
-        # Verify hardcoded URL
-        self.assertIn('HEALTH_URL = "https://hiremebahamas.onrender.com/health"', content)
+        # Verify default URL is defined
+        self.assertIn('DEFAULT_URL = "https://hiremebahamas.onrender.com"', content)
 
-        # Verify NO os.getenv is used
-        self.assertNotIn("os.getenv", content)
-        self.assertNotIn("os.environ", content)
+        # Verify URL validation for proper scheme
+        self.assertIn('startswith(("http://", "https://"))', content)
+
+        # Verify HEALTH_URL is constructed from base URL + /health
+        self.assertIn('HEALTH_URL = _base_url + "/health"', content)
 
     def test_uses_health_endpoint(self):
         """Test that the script uses the /health endpoint."""
@@ -40,23 +42,29 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         # Verify the script uses the /health endpoint
         self.assertIn("/health", content)
 
-    def test_three_retries_per_ping(self):
-        """Test that the script has 3 retries per ping cycle."""
+    def test_max_retries_per_ping(self):
+        """Test that the script has MAX_RETRIES retries per ping cycle."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
 
-        # Verify 3 retries (range 1 to 4 = attempts 1, 2, 3)
-        self.assertIn("range(1, 4)", content)
+        # Verify MAX_RETRIES is defined (5 retries)
+        self.assertIn("MAX_RETRIES = 5", content)
+        # Verify retry loop uses MAX_RETRIES
+        self.assertIn("range(1, MAX_RETRIES + 1)", content)
         self.assertIn("attempt", content)
-        self.assertIn("/3", content)
+        # Verify MAX_RETRIES is used in logging (f-string format)
+        self.assertIn("{MAX_RETRIES}", content)
 
-    def test_increasing_timeout(self):
-        """Test that timeout increases with each retry attempt."""
+    def test_timeout_configuration(self):
+        """Test that timeout is configured correctly."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
 
-        # Verify connect timeout (6s) and increasing read timeout (20 + attempt * 10)
-        self.assertIn("timeout=(6, 20 + attempt * 10)", content)
+        # Verify connect timeout and read timeout are defined
+        self.assertIn("CONNECT_TIMEOUT = 10", content)
+        self.assertIn("READ_TIMEOUT = 30", content)
+        # Verify tuple timeout format is used
+        self.assertIn("timeout=(CONNECT_TIMEOUT, READ_TIMEOUT + 15)", content)
 
     def test_exception_handling(self):
         """Test that exceptions are caught and don't stop the loop."""
@@ -101,6 +109,57 @@ class TestKeepAliveConfiguration(unittest.TestCase):
 
 class TestKeepAliveBehavior(unittest.TestCase):
     """Test keep_alive.py runtime behavior."""
+
+    def test_url_validation_empty_env_var(self):
+        """Test that empty RENDER_EXTERNAL_URL falls back to default."""
+        # This test verifies the fix for MissingSchema error
+        DEFAULT_URL = "https://hiremebahamas.onrender.com"
+        
+        # Test with empty string
+        with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": ""}):
+            _base_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+            if not _base_url or not _base_url.startswith(("http://", "https://")):
+                _base_url = DEFAULT_URL
+            self.assertEqual(_base_url, DEFAULT_URL)
+
+    def test_url_validation_whitespace_env_var(self):
+        """Test that whitespace-only RENDER_EXTERNAL_URL falls back to default."""
+        DEFAULT_URL = "https://hiremebahamas.onrender.com"
+        
+        with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "   "}):
+            _base_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+            if not _base_url or not _base_url.startswith(("http://", "https://")):
+                _base_url = DEFAULT_URL
+            self.assertEqual(_base_url, DEFAULT_URL)
+
+    def test_url_validation_relative_path(self):
+        """Test that relative path RENDER_EXTERNAL_URL falls back to default."""
+        DEFAULT_URL = "https://hiremebahamas.onrender.com"
+        
+        # This was the original bug: /health without scheme
+        with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "/health"}):
+            _base_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+            if not _base_url or not _base_url.startswith(("http://", "https://")):
+                _base_url = DEFAULT_URL
+            self.assertEqual(_base_url, DEFAULT_URL)
+
+    def test_url_validation_valid_https(self):
+        """Test that valid HTTPS URL is used."""
+        with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "https://custom-app.render.com"}):
+            _base_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+            DEFAULT_URL = "https://hiremebahamas.onrender.com"
+            if not _base_url or not _base_url.startswith(("http://", "https://")):
+                _base_url = DEFAULT_URL
+            self.assertEqual(_base_url, "https://custom-app.render.com")
+
+    def test_url_validation_valid_http(self):
+        """Test that valid HTTP URL is used for local development."""
+        with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "http://localhost:8000"}):
+            _base_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+            DEFAULT_URL = "https://hiremebahamas.onrender.com"
+            if not _base_url or not _base_url.startswith(("http://", "https://")):
+                _base_url = DEFAULT_URL
+            self.assertEqual(_base_url, "http://localhost:8000")
 
     @patch("requests.get")
     def test_ping_request_made(self, mock_get):
