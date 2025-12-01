@@ -148,6 +148,7 @@ def when_ready(server):
         print(f"✅ Server ready in {startup_time:.2f}s")
     print(f"   Health: GET /health (instant, no DB)")
     print(f"   Ready: GET /ready (checks DB)")
+    print(f"🎉 Your service is live")
 
 
 def on_exit(server):

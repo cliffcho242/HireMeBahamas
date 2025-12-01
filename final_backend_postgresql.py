@@ -4110,10 +4110,6 @@ except Exception as e:
     print(f"⚠️ Failed to start database initialization thread: {e}")
     print("⚠️ Database will be initialized on first request")
 
-# Record when imports and initialization completed
-_APP_IMPORT_COMPLETE_TIME = time.time()
-_startup_time_ms = int((_APP_IMPORT_COMPLETE_TIME - _APP_START_TIME) * 1000)
-print(f"✅ Application ready to serve requests (startup time: {_startup_time_ms}ms)")
 print("🏥 IMMORTAL HEALTH ENDPOINTS LOADED — /health (GET+HEAD), /ready, /ping — RENDER CANNOT STOP ME")
 
 
@@ -9998,6 +9994,11 @@ def api_fallback(path):
 # ==========================================
 # APPLICATION ENTRY POINT
 # ==========================================
+
+# Mark application import as complete and log startup time
+_APP_IMPORT_COMPLETE_TIME = time.time()
+_startup_time_ms = int((_APP_IMPORT_COMPLETE_TIME - _APP_START_TIME) * 1000)
+print(f"✅ Application ready to serve requests (startup time: {_startup_time_ms}ms)")
 
 # Export application for gunicorn
 application = app
