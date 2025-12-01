@@ -18,8 +18,8 @@ app = FastAPI(
 )
 
 # IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
-@app.get("/health")
-@app.head("/health")
+@app.get("/health", tags=["health"])
+@app.head("/health", tags=["health"])
 def health():
     """Instant health check - no database dependency.
     
@@ -50,8 +50,8 @@ def liveness():
     return JSONResponse({"status": "alive"}, status_code=200)
 
 
-@app.get("/ready")
-@app.head("/ready")
+@app.get("/ready", tags=["health"])
+@app.head("/ready", tags=["health"])
 async def ready():
     """Readiness check with lazy database initialization.
     
