@@ -190,7 +190,15 @@
       ]
     }
   ],
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "env": {
-    "VITE_API_URL": "https://hiremebahamas.onrender.com"
+    "VITE_API_URL": "https://hiremebahamas.onrender.com",
+    "POSTGRES_URL": "@postgres_url",
+    "POSTGRES_URL_NON_POOLING": "@postgres_url_non_pooling",
+    "POSTGRES_PRISMA_URL": "@postgres_prisma_url",
+    "POSTGRES_HOST": "@postgres_host",
+    "POSTGRES_DATABASE": "@postgres_database",
+    "POSTGRES_USER": "@postgres_user",
+    "POSTGRES_PASSWORD": "@postgres_password"
   }
 }
