@@ -11,7 +11,7 @@ COPY requirements.txt .
 
 # MASTERMIND FIX 2025 — NUCLEAR BINARY-ONLY INSTALL
 RUN pip install --upgrade pip && \
-    pip install --only-binary=all -r requirements.txt
+    pip install --only-binary=:all: -r requirements.txt
 
 COPY . .
 

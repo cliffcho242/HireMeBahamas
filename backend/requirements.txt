@@ -10,7 +10,7 @@ gunicorn==22.0.0
 # Database & ORM - NUCLEAR BINARY-ONLY CONFIGURATION
 sqlalchemy[asyncio]==2.0.44
 psycopg2-binary==2.9.11
-asyncpg==0.30.0 --only-binary=asyncpg
+asyncpg==0.30.0
 aiosqlite==0.21.0
 alembic==1.13.1
 

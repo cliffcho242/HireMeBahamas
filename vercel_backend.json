@@ -10,7 +10,7 @@
       }
     }
   ],
-  "installCommand": "pip install --upgrade pip && pip install -r requirements.txt --only-binary=all",
+  "installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt",
   "routes": [
     {
       "src": "/(.*)",

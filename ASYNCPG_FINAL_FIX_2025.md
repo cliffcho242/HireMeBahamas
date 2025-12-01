@@ -9,23 +9,21 @@ ERROR: Failed to build installable wheels for some pyproject.toml based projects
 
 ### ✅ FIX #1: requirements.txt (NUCLEAR BINARY-ONLY VERSION)
 ```txt
-# ============================================================================
-# MASTERMIND FIX 2025 — ZERO ASYNCPG BUILD ERRORS FOREVER
-# ============================================================================
+# Core packages
 fastapi==0.115.0
 uvicorn[standard]==0.31.0
 gunicorn==22.0.0
 sqlalchemy[asyncio]==2.0.35
-asyncpg==0.29.0 --only-binary=asyncpg
+asyncpg==0.29.0
 pydantic==2.9.2
 python-jose[cryptography]==3.3.0
 pyjwt==2.9.0
 python-multipart==0.0.9
 ```
 
-**INSTALL COMMAND:**
+**CRITICAL: INSTALL COMMAND (use --only-binary flag):**
 ```bash
-pip install --upgrade pip && pip install -r requirements.txt --only-binary=all
+pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt
 ```
 
 ---
@@ -36,13 +34,13 @@ services:
   - type: web
     name: hiremebahamas-backend
     runtime: python
-    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt --no-cache-dir
+    buildCommand: pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r requirements.txt
     startCommand: gunicorn app:application --workers 1 --timeout 180
 ```
 
 **COPY-PASTE BUILD COMMAND:**
 ```bash
-pip install --upgrade pip setuptools wheel && pip install -r requirements.txt --no-cache-dir
+pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r requirements.txt
 ```
 
 ---
@@ -58,7 +56,7 @@ pip install --upgrade pip setuptools wheel && pip install -r requirements.txt --
       "config": { "maxLambdaSize": "50mb" }
     }
   ],
-  "installCommand": "pip install --upgrade pip && pip install -r requirements.txt --only-binary=all"
+  "installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt"
 }
 ```
 
@@ -71,7 +69,7 @@ pip install --upgrade pip setuptools wheel && pip install -r requirements.txt --
 
 # With this:
 RUN pip install --upgrade pip && \
-    pip install --only-binary=all -r requirements.txt
+    pip install --only-binary=:all: -r requirements.txt
 ```
 
 **COMPLETE DOCKERFILE EXAMPLE:**
@@ -91,7 +89,7 @@ COPY requirements.txt .
 
 # MASTERMIND FIX — NUCLEAR BINARY-ONLY INSTALL
 RUN pip install --upgrade pip && \
-    pip install --only-binary=all -r requirements.txt
+    pip install --only-binary=:all: -r requirements.txt
 
 COPY . .
 
@@ -144,25 +142,25 @@ engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
 ## 🚀 5-STEP DEPLOY CHECKLIST
 
 ### ✅ STEP 1: Update requirements.txt
-```bash
-# Add --only-binary flag to asyncpg line
-asyncpg==0.29.0 --only-binary=asyncpg
+```txt
+# Keep packages as-is, NO --only-binary flag in file
+asyncpg==0.29.0
 ```
 
 ### ✅ STEP 2: Update Build Commands
 **Render:**
 ```bash
-pip install --upgrade pip setuptools wheel && pip install -r requirements.txt --no-cache-dir
+pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r requirements.txt
 ```
 
 **Vercel (vercel.json):**
 ```json
-"installCommand": "pip install --upgrade pip && pip install -r requirements.txt --only-binary=all"
+"installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt"
 ```
 
 **Railway (Dockerfile):**
 ```dockerfile
-RUN pip install --upgrade pip && pip install --only-binary=all -r requirements.txt
+RUN pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt
 ```
 
 ### ✅ STEP 3: Remove Old Build Dependencies
@@ -186,7 +184,7 @@ source venv/bin/activate  # or venv\Scripts\activate on Windows
 
 # Test binary-only install
 pip install --upgrade pip
-pip install -r requirements.txt --only-binary=all
+pip install --only-binary=:all: -r requirements.txt
 
 # Should complete in <8 seconds with NO compilation
 ```
@@ -230,18 +228,22 @@ curl https://your-app.com/health
 ## 🆘 TROUBLESHOOTING
 
 ### Error: "Could not find a version that satisfies --only-binary"
-**Fix:** Remove `--only-binary=asyncpg` from requirements.txt, use it ONLY in pip command:
+**Fix:** The `--only-binary` flag must be in pip command, NOT in requirements.txt:
 ```bash
-pip install --only-binary=all -r requirements.txt
+# CORRECT:
+pip install --only-binary=:all: -r requirements.txt
+
+# WRONG:
+asyncpg==0.29.0 --only-binary=asyncpg  # Don't put this in requirements.txt
 ```
 
 ### Error: "No matching distribution found for asyncpg==0.29.0"
 **Fix:** Your Python version is too old or platform unsupported. Use psycopg[binary] instead (Fix #5).
 
 ### Error: Still seeing "Building wheel for asyncpg"
-**Fix:** You forgot `--only-binary=all` in the pip install command. Always use:
+**Fix:** You forgot `--only-binary=:all:` in the pip install command. Always use:
 ```bash
-pip install --only-binary=all -r requirements.txt
+pip install --only-binary=:all: -r requirements.txt
 ```
 
 ### Nuclear Option: asyncpg won't install AT ALL
@@ -270,11 +272,10 @@ pip install --only-binary=all -r requirements.txt
 
 ## 🎯 WHY THIS WORKS
 
-1. **`--only-binary=asyncpg`** in requirements.txt tells pip to ONLY use pre-built wheels
-2. **`pip install --only-binary=all`** enforces binary-only for ALL packages
-3. **No apt-get build tools** = faster builds, smaller images
-4. **Pre-built wheels** exist for asyncpg on PyPI for all major platforms
-5. **psycopg[binary]** fallback has wheels for EVERY platform
+1. **`--only-binary=:all:`** flag forces pip to ONLY use pre-built wheels
+2. **No apt-get build tools** = faster builds, smaller images
+3. **Pre-built wheels** exist for asyncpg on PyPI for all major platforms
+4. **psycopg[binary]** fallback has wheels for EVERY platform
 
 ---
 

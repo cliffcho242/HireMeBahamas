@@ -13,7 +13,7 @@ gunicorn==22.0.0
 
 # Database - NUCLEAR BINARY-ONLY INSTALLATION
 sqlalchemy[asyncio]==2.0.35
-asyncpg==0.29.0 --only-binary=asyncpg
+asyncpg==0.29.0
 
 # Data Validation
 pydantic==2.9.2
@@ -27,8 +27,8 @@ python-multipart==0.0.9
 
 # ============================================================================
 # INSTALL COMMAND (COPY-PASTE):
-# pip install --only-binary :all: -r requirements.txt
+# pip install --only-binary=:all: -r requirements.txt
 # 
-# The --only-binary=asyncpg flag in requirements.txt + pip --only-binary :all:
-# ensures asyncpg installs from pre-built wheel ONLY, never compiles from source
+# The --only-binary flag MUST be in pip command, NOT in requirements.txt
+# This ensures asyncpg installs from pre-built wheel ONLY
 # ============================================================================

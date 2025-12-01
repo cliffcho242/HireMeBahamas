@@ -9,7 +9,7 @@
       }
     }
   ],
-  "installCommand": "pip install --upgrade pip && pip install -r requirements.txt --only-binary=all",
+  "installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt",
   "framework": "vite",
   "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/dist",
