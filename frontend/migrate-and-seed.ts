@@ -237,11 +237,19 @@ async function seedData(db: ReturnType<typeof drizzle>) {
     return;
   }
 
+  // Get admin password hash from environment or skip admin creation
+  const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
+  if (!adminPasswordHash) {
+    console.log('  ⚠️  ADMIN_PASSWORD_HASH not set, skipping admin user creation');
+    console.log('     Set ADMIN_PASSWORD_HASH env var to create admin user');
+    return;
+  }
+
   // Create admin user
   console.log('  Creating admin user...');
   await db.insert(schema.users).values({
-    email: 'admin@hiremebahamas.com',
-    hashedPassword: '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.bqGPKe7W7.6S5.',
+    email: process.env.ADMIN_EMAIL || 'admin@hiremebahamas.com',
+    hashedPassword: adminPasswordHash,
     firstName: 'Admin',
     lastName: 'User',
     username: 'admin',
@@ -265,7 +273,8 @@ async function seedData(db: ReturnType<typeof drizzle>) {
 
   // Create sample jobs
   console.log('  Creating sample jobs...');
-  const adminUser = await sql`SELECT id FROM users WHERE email = 'admin@hiremebahamas.com'`;
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@hiremebahamas.com';
+  const adminUser = await sql`SELECT id FROM users WHERE email = ${adminEmail}`;
   const adminId = adminUser.rows[0]?.id as number;
 
   if (adminId) {

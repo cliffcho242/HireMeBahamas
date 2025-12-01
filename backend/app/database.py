@@ -131,8 +131,6 @@ else:
     POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s
     POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "120"))  # Recycle every 2 min
     USE_NULL_POOL = False
-POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for connection
-POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "120"))  # Recycle every 2 min (CRITICAL for Railway)
 
 # =============================================================================
 # CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RAILWAY
