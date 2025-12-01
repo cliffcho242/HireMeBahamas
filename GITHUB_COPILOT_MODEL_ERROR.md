@@ -53,14 +53,25 @@ For applications using GitHub Models API, implement fallback logic:
 
 ```python
 # Example: Python fallback pattern
+from requests.exceptions import HTTPError, RequestException
+
 try:
     response = call_premium_model()
 except HTTPError as e:
-    if e.status_code == 400 and "no endpoints available" in str(e):
-        # Fall back to standard model
-        response = call_standard_model()
+    if e.response.status_code == 400:
+        error_data = e.response.json()
+        # Check for model availability error
+        if 'endpoints' in error_data.get('message', '').lower():
+            # Fall back to standard model
+            response = call_standard_model()
+        else:
+            raise
     else:
         raise
+except RequestException as e:
+    # Handle network errors
+    logger.error(f"Network error calling model: {e}")
+    response = call_standard_model()
 ```
 
 ```javascript
@@ -68,9 +79,15 @@ except HTTPError as e:
 try {
   const response = await callPremiumModel();
 } catch (error) {
-  if (error.status === 400 && error.message.includes('no endpoints available')) {
-    // Fall back to standard model
-    const response = await callStandardModel();
+  if (error.response?.status === 400) {
+    const errorData = error.response.data;
+    // Check for model availability error
+    if (errorData.error?.includes('endpoints') || errorData.message?.includes('endpoints')) {
+      // Fall back to standard model
+      const response = await callStandardModel();
+    } else {
+      throw error;
+    }
   } else {
     throw error;
   }
@@ -148,20 +165,29 @@ To avoid this error in the future:
 ### Example: Graceful AI Feature Handling
 
 ```python
-# Good: Optional AI with fallback
+# Good: Optional AI with fallback and specific exception handling
+from requests.exceptions import HTTPError, RequestException
+import logging
+
+logger = logging.getLogger(__name__)
+
 def get_job_recommendations(user_id):
+    """Get job recommendations with AI fallback to simple algorithm"""
     try:
         if os.getenv('OPENAI_API_KEY'):
             return ai_powered_recommendations(user_id)
-    except Exception as e:
+    except (HTTPError, RequestException) as e:
         logger.warning(f"AI recommendations failed: {e}")
+    except ValueError as e:
+        logger.error(f"Invalid configuration for AI recommendations: {e}")
     
     # Fallback to simple algorithm
     return simple_recommendations(user_id)
 
-# Bad: Required AI that breaks without keys
+# Bad: Required AI that raises unhandled errors
 def get_job_recommendations(user_id):
-    return openai.complete(model="gpt-4", ...)  # Crashes if no key
+    """This will raise an authentication or API error without proper API key"""
+    return openai.complete(model="gpt-4", ...)  # Raises error if no key or model unavailable
 ```
 
 ## Verification
