@@ -37,6 +37,10 @@ async def startup():
         print(f"Warning: Could not initialize database: {e}")
 
 
+# For Vercel serverless compatibility
+handler = app
+
+
 @app.get("/api/health")
 async def health_check():
     """Instant health check - no DB query"""
@@ -116,9 +120,4 @@ async def database_status(db: AsyncSession = Depends(get_db)):
         )
 
 
-# Vercel serverless function handler
-def handler(request, response):
-    """Vercel serverless handler wrapper"""
-    import uvicorn
-    return app
 

@@ -17,7 +17,6 @@ if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 # Create async engine optimized for Vercel Serverless
-# No pooling - each request gets fresh connection (serverless pattern)
 engine = create_async_engine(
     DATABASE_URL,
     pool_pre_ping=True,
@@ -37,8 +36,7 @@ engine = create_async_engine(
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False
+    expire_on_commit=False
 )
 
 # Base for models
