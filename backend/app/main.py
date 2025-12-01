@@ -345,8 +345,11 @@ async def lazy_import_heavy_stuff():
     # STEP 4: Initialize database tables (with retry)
     # ==========================================================================
     # This uses retry logic to handle Railway cold starts
+    # Retry configuration is controlled by environment variables:
+    # - DB_INIT_MAX_RETRIES (default: 3)
+    # - DB_INIT_RETRY_DELAY (default: 2.0 seconds)
     try:
-        success = await init_db(max_retries=3, retry_delay=2.0)
+        success = await init_db()  # Uses env var defaults for retry config
         if success:
             logger.info("Database tables initialized successfully")
         else:

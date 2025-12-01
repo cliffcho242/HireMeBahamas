@@ -247,7 +247,11 @@ asyncio.run(test())
 | `DB_POOL_TIMEOUT` | 30 | Wait time for pool connection |
 | `DB_POOL_RECYCLE` | 180 | Recycle connections every N seconds |
 | `DB_SSL_MODE` | require | SSL mode for Railway |
+| `DB_SSL_CA_FILE` | - | Path to CA certificate (for verify-full mode) |
 | `DB_ECHO` | false | Log SQL queries (debug only) |
+| `DB_INIT_MAX_RETRIES` | 3 | Max retries for DB initialization |
+| `DB_INIT_RETRY_DELAY` | 2.0 | Delay between retries (seconds) |
+| `DB_STATEMENT_TIMEOUT_MS` | 30000 | Query timeout in milliseconds |
 
 ---
 

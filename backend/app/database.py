@@ -63,8 +63,28 @@ if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
 
-# Log which database URL we're using (mask password)
-_masked_url = DATABASE_URL.split("@")[0].rsplit(":", 1)[0] + ":****@" + DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else DATABASE_URL
+# Log which database URL we're using (mask password for security)
+def _mask_database_url(url: str) -> str:
+    """Mask the password in a database URL for logging.
+    
+    Args:
+        url: Database connection URL
+        
+    Returns:
+        URL with password replaced by ****
+    """
+    if "@" not in url:
+        return url
+    try:
+        # Split at @ to get auth and host parts
+        auth_part, host_part = url.rsplit("@", 1)
+        # Split auth part at last : to get user and password
+        user_part = auth_part.rsplit(":", 1)[0]
+        return f"{user_part}:****@{host_part}"
+    except (ValueError, IndexError):
+        return url
+
+_masked_url = _mask_database_url(DATABASE_URL)
 logger.info(f"Database URL: {_masked_url}")
 
 # =============================================================================
@@ -86,19 +106,67 @@ STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s
 # =============================================================================
 # SSL CONFIGURATION FOR RAILWAY POSTGRES
 # =============================================================================
-# Railway requires SSL for all connections
-# "require" mode is sufficient - Railway doesn't provide client certificates
+# Railway PostgreSQL connections require SSL for security.
+# 
+# SSL Mode Options:
+# - "require": Encrypt connection, don't verify server certificate (Railway default)
+# - "verify-ca": Verify server certificate against CA (requires cert file)
+# - "verify-full": Verify server cert + hostname (most secure, requires cert file)
+#
+# Railway uses Amazon RDS which provides SSL, but doesn't expose certificates
+# for client-side verification. We use "require" mode which:
+# 1. Encrypts all traffic between Render and Railway
+# 2. Protects data in transit
+# 3. Works with Railway's managed PostgreSQL without additional configuration
+#
+# For production with custom certificates, set DB_SSL_MODE=verify-full and
+# provide DB_SSL_CA_FILE environment variable with path to CA certificate.
+# =============================================================================
 SSL_MODE = os.getenv("DB_SSL_MODE", "require")
 
 def _get_ssl_context() -> ssl.SSLContext:
     """Create SSL context for Railway PostgreSQL connections.
     
+    The context is configured based on SSL_MODE:
+    - "require": Encrypt but don't verify (Railway default)
+    - "verify-ca" or "verify-full": Full verification with CA certificate
+    
     Returns:
-        SSL context with TLS verification disabled (Railway uses self-signed certs)
+        SSL context configured for the specified mode
+        
+    Note:
+        Railway's managed PostgreSQL uses Amazon RDS certificates. For "require" mode,
+        certificate verification is disabled because Railway doesn't provide the CA
+        certificate file. This is standard for managed database services.
+        
+        Traffic is still encrypted - only certificate verification is disabled.
     """
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    
+    if SSL_MODE == "require":
+        # "require" mode: encrypt but don't verify server certificate
+        # This is safe for Railway because:
+        # 1. Traffic is encrypted end-to-end
+        # 2. Railway uses private networking (no public internet exposure)
+        # 3. Railway manages the PostgreSQL instance (trusted provider)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+    else:
+        # "verify-ca" or "verify-full": full certificate verification
+        # Requires CA certificate file
+        ca_file = os.getenv("DB_SSL_CA_FILE")
+        if ca_file and os.path.exists(ca_file):
+            ctx.load_verify_locations(ca_file)
+            ctx.check_hostname = SSL_MODE == "verify-full"
+            ctx.verify_mode = ssl.CERT_REQUIRED
+        else:
+            logger.warning(
+                f"SSL mode '{SSL_MODE}' requires DB_SSL_CA_FILE but none provided. "
+                "Falling back to 'require' mode."
+            )
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+    
     return ctx
 
 # =============================================================================
@@ -211,22 +279,34 @@ async def get_async_session():
 # =============================================================================
 # DATABASE INITIALIZATION WITH RETRY LOGIC
 # =============================================================================
-async def init_db(max_retries: int = 3, retry_delay: float = 2.0) -> bool:
+
+# Retry configuration constants
+DB_INIT_MAX_RETRIES = int(os.getenv("DB_INIT_MAX_RETRIES", "3"))
+DB_INIT_RETRY_DELAY = float(os.getenv("DB_INIT_RETRY_DELAY", "2.0"))
+
+async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     """Initialize database tables with retry logic.
     
     This function is called during startup to ensure database tables exist.
     Uses retry logic to handle Railway cold starts and transient failures.
     
     Args:
-        max_retries: Maximum number of retry attempts (default: 3)
-        retry_delay: Delay between retries in seconds (default: 2.0)
+        max_retries: Maximum number of retry attempts (default from env: 3)
+        retry_delay: Delay between retries in seconds (default from env: 2.0)
         
     Returns:
         bool: True if initialization succeeded, False otherwise
     """
     global _db_initialized, _db_init_error
     
-    from app import models  # noqa: F401 - Import models for table registration
+    # Use defaults from environment if not specified
+    if max_retries is None:
+        max_retries = DB_INIT_MAX_RETRIES
+    if retry_delay is None:
+        retry_delay = DB_INIT_RETRY_DELAY
+    
+    # Import models using relative import for package consistency
+    from . import models  # noqa: F401 - Import models for table registration
     
     for attempt in range(max_retries):
         try:
