@@ -6,9 +6,24 @@
     "dev": "cd frontend && npm run dev",
     "install-frontend": "cd frontend && npm install",
     "build": "cd frontend && npm run build",
-    "start": "cd frontend && npm run dev"
+    "start": "cd frontend && npm run dev",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
-  "keywords": ["hiremebahamas", "platform"],
+  "keywords": [
+    "hiremebahamas",
+    "platform"
+  ],
   "author": "HireMeBahamas Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "drizzle-orm": "^0.44.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "drizzle-kit": "^0.31.7",
+    "typescript": "^5.0.0"
+  }
 }
