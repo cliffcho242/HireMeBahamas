@@ -46,14 +46,11 @@ while True:
     
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            # Generous timeouts to handle cold starts
-            # connect: 10s (should be instant if service is warm)
-            # read: 30s + (attempt * 10) = 40-80s (handles slow cold starts)
-            read_timeout = READ_TIMEOUT + (attempt * 10)
-            
+            # Fixed timeout to avoid blocking the keep-alive loop for too long
+            # connect: 10s, read: 45s - handles cold starts without excessive delays
             response = requests.get(
                 HEALTH_URL,
-                timeout=(CONNECT_TIMEOUT, read_timeout),
+                timeout=(CONNECT_TIMEOUT, READ_TIMEOUT + 15),  # (10s, 45s) max
                 headers={
                     "User-Agent": "KeepAlive-Worker/2025",
                     "Accept": "application/json",

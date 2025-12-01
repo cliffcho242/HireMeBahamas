@@ -115,8 +115,14 @@ group = None
 tmp_upload_dir = None
 
 # Trust forwarded headers from load balancer
-# Render/Railway set these automatically
-forwarded_allow_ips = os.environ.get("FORWARDED_ALLOW_IPS", "*")
+# Security: In production with Render/Railway, set to "*" to trust their load balancers
+# For self-hosted deployments, set FORWARDED_ALLOW_IPS to specific IPs
+# Example: FORWARDED_ALLOW_IPS="10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+_is_cloud_platform = os.environ.get("RENDER") == "true" or os.environ.get("RAILWAY_ENVIRONMENT")
+forwarded_allow_ips = os.environ.get(
+    "FORWARDED_ALLOW_IPS", 
+    "*" if _is_cloud_platform else "127.0.0.1"
+)
 
 # =============================================================================
 # STARTUP/SHUTDOWN HOOKS

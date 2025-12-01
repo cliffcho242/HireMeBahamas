@@ -40,8 +40,8 @@ engine = create_async_engine(
     pool_recycle=180,  # Recycle connections every 3 min (Railway drops idle connections)
     pool_timeout=30,  # Wait max 30s for connection from pool
     connect_args={
-        "timeout": 30,  # asyncpg uses 'timeout' not 'connect_timeout'
-        "command_timeout": 30,  # Query timeout in seconds
+        "timeout": 30,  # Connection establishment timeout (asyncpg parameter)
+        "command_timeout": 30,  # Query execution timeout (asyncpg parameter)
         "server_settings": {
             "jit": "off",  # CRITICAL: Disable JIT - causes 60s+ first-query delays
             "statement_timeout": "30000",  # 30 second query timeout (milliseconds)
