@@ -887,10 +887,6 @@ MAX_ERROR_MESSAGE_LENGTH = 500
 if USE_POSTGRESQL:
     print(f"✅ PostgreSQL URL detected: {DATABASE_URL[:30]}...")
 
-    # Validate DATABASE_URL is set
-    if not DATABASE_URL:
-        raise ValueError("DATABASE_URL environment variable is not set!")
-
     # Expected DATABASE_URL format message
     DATABASE_URL_FORMAT = "postgresql://username:password@hostname:5432/database"
 

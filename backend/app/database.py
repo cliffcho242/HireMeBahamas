@@ -59,14 +59,20 @@ if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
 
-# Validate DATABASE_URL format
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is not set!")
-
+# Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields
 parsed = urlparse(DATABASE_URL)
-missing_fields = [field for field in ["username", "password", "hostname", "port", "path"] 
-                  if not getattr(parsed, field, None)]
+missing_fields = []
+if not parsed.username:
+    missing_fields.append("username")
+if not parsed.password:
+    missing_fields.append("password")
+if not parsed.hostname:
+    missing_fields.append("hostname")
+if not parsed.path or len(parsed.path) <= 1:
+    # path should be /database_name, so length > 1
+    missing_fields.append("path")
+
 if missing_fields:
     raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 

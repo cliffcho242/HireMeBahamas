@@ -137,10 +137,6 @@ if not USE_POSTGRESQL:
 if USE_POSTGRESQL:
     print(f"✅ PostgreSQL URL detected: {DATABASE_URL[:30]}...")
 
-    # Validate DATABASE_URL is set
-    if not DATABASE_URL:
-        raise ValueError("DATABASE_URL environment variable is not set!")
-
     # Parse DATABASE_URL
     parsed = urlparse(DATABASE_URL)
     
@@ -152,9 +148,6 @@ if USE_POSTGRESQL:
         missing_fields.append("password")
     if not parsed.hostname:
         missing_fields.append("host")
-    if not parsed.port and not parsed.hostname:
-        # port is optional if we can default to 5432, but host must exist
-        missing_fields.append("port")
     if not parsed.path or len(parsed.path) <= 1:
         # path should be /database_name, so length > 1
         missing_fields.append("path")
