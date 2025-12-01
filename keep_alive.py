@@ -34,15 +34,17 @@ HEALTH_URL = _base_url + "/health"
 # Ping interval: 45 seconds keeps service warm without overloading
 PING_INTERVAL_SECONDS = 45
 
-# Retry configuration
+# Retry configuration - NUCLEAR SETTINGS
 MAX_RETRIES = 5
-CONNECT_TIMEOUT = 10  # seconds
-READ_TIMEOUT = 30  # seconds (generous for cold start)
+CONNECT_TIMEOUT = 10  # seconds - connection establishment
+READ_TIMEOUT = 30     # seconds - response read (30s as specified)
 
 print("=" * 60)
 print("🔥 UNBREAKABLE KEEP-ALIVE WORKER STARTED")
 print(f"   Target: {HEALTH_URL}")
 print(f"   Interval: {PING_INTERVAL_SECONDS}s")
+print(f"   Timeout: ({CONNECT_TIMEOUT}s connect, {READ_TIMEOUT}s read)")
+print(f"   Retries: {MAX_RETRIES}")
 print("=" * 60)
 
 backoff = 0
@@ -53,11 +55,11 @@ while True:
     
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            # Fixed timeout to avoid blocking the keep-alive loop for too long
-            # connect: 10s, read: 45s - handles cold starts without excessive delays
+            # NUCLEAR TIMEOUT: (10s connect, 30s read) as specified
+            # This handles cold starts without blocking the keep-alive loop too long
             response = requests.get(
                 HEALTH_URL,
-                timeout=(CONNECT_TIMEOUT, READ_TIMEOUT + 15),  # (10s, 45s) max
+                timeout=(CONNECT_TIMEOUT, READ_TIMEOUT),
                 headers={
                     "User-Agent": "KeepAlive-Worker/2025",
                     "Accept": "application/json",

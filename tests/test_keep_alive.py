@@ -63,8 +63,8 @@ class TestKeepAliveConfiguration(unittest.TestCase):
         # Verify connect timeout and read timeout are defined
         self.assertIn("CONNECT_TIMEOUT = 10", content)
         self.assertIn("READ_TIMEOUT = 30", content)
-        # Verify tuple timeout format is used
-        self.assertIn("timeout=(CONNECT_TIMEOUT, READ_TIMEOUT + 15)", content)
+        # Verify tuple timeout format is used (connect, read)
+        self.assertIn("timeout=(CONNECT_TIMEOUT, READ_TIMEOUT)", content)
 
     def test_exception_handling(self):
         """Test that exceptions are caught and don't stop the loop."""
