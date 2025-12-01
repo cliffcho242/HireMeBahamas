@@ -92,8 +92,11 @@ if IS_PRODUCTION_DATABASE:
 # =============================================================================
 
 # Pool size configuration (configurable via environment)
-POOL_SIZE = config("DB_POOL_SIZE", default=10 if IS_PRODUCTION_DATABASE else 5, cast=int)
-POOL_MAX_OVERFLOW = config("DB_POOL_MAX_OVERFLOW", default=20 if IS_PRODUCTION_DATABASE else 10, cast=int)
+# NUCLEAR FIX: Use smaller pools (3/5) to survive cold starts and avoid timeout issues
+# with Railway/Render PostgreSQL connections. Larger pools can exhaust connections
+# during cold starts when multiple workers initialize simultaneously.
+POOL_SIZE = config("DB_POOL_SIZE", default=3 if IS_PRODUCTION_DATABASE else 5, cast=int)
+POOL_MAX_OVERFLOW = config("DB_POOL_MAX_OVERFLOW", default=5 if IS_PRODUCTION_DATABASE else 10, cast=int)
 POOL_TIMEOUT = config("DB_POOL_TIMEOUT", default=30, cast=int)
 
 # Connection pool configuration
@@ -109,9 +112,10 @@ POOL_RECYCLE_SECONDS = config("POOL_RECYCLE_SECONDS", default=300, cast=int)
 STATEMENT_TIMEOUT_SECONDS = config("STATEMENT_TIMEOUT_SECONDS", default=30, cast=int)
 
 # Connect timeout in seconds for establishing new connections
-# This is the maximum time asyncpg will wait to establish a connection to PostgreSQL
-# Set to 15 seconds to handle slow network conditions in cloud environments
-CONNECT_TIMEOUT_SECONDS = config("DB_CONNECT_TIMEOUT", default=15, cast=int)
+# NUCLEAR FIX: Increased to 30 seconds to handle slow Railway/Render network conditions
+# during cold starts. This prevents timeout errors like "Failed to create connection pool:
+# timeout expired" when PostgreSQL needs extra time to establish connections.
+CONNECT_TIMEOUT_SECONDS = config("DB_CONNECT_TIMEOUT", default=30, cast=int)
 
 # Create async engine with appropriate settings for the environment
 engine_kwargs = {
@@ -152,10 +156,15 @@ if IS_PRODUCTION_DATABASE:
     #     cause timeouts or performance problems. Disabling JIT ensures
     #     consistent query execution across cloud environments.
     #
+    # ssl: Explicitly require SSL for production security
+    #   - Set to "require" to ensure encrypted connections to PostgreSQL
+    #   - This is the NUCLEAR FIX for Railway/Render connection stability
+    #
     # Both timeouts are set to the same effective duration for consistent behavior
     connect_args = {
         "timeout": CONNECT_TIMEOUT_SECONDS,
         "command_timeout": STATEMENT_TIMEOUT_SECONDS,
+        "ssl": "require",  # NUCLEAR FIX: Explicit SSL requirement for Railway/Render
         "server_settings": {
             "statement_timeout": str(STATEMENT_TIMEOUT_SECONDS * 1000),
             "jit": "off",
@@ -169,6 +178,7 @@ if IS_PRODUCTION_DATABASE:
         f"pool_recycle={POOL_RECYCLE_SECONDS}s, "
         f"connect_timeout={CONNECT_TIMEOUT_SECONDS}s, "
         f"statement_timeout={STATEMENT_TIMEOUT_SECONDS}s, "
+        f"ssl=require, "
         f"jit=off"
     )
 

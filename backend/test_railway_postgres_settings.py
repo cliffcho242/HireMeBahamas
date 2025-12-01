@@ -31,11 +31,11 @@ def test_production_connection_settings():
         )
         print("✓ Test 1 passed: Production mode detected correctly")
         
-        # Test 2: Verify connect_timeout is set
-        assert database.CONNECT_TIMEOUT_SECONDS == 15, (
-            f"Expected CONNECT_TIMEOUT_SECONDS=15, got {database.CONNECT_TIMEOUT_SECONDS}"
+        # Test 2: Verify connect_timeout is set (NUCLEAR FIX: 30 seconds)
+        assert database.CONNECT_TIMEOUT_SECONDS == 30, (
+            f"Expected CONNECT_TIMEOUT_SECONDS=30, got {database.CONNECT_TIMEOUT_SECONDS}"
         )
-        print("✓ Test 2 passed: CONNECT_TIMEOUT_SECONDS=15")
+        print("✓ Test 2 passed: CONNECT_TIMEOUT_SECONDS=30 (NUCLEAR FIX)")
         
         # Test 3: Verify statement_timeout is set  
         assert database.STATEMENT_TIMEOUT_SECONDS == 30, (
@@ -55,10 +55,10 @@ def test_production_connection_settings():
         )
         connect_args = database.engine_kwargs["connect_args"]
         
-        assert connect_args.get("timeout") == 15, (
-            f"Expected connect_args['timeout']=15, got {connect_args.get('timeout')}"
+        assert connect_args.get("timeout") == 30, (
+            f"Expected connect_args['timeout']=30, got {connect_args.get('timeout')}"
         )
-        print("✓ Test 5 passed: connect_args['timeout']=15")
+        print("✓ Test 5 passed: connect_args['timeout']=30 (NUCLEAR FIX)")
         
         # Test 6: Verify command_timeout
         assert connect_args.get("command_timeout") == 30, (
@@ -91,7 +91,26 @@ def test_production_connection_settings():
         )
         print("✓ Test 10 passed: pool_recycle=300")
         
+        # Test 11: Verify SSL require is set (NUCLEAR FIX)
+        assert connect_args.get("ssl") == "require", (
+            f"Expected connect_args['ssl']='require', got {connect_args.get('ssl')}"
+        )
+        print("✓ Test 11 passed: connect_args['ssl']='require' (NUCLEAR FIX)")
+        
+        # Test 12: Verify pool_size is 3 for production (NUCLEAR FIX)
+        assert database.POOL_SIZE == 3, (
+            f"Expected POOL_SIZE=3, got {database.POOL_SIZE}"
+        )
+        print("✓ Test 12 passed: POOL_SIZE=3 (NUCLEAR FIX)")
+        
+        # Test 13: Verify max_overflow is 5 for production (NUCLEAR FIX)
+        assert database.POOL_MAX_OVERFLOW == 5, (
+            f"Expected POOL_MAX_OVERFLOW=5, got {database.POOL_MAX_OVERFLOW}"
+        )
+        print("✓ Test 13 passed: POOL_MAX_OVERFLOW=5 (NUCLEAR FIX)")
+        
         print("\n✅ All Railway/Render Postgres timeout fix settings verified!")
+        print("✅ NUCLEAR FIX applied: pool_size=3, max_overflow=5, connect_timeout=30, ssl=require, jit=off")
         print("✅ Configuration ready for Render → Railway PostgreSQL connections")
         
     finally:
