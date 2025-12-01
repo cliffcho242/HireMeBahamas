@@ -41,20 +41,18 @@ class handler(BaseHTTPRequestHandler):
         - execution_time_ms: Time taken to process request
         """
         start_time = time.time()
+        current_timestamp = int(start_time)
         
         try:
             response_data = {
                 "status": "healthy",
-                "timestamp": int(time.time()),
+                "timestamp": current_timestamp,
                 "environment": os.getenv("ENVIRONMENT", "production"),
                 "vercel_region": os.getenv("VERCEL_REGION", "unknown"),
                 "message": "Vercel cron health check OK",
                 "cron_schedule": "*/5 * * * *",
-                "execution_time_ms": 0
+                "execution_time_ms": round((time.time() - start_time) * 1000, 2)
             }
-            
-            # Calculate execution time
-            response_data["execution_time_ms"] = round((time.time() - start_time) * 1000, 2)
             
             self._set_headers(200)
             self.wfile.write(json.dumps(response_data).encode())
@@ -62,7 +60,7 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             error_response = {
                 "status": "unhealthy",
-                "timestamp": int(time.time()),
+                "timestamp": current_timestamp,
                 "error": str(e),
                 "execution_time_ms": round((time.time() - start_time) * 1000, 2)
             }

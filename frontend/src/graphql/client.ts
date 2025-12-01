@@ -34,8 +34,12 @@ let API_BASE_URL = ENV_API || 'http://127.0.0.1:9999';
 // Use strict hostname matching to prevent URL manipulation attacks
 if (!ENV_API && typeof window !== 'undefined') {
   const hostname = window.location.hostname;
-  // Strict match: only exact domain, www subdomain, or vercel.app
-  if (hostname === 'hiremebahamas.com' || hostname === 'www.hiremebahamas.com' || hostname.endsWith('.vercel.app')) {
+  // Strict match: only exact domain, www subdomain, or our specific vercel.app subdomain
+  if (
+    hostname === 'hiremebahamas.com' || 
+    hostname === 'www.hiremebahamas.com' || 
+    hostname === 'hiremebahamas.vercel.app'
+  ) {
     API_BASE_URL = DEFAULT_PROD_API;
   }
 }

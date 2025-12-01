@@ -12,8 +12,8 @@
   },
   "rewrites": [
     {
-      "source": "/api/cron/:path*",
-      "destination": "/api/cron/:path*"
+      "source": "/api/cron/health",
+      "destination": "/api/cron/health.py"
     },
     {
       "source": "/api/:path*",

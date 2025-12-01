@@ -29,9 +29,15 @@ const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }
 let API_BASE_URL = ENV_API || 'http://127.0.0.1:9999';
 
 // If no env is set and we're on the hiremebahamas.com or vercel domain, use the Vercel backend
+// Use strict hostname matching to prevent URL manipulation attacks
 if (!ENV_API && typeof window !== 'undefined') {
-  const origin = window.location.origin;
-  if (origin.includes('hiremebahamas.com') || origin.includes('vercel.app')) {
+  const hostname = window.location.hostname;
+  // Strict match: only exact domain, www subdomain, or our specific vercel.app subdomain
+  if (
+    hostname === 'hiremebahamas.com' || 
+    hostname === 'www.hiremebahamas.com' ||
+    hostname === 'hiremebahamas.vercel.app'
+  ) {
     API_BASE_URL = DEFAULT_PROD_API;
   }
 }
