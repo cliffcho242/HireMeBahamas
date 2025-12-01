@@ -11,6 +11,48 @@
 
 ---
 
+## Vercel CLI 48.12.0 - 5-Step Deploy Checklist
+
+> **IMPORTANT:** The `vercel.json` is already configured correctly. Follow these steps for guaranteed success.
+
+### Step 1: Update Vercel CLI & Clear Cache
+```bash
+npm i -g vercel@latest && vercel --version && rm -rf .vercel
+```
+
+### Step 2: Verify vercel.json (Already Fixed)
+The runtime has been removed from the functions block - Vercel auto-detects Python 3.12:
+```json
+"functions": {
+  "api/**/*.py": {
+    "maxDuration": 30
+  }
+}
+```
+
+### Step 3: Deploy to Vercel
+```bash
+vercel --prod
+```
+
+### Step 4: Verify Build Succeeds
+```bash
+curl https://your-project.vercel.app/api/health
+```
+
+### Step 5: Confirm Git Integration (Dashboard)
+- Go to: https://vercel.com/dashboard
+- Select project → Settings → Git
+- Ensure "Production Branch" is set to `main`
+
+### ✅ Expected Results:
+- Build succeeds in <30 seconds
+- No "Function Runtimes must have a valid version" errors
+- Python API functions work at `/api/*`
+- Static React/Vite frontend served correctly
+
+---
+
 ## RECOMMENDED: Quick Free Deployment
 
 ### Option 1: Vercel (Frontend) + Railway (Backend)
