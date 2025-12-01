@@ -47,6 +47,12 @@ frontend/dist/
 frontend/build/
 frontend/.vite/
 
+# Next.js App
+next-app/node_modules/
+next-app/.next/
+next-app/out/
+next-app/drizzle/
+
 # Admin Panel
 admin-panel/node_modules/
 admin-panel/dist/
@@ -70,3 +76,4 @@ htmlcov/
 .vercel
 .railway
 *.db-journal
+node_modules/

@@ -4,6 +4,23 @@
 
 A modern, Facebook-inspired social platform designed specifically for professionals in the Bahamas to connect, share career opportunities, and build meaningful professional relationships.
 
+## ⚡ NEW: Edge Functions + Direct Postgres Access
+
+**MASTERMIND FINAL EDGE + POSTGRES — Run real SQL directly from Vercel Edge Functions!**
+
+✅ **<50ms global latency** - Edge Functions deploy to 300+ locations  
+✅ **No serverless detours** - Direct Edge → Postgres connection  
+✅ **SELECT, INSERT, UPDATE** - Full SQL support from Edge  
+✅ **Production-ready** - Connection pooling, error handling, auth patterns  
+
+📖 **[Complete Edge + Postgres Guide](./EDGE_POSTGRES_README.md)** - The ONE production-immortal solution  
+📖 **[Quick Reference Card](./next-app/EDGE_POSTGRES_QUICKREF.md)** - 1-minute setup guide  
+📖 **[Full Documentation](./next-app/EDGE_POSTGRES_GUIDE.md)** - Deep dive with examples  
+
+**Demo Endpoint:** `/api/edge-sql-demo` - Live examples of SELECT, INSERT, UPDATE from Edge
+
+---
+
 ## 🚀 Production Mode (Recommended for Local Development)
 
 **NEW**: Run HireMeBahamas in full production mode with PostgreSQL!
@@ -78,7 +95,20 @@ Base images include all system dependencies pre-installed:
 
 📖 **[Read Docker Base Images Documentation](./DOCKER_BASE_IMAGES.md)** for technical details.
 
-### 🗄️ Railway Database Setup
+### 🗄️ Database Setup
+
+#### Vercel Postgres (Recommended for Vercel Deployments)
+
+Vercel Postgres (powered by Neon) provides serverless PostgreSQL optimized for Vercel:
+
+- ✅ **Free Tier**: 0.5 GB storage (Hobby plan)
+- ✅ **Serverless**: Automatic scaling and hibernation
+- ✅ **Edge Network**: Low latency worldwide
+- ✅ **Simple Setup**: 5-minute configuration
+
+📖 **[Complete Vercel Postgres Setup Guide](./VERCEL_POSTGRES_SETUP.md)** - Step-by-step instructions with connection string configuration, migration guide, and troubleshooting.
+
+#### Railway Postgres (Alternative Option)
 
 For production deployments on Railway, you need to configure PostgreSQL for persistent data storage:
 
@@ -592,6 +622,26 @@ This project follows [Docker security best practices](DOCKER_SECURITY.md):
 - No secrets in Dockerfiles (no ARG/ENV for sensitive data)
 - `.dockerignore` prevents sensitive files from being copied into images
 - See [DOCKER_SECURITY.md](DOCKER_SECURITY.md) for detailed information
+
+## Troubleshooting
+
+### GitHub Copilot Model Endpoint Error
+
+If you encounter this error while using GitHub Copilot Workspace:
+
+```
+HTTP error 400: bad request: no endpoints available for this model under your current plan and policies
+```
+
+**This is not a code issue** - it's related to your GitHub subscription plan's AI model access.
+
+📖 **[Read the complete troubleshooting guide](GITHUB_COPILOT_MODEL_ERROR.md)** for solutions.
+
+**Quick Summary:**
+- The error occurs when GitHub Copilot tries to use a model not available in your plan
+- Standard GitHub Copilot access works fine for all repository development tasks
+- No code changes are needed in the repository
+- See the troubleshooting guide for detailed solutions and workarounds
 
 ## Contributing
 
