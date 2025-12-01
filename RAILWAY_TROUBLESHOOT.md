@@ -59,6 +59,25 @@ By default, the application creates a **dummy `pg_stat_statements` view** that r
 
 This is the recommended approach as it eliminates log noise while having zero performance impact.
 
+### "Periodic Extension Cleanup Failed" Warning
+
+If you see this warning in your logs:
+```
+Periodic extension cleanup failed: connection to server at "dpg-xxxxx-a" (10.x.x.x), port 5432 failed: Connection timed out
+```
+
+**This is a harmless warning** that occurs when the database connection times out during the periodic cleanup. The cleanup is non-critical and only affects cosmetic log noise.
+
+**Quick Fix (3 clicks):**
+1. Go to Railway Dashboard → Backend service → Variables tab
+2. Add: `SUPPRESS_EXTENSION_CLEANUP_WARNINGS=true`
+3. Redeploy (optional - takes effect on next deployment)
+
+**Alternative:** To completely disable periodic cleanup:
+- Add: `DISABLE_EXTENSION_CLEANUP=true`
+
+See [RAILWAY_EXTENSION_CLEANUP_FIX.md](./RAILWAY_EXTENSION_CLEANUP_FIX.md) for the complete guide.
+
 ### Note About External Monitoring Errors
 If you see `pg_stat_statements` errors in your Railway logs like:
 ```

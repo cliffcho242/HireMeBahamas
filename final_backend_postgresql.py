@@ -4154,6 +4154,14 @@ DB_KEEPALIVE_MAX_PING_AGE_SECONDS = 300  # Consider thread dead if no ping for 5
 # Cleanup runs every hour (3600 seconds) to catch any newly created extensions
 DB_EXTENSION_CLEANUP_INTERVAL_SECONDS = int(os.getenv("DB_EXTENSION_CLEANUP_INTERVAL_SECONDS", "3600"))
 
+# Disable periodic extension cleanup entirely
+# Set to "true" to prevent the periodic extension cleanup from running.
+# The initial cleanup at startup will still run to set up the dummy view.
+# This is useful if you want to eliminate the "Periodic extension cleanup failed" warnings
+# that occur when the database connection times out.
+# Default: "false" (cleanup enabled)
+DISABLE_EXTENSION_CLEANUP = os.getenv("DISABLE_EXTENSION_CLEANUP", "false").lower() == "true"
+
 # Create a dummy pg_stat_statements view to satisfy Railway's monitoring queries
 # When enabled, instead of dropping the pg_stat_statements table/view, we create a
 # dummy empty view that returns no rows. This allows Railway's monitoring queries
@@ -4161,6 +4169,13 @@ DB_EXTENSION_CLEANUP_INTERVAL_SECONDS = int(os.getenv("DB_EXTENSION_CLEANUP_INTE
 # of failing with an error. This reduces log noise from Railway's monitoring.
 # Set to "true" to enable this behavior.
 CREATE_DUMMY_PG_STAT_STATEMENTS = os.getenv("CREATE_DUMMY_PG_STAT_STATEMENTS", "true").lower() == "true"
+
+# Suppress extension cleanup failure logs for transient connection errors
+# Set to "true" to hide warnings when periodic extension cleanup fails due to
+# database connection timeouts. Since the cleanup is non-critical (only cosmetic),
+# these warnings can be safely suppressed.
+# Default: "true" (suppress transient error warnings)
+SUPPRESS_EXTENSION_CLEANUP_WARNINGS = os.getenv("SUPPRESS_EXTENSION_CLEANUP_WARNINGS", "true").lower() == "true"
 
 # Track keepalive thread and status
 _keepalive_thread = None
@@ -4178,6 +4193,7 @@ def should_run_extension_cleanup():
     
     This function checks the global `_last_extension_cleanup` variable to decide
     whether to run the cleanup:
+    - Returns False if DISABLE_EXTENSION_CLEANUP is True
     - Returns True on the first call (when `_last_extension_cleanup` is None)
     - Returns True if `DB_EXTENSION_CLEANUP_INTERVAL_SECONDS` has passed since last cleanup
     - Returns False otherwise
@@ -4186,6 +4202,10 @@ def should_run_extension_cleanup():
         True if cleanup should run, False otherwise
     """
     global _last_extension_cleanup
+    
+    # If cleanup is disabled via environment variable, skip it
+    if DISABLE_EXTENSION_CLEANUP:
+        return False
     
     if _last_extension_cleanup is None:
         # First cleanup after startup
@@ -4213,6 +4233,10 @@ def periodic_extension_cleanup():
     The cleanup is non-blocking and failures are logged but don't affect other operations.
     Updates `_last_extension_cleanup` timestamp after each cleanup attempt.
     
+    Connection timeout errors are suppressed by default (controlled by
+    SUPPRESS_EXTENSION_CLEANUP_WARNINGS) since they are transient and the
+    cleanup is non-critical.
+    
     Returns:
         True if cleanup was successful or not needed, False if cleanup failed
     """
@@ -4224,6 +4248,10 @@ def periodic_extension_cleanup():
     try:
         conn = get_db_connection()
         if conn is None:
+            # Connection failed - this is a transient error, suppress warning if configured
+            if not SUPPRESS_EXTENSION_CLEANUP_WARNINGS:
+                print("⚠️ Periodic extension cleanup skipped: could not get database connection")
+            _last_extension_cleanup = datetime.now(timezone.utc)
             return False
         
         cursor = conn.cursor()
@@ -4236,13 +4264,21 @@ def periodic_extension_cleanup():
         if success:
             print(f"✅ Periodic extension cleanup completed at {_last_extension_cleanup.isoformat()}")
         else:
-            print(f"⚠️ Periodic extension cleanup had some issues at {_last_extension_cleanup.isoformat()}")
+            if not SUPPRESS_EXTENSION_CLEANUP_WARNINGS:
+                print(f"⚠️ Periodic extension cleanup had some issues at {_last_extension_cleanup.isoformat()}")
         
         return success
         
     except Exception as e:
         error_msg = str(e)[:100]
-        print(f"⚠️ Periodic extension cleanup failed: {error_msg}")
+        # Suppress transient connection errors if configured
+        # These are typically "Connection timed out" or similar network issues
+        is_connection_error = any(phrase in error_msg.lower() for phrase in [
+            "connection", "timed out", "timeout", "refused", "network", 
+            "unreachable", "no route", "connection reset"
+        ])
+        if not SUPPRESS_EXTENSION_CLEANUP_WARNINGS or not is_connection_error:
+            print(f"⚠️ Periodic extension cleanup failed: {error_msg}")
         _last_extension_cleanup = datetime.now(timezone.utc)  # Update time even on failure
         return False
     finally:
