@@ -69,7 +69,8 @@ export async function POST(request: Request) {
     const user = rows[0];
     
     // Always run bcrypt.compare to prevent timing attacks
-    const passwordHash = user?.hashed_password ?? "$2a$12$invalidhashtopreventtimingattack";
+    // Use a valid bcrypt hash format (this is a hash of empty string)
+    const passwordHash = user?.hashed_password ?? "$2a$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW";
     const isValidPassword = await bcrypt.compare(password, passwordHash);
     
     if (!user || !isValidPassword) {
