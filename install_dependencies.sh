@@ -144,7 +144,6 @@ fi
 # 12. Install Python packages
 print_section "Installing Python packages from requirements.txt"
 if [ -f "requirements.txt" ]; then
-    export CFLAGS="-Wno-conversion"
     pip install -r requirements.txt
     print_success "Python packages installed"
 else

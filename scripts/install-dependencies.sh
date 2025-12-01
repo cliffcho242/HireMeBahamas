@@ -140,7 +140,6 @@ if [ "$INSTALL_MODE" == "all" ] || [ "$INSTALL_MODE" == "backend" ]; then
         # Install root requirements.txt
         if [ -f "requirements.txt" ]; then
             print_status "info" "Installing from requirements.txt..."
-            export CFLAGS="-Wno-conversion"
             python3 -m pip install -r requirements.txt || print_status "error" "Failed to install requirements.txt"
             print_status "success" "Installed root requirements.txt"
         else
@@ -150,7 +149,6 @@ if [ "$INSTALL_MODE" == "all" ] || [ "$INSTALL_MODE" == "backend" ]; then
         # Install backend requirements.txt
         if [ -f "backend/requirements.txt" ]; then
             print_status "info" "Installing from backend/requirements.txt..."
-            export CFLAGS="-Wno-conversion"
             python3 -m pip install -r backend/requirements.txt || print_status "error" "Failed to install backend/requirements.txt"
             print_status "success" "Installed backend/requirements.txt"
         else

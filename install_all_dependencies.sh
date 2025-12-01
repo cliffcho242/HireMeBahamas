@@ -152,7 +152,6 @@ pip install --upgrade pip setuptools wheel
 
 # Install backend dependencies
 echo "Installing backend Python packages..."
-export CFLAGS="-Wno-conversion"
 pip install -r requirements.txt
 
 echo "Backend dependencies installed successfully!"
@@ -204,7 +203,6 @@ cd .. || exit
 
 # Install root Python dependencies (for utility scripts)
 echo "Installing root Python packages..."
-export CFLAGS="-Wno-conversion"
 pip3 install -r requirements.txt
 
 echo ""
