@@ -87,7 +87,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libpq-dev python3-dev libjpeg-dev libpng-dev libwebp-dev zlib1g-dev
+          sudo apt-get install -y libjpeg-dev libpng-dev libwebp-dev zlib1g-dev
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -103,7 +103,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest pytest-flask
-          pip install -r requirements.txt
+          pip install --only-binary=:all: -r requirements.txt
 
       - name: Run database recovery tests
         run: |
