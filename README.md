@@ -4,6 +4,23 @@
 
 A modern, Facebook-inspired social platform designed specifically for professionals in the Bahamas to connect, share career opportunities, and build meaningful professional relationships.
 
+## ⚡ NEW: Edge Functions + Direct Postgres Access
+
+**MASTERMIND FINAL EDGE + POSTGRES — Run real SQL directly from Vercel Edge Functions!**
+
+✅ **<50ms global latency** - Edge Functions deploy to 300+ locations  
+✅ **No serverless detours** - Direct Edge → Postgres connection  
+✅ **SELECT, INSERT, UPDATE** - Full SQL support from Edge  
+✅ **Production-ready** - Connection pooling, error handling, auth patterns  
+
+📖 **[Complete Edge + Postgres Guide](./EDGE_POSTGRES_README.md)** - The ONE production-immortal solution  
+📖 **[Quick Reference Card](./next-app/EDGE_POSTGRES_QUICKREF.md)** - 1-minute setup guide  
+📖 **[Full Documentation](./next-app/EDGE_POSTGRES_GUIDE.md)** - Deep dive with examples  
+
+**Demo Endpoint:** `/api/edge-sql-demo` - Live examples of SELECT, INSERT, UPDATE from Edge
+
+---
+
 ## 🚀 Production Mode (Recommended for Local Development)
 
 **NEW**: Run HireMeBahamas in full production mode with PostgreSQL!
