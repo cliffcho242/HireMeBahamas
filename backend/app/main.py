@@ -81,7 +81,12 @@ def health_ping():
     return PlainTextResponse("pong", status_code=200)
 
 
-# Log boot completion time
+# =============================================================================
+# BOOT TIME MEASUREMENT - Immortal Section Only
+# =============================================================================
+# This measures only the time to create FastAPI app and register health endpoints.
+# The imports below are part of the "lazy loading" phase that happens after
+# health endpoints are already active and responding to requests.
 _APP_BOOT_END = time.time()
 _BOOT_TIME_MS = int((_APP_BOOT_END - _APP_BOOT_START) * 1000)
 print(f"🚀 IMMORTAL HEALTH ENDPOINTS ACTIVE - Boot time: {_BOOT_TIME_MS}ms")

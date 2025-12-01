@@ -48,13 +48,14 @@ def _normalize_database_url(url: str) -> str:
     parsed = urlparse(url)
     params = parse_qs(parsed.query)
     
-    # Ensure connect_timeout is set (fail fast at 10s, not 30s)
+    # Ensure connect_timeout is set (fail fast, not 30s default)
     if "connect_timeout" not in params:
-        params["connect_timeout"] = ["10"]
+        params["connect_timeout"] = [str(CONNECT_TIMEOUT)]
     
     # Ensure jit=off is in options (CRITICAL for cold start performance)
+    # Check for exact "jit=" pattern to avoid matching "jitter" or similar
     existing_options = params.get("options", [""])[0]
-    if "jit" not in existing_options:
+    if "jit=" not in existing_options and " jit " not in existing_options:
         if existing_options:
             params["options"] = [f"{existing_options} -c jit=off"]
         else:
