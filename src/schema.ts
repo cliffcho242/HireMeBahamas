@@ -9,6 +9,6 @@ export const users = pgTable('users', {
 export const jobs = pgTable('jobs', {
   id: serial('id').primaryKey(),
   title: text('title').notNull(),
-  userId: integer('user_id').references(() => users.id),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow(),
 });
