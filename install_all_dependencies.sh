@@ -201,6 +201,7 @@ cd .. || exit
 
 # Install root Python dependencies (for utility scripts)
 echo "Installing root Python packages..."
+export CFLAGS="-Wno-conversion"
 pip3 install -r requirements.txt
 
 echo ""
