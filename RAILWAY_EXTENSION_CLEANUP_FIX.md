@@ -61,11 +61,23 @@ If you want to completely disable the periodic extension cleanup (not just silen
 If you want to manually clean up the extension now, run this in your database:
 
 ```sql
+-- Step 1: Drop the extension if it exists
 DROP EXTENSION IF EXISTS pg_stat_statements CASCADE;
-CREATE OR REPLACE VIEW public.pg_stat_statements AS SELECT 0::oid AS userid, 0::oid AS dbid, 0::bigint AS queryid, ''::text AS query, 0::bigint AS calls, 0::double precision AS total_exec_time, 0::double precision AS mean_exec_time, 0::bigint AS rows;
+
+-- Step 2: Create a dummy view that satisfies Railway monitoring queries
+CREATE OR REPLACE VIEW public.pg_stat_statements AS 
+SELECT 
+    0::oid AS userid, 
+    0::oid AS dbid, 
+    0::bigint AS queryid, 
+    ''::text AS query, 
+    0::bigint AS calls, 
+    0::double precision AS total_exec_time, 
+    0::double precision AS mean_exec_time, 
+    0::bigint AS rows;
 ```
 
-Or via Railway CLI:
+Or via Railway CLI (one-liner):
 ```bash
 railway run psql -c "DROP EXTENSION IF EXISTS pg_stat_statements CASCADE; CREATE OR REPLACE VIEW public.pg_stat_statements AS SELECT 0::oid AS userid, 0::oid AS dbid, 0::bigint AS queryid, ''::text AS query, 0::bigint AS calls, 0::double precision AS total_exec_time, 0::double precision AS mean_exec_time, 0::bigint AS rows;"
 ```

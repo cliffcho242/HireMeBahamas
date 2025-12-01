@@ -4186,6 +4186,48 @@ _keepalive_start_time = None  # Track when keepalive started for aggressive mode
 _keepalive_total_pings = 0  # Track total successful pings for monitoring
 _last_extension_cleanup = None  # Track when we last cleaned up orphaned extensions
 
+# Connection error indicators for detecting transient database issues
+# These patterns indicate network/connection problems that are typically transient
+CONNECTION_ERROR_PATTERNS = frozenset([
+    "connection", "timed out", "timeout", "refused", "network",
+    "unreachable", "no route", "connection reset", "closed", 
+    "broken pipe", "eof", "ssl error"
+])
+
+
+def _is_connection_error(error_message: str) -> bool:
+    """
+    Check if an error message indicates a transient connection error.
+    
+    This function checks for common patterns in error messages that indicate
+    network or connection issues (timeouts, refused connections, etc.).
+    These errors are typically transient and the operation can be retried later.
+    
+    Args:
+        error_message: The error message to check
+        
+    Returns:
+        True if the error appears to be a connection-related issue
+    """
+    error_lower = error_message.lower()
+    return any(pattern in error_lower for pattern in CONNECTION_ERROR_PATTERNS)
+
+
+def _log_cleanup_warning(message: str, is_connection_error: bool = False) -> None:
+    """
+    Log a cleanup warning message, respecting suppression settings.
+    
+    If SUPPRESS_EXTENSION_CLEANUP_WARNINGS is True and the error is a
+    connection-related issue, the warning will be suppressed.
+    
+    Args:
+        message: The warning message to log
+        is_connection_error: Whether this is a connection-related error
+    """
+    if SUPPRESS_EXTENSION_CLEANUP_WARNINGS and is_connection_error:
+        return
+    print(message)
+
 
 def should_run_extension_cleanup():
     """
@@ -4248,9 +4290,11 @@ def periodic_extension_cleanup():
     try:
         conn = get_db_connection()
         if conn is None:
-            # Connection failed - this is a transient error, suppress warning if configured
-            if not SUPPRESS_EXTENSION_CLEANUP_WARNINGS:
-                print("⚠️ Periodic extension cleanup skipped: could not get database connection")
+            # Connection failed - this is a transient connection error
+            _log_cleanup_warning(
+                "⚠️ Periodic extension cleanup skipped: could not get database connection",
+                is_connection_error=True
+            )
             _last_extension_cleanup = datetime.now(timezone.utc)
             return False
         
@@ -4264,21 +4308,20 @@ def periodic_extension_cleanup():
         if success:
             print(f"✅ Periodic extension cleanup completed at {_last_extension_cleanup.isoformat()}")
         else:
-            if not SUPPRESS_EXTENSION_CLEANUP_WARNINGS:
-                print(f"⚠️ Periodic extension cleanup had some issues at {_last_extension_cleanup.isoformat()}")
+            _log_cleanup_warning(
+                f"⚠️ Periodic extension cleanup had some issues at {_last_extension_cleanup.isoformat()}",
+                is_connection_error=False
+            )
         
         return success
         
     except Exception as e:
         error_msg = str(e)[:100]
-        # Suppress transient connection errors if configured
-        # These are typically "Connection timed out" or similar network issues
-        is_connection_error = any(phrase in error_msg.lower() for phrase in [
-            "connection", "timed out", "timeout", "refused", "network", 
-            "unreachable", "no route", "connection reset"
-        ])
-        if not SUPPRESS_EXTENSION_CLEANUP_WARNINGS or not is_connection_error:
-            print(f"⚠️ Periodic extension cleanup failed: {error_msg}")
+        is_conn_error = _is_connection_error(error_msg)
+        _log_cleanup_warning(
+            f"⚠️ Periodic extension cleanup failed: {error_msg}",
+            is_connection_error=is_conn_error
+        )
         _last_extension_cleanup = datetime.now(timezone.utc)  # Update time even on failure
         return False
     finally:
