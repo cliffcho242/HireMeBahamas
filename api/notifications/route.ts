@@ -9,6 +9,9 @@ export const config = {
   regions: ['iad1', 'sfo1', 'cdg1', 'hnd1', 'syd1'], // Global edge locations
 };
 
+// JWT secret for verification
+const JWT_SECRET = process.env.JWT_SECRET || 'hiremebahamas-edge-secret-2025';
+
 // Notification types
 interface Notification {
   id: string;
@@ -25,9 +28,65 @@ interface Notification {
 const notificationStore = new Map<string, Notification[]>();
 
 /**
- * Validate JWT token from Edge
+ * Base64URL decode for JWT
  */
-function validateEdgeToken(token: string): { valid: boolean; userId?: string } {
+function base64UrlDecode(data: string): string {
+  // Restore base64 padding
+  let base64 = data.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = base64.length % 4;
+  if (padding) {
+    base64 += '='.repeat(4 - padding);
+  }
+  return atob(base64);
+}
+
+/**
+ * Verify HMAC-SHA256 signature using Web Crypto API
+ */
+async function verifyHmacSignature(data: string, signature: string, secret: string): Promise<boolean> {
+  try {
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secret);
+    const messageData = encoder.encode(data);
+    
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const expectedSignatureBuffer = await crypto.subtle.sign('HMAC', key, messageData);
+    
+    // Convert ArrayBuffer to base64url
+    const bytes = new Uint8Array(expectedSignatureBuffer);
+    let binary = '';
+    bytes.forEach(byte => binary += String.fromCharCode(byte));
+    const expectedSignature = btoa(binary)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+    
+    // Constant-time comparison to prevent timing attacks
+    if (signature.length !== expectedSignature.length) {
+      return false;
+    }
+    
+    let result = 0;
+    for (let i = 0; i < signature.length; i++) {
+      result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
+    }
+    return result === 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validate JWT token from Edge with HMAC-SHA256 verification
+ */
+async function validateEdgeToken(token: string): Promise<{ valid: boolean; userId?: string }> {
   try {
     if (!token || !token.startsWith('Bearer ')) {
       return { valid: false };
@@ -40,14 +99,24 @@ function validateEdgeToken(token: string): { valid: boolean; userId?: string } {
       return { valid: false };
     }
     
-    const payload = JSON.parse(atob(parts[1]));
+    const [header, payload, signature] = parts;
+    const signatureInput = `${header}.${payload}`;
     
-    // Check expiration
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+    // Verify HMAC-SHA256 signature
+    const isValidSignature = await verifyHmacSignature(signatureInput, signature, JWT_SECRET);
+    if (!isValidSignature) {
       return { valid: false };
     }
     
-    return { valid: true, userId: payload.user_id || payload.sub };
+    // Decode payload after signature verification
+    const decodedPayload = JSON.parse(base64UrlDecode(payload));
+    
+    // Check expiration
+    if (decodedPayload.exp && decodedPayload.exp < Math.floor(Date.now() / 1000)) {
+      return { valid: false };
+    }
+    
+    return { valid: true, userId: decodedPayload.user_id || decodedPayload.sub };
   } catch {
     return { valid: false };
   }
@@ -154,7 +223,7 @@ export default async function handler(request: Request): Promise<Response> {
   
   // Validate authentication
   const authHeader = request.headers.get('Authorization') || '';
-  const auth = validateEdgeToken(authHeader);
+  const auth = await validateEdgeToken(authHeader);
   
   if (!auth.valid || !auth.userId) {
     return new Response(

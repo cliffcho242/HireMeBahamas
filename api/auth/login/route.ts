@@ -4,8 +4,6 @@
  * Target: < 45ms globally, zero cold starts
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
 // Edge Runtime configuration
 export const config = {
   runtime: 'edge',
@@ -22,31 +20,127 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number; locked?
 
 // JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'hiremebahamas-edge-secret-2025';
-const JWT_EXPIRY = '24h';
+const JWT_EXPIRY_SECONDS = 24 * 60 * 60; // 24 hours
 
 /**
- * Simple JWT encoder for Edge runtime (no crypto dependencies)
+ * Base64URL encode (RFC 4648)
  */
-function createEdgeJWT(payload: Record<string, unknown>): string {
+function base64UrlEncode(data: string): string {
+  return btoa(data)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+/**
+ * Base64URL decode
+ */
+function base64UrlDecode(data: string): string {
+  // Restore base64 padding
+  let base64 = data.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = base64.length % 4;
+  if (padding) {
+    base64 += '='.repeat(4 - padding);
+  }
+  return atob(base64);
+}
+
+/**
+ * Create HMAC-SHA256 signature using Web Crypto API
+ */
+async function createHmacSignature(data: string, secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const messageData = encoder.encode(data);
+  
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign('HMAC', key, messageData);
+  
+  // Convert ArrayBuffer to base64url
+  const bytes = new Uint8Array(signature);
+  let binary = '';
+  bytes.forEach(byte => binary += String.fromCharCode(byte));
+  return base64UrlEncode(binary);
+}
+
+/**
+ * Verify HMAC-SHA256 signature using Web Crypto API
+ */
+async function verifyHmacSignature(data: string, signature: string, secret: string): Promise<boolean> {
+  const expectedSignature = await createHmacSignature(data, secret);
+  
+  // Constant-time comparison to prevent timing attacks
+  if (signature.length !== expectedSignature.length) {
+    return false;
+  }
+  
+  let result = 0;
+  for (let i = 0; i < signature.length; i++) {
+    result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+/**
+ * Create JWT with HMAC-SHA256 signature (Edge-compatible)
+ */
+async function createEdgeJWT(payload: Record<string, unknown>): Promise<string> {
   const header = { alg: 'HS256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
-  const expiresIn = 24 * 60 * 60; // 24 hours in seconds
   
   const tokenPayload = {
     ...payload,
     iat: now,
-    exp: now + expiresIn,
+    exp: now + JWT_EXPIRY_SECONDS,
   };
   
-  const base64Header = btoa(JSON.stringify(header));
-  const base64Payload = btoa(JSON.stringify(tokenPayload));
+  const base64Header = base64UrlEncode(JSON.stringify(header));
+  const base64Payload = base64UrlEncode(JSON.stringify(tokenPayload));
+  const signatureInput = `${base64Header}.${base64Payload}`;
   
-  // Simple signature (in production, use proper HMAC-SHA256)
-  const signature = btoa(
-    `${base64Header}.${base64Payload}.${JWT_SECRET}`
-  );
+  const signature = await createHmacSignature(signatureInput, JWT_SECRET);
   
   return `${base64Header}.${base64Payload}.${signature}`;
+}
+
+/**
+ * Verify and decode JWT with HMAC-SHA256 signature
+ */
+async function verifyEdgeJWT(token: string): Promise<{ valid: boolean; payload?: Record<string, unknown> }> {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return { valid: false };
+    }
+    
+    const [header, payload, signature] = parts;
+    const signatureInput = `${header}.${payload}`;
+    
+    // Verify signature
+    const isValid = await verifyHmacSignature(signatureInput, signature, JWT_SECRET);
+    if (!isValid) {
+      return { valid: false };
+    }
+    
+    // Decode and verify payload
+    const decodedPayload = JSON.parse(base64UrlDecode(payload));
+    
+    // Check expiration
+    if (decodedPayload.exp && decodedPayload.exp < Math.floor(Date.now() / 1000)) {
+      return { valid: false };
+    }
+    
+    return { valid: true, payload: decodedPayload };
+  } catch {
+    return { valid: false };
+  }
 }
 
 /**
@@ -208,7 +302,7 @@ export default async function handler(request: Request): Promise<Response> {
     }
     
     // Generate Edge JWT with user data
-    const edgeToken = createEdgeJWT({
+    const edgeToken = await createEdgeJWT({
       user_id: responseData.user?.id,
       email: responseData.user?.email,
       user_type: responseData.user?.user_type,
