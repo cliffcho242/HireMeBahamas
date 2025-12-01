@@ -119,6 +119,7 @@ async def test_security_headers_on_all_endpoints():
     endpoints = [
         "/health/ping",
         "/health",
+        "/live",
         "/",
     ]
     
