@@ -1,8 +1,33 @@
-import json
-from http.server import BaseHTTPRequestHandler
-from urllib.parse import parse_qs, urlparse
+"""
+FastAPI + JWT Authentication for Vercel Serverless
+Production-ready authentication with JWT tokens
+"""
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr
+from typing import Optional
+from datetime import timedelta
 
-# In-memory data
+from .middleware import create_access_token, get_current_user, get_optional_user
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="HireMeBahamas API",
+    version="1.0.0",
+    docs_url=None,  # Disable in production
+    redoc_url=None,
+)
+
+# CORS Configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# In-memory data stores
 users = {
     "admin@hiremebahamas.com": {
         "email": "admin@hiremebahamas.com",
@@ -15,155 +40,188 @@ users = {
 jobs = []
 posts = []
 
+# Pydantic Models
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
 
-class handler(BaseHTTPRequestHandler):
-    def _set_headers(self, status=200):
-        self.send_response(status)
-        self.send_header("Content-type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header(
-            "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS"
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: str = ""
+    last_name: str = ""
+    user_type: str = "job_seeker"
+
+class JobCreate(BaseModel):
+    title: str
+    company: str
+    location: str
+    description: str
+    salary: str = "Negotiable"
+
+class PostCreate(BaseModel):
+    content: str
+    image_url: Optional[str] = None
+    video_url: Optional[str] = None
+
+
+# ==================== PUBLIC ROUTES ====================
+
+@app.get("/health")
+@app.get("/api/health")
+async def health_check():
+    """Public health check endpoint"""
+    return {
+        "status": "healthy",
+        "message": "Vercel Serverless API is running",
+        "platform": "vercel",
+        "cold_starts": "eliminated",
+        "authentication": "JWT enabled"
+    }
+
+
+@app.post("/api/auth/login")
+async def login(request: LoginRequest):
+    """Login endpoint - creates JWT token"""
+    email = request.email
+    password = request.password
+    
+    # Verify credentials
+    if email not in users or users[email]["password"] != password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
         )
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        self.end_headers()
+    
+    user = users[email]
+    
+    # Create JWT token
+    access_token = create_access_token(
+        data={
+            "email": user["email"],
+            "user_type": user["user_type"],
+            "first_name": user["first_name"],
+            "last_name": user["last_name"],
+        }
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "email": user["email"],
+            "user_type": user["user_type"],
+            "first_name": user["first_name"],
+            "last_name": user["last_name"],
+        },
+    }
 
-    def do_OPTIONS(self):
-        self._set_headers()
-        return
 
-    def do_GET(self):
-        path = self.path
-
-        if path == "/health" or path == "/api/health":
-            self._set_headers()
-            response = {
-                "status": "healthy",
-                "message": "Vercel Serverless API is running",
-                "platform": "vercel",
-                "cold_starts": "eliminated"
-            }
-            self.wfile.write(json.dumps(response).encode())
-
-        elif path == "/api/jobs":
-            self._set_headers()
-            self.wfile.write(json.dumps({"success": True, "jobs": jobs, "total": len(jobs)}).encode())
-
-        elif path == "/api/jobs/stats/overview":
-            self._set_headers()
-            response = {
-                "success": True,
-                "stats": {
-                    "active_jobs": len(jobs),
-                    "companies_hiring": len(set(job.get("company", "") for job in jobs)),
-                    "new_this_week": len(jobs),  # Simplified for in-memory store
-                },
-            }
-            self.wfile.write(json.dumps(response).encode())
-
-        elif path == "/api/posts":
-            self._set_headers()
-            self.wfile.write(json.dumps(posts).encode())
-
-        else:
-            self._set_headers(404)
-            self.wfile.write(json.dumps({"error": "Not found"}).encode())
-
-    def do_POST(self):
-        content_length = int(self.headers.get("Content-Length", 0))
-        body = (
-            self.rfile.read(content_length).decode("utf-8")
-            if content_length > 0
-            else "{}"
+@app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
+async def register(request: RegisterRequest):
+    """Register new user endpoint"""
+    email = request.email
+    
+    if email in users:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User already exists"
         )
+    
+    # Create new user
+    users[email] = {
+        "email": email,
+        "password": request.password,
+        "user_type": request.user_type,
+        "first_name": request.first_name,
+        "last_name": request.last_name,
+    }
+    
+    return {
+        "message": "User registered successfully",
+        "user": {
+            "email": email,
+            "user_type": request.user_type,
+            "first_name": request.first_name,
+            "last_name": request.last_name,
+        },
+    }
 
-        try:
-            data = json.loads(body)
-        except:
-            data = {}
 
-        path = self.path
+@app.get("/api/jobs")
+async def get_jobs():
+    """Public endpoint - list all jobs"""
+    return {
+        "success": True,
+        "jobs": jobs,
+        "total": len(jobs)
+    }
 
-        if path == "/api/auth/login":
-            email = data.get("email")
-            password = data.get("password")
 
-            if email in users and users[email]["password"] == password:
-                self._set_headers()
-                response = {
-                    "access_token": "demo_token_12345",
-                    "user": {
-                        "email": email,
-                        "user_type": users[email]["user_type"],
-                        "first_name": users[email]["first_name"],
-                        "last_name": users[email]["last_name"],
-                    },
-                }
-                self.wfile.write(json.dumps(response).encode())
-            else:
-                self._set_headers(401)
-                self.wfile.write(json.dumps({"error": "Invalid credentials"}).encode())
+@app.get("/api/jobs/stats/overview")
+async def get_job_stats():
+    """Public endpoint - job statistics"""
+    return {
+        "success": True,
+        "stats": {
+            "active_jobs": len(jobs),
+            "companies_hiring": len(set(job.get("company", "") for job in jobs)),
+            "new_this_week": len(jobs),
+        },
+    }
 
-        elif path == "/api/auth/register":
-            email = data.get("email")
-            password = data.get("password")
-            first_name = data.get("first_name", "")
-            last_name = data.get("last_name", "")
-            user_type = data.get("user_type", "job_seeker")
 
-            if email in users:
-                self._set_headers(400)
-                self.wfile.write(json.dumps({"error": "User already exists"}).encode())
-            else:
-                users[email] = {
-                    "email": email,
-                    "password": password,
-                    "user_type": user_type,
-                    "first_name": first_name,
-                    "last_name": last_name,
-                }
-                self._set_headers(201)
-                response = {
-                    "message": "User registered successfully",
-                    "user": {
-                        "email": email,
-                        "user_type": user_type,
-                        "first_name": first_name,
-                        "last_name": last_name,
-                    },
-                }
-                self.wfile.write(json.dumps(response).encode())
+@app.get("/api/posts")
+async def get_posts():
+    """Public endpoint - list all posts"""
+    return posts
 
-        elif path == "/api/jobs":
-            job = {
-                "id": len(jobs) + 1,
-                "title": data.get("title"),
-                "company": data.get("company"),
-                "location": data.get("location"),
-                "description": data.get("description"),
-                "salary": data.get("salary", "Negotiable"),
-            }
-            jobs.append(job)
-            self._set_headers(201)
-            self.wfile.write(json.dumps(job).encode())
 
-        elif path == "/api/posts":
-            post = {
-                "id": len(posts) + 1,
-                "content": data.get("content"),
-                "image_url": data.get("image_url"),
-                "video_url": data.get("video_url"),
-                "user": {
-                    "id": 1,
-                    "first_name": "Admin",
-                    "last_name": "User",
-                    "email": "admin@hiremebahamas.com",
-                },
-                "likes_count": 0,
-            }
-            posts.append(post)
-            self._set_headers(201)
-            self.wfile.write(json.dumps(post).encode())
+# ==================== PROTECTED ROUTES ====================
 
-        else:
-            self._set_headers(404)
-            self.wfile.write(json.dumps({"error": "Not found"}).encode())
+@app.get("/api/auth/me")
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    """Protected endpoint - get current user info from JWT"""
+    return {
+        "user": current_user
+    }
+
+
+@app.post("/api/jobs", status_code=status.HTTP_201_CREATED)
+async def create_job(job: JobCreate, current_user: dict = Depends(get_current_user)):
+    """Protected endpoint - create new job posting"""
+    new_job = {
+        "id": len(jobs) + 1,
+        "title": job.title,
+        "company": job.company,
+        "location": job.location,
+        "description": job.description,
+        "salary": job.salary,
+        "created_by": current_user["email"],
+    }
+    jobs.append(new_job)
+    return new_job
+
+
+@app.post("/api/posts", status_code=status.HTTP_201_CREATED)
+async def create_post(post: PostCreate, current_user: dict = Depends(get_current_user)):
+    """Protected endpoint - create new post"""
+    new_post = {
+        "id": len(posts) + 1,
+        "content": post.content,
+        "image_url": post.image_url,
+        "video_url": post.video_url,
+        "user": {
+            "id": len(users) + 1,
+            "first_name": current_user["first_name"],
+            "last_name": current_user["last_name"],
+            "email": current_user["email"],
+        },
+        "likes_count": 0,
+    }
+    posts.append(new_post)
+    return new_post
+
+
+# Vercel serverless handler
+handler = app
