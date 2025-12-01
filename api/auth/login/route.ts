@@ -18,8 +18,16 @@ const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minute lockout after too many fai
 // In-memory rate limiting (for edge, use Vercel KV in production)
 const rateLimitMap = new Map<string, { count: number; resetTime: number; locked?: boolean }>();
 
-// JWT configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'hiremebahamas-edge-secret-2025';
+// JWT configuration - fail if not set in production
+const JWT_SECRET = process.env.JWT_SECRET;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+
+if (!JWT_SECRET && IS_PRODUCTION) {
+  throw new Error('JWT_SECRET environment variable is required in production');
+}
+
+// Use default only in development
+const EFFECTIVE_JWT_SECRET = JWT_SECRET || 'dev-only-jwt-secret-not-for-production';
 const JWT_EXPIRY_SECONDS = 24 * 60 * 60; // 24 hours
 
 /**
@@ -105,7 +113,7 @@ async function createEdgeJWT(payload: Record<string, unknown>): Promise<string> 
   const base64Payload = base64UrlEncode(JSON.stringify(tokenPayload));
   const signatureInput = `${base64Header}.${base64Payload}`;
   
-  const signature = await createHmacSignature(signatureInput, JWT_SECRET);
+  const signature = await createHmacSignature(signatureInput, EFFECTIVE_JWT_SECRET);
   
   return `${base64Header}.${base64Payload}.${signature}`;
 }
@@ -124,7 +132,7 @@ async function verifyEdgeJWT(token: string): Promise<{ valid: boolean; payload?:
     const signatureInput = `${header}.${payload}`;
     
     // Verify signature
-    const isValid = await verifyHmacSignature(signatureInput, signature, JWT_SECRET);
+    const isValid = await verifyHmacSignature(signatureInput, signature, EFFECTIVE_JWT_SECRET);
     if (!isValid) {
       return { valid: false };
     }
@@ -196,18 +204,41 @@ function isValidEmail(email: string): boolean {
 }
 
 /**
+ * Allowed CORS origins
+ */
+const ALLOWED_ORIGINS = [
+  'https://hiremebahamas.com',
+  'https://www.hiremebahamas.com',
+  'https://hiremebahamas.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+];
+
+/**
+ * Get CORS headers with dynamic origin checking
+ */
+function getCorsHeaders(request: Request): Record<string, string> {
+  const origin = request.headers.get('origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin',
+  };
+}
+
+/**
  * Edge Login Handler
  */
 export default async function handler(request: Request): Promise<Response> {
   const startTime = Date.now();
   
-  // CORS headers for Edge
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Max-Age': '86400',
-  };
+  // Dynamic CORS headers
+  const corsHeaders = getCorsHeaders(request);
   
   // Handle preflight
   if (request.method === 'OPTIONS') {

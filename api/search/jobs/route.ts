@@ -289,19 +289,42 @@ function getCacheKey(query: string, filters: Record<string, unknown>, skip: numb
 }
 
 /**
+ * Allowed CORS origins
+ */
+const ALLOWED_ORIGINS = [
+  'https://hiremebahamas.com',
+  'https://www.hiremebahamas.com',
+  'https://hiremebahamas.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+];
+
+/**
+ * Get CORS headers with dynamic origin checking
+ */
+function getCorsHeaders(request: Request): Record<string, string> {
+  const origin = request.headers.get('origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin',
+  };
+}
+
+/**
  * Edge Job Search Handler
  */
 export default async function handler(request: Request): Promise<Response> {
   const startTime = Date.now();
   const url = new URL(request.url);
   
-  // CORS headers
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Max-Age': '86400',
-  };
+  // Dynamic CORS headers
+  const corsHeaders = getCorsHeaders(request);
   
   // Handle preflight
   if (request.method === 'OPTIONS') {
@@ -386,30 +409,41 @@ export default async function handler(request: Request): Promise<Response> {
     
     try {
       const backendUrl = process.env.BACKEND_URL || 'https://hiremebahamas.onrender.com';
-      const backendResponse = await fetch(`${backendUrl}/api/jobs?search=${encodeURIComponent(query)}&skip=${skip}&limit=${limit}`, {
-        headers: { 'X-Edge-Request': 'true' },
-        signal: AbortSignal.timeout(3000), // 3 second timeout for backend
-      });
       
-      if (backendResponse.ok) {
-        const backendData = await backendResponse.json();
-        const jobs = backendData.jobs || backendData.results || [];
+      // Create AbortController with manual timeout for Edge compatibility
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
+      try {
+        const backendResponse = await fetch(`${backendUrl}/api/jobs?search=${encodeURIComponent(query)}&skip=${skip}&limit=${limit}`, {
+          headers: { 'X-Edge-Request': 'true' },
+          signal: controller.signal,
+        });
         
-        searchResults = {
-          results: jobs.map((job: Job) => ({
-            job,
-            score: query ? calculateScore(job, query) : 1,
-            highlights: query ? {
-              title: highlightText(job.title, query),
-              description: highlightText((job.description || '').substring(0, 200), query),
-              company: highlightText(job.company || '', query),
-            } : {},
-          })),
-          total: backendData.total || jobs.length,
-        };
-        fromBackend = true;
-      } else {
-        throw new Error('Backend response not ok');
+        clearTimeout(timeoutId);
+        
+        if (backendResponse.ok) {
+          const backendData = await backendResponse.json();
+          const jobs = backendData.jobs || backendData.results || [];
+          
+          searchResults = {
+            results: jobs.map((job: Job) => ({
+              job,
+              score: query ? calculateScore(job, query) : 1,
+              highlights: query ? {
+                title: highlightText(job.title, query),
+                description: highlightText((job.description || '').substring(0, 200), query),
+                company: highlightText(job.company || '', query),
+              } : {},
+            })),
+            total: backendData.total || jobs.length,
+          };
+          fromBackend = true;
+        } else {
+          throw new Error('Backend response not ok');
+        }
+      } finally {
+        clearTimeout(timeoutId);
       }
     } catch {
       // Fallback to local sample data

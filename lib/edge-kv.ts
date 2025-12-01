@@ -65,8 +65,15 @@ export class EdgeKV {
     this.kvToken = process.env.KV_REST_API_TOKEN;
     this.useMemory = !this.kvUrl || !this.kvToken;
     
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+    
     if (this.useMemory) {
-      console.warn('EdgeKV: Using in-memory fallback. Set KV_REST_API_URL and KV_REST_API_TOKEN for production.');
+      if (isProduction) {
+        console.error('EdgeKV: WARNING - Using in-memory fallback in production. KV state will not persist across Edge Function instances.');
+        console.error('EdgeKV: Set KV_REST_API_URL and KV_REST_API_TOKEN for production use.');
+      } else {
+        console.warn('EdgeKV: Using in-memory fallback. Set KV_REST_API_URL and KV_REST_API_TOKEN for production.');
+      }
     }
   }
 

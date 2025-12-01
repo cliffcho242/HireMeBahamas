@@ -9,8 +9,16 @@ export const config = {
   regions: ['iad1', 'sfo1', 'cdg1', 'hnd1', 'syd1'], // Global edge locations
 };
 
-// JWT secret for verification
-const JWT_SECRET = process.env.JWT_SECRET || 'hiremebahamas-edge-secret-2025';
+// JWT secret for verification - fail if not set in production
+const JWT_SECRET = process.env.JWT_SECRET;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+
+if (!JWT_SECRET && IS_PRODUCTION) {
+  throw new Error('JWT_SECRET environment variable is required in production');
+}
+
+// Use default only in development
+const EFFECTIVE_JWT_SECRET = JWT_SECRET || 'dev-only-jwt-secret-not-for-production';
 
 // Notification types
 interface Notification {
@@ -103,7 +111,7 @@ async function validateEdgeToken(token: string): Promise<{ valid: boolean; userI
     const signatureInput = `${header}.${payload}`;
     
     // Verify HMAC-SHA256 signature
-    const isValidSignature = await verifyHmacSignature(signatureInput, signature, JWT_SECRET);
+    const isValidSignature = await verifyHmacSignature(signatureInput, signature, EFFECTIVE_JWT_SECRET);
     if (!isValidSignature) {
       return { valid: false };
     }
@@ -201,6 +209,34 @@ function getUnreadCount(userId: string): number {
 }
 
 /**
+ * Allowed CORS origins
+ */
+const ALLOWED_ORIGINS = [
+  'https://hiremebahamas.com',
+  'https://www.hiremebahamas.com',
+  'https://hiremebahamas.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+];
+
+/**
+ * Get CORS headers with dynamic origin checking
+ */
+function getCorsHeaders(request: Request): Record<string, string> {
+  const origin = request.headers.get('origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin',
+  };
+}
+
+/**
  * Edge Notifications Handler
  */
 export default async function handler(request: Request): Promise<Response> {
@@ -208,13 +244,8 @@ export default async function handler(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
   
-  // CORS headers
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Max-Age': '86400',
-  };
+  // Dynamic CORS headers
+  const corsHeaders = getCorsHeaders(request);
   
   // Handle preflight
   if (request.method === 'OPTIONS') {

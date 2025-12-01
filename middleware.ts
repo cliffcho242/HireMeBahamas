@@ -15,8 +15,16 @@ export const config = {
   ],
 };
 
-// JWT secret for verification
-const JWT_SECRET = process.env.JWT_SECRET || 'hiremebahamas-edge-secret-2025';
+// JWT secret for verification - fail if not set in production
+const JWT_SECRET = process.env.JWT_SECRET;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+
+if (!JWT_SECRET && IS_PRODUCTION) {
+  throw new Error('JWT_SECRET environment variable is required in production');
+}
+
+// Use default only in development
+const EFFECTIVE_JWT_SECRET = JWT_SECRET || 'dev-only-jwt-secret-not-for-production';
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
@@ -220,7 +228,7 @@ async function validateToken(token: string): Promise<{ valid: boolean; payload?:
     const [header, payload, signature] = parts;
     const signatureInput = `${header}.${payload}`;
     
-    const isValidSignature = await verifyHmacSignature(signatureInput, signature, JWT_SECRET);
+    const isValidSignature = await verifyHmacSignature(signatureInput, signature, EFFECTIVE_JWT_SECRET);
     if (!isValidSignature) {
       return { valid: false };
     }
@@ -357,11 +365,31 @@ export default async function middleware(request: Request): Promise<Response> {
   responseHeaders.set('X-XSS-Protection', '1; mode=block');
   responseHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   
-  // Return a simple passthrough response
-  // Vercel Edge will merge these headers with the origin response
-  return new Response(null, {
-    status: 200,
-    headers: responseHeaders,
-  });
+  // Fetch the original request and add our headers
+  // This allows the request to continue to the origin while adding Edge headers
+  try {
+    const response = await fetch(request);
+    
+    // Clone the response and add our headers
+    const modifiedResponse = new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+    
+    // Add Edge headers to the response
+    responseHeaders.forEach((value, key) => {
+      modifiedResponse.headers.set(key, value);
+    });
+    
+    return modifiedResponse;
+  } catch {
+    // If fetch fails, return a simple response with headers
+    // This maintains backwards compatibility
+    return new Response(null, {
+      status: 200,
+      headers: responseHeaders,
+    });
+  }
 }
 
