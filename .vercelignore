@@ -1,9 +1,9 @@
 # Vercel ignore file - exclude backend files from frontend deployment
 
-# Backend Python files
-*.py
-requirements.txt
-pyproject.toml
+# Backend Python files (exclude Flask backend, but NOT api/ serverless functions)
+backend/**/*.py
+backend/requirements.txt
+backend/pyproject.toml
 nixpacks.toml
 railway.json
 Procfile
