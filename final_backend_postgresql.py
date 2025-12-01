@@ -1031,6 +1031,7 @@ DB_POOL_MAX_CONNECTIONS = _get_env_int("DB_POOL_MAX_CONNECTIONS", 5, 2, 100)
 
 # Minimum connection pool size (pre-warmed connections)
 # NUCLEAR FIX: Set to 2 to prevent OOM on 512MB instances while maintaining availability
+# Range reduced to 1-10 to align with the nuclear fix's conservative memory approach
 DB_POOL_MIN_CONNECTIONS = _get_env_int("DB_POOL_MIN_CONNECTIONS", 2, 1, 10)
 
 # Connection pool recycle time in seconds

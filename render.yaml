@@ -98,7 +98,10 @@ services:
       - key: DB_CONNECT_TIMEOUT
         value: "45"
       # DATABASE_URL must be set manually in Render dashboard
-      # NUCLEAR FORMAT: postgresql://user:pass@host:5432/db?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
+      # NUCLEAR FORMAT (URL-encoded spaces and equals):
+      # postgresql://user:pass@host:5432/db?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
+      # Alternative (non-encoded):
+      # postgresql://user:pass@host:5432/db?sslmode=require&options=-c jit=off&connect_timeout=45
     
     # ==========================================================================
     # HEALTH CHECK - Nuclear Settings

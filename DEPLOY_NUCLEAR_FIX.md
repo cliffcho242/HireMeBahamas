@@ -41,6 +41,14 @@ MAX_OVERFLOW = 3        # Burst capacity
 POOL_RECYCLE = 180      # Recycle before Railway drops connections
 CONNECT_TIMEOUT = 45    # 45s for cold starts
 
+# SSL Configuration (require mode for Railway)
+import ssl
+def _get_ssl_context():
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
+
 engine = create_async_engine(
     DATABASE_URL,
     pool_size=POOL_SIZE,
@@ -54,7 +62,7 @@ engine = create_async_engine(
             "jit": "off",               # CRITICAL: Prevents 60s+ delays
             "statement_timeout": "30000",
         },
-        "ssl": ssl_context,
+        "ssl": _get_ssl_context(),
     }
 )
 ```
@@ -101,10 +109,10 @@ print("NUCLEAR MAIN.PY LOADED")
 gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
 ```
 
-**Or for FastAPI backend:**
+**Or for FastAPI backend (async uvicorn workers don't use threads):**
 
 ```bash
-gunicorn backend.app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --threads 4 --timeout 180 --keep-alive 5 --preload
+gunicorn backend.app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --timeout 180 --keep-alive 5 --preload
 ```
 
 ---
@@ -227,8 +235,8 @@ Login should complete in **< 250ms** (not 129 seconds!)
 
 | Metric | Before | After |
 |--------|--------|-------|
-| Cold Start | 129s | <10s |
-| Login | 129905ms | <250ms |
+| Cold Start | ~129s | <10s |
+| Login | ~130s (129905ms) | <250ms |
 | 502 Errors | Frequent | Zero |
 | OOM Crashes | Frequent | Zero |
 
