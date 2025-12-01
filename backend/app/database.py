@@ -88,10 +88,14 @@ _masked_url = _mask_database_url(DATABASE_URL)
 logger.info(f"Database URL: {_masked_url}")
 
 # =============================================================================
-# POOL CONFIGURATION - Optimized for Railway + Render
+# POOL CONFIGURATION - NUCLEAR FIX for Railway + Render (2025)
 # =============================================================================
-POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "3"))  # Minimum connections kept open
-MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "5"))  # Additional connections under load
+# CRITICAL: pool_size=2 prevents OOM on 512MB-1GB instances
+# MAX_OVERFLOW=3 allows burst capacity without exhausting memory
+# POOL_RECYCLE=180 recycles before Railway/Render drops idle connections
+# =============================================================================
+POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "2"))  # Minimum connections (2 = nuclear safe)
+MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "3"))  # Burst capacity
 POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for connection
 POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "180"))  # Recycle every 3 min
 

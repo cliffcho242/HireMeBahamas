@@ -1020,18 +1020,18 @@ STATEMENT_TIMEOUT_MS = _get_env_int("STATEMENT_TIMEOUT_MS", 30000, 1000, 300000)
 # =============================================================================
 
 # Connection timeout in seconds for PostgreSQL
-# Set to 30 seconds for cloud databases (Railway/Render) which may have higher latency
-# This is FIX #1 of the top 3 timeout fixes
-DB_CONNECT_TIMEOUT = _get_env_int("DB_CONNECT_TIMEOUT", 30, 5, 120)
+# Set to 45 seconds for cloud databases (Railway/Render) which may have higher latency
+# This is FIX #1 of the top 3 timeout fixes - handles Railway cold starts
+DB_CONNECT_TIMEOUT = _get_env_int("DB_CONNECT_TIMEOUT", 45, 5, 120)
 
 # Maximum connection pool size
-# Increased to 30 for better handling of concurrent mobile users
+# NUCLEAR FIX: Reduced to 5 for 512MB-1GB instances to prevent OOM
 # Configurable via environment variable for different deployment environments
-DB_POOL_MAX_CONNECTIONS = _get_env_int("DB_POOL_MAX_CONNECTIONS", 30, 5, 100)
+DB_POOL_MAX_CONNECTIONS = _get_env_int("DB_POOL_MAX_CONNECTIONS", 5, 2, 100)
 
 # Minimum connection pool size (pre-warmed connections)
-# Higher min connections reduce cold start latency
-DB_POOL_MIN_CONNECTIONS = _get_env_int("DB_POOL_MIN_CONNECTIONS", 5, 1, 20)
+# NUCLEAR FIX: Set to 2 to prevent OOM on 512MB instances while maintaining availability
+DB_POOL_MIN_CONNECTIONS = _get_env_int("DB_POOL_MIN_CONNECTIONS", 2, 1, 10)
 
 # Connection pool recycle time in seconds
 # Connections older than this are recycled to prevent stale connection issues

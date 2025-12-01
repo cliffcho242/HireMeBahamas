@@ -92,8 +92,13 @@ services:
       # Trust Render's load balancer
       - key: FORWARDED_ALLOW_IPS
         value: "*"
+      # Nuclear pool configuration
+      - key: DB_POOL_SIZE
+        value: "2"
+      - key: DB_CONNECT_TIMEOUT
+        value: "45"
       # DATABASE_URL must be set manually in Render dashboard
-      # Format: postgresql://user:pass@host:5432/db?sslmode=require
+      # NUCLEAR FORMAT: postgresql://user:pass@host:5432/db?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
     
     # ==========================================================================
     # HEALTH CHECK - Nuclear Settings
