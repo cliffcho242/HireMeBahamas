@@ -32,7 +32,9 @@ class handler(BaseHTTPRequestHandler):
         return
 
     def do_GET(self):
-        path = self.path
+        # Parse URL to get path without query parameters
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path
 
         if path == "/health" or path == "/api/health":
             self._set_headers()
@@ -44,7 +46,7 @@ class handler(BaseHTTPRequestHandler):
             }
             self.wfile.write(json.dumps(response).encode())
 
-        elif path == "/api/auth/me" or path.startswith("/api/auth/me?"):
+        elif path == "/api/auth/me":
             # Get current user information based on auth token
             auth_header = self.headers.get("Authorization", "")
             
@@ -107,7 +109,9 @@ class handler(BaseHTTPRequestHandler):
         except:
             data = {}
 
-        path = self.path
+        # Parse URL to get path without query parameters
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path
 
         if path == "/api/auth/login":
             email = data.get("email")

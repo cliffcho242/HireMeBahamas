@@ -4,14 +4,17 @@ Test script for /api/auth/me endpoint
 """
 import json
 import sys
+import os
 from http.server import HTTPServer
 from threading import Thread
 import time
 import urllib.request
 import urllib.error
 
-# Import the handler from api/index.py
-sys.path.insert(0, '/home/runner/work/HireMeBahamas/HireMeBahamas/api')
+# Import the handler from api/index.py using relative path
+script_dir = os.path.dirname(os.path.abspath(__file__))
+api_dir = os.path.join(script_dir, 'api')
+sys.path.insert(0, api_dir)
 from index import handler
 
 def start_server(port=8888):
