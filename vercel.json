@@ -189,8 +189,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "VITE_API_URL": "https://hiremebahamas.onrender.com"
-  }
+  ]
 }
