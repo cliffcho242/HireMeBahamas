@@ -56,18 +56,25 @@ class handler(BaseHTTPRequestHandler):
                 return
             
             # For this simple in-memory implementation, we accept the demo token
-            # and return the default admin user
-            token = auth_header.replace("Bearer ", "")
+            # Extract token using slicing to avoid security issues with replace()
+            token = auth_header[7:]  # Skip "Bearer " prefix
             
             if token == "demo_token_12345":
-                self._set_headers()
-                response = {
-                    "email": "admin@hiremebahamas.com",
-                    "user_type": "admin",
-                    "first_name": "Admin",
-                    "last_name": "User",
-                }
-                self.wfile.write(json.dumps(response).encode())
+                # Return admin user data from the users dictionary
+                admin_email = "admin@hiremebahamas.com"
+                if admin_email in users:
+                    admin_user = users[admin_email]
+                    self._set_headers()
+                    response = {
+                        "email": admin_user["email"],
+                        "user_type": admin_user["user_type"],
+                        "first_name": admin_user["first_name"],
+                        "last_name": admin_user["last_name"],
+                    }
+                    self.wfile.write(json.dumps(response).encode())
+                else:
+                    self._set_headers(500)
+                    self.wfile.write(json.dumps({"error": "User not found"}).encode())
             else:
                 self._set_headers(401)
                 self.wfile.write(json.dumps({"error": "Invalid token"}).encode())
