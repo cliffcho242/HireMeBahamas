@@ -623,6 +623,26 @@ This project follows [Docker security best practices](DOCKER_SECURITY.md):
 - `.dockerignore` prevents sensitive files from being copied into images
 - See [DOCKER_SECURITY.md](DOCKER_SECURITY.md) for detailed information
 
+## Troubleshooting
+
+### GitHub Copilot Model Endpoint Error
+
+If you encounter this error while using GitHub Copilot Workspace:
+
+```
+HTTP error 400: bad request: no endpoints available for this model under your current plan and policies
+```
+
+**This is not a code issue** - it's related to your GitHub subscription plan's AI model access.
+
+📖 **[Read the complete troubleshooting guide](GITHUB_COPILOT_MODEL_ERROR.md)** for solutions.
+
+**Quick Summary:**
+- The error occurs when GitHub Copilot tries to use a model not available in your plan
+- Standard GitHub Copilot access works fine for all repository development tasks
+- No code changes are needed in the repository
+- See the troubleshooting guide for detailed solutions and workarounds
+
 ## Contributing
 
 1. Fork the repository

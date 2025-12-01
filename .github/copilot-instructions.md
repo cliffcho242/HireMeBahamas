@@ -68,3 +68,23 @@ Example of safe optional command:
 2. Create necessary directories before running processes that write logs
 3. Use conditional artifact uploads to prevent failures on missing files
 4. Validate YAML syntax before committing workflow changes
+
+## AI Model Compatibility
+
+### Model Selection
+- GitHub Copilot automatically selects appropriate models based on your plan
+- Do not hardcode specific model names in configurations
+- Standard GitHub Copilot access is sufficient for all repository tasks
+
+### Error Handling
+If you encounter "HTTP error 400: no endpoints available for this model":
+1. This indicates the requested AI model is not available in your GitHub plan
+2. The error is plan-related, not a code issue in this repository
+3. See [GITHUB_COPILOT_MODEL_ERROR.md](../GITHUB_COPILOT_MODEL_ERROR.md) for detailed troubleshooting
+4. Standard features work with all GitHub Copilot plans (Individual, Business, Enterprise)
+
+### Best Practices
+- Use default model selection (don't specify models explicitly)
+- Implement fallback logic for AI API calls
+- Test features with standard GitHub access
+- Document any premium model requirements clearly
