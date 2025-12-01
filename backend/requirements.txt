@@ -1,9 +1,13 @@
+# ============================================================================
+# MASTERMIND FIX 2025 — BACKEND REQUIREMENTS (ZERO BUILD ERRORS)
+# ============================================================================
+
 # Core Framework & Server
 fastapi==0.115.6
 uvicorn[standard]==0.31.0
 gunicorn==22.0.0
 
-# Database & ORM
+# Database & ORM - NUCLEAR BINARY-ONLY CONFIGURATION
 sqlalchemy[asyncio]==2.0.44
 psycopg2-binary==2.9.11
 asyncpg==0.30.0
