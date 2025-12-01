@@ -155,8 +155,12 @@ export_from_railway() {
 
     print_success "Export completed in ${duration} seconds"
     if [ -f "$BACKUP_FILE" ]; then
-        file_size=$(stat -c%s "$BACKUP_FILE" 2>/dev/null || stat -f%z "$BACKUP_FILE" 2>/dev/null)
-        echo "Backup file size: $((file_size / 1024 / 1024)) MB"
+        file_size=$(stat -c%s "$BACKUP_FILE" 2>/dev/null || stat -f%z "$BACKUP_FILE" 2>/dev/null || echo "0")
+        if [ "$file_size" != "0" ] && [ -n "$file_size" ]; then
+            echo "Backup file size: $((file_size / 1024 / 1024)) MB"
+        else
+            print_warning "Could not determine backup file size"
+        fi
     fi
     echo ""
 }
@@ -183,13 +187,23 @@ import_to_vercel() {
         END \$\$;
     " 2>/dev/null || true
 
-    # Restore data
+    # Restore data - capture errors but don't fail on warnings
+    restore_log="/tmp/pg_restore_$(date +%s).log"
     pg_restore \
         --no-owner \
         --no-acl \
         --jobs="$JOBS" \
         --dbname="$VERCEL_POSTGRES_URL" \
-        "$BACKUP_FILE" 2>/dev/null || true
+        "$BACKUP_FILE" 2>"$restore_log" || true
+
+    # Check for critical errors in the log
+    if [ -s "$restore_log" ]; then
+        if grep -q "ERROR" "$restore_log" 2>/dev/null; then
+            print_warning "pg_restore completed with errors (see $restore_log)"
+        elif grep -q "WARNING" "$restore_log" 2>/dev/null; then
+            print_warning "pg_restore completed with warnings (non-critical)"
+        fi
+    fi
 
     end_time=$(date +%s)
     duration=$((end_time - start_time))
@@ -229,6 +243,12 @@ set_railway_readonly() {
     
     if [ -z "$db_name" ]; then
         print_warning "Could not extract database name from URL"
+        return
+    fi
+
+    # Validate database name contains only safe characters (alphanumeric, underscore, hyphen)
+    if ! echo "$db_name" | grep -qE '^[a-zA-Z0-9_-]+$'; then
+        print_warning "Database name contains invalid characters"
         return
     fi
 

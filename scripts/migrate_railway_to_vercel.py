@@ -239,8 +239,16 @@ def import_to_vercel(vercel_url: str, backup_file: str, jobs: int = 8) -> None:
         backup_file
     ]
 
-    # pg_restore may return non-zero for warnings, so don't check strictly
-    subprocess.run(cmd, capture_output=True)
+    # pg_restore may return non-zero for warnings, so capture output and check for errors
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    # Log any errors or warnings
+    if result.stderr:
+        if 'ERROR' in result.stderr:
+            print_warning(f"pg_restore completed with errors")
+            print(f"First error: {result.stderr.split('ERROR')[1][:100]}...")
+        elif 'WARNING' in result.stderr:
+            print_warning("pg_restore completed with warnings (non-critical)")
 
     duration = (datetime.now() - start_time).total_seconds()
     print_success(f"Import completed in {duration:.1f} seconds")
@@ -275,6 +283,11 @@ def print_next_steps() -> None:
     print()
 
 
+def validate_db_name(db_name: str) -> bool:
+    """Validate database name contains only safe characters"""
+    return bool(re.match(r'^[a-zA-Z0-9_-]+$', db_name))
+
+
 def set_railway_readonly(railway_url: str) -> None:
     """Set Railway database to read-only mode"""
     print_header("SETTING RAILWAY TO READ-ONLY (7-DAY BACKUP)")
@@ -286,6 +299,13 @@ def set_railway_readonly(railway_url: str) -> None:
         print_warning("Could not extract database name from URL")
         return
 
+    # Validate database name to prevent SQL injection
+    if not validate_db_name(db_name):
+        print_warning("Database name contains invalid characters")
+        return
+
+    # Use identifier quoting for the database name
+    # The database name is validated above to only contain safe characters
     query = f'ALTER DATABASE "{db_name}" SET default_transaction_read_only = on;'
     try:
         subprocess.run(

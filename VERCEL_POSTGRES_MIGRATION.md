@@ -44,7 +44,7 @@ UNION ALL SELECT 'notifications', COUNT(*) FROM notifications;
 ### COMMAND 5: Set Railway to Read-Only (7-day backup)
 ```bash
 # Extract database name from your RAILWAY_DATABASE_URL
-# Example: postgresql://user:pass@host:5432/railway → database name is "railway"
+# Example: postgresql://user:pass@host:5432/mydb → database name is "mydb"
 DB_NAME=$(echo "$RAILWAY_DATABASE_URL" | sed -E 's|.*://[^/]+/([^?]+).*|\1|')
 psql "$RAILWAY_DATABASE_URL" -c "ALTER DATABASE \"$DB_NAME\" SET default_transaction_read_only = on;"
 
