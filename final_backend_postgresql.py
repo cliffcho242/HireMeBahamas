@@ -2005,6 +2005,10 @@ def return_db_connection(conn, discard=False):
     - For non-pooled/fallback connections: Closes the connection
     - If discard=True: Always close the connection, never return to pool
     
+    IMPORTANT: Before returning to pool, this function calls rollback() to ensure
+    no aborted transaction state is carried over. This prevents the PostgreSQL error:
+    "current transaction is aborted, commands ignored until end of transaction block"
+    
     The discard parameter should be set to True when:
     - An SSL error occurred (e.g., "decryption failed or bad record mac")
     - The connection is detected as stale or corrupted
@@ -2021,6 +2025,15 @@ def return_db_connection(conn, discard=False):
         return
     
     if USE_POSTGRESQL:
+        # Always rollback before returning to pool to clear any aborted transaction state.
+        # This prevents "current transaction is aborted" errors on subsequent queries.
+        # Rollback is safe to call even if no transaction is active or if already committed.
+        try:
+            conn.rollback()
+        except Exception:
+            # If rollback fails, the connection is likely broken - discard it
+            discard = True
+        
         conn_pool = _get_connection_pool()
         if conn_pool and not discard:
             try:
