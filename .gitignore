@@ -77,3 +77,7 @@ htmlcov/
 .railway
 *.db-journal
 node_modules/
+
+# Drizzle migrations (root)
+drizzle/
+dist/
