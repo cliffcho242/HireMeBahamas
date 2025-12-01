@@ -4743,6 +4743,27 @@ def health_check():
     return jsonify({"status": "healthy"}), 200
 
 
+@app.route("/live", methods=["GET", "HEAD"])
+@limiter.exempt
+def liveness_probe():
+    """
+    Kubernetes-style liveness probe for container orchestrators.
+    
+    Returns 200 OK immediately without any external dependency checks.
+    Use this endpoint for:
+    - Kubernetes livenessProbe configuration
+    - Container orchestrator health checks
+    - Basic process liveness verification
+    
+    This endpoint confirms the Python process is running and Flask is responsive.
+    It does NOT check database connectivity - use /ready for that.
+    
+    Supports both GET and HEAD methods for maximum compatibility.
+    Exempt from rate limiting to allow monitoring services to check frequently.
+    """
+    return jsonify({"status": "alive"}), 200
+
+
 @app.route("/ready", methods=["GET"])
 @limiter.exempt
 def readiness_probe():

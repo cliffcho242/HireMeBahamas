@@ -97,6 +97,8 @@ services:
         value: "2"
       - key: DB_CONNECT_TIMEOUT
         value: "45"
+      - key: DB_POOL_RECYCLE
+        value: "120"
       # DATABASE_URL must be set manually in Render dashboard
       # NUCLEAR FORMAT (URL-encoded spaces and equals):
       # postgresql://user:pass@host:5432/db?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
@@ -111,13 +113,19 @@ services:
     #   /live    - Kubernetes-style liveness probe, no DB
     #   /ready   - Readiness check with DB connectivity (returns 503 if DB down)
     #   /ready/db - Full DB health with session (use for deep checks)
+    #   /ping    - Simple "pong" response for keepalive workers
     #   /metrics - Prometheus metrics (for monitoring)
     #
-    # RENDER DASHBOARD SETTINGS:
+    # RENDER DASHBOARD SETTINGS (COPY-PASTE):
     #   Health Check Path: /health
     #   Grace Period: 300 seconds (5 min - handles worst-case cold start)
     #   Health Check Timeout: 30 seconds
     #   Health Check Interval: 30 seconds (default)
+    #
+    # WHY /health AND NOT /ready?
+    #   /health responds instantly (<5ms) even during cold starts
+    #   /ready checks DB connectivity, which may timeout during cold starts
+    #   Using /health prevents Render from killing the container prematurely
     # ==========================================================================
     healthCheckPath: /health
 
