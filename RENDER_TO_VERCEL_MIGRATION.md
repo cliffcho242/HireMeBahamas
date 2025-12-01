@@ -87,12 +87,16 @@ ENVIRONMENT=production
 
 | Key | Value | Environment |
 |-----|-------|-------------|
-| `VITE_API_URL` | `https://api.hiremebahamas.com` | Production |
-| `VITE_SOCKET_URL` | `https://api.hiremebahamas.com` | Production |
+| `VITE_API_URL` | `https://YOUR-BACKEND-URL` | Production |
+| `VITE_SOCKET_URL` | `https://YOUR-BACKEND-URL` | Production |
 | `DATABASE_URL` | `<railway-postgres-url>` | Production |
 | `SECRET_KEY` | `<your-secret-key>` | Production |
 | `JWT_SECRET_KEY` | `<your-jwt-secret-key>` | Production |
 | `FRONTEND_URL` | `https://hiremebahamas.com` | Production |
+
+**Note**: Replace `YOUR-BACKEND-URL` with your actual backend URL:
+- If using Railway: `https://your-app.up.railway.app`
+- If using custom domain: `https://api.hiremebahamas.com` (requires DNS setup)
 
 ### Step 3.3: Backend API on Vercel Serverless
 Since Vercel is for frontend (static + serverless), the Flask backend needs:
@@ -345,31 +349,23 @@ Files to update:
 ### 7.2: frontend/.env.production
 ```bash
 # Production Environment - Vercel
-VITE_API_URL=https://api.hiremebahamas.com
-VITE_SOCKET_URL=wss://api.hiremebahamas.com
+# Replace YOUR-BACKEND-URL with your actual backend URL
+# Examples:
+#   - Railway: https://your-app.up.railway.app
+#   - Custom domain: https://api.hiremebahamas.com
+VITE_API_URL=https://YOUR-BACKEND-URL
+VITE_SOCKET_URL=https://YOUR-BACKEND-URL
 VITE_GOOGLE_CLIENT_ID=your-google-client-id
 VITE_APPLE_CLIENT_ID=com.hiremebahamas.signin
 ```
 
 ### 7.3: Update api.ts Production URL
-Replace in `frontend/src/services/api.ts`:
-```typescript
-// OLD:
-const DEFAULT_PROD_API = 'https://hiremebahamas.onrender.com';
-
-// NEW:
-const DEFAULT_PROD_API = 'https://api.hiremebahamas.com';
-```
+In `frontend/src/services/api.ts`, the `DEFAULT_PROD_API` reads from `VITE_API_URL` environment variable.
+Set this in Vercel Dashboard → Environment Variables for production.
 
 ### 7.4: Update graphql/client.ts
-Replace in `frontend/src/graphql/client.ts`:
-```typescript
-// OLD:
-const DEFAULT_PROD_API = 'https://hiremebahamas.onrender.com';
-
-// NEW:
-const DEFAULT_PROD_API = 'https://api.hiremebahamas.com';
-```
+In `frontend/src/graphql/client.ts`, the `DEFAULT_PROD_API` also reads from `VITE_API_URL`.
+Set the same environment variable in Vercel.
 
 ---
 
