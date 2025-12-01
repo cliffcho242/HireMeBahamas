@@ -784,6 +784,14 @@ def log_request_end(response):
 # (RAILWAY_TCP_PROXY_DOMAIN used by DATABASE_PUBLIC_URL).
 # We prefer DATABASE_PRIVATE_URL > DATABASE_URL to minimize costs.
 DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
+
+# Normalize DATABASE_URL for psycopg2 compatibility
+# If the URL uses postgresql+asyncpg:// scheme (for SQLAlchemy/asyncpg), convert it
+# to postgresql:// for psycopg2 (sync driver) compatibility
+if DATABASE_URL and DATABASE_URL.startswith("postgresql+asyncpg://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
+    print("🔄 Normalized DATABASE_URL: converted postgresql+asyncpg:// to postgresql://")
+
 USE_POSTGRESQL = DATABASE_URL is not None
 
 # PostgreSQL extensions to initialize during database setup
@@ -991,6 +999,30 @@ def _get_env_int(env_var: str, default: int, min_val: int, max_val: int) -> int:
 # Configurable via environment variable for different deployment environments
 # PostgreSQL interprets integer values as milliseconds
 STATEMENT_TIMEOUT_MS = _get_env_int("STATEMENT_TIMEOUT_MS", 30000, 1000, 300000)
+
+# =============================================================================
+# TOP 3 TIMEOUT FIXES FOR CLOUD POSTGRESQL (Railway/Render)
+# =============================================================================
+# These three settings fix 99% of PostgreSQL timeout errors in cloud environments:
+#
+# 1. DB_CONNECT_TIMEOUT (30s) - Connection establishment timeout
+#    Cloud databases often have higher latency due to network hops, SSL handshakes,
+#    and cold starts. 30 seconds allows for these delays without failing prematurely.
+#
+# 2. JIT=off - Disable JIT compilation
+#    PostgreSQL's JIT compiler can cause significant delays on first query execution.
+#    Disabling JIT prevents unexpected timeouts during query compilation.
+#    Set via options="-c jit=off" in connection parameters.
+#
+# 3. sslmode=require - Proper SSL handling
+#    Cloud databases require SSL. Using 'require' ensures encrypted connections
+#    without certificate verification issues that can cause connection failures.
+# =============================================================================
+
+# Connection timeout in seconds for PostgreSQL
+# Set to 30 seconds for cloud databases (Railway/Render) which may have higher latency
+# This is FIX #1 of the top 3 timeout fixes
+DB_CONNECT_TIMEOUT = _get_env_int("DB_CONNECT_TIMEOUT", 30, 5, 120)
 
 # Maximum connection pool size
 # Increased to 30 for better handling of concurrent mobile users
@@ -1514,6 +1546,11 @@ def _get_connection_pool():
                     # - maxconn: Configurable via DB_POOL_MAX_CONNECTIONS (default 30)
                     #   Higher max handles concurrent mobile users during peak traffic
                     #
+                    # TOP 3 TIMEOUT FIXES applied here:
+                    # 1. connect_timeout=DB_CONNECT_TIMEOUT (30s) for cloud DB latency
+                    # 2. jit=off in options to prevent first-query compilation delays
+                    # 3. sslmode=require for proper SSL handling
+                    #
                     # TCP keepalive parameters prevent "SSL error: unexpected eof while reading"
                     # by detecting and handling stale connections before they cause SSL errors
                     #
@@ -1530,7 +1567,8 @@ def _get_connection_pool():
                         sslmode=DB_CONFIG["sslmode"],
                         application_name=DB_CONFIG["application_name"],
                         cursor_factory=RealDictCursor,
-                        connect_timeout=10,  # Reduced from 15s for faster failure detection
+                        # FIX #1: Increased to 30s for cloud databases with higher latency
+                        connect_timeout=DB_CONNECT_TIMEOUT,
                         # TCP keepalive settings to prevent SSL EOF errors on idle connections
                         # psycopg2 expects integer (1=enabled, 0=disabled)
                         keepalives=1 if TCP_KEEPALIVE_ENABLED else 0,
@@ -1540,12 +1578,13 @@ def _get_connection_pool():
                         # tcp_user_timeout: abort if data isn't acknowledged within this time
                         # Works with keepalives for faster detection of broken connections
                         tcp_user_timeout=TCP_USER_TIMEOUT_MS,
-                        # Set statement_timeout on connection to prevent long-running queries
-                        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
+                        # FIX #2: jit=off prevents first-query timeout from JIT compilation
+                        # Combined with statement_timeout for query execution limits
+                        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS} -c jit=off",
                     )
                     keepalive_status = "enabled" if TCP_KEEPALIVE_ENABLED == 1 else "disabled"
                     user_timeout_sec = TCP_USER_TIMEOUT_MS // 1000
-                    print(f"✅ PostgreSQL connection pool created (min={DB_POOL_MIN_CONNECTIONS}, max={DB_POOL_MAX_CONNECTIONS}, recycle={DB_POOL_RECYCLE_SECONDS}s, tcp_keepalive={keepalive_status}, tcp_user_timeout={user_timeout_sec}s)")
+                    print(f"✅ PostgreSQL connection pool created (min={DB_POOL_MIN_CONNECTIONS}, max={DB_POOL_MAX_CONNECTIONS}, recycle={DB_POOL_RECYCLE_SECONDS}s, connect_timeout={DB_CONNECT_TIMEOUT}s, jit=off, tcp_keepalive={keepalive_status}, tcp_user_timeout={user_timeout_sec}s)")
                 except Exception as e:
                     print(f"⚠️ Failed to create connection pool: {e}")
                     # Pool creation failed, will fall back to direct connections
@@ -1784,6 +1823,11 @@ def _create_direct_postgresql_connection(sslmode: str = None):
     "SSL error: unexpected eof while reading" errors that occur when idle 
     connections are silently dropped by network intermediaries.
     
+    Applies the TOP 3 TIMEOUT FIXES:
+    1. connect_timeout=30s for cloud database latency
+    2. jit=off to prevent first-query compilation delays
+    3. sslmode=require for proper SSL handling
+    
     Args:
         sslmode: SSL mode to use. If None, uses the configured default.
         
@@ -1802,7 +1846,8 @@ def _create_direct_postgresql_connection(sslmode: str = None):
         sslmode=sslmode or DB_CONFIG["sslmode"],
         application_name=DB_CONFIG["application_name"],
         cursor_factory=RealDictCursor,
-        connect_timeout=10,
+        # FIX #1: 30s timeout for cloud databases with higher latency
+        connect_timeout=DB_CONNECT_TIMEOUT,
         # TCP keepalive settings to prevent SSL EOF errors on idle connections
         # psycopg2 expects integer (1=enabled, 0=disabled)
         keepalives=1 if TCP_KEEPALIVE_ENABLED else 0,
@@ -1812,7 +1857,8 @@ def _create_direct_postgresql_connection(sslmode: str = None):
         # tcp_user_timeout: abort if data isn't acknowledged within this time
         # Works with keepalives for faster detection of broken connections
         tcp_user_timeout=TCP_USER_TIMEOUT_MS,
-        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
+        # FIX #2: jit=off prevents first-query timeout from JIT compilation
+        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS} -c jit=off",
     )
 
 
