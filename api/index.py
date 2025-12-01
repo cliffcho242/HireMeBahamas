@@ -44,6 +44,32 @@ class handler(BaseHTTPRequestHandler):
             }
             self.wfile.write(json.dumps(response).encode())
 
+        elif path == "/api/auth/me" or path.startswith("/api/auth/me?"):
+            # Get current user information based on auth token
+            auth_header = self.headers.get("Authorization", "")
+            
+            if not auth_header or not auth_header.startswith("Bearer "):
+                self._set_headers(401)
+                self.wfile.write(json.dumps({"error": "No token provided"}).encode())
+                return
+            
+            # For this simple in-memory implementation, we accept the demo token
+            # and return the default admin user
+            token = auth_header.replace("Bearer ", "")
+            
+            if token == "demo_token_12345":
+                self._set_headers()
+                response = {
+                    "email": "admin@hiremebahamas.com",
+                    "user_type": "admin",
+                    "first_name": "Admin",
+                    "last_name": "User",
+                }
+                self.wfile.write(json.dumps(response).encode())
+            else:
+                self._set_headers(401)
+                self.wfile.write(json.dumps({"error": "Invalid token"}).encode())
+
         elif path == "/api/jobs":
             self._set_headers()
             self.wfile.write(json.dumps({"success": True, "jobs": jobs, "total": len(jobs)}).encode())
