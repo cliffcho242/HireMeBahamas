@@ -3,23 +3,22 @@
 # HireMeBahamas Backend Startup Script
 # =============================================================================
 # 
-# COLD START ELIMINATION (2025 Best Practice)
+# NUCLEAR FIX FOR 502 BAD GATEWAY (2025)
 # 
-# This script uses Gunicorn with preload to eliminate 30-120s cold starts:
-# 
-# How --preload works:
-#   1. App loads ONCE in master process BEFORE forking workers
-#   2. Workers inherit pre-loaded app via copy-on-write memory
-#   3. First request after boot is instant (<400ms)
+# This script eliminates cold start timeouts with:
+# 1. Database migrations before app start
+# 2. Preload health check to verify app can load
+# 3. Gunicorn with --preload for instant first request
 #
 # Configuration (via environment variables):
-#   WEB_CONCURRENCY=2-4    Number of workers (2 for 512MB, 4 for 1-2GB RAM)
-#   WEB_THREADS=8          Threads per worker (total capacity = workers * threads)
-#   PRELOAD_APP=true       Enable app preloading (default: true)
+#   WEB_CONCURRENCY=1       Single worker for 512MB-1GB RAM
+#   WEB_THREADS=4           Threads per worker
+#   GUNICORN_TIMEOUT=180    Worker timeout (survives cold starts)
+#   PRELOAD_APP=true        Enable app preloading
 #
 # For Render:
-#   - Starter plan ($7/mo, 512MB): WEB_CONCURRENCY=2
-#   - Standard plan ($25/mo, 2GB): WEB_CONCURRENCY=4
+#   - Standard plan ($25/mo, 1GB RAM): WEB_CONCURRENCY=1, WEB_THREADS=4
+#   - Starter plan ($7/mo, 512MB RAM): WEB_CONCURRENCY=1, WEB_THREADS=2
 #
 # =============================================================================
 
@@ -29,8 +28,9 @@ echo "=============================================="
 echo "🚀 HireMeBahamas Backend Startup"
 echo "=============================================="
 echo "Environment: ${ENVIRONMENT:-development}"
-echo "Workers: ${WEB_CONCURRENCY:-2}"
-echo "Threads: ${WEB_THREADS:-8}"
+echo "Workers: ${WEB_CONCURRENCY:-1}"
+echo "Threads: ${WEB_THREADS:-4}"
+echo "Timeout: ${GUNICORN_TIMEOUT:-180}s"
 echo "Preload: ${PRELOAD_APP:-true}"
 echo "=============================================="
 
@@ -65,17 +65,15 @@ else
     exit 1
 fi
 
-# Start Gunicorn with preload configuration
+# Start Gunicorn with nuclear configuration
 echo ""
-echo "🚀 Starting Gunicorn server with preload..."
+echo "🚀 Starting Gunicorn server..."
 echo "   Config: gunicorn.conf.py"
 echo "   App: final_backend_postgresql:application"
 echo "   Bind: 0.0.0.0:${PORT:-8080}"
+echo "   Timeout: ${GUNICORN_TIMEOUT:-180}s"
 echo ""
 
-# Using gunicorn.conf.py which has preload_app=True by default
-# The --preload flag overrides config file settings, ensuring preload is always enabled
-# even if PRELOAD_APP=false is accidentally set in the environment
 exec gunicorn final_backend_postgresql:application \
     --config gunicorn.conf.py \
     --preload
