@@ -4191,7 +4191,7 @@ _last_extension_cleanup = None  # Track when we last cleaned up orphaned extensi
 # Using specific phrases to avoid false positives with generic terms
 CONNECTION_ERROR_PATTERNS = frozenset([
     "connection timed out", "connection refused", "connection reset",
-    "timed out", "connect timeout", "network unreachable", "no route to host",
+    "connect timeout", "network unreachable", "no route to host",
     "broken pipe", "connection closed unexpectedly", "server closed the connection",
     "ssl connection has been closed", "could not connect", "failed to connect",
     "unable to connect", "lost connection", "connection lost"
@@ -4302,6 +4302,8 @@ def periodic_extension_cleanup():
                 "⚠️ Periodic extension cleanup skipped: could not get database connection",
                 is_connection_error=True  # Treat as connection error for suppression
             )
+            # Update timestamp even on failure to prevent retry storms when DB is down
+            # Since cleanup is non-critical, waiting for next interval is acceptable
             _last_extension_cleanup = datetime.now(timezone.utc)
             return False
         
