@@ -73,9 +73,11 @@ IS_PRODUCTION_DATABASE = (
 )
 
 # For production PostgreSQL deployments, ensure SSL is configured
+# NUCLEAR FIX: Use sslmode=require in URL for explicit SSL enforcement
+# This is consistent with ssl="require" in connect_args
 if IS_PRODUCTION_DATABASE:
     if "sslmode" not in DATABASE_URL:
-        DATABASE_URL = f"{DATABASE_URL}?sslmode=prefer"
+        DATABASE_URL = f"{DATABASE_URL}?sslmode=require"
 
 # =============================================================================
 # CONNECTION POOL CONFIGURATION (Meta-inspired optimization)
@@ -141,7 +143,7 @@ if IS_PRODUCTION_DATABASE:
     #
     # timeout: Connection establishment timeout in seconds
     #   - Maximum time to wait for the TCP connection and PostgreSQL handshake
-    #   - Set to 15 seconds to handle slow cloud network conditions
+    #   - NUCLEAR FIX: Set to 30 seconds to handle slow Railway/Render network conditions
     #   - Prevents indefinite hangs during connection establishment
     #
     # command_timeout: Client-side timeout for asyncpg operations (in seconds)
