@@ -60,8 +60,9 @@ npm install
 cp .env.example .env.local
 # Edit .env.local with your values
 
-# Run database migrations
+# Deploy database schema
 npm run db:push
+# For detailed instructions, see DATABASE_SCHEMA_DEPLOYMENT.md
 
 # Start development server
 npm run dev
