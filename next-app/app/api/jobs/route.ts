@@ -39,8 +39,11 @@ export async function GET(request: NextRequest) {
       query.data;
     const offset = (page - 1) * limit;
 
-    // Build cache key
-    const cacheKey = `jobs:list:${JSON.stringify(query.data)}`;
+    // Get cache version for proper invalidation
+    const cacheVersion = await kv.get<number>("jobs:cache:version") || 0;
+
+    // Build cache key with version
+    const cacheKey = `jobs:list:v${cacheVersion}:${JSON.stringify(query.data)}`;
 
     // Check cache first
     const cached = await kv.get<{
@@ -273,11 +276,10 @@ export async function POST(request: NextRequest) {
       RETURNING id, title, company, location, job_type, created_at
     `;
 
-    // Invalidate job list cache
-    const keys = await kv.keys("jobs:list:*");
-    if (keys.length > 0) {
-      await kv.del(...keys);
-    }
+    // Invalidate job list cache using versioned cache key
+    // More efficient than pattern scanning - just increment the version
+    const cacheVersion = Date.now();
+    await kv.set("jobs:cache:version", cacheVersion);
 
     const duration = Date.now() - startTime;
 

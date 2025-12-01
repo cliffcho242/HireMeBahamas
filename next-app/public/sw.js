@@ -110,7 +110,7 @@ self.addEventListener("push", (event) => {
   const options = {
     body: data.body || "You have a new notification",
     icon: "/icons/icon-192x192.png",
-    badge: "/icons/badge-72x72.png",
+    badge: "/icons/icon-72x72.png",
     vibrate: [100, 50, 100],
     data: {
       url: data.url || "/",

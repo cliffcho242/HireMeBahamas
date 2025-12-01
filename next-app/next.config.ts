@@ -98,13 +98,7 @@ const nextConfig: NextConfig = {
   // PWA configuration
   async rewrites() {
     return {
-      beforeFiles: [
-        // PWA service worker
-        {
-          source: "/sw.js",
-          destination: "/_next/static/sw.js",
-        },
-      ],
+      beforeFiles: [],
       afterFiles: [],
       fallback: [],
     };

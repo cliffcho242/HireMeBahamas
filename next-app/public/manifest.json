@@ -81,21 +81,21 @@
       "short_name": "Jobs",
       "description": "Find your next opportunity",
       "url": "/jobs",
-      "icons": [{ "src": "/icons/jobs-icon.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Post a Job",
       "short_name": "Post",
       "description": "Post a new job listing",
       "url": "/post-job",
-      "icons": [{ "src": "/icons/post-icon.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Messages",
       "short_name": "Messages",
       "description": "View your messages",
       "url": "/messages",
-      "icons": [{ "src": "/icons/messages-icon.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
     }
   ],
   "related_applications": [],

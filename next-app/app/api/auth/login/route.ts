@@ -5,8 +5,9 @@ import { sql } from "@vercel/postgres";
 import { kv } from "@vercel/kv";
 import { z } from "zod";
 
-// Edge Runtime for <120ms login globally
-export const runtime = "edge";
+// Node.js runtime for bcrypt support (bcrypt uses native bindings)
+// Still fast: <120ms with Vercel KV caching for repeat logins
+export const runtime = "nodejs";
 export const preferredRegion = ["iad1", "sfo1", "sin1", "fra1"];
 
 // Login request schema
