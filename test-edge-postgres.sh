@@ -37,3 +37,4 @@ echo "   - ?operation=info   - System information"
 echo "   - ?operation=select - SELECT query demo"
 echo "   - ?operation=count  - Aggregate queries"
 echo "   - ?operation=join   - Multi-table JOINs"
+

@@ -286,6 +286,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Build dynamic UPDATE query
+        // Note: We use sql.query() here instead of sql`` template literal
+        // because we need to dynamically build the SET clause based on
+        // which fields are being updated. Template literals work best
+        // with static queries.
         const updateFields: string[] = [];
         const updateValues: unknown[] = [];
         let paramIndex = 1;
@@ -304,12 +308,15 @@ export async function POST(request: NextRequest) {
         }
 
         updateFields.push(`updated_at = NOW()`);
+        
+        // Add id as the final parameter
+        const idParamIndex = paramIndex;
         updateValues.push(id);
 
         const updateQuery = `
           UPDATE jobs 
           SET ${updateFields.join(", ")}
-          WHERE id = $${paramIndex}
+          WHERE id = $${idParamIndex}
           RETURNING id, title, company, location, updated_at
         `;
 

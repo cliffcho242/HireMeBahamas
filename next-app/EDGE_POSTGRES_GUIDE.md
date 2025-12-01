@@ -245,15 +245,26 @@ const jobs = [
   { title: "Designer", company: "Corp B", location: "Freeport" },
 ];
 
-// Build VALUES clause dynamically
-const values = jobs.map(j => 
-  sql`(${j.title}, ${j.company}, ${j.location}, NOW(), NOW())`
-).join(sql`, `);
+// Build VALUES clause using sql.query() for dynamic insertion
+const placeholders = jobs
+  .map((_, i) => {
+    const base = i * 5;
+    return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+  })
+  .join(", ");
 
-await sql`
-  INSERT INTO jobs (title, company, location, created_at, updated_at)
-  VALUES ${values}
-`;
+const values = jobs.flatMap(j => [
+  j.title,
+  j.company,
+  j.location,
+  new Date(),
+  new Date()
+]);
+
+await sql.query(
+  `INSERT INTO jobs (title, company, location, created_at, updated_at) VALUES ${placeholders}`,
+  values
+);
 ```
 
 ---
