@@ -15,7 +15,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libpq-dev python3-dev
+          sudo apt-get install -y libjpeg-dev libpng-dev libwebp-dev zlib1g-dev
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -32,4 +32,4 @@ jobs:
           JF_URL: ${{ secrets.JF_URL }}
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JF_INSTALL_DEPS_CMD: "pip install -r backend/requirements.txt && cd frontend && npm ci"
+          JF_INSTALL_DEPS_CMD: "pip install --only-binary=:all: -r backend/requirements.txt && cd frontend && npm ci"
