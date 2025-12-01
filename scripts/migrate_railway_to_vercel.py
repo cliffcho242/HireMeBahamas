@@ -245,8 +245,12 @@ def import_to_vercel(vercel_url: str, backup_file: str, jobs: int = 8) -> None:
     # Log any errors or warnings
     if result.stderr:
         if 'ERROR' in result.stderr:
-            print_warning(f"pg_restore completed with errors")
-            print(f"First error: {result.stderr.split('ERROR')[1][:100]}...")
+            print_warning("pg_restore completed with errors")
+            # Safely extract first error message
+            error_parts = result.stderr.split('ERROR')
+            if len(error_parts) > 1:
+                first_error = error_parts[1][:100].strip()
+                print(f"First error: {first_error}...")
         elif 'WARNING' in result.stderr:
             print_warning("pg_restore completed with warnings (non-critical)")
 
