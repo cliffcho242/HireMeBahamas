@@ -31,6 +31,7 @@ import os
 import logging
 import ssl
 from typing import Optional
+from urllib.parse import urlparse
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -57,6 +58,23 @@ DATABASE_URL = (
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
+
+# Validate DATABASE_URL format - ensure all required fields are present
+# Parse and validate required fields
+parsed = urlparse(DATABASE_URL)
+missing_fields = []
+if not parsed.username:
+    missing_fields.append("username")
+if not parsed.password:
+    missing_fields.append("password")
+if not parsed.hostname:
+    missing_fields.append("hostname")
+if not parsed.path or len(parsed.path) <= 1:
+    # path should be /database_name, so length > 1
+    missing_fields.append("path")
+
+if missing_fields:
+    raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:
