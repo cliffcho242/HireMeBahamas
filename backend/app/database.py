@@ -1,53 +1,130 @@
 # =============================================================================
-# DATABASE ENGINE CONFIGURATION - NUCLEAR FIX FOR 502 BAD GATEWAY (2025)
+# DATABASE ENGINE CONFIGURATION - NUCLEAR 2025-PROOF FIX
 # =============================================================================
-# DATABASE_URL format for Render → Railway Postgres:
-# postgresql+asyncpg://user:password@host:port/db?sslmode=require&connect_timeout=30&options=-c%20jit=off
+# FINAL DATABASE_URL FORMAT (copy-paste to Railway/Render):
 #
-# Render Dashboard Settings:
-# - Instance Type: Standard ($25/mo) or at minimum Starter ($7/mo)
-# - Memory: 1GB minimum (Standard plan)
-# - Health Check Path: /health
-# - Grace Period: 300s
+# Private Networking (recommended - no egress costs):
+#   postgresql://user:pass@postgres.railway.internal:5432/railway?connect_timeout=10&options=-c%20jit%3Doff
 #
-# Start Command:
-# gunicorn backend.app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --timeout 180 --keep-alive 5 --preload
+# Public URL (fallback):
+#   postgresql://user:pass@host.railway.app:port/railway?sslmode=require&connect_timeout=10&options=-c%20jit%3Doff
+#
+# CRITICAL PARAMETERS:
+#   - connect_timeout=10: Fail fast on connection issues (not 30s+ defaults)
+#   - jit=off: Prevents 60-180s JIT compilation delays on first query
+#   - sslmode=require: Required for public connections (optional for private)
 # =============================================================================
 
 import os
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# Get DATABASE_URL from environment - prefer private network URL to avoid egress
-DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL", "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas")
+# =============================================================================
+# DATABASE URL CONFIGURATION
+# =============================================================================
+# Priority: DATABASE_PRIVATE_URL > DATABASE_URL > default
+# Private networking eliminates egress costs and reduces latency by ~50ms
+_raw_url = os.getenv("DATABASE_PRIVATE_URL") or os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+)
 
-# Convert sync PostgreSQL URLs to async driver format
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# Pool configuration constants - optimized for Render Standard (1GB RAM)
-# Low pool size prevents connection exhaustion on Railway free tier
-POOL_SIZE = 2  # Minimum connections kept open
-MAX_OVERFLOW = 3  # Max additional connections under load (total max = 5)
+def _normalize_database_url(url: str) -> str:
+    """
+    Normalize DATABASE_URL for asyncpg with nuclear timeout settings.
+    
+    Ensures:
+    - postgresql+asyncpg:// driver prefix
+    - connect_timeout=10 (fail fast, not Railway's 30s default)
+    - jit=off in options (prevents 60-180s first-query delays)
+    """
+    # Convert sync driver to async driver
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    
+    # Parse URL to inject/override query parameters
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+    
+    # Ensure connect_timeout is set (fail fast at 10s, not 30s)
+    if "connect_timeout" not in params:
+        params["connect_timeout"] = ["10"]
+    
+    # Ensure jit=off is in options (CRITICAL for cold start performance)
+    existing_options = params.get("options", [""])[0]
+    if "jit" not in existing_options:
+        if existing_options:
+            params["options"] = [f"{existing_options} -c jit=off"]
+        else:
+            params["options"] = ["-c jit=off"]
+    
+    # Rebuild URL with new query string
+    new_query = urlencode(params, doseq=True)
+    normalized = urlunparse((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path,
+        parsed.params,
+        new_query,
+        parsed.fragment
+    ))
+    
+    return normalized
 
-# Create async engine with bulletproof timeout configuration
-# These settings prevent 502 Bad Gateway and 173-second login delays
+
+DATABASE_URL = _normalize_database_url(_raw_url)
+
+# =============================================================================
+# POOL CONFIGURATION - Optimized for 512MB-1GB RAM
+# =============================================================================
+# Railway/Render free tier: 512MB RAM, 1 shared vCPU
+# Standard tier: 1GB RAM, 1 dedicated vCPU
+#
+# Conservative settings prevent OOM and connection exhaustion:
+POOL_SIZE = 2           # Keep 2 connections warm (minimum for failover)
+MAX_OVERFLOW = 3        # Allow 3 burst connections (total max = 5)
+POOL_RECYCLE = 180      # Recycle connections every 3 min (Railway drops idle)
+POOL_TIMEOUT = 10       # Wait max 10s for connection (fail fast)
+CONNECT_TIMEOUT = 10    # Connection establishment timeout
+COMMAND_TIMEOUT = 30    # Query execution timeout (generous for complex queries)
+
+# =============================================================================
+# SSL CONFIGURATION - Detect private vs public networking
+# =============================================================================
+# Private networking (*.railway.internal) doesn't require SSL
+# Public networking (*.railway.app) requires sslmode=require
+_is_private_network = ".railway.internal" in DATABASE_URL or "localhost" in DATABASE_URL
+_ssl_mode = None if _is_private_network else "require"
+
+# =============================================================================
+# CREATE ASYNC ENGINE - Nuclear 2025-Proof Configuration
+# =============================================================================
 engine = create_async_engine(
     DATABASE_URL,
+    # Pool settings optimized for low-RAM containers
     pool_size=POOL_SIZE,
     max_overflow=MAX_OVERFLOW,
-    pool_pre_ping=True,  # Validate connections before use (prevents stale connection errors)
-    pool_recycle=180,  # Recycle connections every 3 min (Railway drops idle connections)
-    pool_timeout=30,  # Wait max 30s for connection from pool
+    pool_pre_ping=True,         # Validate connections before use (prevents stale errors)
+    pool_recycle=POOL_RECYCLE,  # Recycle connections every 3 min
+    pool_timeout=POOL_TIMEOUT,  # Fail fast if pool exhausted
+    
+    # Connection arguments for asyncpg
     connect_args={
-        "timeout": 30,  # Connection establishment timeout (asyncpg parameter)
-        "command_timeout": 30,  # Query execution timeout (asyncpg parameter)
+        "timeout": CONNECT_TIMEOUT,         # Connection establishment timeout
+        "command_timeout": COMMAND_TIMEOUT,  # Query execution timeout
         "server_settings": {
-            "jit": "off",  # CRITICAL: Disable JIT - causes 60s+ first-query delays
-            "statement_timeout": "30000",  # 30 second query timeout (milliseconds)
+            "jit": "off",                    # CRITICAL: Disable JIT compilation
+            "statement_timeout": "30000",    # 30s query timeout (milliseconds)
+            "idle_in_transaction_session_timeout": "60000",  # 60s idle transaction timeout
         },
-        "ssl": "require"  # Required for Railway Postgres
-    }
+        # SSL only for public networking
+        **({"ssl": _ssl_mode} if _ssl_mode else {}),
+    },
+    
+    # Echo SQL for debugging (disable in production)
+    echo=os.getenv("SQL_ECHO", "false").lower() == "true",
 )
 
 # Create session factory with optimized settings

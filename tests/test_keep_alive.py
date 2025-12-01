@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Test suite for keep_alive.py background worker.
-Tests the ultimate immortal keep-alive functionality that prevents Render services from sleeping.
+Tests the nuclear immortal keep-alive functionality that prevents Render services from sleeping.
 """
 import os
 import unittest
@@ -46,9 +46,8 @@ class TestKeepAliveConfiguration(unittest.TestCase):
             content = f.read()
 
         # Verify 3 retries (range 1 to 4 = attempts 1, 2, 3)
-        self.assertIn("range(1, 4)", content)
-        self.assertIn("attempt", content)
-        self.assertIn("/3", content)
+        self.assertIn("range(1, MAX_RETRIES + 1)", content)
+        self.assertIn("MAX_RETRIES = 3", content)
 
     def test_increasing_timeout(self):
         """Test that timeout increases with each retry attempt."""
@@ -75,8 +74,8 @@ class TestKeepAliveConfiguration(unittest.TestCase):
 
         # Verify backoff logic
         self.assertIn("backoff", content)
-        self.assertIn("2 ** backoff", content)
-        self.assertIn("min(backoff + 1, 6)", content)
+        self.assertIn("BASE_BACKOFF_SECONDS ** backoff", content)
+        self.assertIn("min(backoff + 1, MAX_BACKOFF_LEVEL)", content)
 
     def test_jitter_on_backoff(self):
         """Test that jitter is added to backoff to prevent thundering herd."""

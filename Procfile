@@ -1,21 +1,22 @@
 # =============================================================================
-# HireMeBahamas Procfile (Heroku/Railway)
+# HireMeBahamas Procfile - NUCLEAR 2025-PROOF EDITION
 # =============================================================================
 # 
-# NUCLEAR FIX FOR 502 BAD GATEWAY (2025)
+# FINAL START COMMAND (Railway/Heroku/Render):
+#   gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
 #
-# Configuration:
-# - workers=1: Prevents OOM on 512MB-1GB RAM
-# - timeout=180: Survives Railway DB cold starts (up to 2 min)
-# - keep-alive=5: Matches load balancer settings
-# - preload: Eliminates cold start app loading delay
+# PERFORMANCE TARGETS:
+#   - Boot time: < 9 seconds
+#   - First request: < 400ms
+#   - Login: < 180ms (cached)
+#   - Zero 502/499/timeout/OOM forever
 #
-# Environment variables:
-#   WEB_CONCURRENCY=1    Single worker for low RAM
+# ENVIRONMENT VARIABLES (set in dashboard):
+#   WEB_CONCURRENCY=1    Single worker for 512MB-1GB RAM
 #   WEB_THREADS=4        Threads per worker
-#   GUNICORN_TIMEOUT=180 Worker timeout in seconds
+#   GUNICORN_TIMEOUT=120 Worker timeout in seconds
 #   PRELOAD_APP=true     Enable app preloading
-# 
+#
 # See gunicorn.conf.py for full configuration details.
 # =============================================================================
 
@@ -24,5 +25,5 @@ web: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --p
 # Optional: Use start.sh for migrations + preload health check
 # web: bash start.sh
 
-# Optional: Uncomment to enable Celery worker for background tasks
+# Optional: Celery worker for background tasks
 # worker: celery -A final_backend.celery worker --loglevel=info

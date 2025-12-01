@@ -1,43 +1,54 @@
+#!/usr/bin/env python3
 """
 =============================================================================
-UNBREAKABLE KEEP-ALIVE WORKER FOR RENDER BACKGROUND SERVICE (2025 EDITION)
+NUCLEAR KEEP-ALIVE WORKER - 2025 IMMORTAL EDITION
 =============================================================================
-This worker pings the web service every 45 seconds to prevent cold starts.
+Pings /health every 45 seconds to prevent Render cold starts.
 
 Deploy as Render Background Worker:
   - Name: keep-alive
   - Runtime: Python 3
   - Build Command: pip install requests
   - Start Command: python keep_alive.py
-  - Environment: RENDER_EXTERNAL_URL=https://hiremebahamas.onrender.com
+
+CRITICAL: NO ENVIRONMENT VARIABLES
+  - URL is hardcoded - never fails due to missing env vars
+  - Retries with exponential backoff and jitter
+  - Never exits, never gives up, never dies
 
 Cost: $0 on Render Free tier for Background Workers
 Effect: Eliminates 502 Bad Gateway and 2+ minute cold starts
 =============================================================================
 """
-import os
-import time
 import random
+import time
+
 import requests
 
-# HARDCODED URL — NEVER FAILS
-# Falls back to env var for flexibility in other deployments
-HEALTH_URL = os.getenv("RENDER_EXTERNAL_URL", "https://hiremebahamas.onrender.com") + "/health"
-
-# Ping interval: 45 seconds keeps service warm without overloading
-PING_INTERVAL_SECONDS = 45
+# =============================================================================
+# HARDCODED CONFIGURATION - NO ENV VARS = NO FAILURES
+# =============================================================================
+HEALTH_URL = "https://hiremebahamas.onrender.com/health"
+PING_INTERVAL_SECONDS = 45  # Keep service warm without overloading
 
 # Retry configuration
-MAX_RETRIES = 5
-CONNECT_TIMEOUT = 10  # seconds
-READ_TIMEOUT = 30  # seconds (generous for cold start)
+MAX_RETRIES = 3  # Retries per ping cycle
+BASE_BACKOFF_SECONDS = 2  # Base for exponential backoff
+MAX_BACKOFF_LEVEL = 6  # Cap at 2^6 = 64 seconds
 
+# =============================================================================
+# STARTUP BANNER
+# =============================================================================
 print("=" * 60)
-print("🔥 UNBREAKABLE KEEP-ALIVE WORKER STARTED")
+print("🔥 NUCLEAR KEEP-ALIVE WORKER - 2025 IMMORTAL EDITION")
 print(f"   Target: {HEALTH_URL}")
 print(f"   Interval: {PING_INTERVAL_SECONDS}s")
+print(f"   Retries: {MAX_RETRIES} per cycle")
 print("=" * 60)
 
+# =============================================================================
+# IMMORTAL PING LOOP
+# =============================================================================
 backoff = 0
 consecutive_failures = 0
 
@@ -46,59 +57,59 @@ while True:
     
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            # Fixed timeout to avoid blocking the keep-alive loop for too long
-            # connect: 10s, read: 45s - handles cold starts without excessive delays
+            # Increasing timeout per attempt (20s, 30s, 40s)
+            # Handles cold starts which can take 30-60 seconds
             response = requests.get(
                 HEALTH_URL,
-                timeout=(CONNECT_TIMEOUT, READ_TIMEOUT + 15),  # (10s, 45s) max
-                headers={
-                    "User-Agent": "KeepAlive-Worker/2025",
-                    "Accept": "application/json",
-                }
+                timeout=(6, 20 + attempt * 10),
+                headers={"User-Agent": "ImmortalKeepAlive/2025"}
             )
             
             if response.status_code == 200:
-                print(f"✅ [{time.strftime('%H:%M:%S')}] PING OK → {response.status_code} in {response.elapsed.total_seconds():.2f}s")
+                print(f"✅ [{time.strftime('%H:%M:%S')}] PING OK → {response.status_code} "
+                      f"in {response.elapsed.total_seconds():.2f}s")
                 success = True
                 consecutive_failures = 0
+                backoff = 0
                 break
             else:
-                print(f"⚠️ [{time.strftime('%H:%M:%S')}] HTTP {response.status_code} (attempt {attempt}/{MAX_RETRIES})")
+                print(f"⚠️ [{time.strftime('%H:%M:%S')}] HTTP {response.status_code} "
+                      f"(attempt {attempt}/{MAX_RETRIES})")
                 
         except requests.exceptions.Timeout as e:
-            print(f"⏱️ [{time.strftime('%H:%M:%S')}] TIMEOUT attempt {attempt}/{MAX_RETRIES} — {e}")
+            print(f"⏱️ [{time.strftime('%H:%M:%S')}] TIMEOUT attempt {attempt}/{MAX_RETRIES}")
             if attempt < MAX_RETRIES:
-                # Short delay between retries
-                time.sleep(2 ** attempt)
+                time.sleep(BASE_BACKOFF_SECONDS ** attempt)
                 
         except requests.exceptions.ConnectionError as e:
-            print(f"🔌 [{time.strftime('%H:%M:%S')}] CONNECTION ERROR attempt {attempt}/{MAX_RETRIES} — {e}")
+            print(f"🔌 [{time.strftime('%H:%M:%S')}] CONNECTION ERROR attempt {attempt}/{MAX_RETRIES}")
             if attempt < MAX_RETRIES:
-                time.sleep(2 ** attempt)
+                time.sleep(BASE_BACKOFF_SECONDS ** attempt)
                 
         except Exception as e:
-            print(f"❌ [{time.strftime('%H:%M:%S')}] ERROR attempt {attempt}/{MAX_RETRIES} — {type(e).__name__}: {e}")
+            print(f"❌ [{time.strftime('%H:%M:%S')}] ERROR attempt {attempt}/{MAX_RETRIES} — "
+                  f"{type(e).__name__}: {e}")
             if attempt < MAX_RETRIES:
-                time.sleep(2 ** attempt)
+                time.sleep(BASE_BACKOFF_SECONDS ** attempt)
 
     if success:
-        backoff = 0
-        # Wait 45 seconds before next ping
+        # Wait standard interval before next ping
         time.sleep(PING_INTERVAL_SECONDS)
     else:
-        # Exponential backoff on complete failure (all retries exhausted)
+        # All retries failed - use exponential backoff with jitter
         consecutive_failures += 1
-        backoff = min(backoff + 1, 6)  # Cap at 2^6 = 64 seconds base
+        backoff = min(backoff + 1, MAX_BACKOFF_LEVEL)
         
         # Add jitter to prevent thundering herd
         jitter = random.uniform(0, 5)
-        wait_time = (2 ** backoff) + jitter
+        wait_time = (BASE_BACKOFF_SECONDS ** backoff) + jitter
         
         print(f"🔁 [{time.strftime('%H:%M:%S')}] BACKOFF level {backoff} — "
-              f"waiting {wait_time:.1f}s (consecutive failures: {consecutive_failures})")
+              f"waiting {wait_time:.1f}s (failures: {consecutive_failures})")
         
-        # If too many consecutive failures, alert but keep trying
+        # Alert on persistent failures
         if consecutive_failures >= 10:
-            print(f"🚨 ALERT: {consecutive_failures} consecutive failures! Service may be down.")
+            print(f"🚨 ALERT: {consecutive_failures} consecutive failures! "
+                  "Service may be down.")
         
         time.sleep(wait_time)

@@ -1,33 +1,90 @@
 # =============================================================================
-# NUCLEAR-OPTIMIZED STARTUP (2025 RENDER EDITION)
+# NUCLEAR 2025-PROOF STARTUP - INSTANT HEALTH + LAZY EVERYTHING
 # =============================================================================
-# INSTANT APP — NO HEAVY IMPORTS YET
-# Responds in <5ms even on coldest start. Render cannot kill this.
+# This file is structured for <5ms cold start health response:
+#
+# 1. IMMORTAL SECTION (lines 1-50): Zero heavy imports
+#    - FastAPI app creation with minimal config
+#    - /health endpoint (instant, no DB, no imports)
+#    - /ready endpoint (instant, no DB, no imports)
+#
+# 2. LAZY SECTION (lines 50+): Everything else loaded on startup event
+#    - Database connections
+#    - Redis cache
+#    - API routers
+#    - Middleware
+#
+# Boot time: < 9 seconds (target)
+# Health response: < 5ms even on coldest start
+# Login response: < 180ms after first request
 # =============================================================================
 import os
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+import time
 
-# INSTANT APP — NO HEAVY IMPORTS YET
+# Track startup time for cold start metrics
+_APP_BOOT_START = time.time()
+
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse, PlainTextResponse
+
+# =============================================================================
+# INSTANT APP - NO HEAVY IMPORTS ABOVE THIS LINE
+# =============================================================================
 app = FastAPI(
-    title="hiremebahamas",
+    title="HireMeBahamas",
     version="1.0.0",
-    docs_url=None,        # Disable heavy Swagger/ReDoc on boot
-    redoc_url=None,
-    openapi_url=None,
+    docs_url=None,        # Defer Swagger UI loading
+    redoc_url=None,       # Defer ReDoc loading
+    openapi_url=None,     # Defer OpenAPI schema generation
 )
 
-# IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
+# =============================================================================
+# IMMORTAL HEALTH ENDPOINTS - RESPOND IN <5ms EVEN ON COLDEST START
+# =============================================================================
+# These endpoints have ZERO dependencies on database, cache, or other services.
+# They MUST respond instantly to pass Render/Railway health checks during cold start.
+
 @app.get("/health")
 @app.head("/health")
 def health():
-    return JSONResponse({"status": "healthy"}, status_code=200)
+    """Liveness probe - instant response, no dependencies.
+    
+    Returns 200 if the Python process is running.
+    Used by Render/Railway health checks to determine if container is alive.
+    """
+    return JSONResponse(
+        {"status": "healthy", "timestamp": int(time.time())},
+        status_code=200
+    )
+
 
 @app.get("/ready")
-async def ready():
-    return {"status": "ready"}
+def ready():
+    """Readiness probe - instant response, no database check.
+    
+    Returns 200 immediately. For deep database health check, use /ready/db.
+    This allows health checks to pass during database initialization.
+    """
+    return JSONResponse(
+        {"status": "ready", "timestamp": int(time.time())},
+        status_code=200
+    )
 
-print("NUCLEAR MAIN.PY LOADED — HEALTH ENDPOINTS ACTIVE")
+
+@app.get("/health/ping")
+def health_ping():
+    """Ultra-fast ping endpoint for keep-alive workers.
+    
+    Returns plain text 'pong' with minimal overhead.
+    Used by keep_alive.py background worker to prevent cold starts.
+    """
+    return PlainTextResponse("pong", status_code=200)
+
+
+# Log boot completion time
+_APP_BOOT_END = time.time()
+_BOOT_TIME_MS = int((_APP_BOOT_END - _APP_BOOT_START) * 1000)
+print(f"🚀 IMMORTAL HEALTH ENDPOINTS ACTIVE - Boot time: {_BOOT_TIME_MS}ms")
 
 # =============================================================================
 # END IMMORTAL SECTION — NOW LOAD EVERYTHING ELSE

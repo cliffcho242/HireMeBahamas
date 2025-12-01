@@ -1,48 +1,44 @@
 # =============================================================================
-# HireMeBahamas Backend - Render Deployment Configuration
+# HireMeBahamas Render Deployment - NUCLEAR 2025-PROOF EDITION
 # =============================================================================
-# 
-# NUCLEAR FIX FOR 502 BAD GATEWAY + 173-SECOND LOGINS (2025)
 #
-# This configuration eliminates cold start timeouts with:
-# 1. Standard plan ($25/mo) with 1GB RAM - prevents OOM
-# 2. Single worker + 180s timeout - survives Railway DB cold starts
-# 3. Health check at /health with 300s grace period
-# 4. Keep-alive background worker pinging every 45s
+# DASHBOARD SETTINGS (copy-paste these):
+#   Plan: Standard ($25/mo) or Starter ($7/mo minimum)
+#   Health Check Path: /health
+#   Health Check Timeout: 30 seconds
+#   Grace Period: 300 seconds (5 minutes)
+#   Instance Memory: 1GB (Standard) or 512MB (Starter)
 #
-# COPY-PASTE THESE DASHBOARD VALUES:
-# - Plan: Standard ($25/mo) or Starter ($7/mo minimum)
-# - Health Check Path: /health
-# - Grace Period: 300 seconds
-# - Health Check Timeout: 30 seconds
+# PERFORMANCE TARGETS:
+#   - Boot time: < 9 seconds
+#   - First request: < 400ms
+#   - Login: < 180ms (cached)
+#   - Zero 502/499/timeout/OOM forever
+#
+# COST: < $60/mo total (Standard $25 + DB $7 + domain $0)
 # =============================================================================
 
 services:
+  # ==========================================================================
+  # WEB SERVICE - Backend API
+  # ==========================================================================
   - type: web
     name: hiremebahamas-backend
     runtime: python
     region: oregon
     
-    # ==========================================================================
-    # PLAN SELECTION - Standard recommended for zero 502s
-    # ==========================================================================
-    # STARTER ($7/mo, 512MB RAM):
-    #   - Good for low traffic, may have occasional slow cold starts
-    #   - Set WEB_CONCURRENCY=1, WEB_THREADS=2
-    #
-    # STANDARD ($25/mo, 1GB RAM) - RECOMMENDED:
-    #   - Always On, no 502s, fast responses
-    #   - Set WEB_CONCURRENCY=1, WEB_THREADS=4
-    # ==========================================================================
+    # Standard plan ($25/mo, 1GB RAM) - RECOMMENDED for zero 502s
+    # Starter plan ($7/mo, 512MB RAM) - Budget option, may have slow cold starts
     plan: standard
     
-    # Auto-scaling (Standard plan and above)
+    # Auto-scaling configuration
     scaling:
       minInstances: 1
       maxInstances: 3
       targetCPUPercent: 80
       targetMemoryPercent: 85
     
+    # Build command - install system dependencies + Python packages
     buildCommand: |
       apt-get update
       apt-get install -y --no-install-recommends \
@@ -52,16 +48,10 @@ services:
       pip install --upgrade pip setuptools wheel
       pip install -r requirements.txt
     
-    # ==========================================================================
-    # START COMMAND - Nuclear Configuration
-    # ==========================================================================
-    # - workers=1: Prevents OOM on 1GB RAM
-    # - timeout=180: Survives Railway DB cold starts (up to 2 min)
-    # - keep-alive=5: Matches Render load balancer
-    # - preload: Eliminates cold start app loading delay
-    # ==========================================================================
+    # Start command - nuclear gunicorn configuration
     startCommand: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
     
+    # Environment variables
     envVars:
       - key: FLASK_ENV
         value: production
@@ -75,34 +65,31 @@ services:
         value: "true"
       - key: PYTHON_VERSION
         value: "3.12.0"
-      # Nuclear configuration - single worker, high timeout
+      # Nuclear worker configuration
       - key: WEB_CONCURRENCY
         value: "1"
       - key: WEB_THREADS
         value: "4"
       - key: GUNICORN_TIMEOUT
-        value: "180"
+        value: "120"
       - key: GUNICORN_KEEPALIVE
         value: "5"
       - key: PRELOAD_APP
         value: "true"
-      # Database keepalive thread
+      # Database keepalive
       - key: DB_KEEPALIVE_ENABLED
         value: "true"
       # Trust Render's load balancer
       - key: FORWARDED_ALLOW_IPS
         value: "*"
       # DATABASE_URL must be set manually in Render dashboard
-      # Format: postgresql://user:pass@host:5432/db?sslmode=require
+      # Format: postgresql://user:pass@host:5432/db?connect_timeout=10&options=-c%20jit%3Doff
     
     # ==========================================================================
     # HEALTH CHECK - Nuclear Settings
     # ==========================================================================
     # Path: /health (instant response, no DB check)
-    # Grace Period: 300s (5 min) - handles worst-case cold start
-    # Timeout: 30s per health check request
-    # Interval: 30s between checks
-    # ==========================================================================
+    # This endpoint responds in <5ms even on coldest start
     healthCheckPath: /health
 
   # ==========================================================================
@@ -110,7 +97,6 @@ services:
   # ==========================================================================
   # Pings /health every 45 seconds to prevent cold starts
   # Cost: $0 on Render Free tier for Background Workers
-  # ==========================================================================
   - type: worker
     name: keep-alive
     runtime: python
@@ -121,15 +107,11 @@ services:
     envVars:
       - key: PYTHONUNBUFFERED
         value: "true"
-      - key: RENDER_EXTERNAL_URL
-        value: https://hiremebahamas.onrender.com
 
   # ==========================================================================
   # CRON JOB - Backup Keepalive
   # ==========================================================================
   # Pings /health every 5 minutes as backup
-  # Uses minimal Docker image (5MB vs full Python)
-  # ==========================================================================
   - type: cron
     name: keepalive-ping
     region: oregon
@@ -142,7 +124,6 @@ services:
   # CACHE WARMING CRON JOB
   # ==========================================================================
   # Pre-warms cache every 5 minutes for sub-100ms responses
-  # ==========================================================================
   - type: cron
     name: cache-warmer
     region: oregon
