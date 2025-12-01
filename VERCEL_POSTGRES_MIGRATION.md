@@ -106,9 +106,32 @@ SELECT conname FROM pg_constraint;
 # Before migration (Railway)
 DATABASE_URL=postgresql://user:pass@railway-host:5432/railway
 
-# After migration (Vercel/Neon)
-DATABASE_URL=postgresql://user:pass@ep-xyz.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require
+# After migration (Vercel Postgres / Neon with pgbouncer)
+# 
+# Main connection URL (pooled, for queries):
+POSTGRES_URL=postgres://user:pass@ep-xyz.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require&pgbouncer=true&connect_timeout=15
+
+# For Prisma ORM compatibility:
+POSTGRES_PRISMA_URL=$POSTGRES_URL
+
+# Non-pooled connection (for migrations and schema changes):
+POSTGRES_URL_NON_POOLING=postgres://user:pass@ep-xyz.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require&pgbouncer=false
+
+# Backend (Flask/FastAPI) - set to the pooled URL:
+DATABASE_URL=${POSTGRES_URL}
 ```
+
+### Connection String Formats
+
+**Pooled Connection (pgbouncer=true)**: Used for application queries
+- Format: `postgres://...?sslmode=require&pgbouncer=true&connect_timeout=15`
+- Use for: API endpoints, web requests, application logic
+- Benefit: Better performance, connection reuse
+
+**Non-Pooled Connection (pgbouncer=false)**: Used for schema operations
+- Format: `postgres://...?sslmode=require&pgbouncer=false`
+- Use for: Database migrations, schema changes, DDL operations
+- Benefit: Direct connection for operations that don't work with poolers
 
 ## ESTIMATED TIME
 

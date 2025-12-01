@@ -26,9 +26,16 @@ npx vercel link
 # In Vercel Dashboard:
 # 1. Go to Storage → Create Database → Postgres
 # 2. Connect to your project
-# 3. Copy connection strings
+# 3. Copy connection strings (auto-injected as environment variables)
 
-# Run migrations:
+# Connection strings provided by Vercel:
+# - POSTGRES_URL: Pooled connection with pgbouncer=true (for queries)
+#   Format: postgres://user:pass@host:5432/db?sslmode=require&pgbouncer=true&connect_timeout=15
+# - POSTGRES_PRISMA_URL: Same as POSTGRES_URL (for Prisma compatibility)
+# - POSTGRES_URL_NON_POOLING: Direct connection with pgbouncer=false (for migrations)
+#   Format: postgres://user:pass@host:5432/db?sslmode=require&pgbouncer=false
+
+# Run migrations (uses POSTGRES_URL_NON_POOLING):
 npm run db:push
 ```
 
@@ -45,9 +52,15 @@ npm run db:push
 # Required in Vercel Dashboard → Settings → Environment Variables:
 
 JWT_SECRET=your-super-secret-key-minimum-32-chars
-POSTGRES_URL=${POSTGRES_URL}            # Auto-injected
-KV_REST_API_URL=${KV_REST_API_URL}      # Auto-injected
-KV_REST_API_TOKEN=${KV_REST_API_TOKEN}  # Auto-injected
+
+# Database (Auto-injected by Vercel when Postgres is connected):
+POSTGRES_URL=${POSTGRES_URL}                        # Pooled connection
+POSTGRES_URL_NON_POOLING=${POSTGRES_URL_NON_POOLING}  # For migrations
+POSTGRES_PRISMA_URL=${POSTGRES_PRISMA_URL}          # For Prisma ORM
+
+# KV Store (Auto-injected by Vercel when KV is connected):
+KV_REST_API_URL=${KV_REST_API_URL}
+KV_REST_API_TOKEN=${KV_REST_API_TOKEN}
 
 # Optional (for push notifications):
 VAPID_PUBLIC_KEY=your-vapid-public-key

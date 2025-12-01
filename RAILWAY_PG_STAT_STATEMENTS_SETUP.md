@@ -97,14 +97,20 @@ Several managed PostgreSQL providers have `pg_stat_statements` enabled by defaul
 
 1. Create a Neon account at https://neon.tech
 2. Create a new project/database
-3. Copy the connection string
+3. Copy the connection string (Neon provides pooled and non-pooled versions)
 4. In Railway:
    - Go to your backend service
    - Add environment variable:
    ```
-   DATABASE_URL=postgres://user:password@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+   # Pooled connection (with pgbouncer) - for application queries
+   DATABASE_URL=postgres://user:password@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require&pgbouncer=true&connect_timeout=15
+   
+   # Non-pooled connection (without pgbouncer) - for migrations/schema changes
+   DATABASE_URL_NON_POOLING=postgres://user:password@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require&pgbouncer=false
    ```
 5. Redeploy your service
+
+**Note**: Neon/Vercel Postgres uses pgbouncer for connection pooling. Use the pooled connection (`pgbouncer=true`) for application queries and the non-pooled connection (`pgbouncer=false`) for database migrations.
 
 ---
 

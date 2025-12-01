@@ -77,12 +77,30 @@ npx vercel --prod
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `POSTGRES_URL` | Vercel Postgres connection string | Yes |
+| `POSTGRES_URL` | Vercel Postgres pooled connection (pgbouncer=true) | Yes |
+| `POSTGRES_URL_NON_POOLING` | Direct connection for migrations (pgbouncer=false) | Yes |
+| `POSTGRES_PRISMA_URL` | Same as POSTGRES_URL (for Prisma ORM) | Optional |
 | `KV_REST_API_URL` | Vercel KV REST API URL | Yes |
 | `KV_REST_API_TOKEN` | Vercel KV REST API Token | Yes |
 | `JWT_SECRET` | Secret for JWT signing (32+ chars) | Yes |
 | `VAPID_PUBLIC_KEY` | Push notification public key | No |
 | `VAPID_PRIVATE_KEY` | Push notification private key | No |
+
+### Database Connection Strings
+
+Vercel Postgres provides multiple connection string formats:
+
+- **POSTGRES_URL**: Pooled connection with `pgbouncer=true` - Use for queries and application logic
+  ```
+  postgres://user:password@host:5432/db?sslmode=require&pgbouncer=true&connect_timeout=15
+  ```
+
+- **POSTGRES_URL_NON_POOLING**: Direct connection with `pgbouncer=false` - Required for migrations and schema changes
+  ```
+  postgres://user:password@host:5432/db?sslmode=require&pgbouncer=false
+  ```
+
+- **POSTGRES_PRISMA_URL**: Alias for POSTGRES_URL for Prisma ORM compatibility
 
 ## 📱 PWA Features
 
