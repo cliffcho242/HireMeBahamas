@@ -21,6 +21,8 @@ global-exclude *$py.class
 global-exclude .DS_Store
 
 # Exclude development and deployment files
+# Note: These directories exist in the repository but should not be included
+# in the Python backend package distribution
 prune .git
 prune .github
 prune node_modules
