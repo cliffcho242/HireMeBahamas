@@ -83,19 +83,23 @@ export async function middleware(request: NextRequest) {
   // Create response
   const response = NextResponse.next();
 
-  // A/B testing - assign variant randomly
-  const variant = Math.random() < 0.5 ? "a" : "b";
-  response.headers.set("x-ab-test", variant);
+  // A/B testing - only for page routes (not static assets or API routes)
+  if (!pathname.startsWith("/api") && !pathname.startsWith("/_next")) {
+    const variant = Math.random() < 0.5 ? "a" : "b";
+    response.headers.set("x-ab-test", variant);
+  }
 
-  // Geo-location from Edge runtime
+  // Geo-location from Edge runtime - only for page routes
   // Vercel Edge provides geo info in headers
-  const country = request.headers.get("x-vercel-ip-country") || "unknown";
-  const city = request.headers.get("x-vercel-ip-city") || "unknown";
-  const region = request.headers.get("x-vercel-ip-country-region") || "unknown";
-  
-  response.headers.set("x-geo-country", country);
-  response.headers.set("x-geo-city", city);
-  response.headers.set("x-geo-region", region);
+  if (!pathname.startsWith("/api") && !pathname.startsWith("/_next")) {
+    const country = request.headers.get("x-vercel-ip-country") || "unknown";
+    const city = request.headers.get("x-vercel-ip-city") || "unknown";
+    const region = request.headers.get("x-vercel-ip-country-region") || "unknown";
+    
+    response.headers.set("x-geo-country", country);
+    response.headers.set("x-geo-city", city);
+    response.headers.set("x-geo-region", region);
+  }
 
   // Add security headers
   response.headers.set("X-Content-Type-Options", "nosniff");
@@ -131,5 +135,14 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: "/((?!api/auth|_next|favicon.ico).*)",
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - api/auth (auth endpoints)
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico (icon)
+     */
+    "/((?!api/auth|_next/static|_next/image|favicon.ico).*)",
+  ],
 };
