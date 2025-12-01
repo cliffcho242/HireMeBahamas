@@ -22,7 +22,14 @@ import requests
 
 # HARDCODED URL — NEVER FAILS
 # Falls back to env var for flexibility in other deployments
-HEALTH_URL = os.getenv("RENDER_EXTERNAL_URL", "https://hiremebahamas.onrender.com") + "/health"
+DEFAULT_URL = "https://hiremebahamas.onrender.com"
+_base_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+
+# Validate URL: must be non-empty and have a valid scheme (http/https)
+if not _base_url or not _base_url.startswith(("http://", "https://")):
+    _base_url = DEFAULT_URL
+
+HEALTH_URL = _base_url + "/health"
 
 # Ping interval: 45 seconds keeps service warm without overloading
 PING_INTERVAL_SECONDS = 45
