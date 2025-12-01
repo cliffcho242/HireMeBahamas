@@ -25,6 +25,25 @@ echo "Step 2: Checking out PR #360 branch..."
 git checkout copilot/update-postgres-connection-strings
 
 echo ""
+echo "Step 2.5: Checking if resolution already exists locally..."
+if git rev-parse --verify copilot/update-postgres-connection-strings-resolved >/dev/null 2>&1; then
+    echo "Found existing resolved branch: copilot/update-postgres-connection-strings-resolved"
+    echo "Merging the resolved branch instead of re-resolving conflicts..."
+    if git merge copilot/update-postgres-connection-strings-resolved --no-edit; then
+        echo "Merge completed successfully using pre-resolved branch!"
+        echo ""
+        echo "==========================================="
+        echo "✓ Using cached resolution - conflicts already resolved!"
+        echo "==========================================="
+        echo ""
+        echo "Next step: Push the changes to GitHub"
+        echo "  git push origin copilot/update-postgres-connection-strings"
+        echo ""
+        exit 0
+    fi
+fi
+
+echo ""
 echo "Step 3: Merging main with --allow-unrelated-histories..."
 if git merge main --allow-unrelated-histories --no-edit; then
     echo "Merge completed without conflicts!"

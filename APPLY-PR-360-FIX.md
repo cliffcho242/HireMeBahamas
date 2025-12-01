@@ -2,20 +2,24 @@
 
 ## Quick Start (Recommended)
 
-The automated script will resolve all conflicts for you:
+The automated scripts will resolve and push the fix for you:
 
 ```bash
-# Run the resolution script
+# Step 1: Resolve conflicts
 ./resolve-pr-360-conflicts.sh
+
+# Step 2: Push to GitHub
+./push-pr-360-resolution.sh
 ```
 
-That's it! The script will:
+That's it! The scripts will:
 - ✅ Fetch latest changes
 - ✅ Checkout PR #360 branch  
 - ✅ Merge main with conflict resolution
 - ✅ Create merge commit
+- ✅ Push to GitHub (with confirmation prompt)
 
-After the script completes, push the changes:
+Or manually push after running the resolve script:
 
 ```bash
 git push origin copilot/update-postgres-connection-strings
