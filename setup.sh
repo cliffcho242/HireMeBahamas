@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # HireBahamas Setup Script
+
+# Export CFLAGS to suppress compiler warnings during C extension builds
+export CFLAGS="-Wno-conversion"
+
 echo "🇧🇸 Setting up HireBahamas - The Ultimate Bahaman Job Platform!"
 echo "=================================================================="
 

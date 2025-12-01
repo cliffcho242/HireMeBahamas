@@ -4,6 +4,9 @@
 
 set -e  # Exit on error
 
+# Export CFLAGS to suppress compiler warnings during C extension builds
+export CFLAGS="-Wno-conversion"
+
 echo "======================================"
 echo "HireMeBahamas Dependency Installation"
 echo "======================================"

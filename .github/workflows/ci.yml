@@ -101,9 +101,9 @@ jobs:
 
       - name: Install dependencies
         run: |
+          export CFLAGS="-Wno-conversion"
           python -m pip install --upgrade pip
           pip install pytest pytest-flask
-          export CFLAGS="-Wno-conversion"
           pip install -r requirements.txt
 
       - name: Run database recovery tests

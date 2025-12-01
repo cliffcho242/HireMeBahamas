@@ -13,6 +13,9 @@
 
 set -e  # Exit on error
 
+# Export CFLAGS to suppress compiler warnings during C extension builds
+export CFLAGS="-Wno-conversion"
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
