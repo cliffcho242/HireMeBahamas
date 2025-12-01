@@ -96,12 +96,20 @@ services:
       # Format: postgresql://user:pass@host:5432/db?sslmode=require
     
     # ==========================================================================
-    # HEALTH CHECK - Nuclear Settings
+    # HEALTH CHECK - Nuclear Settings (2025 Render Edition)
     # ==========================================================================
-    # Path: /health (instant response, no DB check)
-    # Grace Period: 300s (5 min) - handles worst-case cold start
-    # Timeout: 30s per health check request
-    # Interval: 30s between checks
+    # AVAILABLE ENDPOINTS (all respond in <5ms):
+    #   /health  - Instant liveness check, no DB (use for Render health path)
+    #   /live    - Kubernetes-style liveness probe, no DB
+    #   /ready   - Readiness check with DB connectivity (returns 503 if DB down)
+    #   /ready/db - Full DB health with session (use for deep checks)
+    #   /metrics - Prometheus metrics (for monitoring)
+    #
+    # RENDER DASHBOARD SETTINGS:
+    #   Health Check Path: /health
+    #   Grace Period: 300 seconds (5 min - handles worst-case cold start)
+    #   Health Check Timeout: 30 seconds
+    #   Health Check Interval: 30 seconds (default)
     # ==========================================================================
     healthCheckPath: /health
 

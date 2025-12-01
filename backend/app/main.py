@@ -30,7 +30,28 @@ def health():
     """
     return JSONResponse({"status": "healthy"}, status_code=200)
 
+
+# LIVENESS PROBE — Kubernetes/Render liveness check
+@app.get("/live", tags=["health"])
+@app.head("/live", tags=["health"])
+def liveness():
+    """Liveness probe - instant response, no dependencies.
+    
+    This endpoint confirms the application process is running and responsive.
+    It does NOT check database or external services.
+    
+    Use this for:
+    - Kubernetes livenessProbe
+    - Render liveness checks
+    - Load balancer health checks
+    
+    Returns 200 immediately (<5ms) on any successful request.
+    """
+    return JSONResponse({"status": "alive"}, status_code=200)
+
+
 @app.get("/ready")
+@app.head("/ready")
 async def ready():
     """Readiness check with lazy database initialization.
     
@@ -63,7 +84,7 @@ async def ready():
             "hint": "Database may be cold-starting. Retry in 10-30 seconds.",
         }, status_code=503)
 
-print("NUCLEAR MAIN.PY LOADED — HEALTH ENDPOINTS ACTIVE")
+print("NUCLEAR MAIN.PY LOADED — HEALTH ENDPOINTS ACTIVE (/health, /live, /ready)")
 
 # =============================================================================
 # END IMMORTAL SECTION — NOW LOAD EVERYTHING ELSE
@@ -364,9 +385,10 @@ async def lazy_import_heavy_stuff():
     asyncio.create_task(warm_cache())
     
     logger.info("LAZY IMPORT COMPLETE — FULL APP LIVE (DB warms on /ready)")
-    logger.info("Health: GET /health (instant, no DB)")
-    logger.info("Ready:  GET /ready (checks DB connectivity)")
-    logger.info("Ready:  GET /ready/db (full DB check with session)")
+    logger.info("Health:   GET /health (instant, no DB)")
+    logger.info("Liveness: GET /live (instant, no DB)")
+    logger.info("Ready:    GET /ready (checks DB connectivity)")
+    logger.info("Ready:    GET /ready/db (full DB check with session)")
 
 
 @app.on_event("shutdown")
