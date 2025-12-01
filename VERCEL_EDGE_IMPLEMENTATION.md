@@ -216,7 +216,8 @@ npx vercel env pull .env.local
 ```
 
 ### Required in Production
-- `POSTGRES_URL` - Database connection (auto-injected)
+- `POSTGRES_URL` - Pooled database connection (auto-injected, pgbouncer=true)
+- `POSTGRES_URL_NON_POOLING` - Direct database connection for migrations (auto-injected, pgbouncer=false)
 - `KV_URL`, `KV_REST_API_URL`, `KV_REST_API_TOKEN` - KV store (auto-injected)
 - `JWT_SECRET` - JWT signing key (manually added)
 
