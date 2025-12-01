@@ -1,3 +1,4 @@
+// middleware.ts — EDGE AUTH + GEO + A/B
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
@@ -82,6 +83,20 @@ export async function middleware(request: NextRequest) {
   // Create response
   const response = NextResponse.next();
 
+  // A/B testing - assign variant randomly
+  const variant = Math.random() < 0.5 ? "a" : "b";
+  response.headers.set("x-ab-test", variant);
+
+  // Geo-location from Edge runtime
+  // Vercel Edge provides geo info in headers
+  const country = request.headers.get("x-vercel-ip-country") || "unknown";
+  const city = request.headers.get("x-vercel-ip-city") || "unknown";
+  const region = request.headers.get("x-vercel-ip-country-region") || "unknown";
+  
+  response.headers.set("x-geo-country", country);
+  response.headers.set("x-geo-city", city);
+  response.headers.set("x-geo-region", region);
+
   // Add security headers
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
@@ -116,14 +131,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, icon.svg (browser icons)
-     * - public folder files
-     */
-    "/((?!_next/static|_next/image|favicon.ico|icon.svg|public).*)",
-  ],
+  matcher: "/((?!api/auth|_next|favicon.ico).*)",
 };
