@@ -23,6 +23,38 @@ scripts\install_all_dependencies.bat
 
 ## Scripts Overview
 
+### 🔄 Database Migration Scripts
+
+#### `migrate_railway_to_vercel.sh` (Shell)
+Zero-downtime migration from Railway Postgres to Vercel Postgres (Neon).
+
+**Features:**
+- Parallel export/import with 8 jobs
+- Row count verification
+- Connection testing
+- Automatic cleanup of target database
+
+**Usage:**
+```bash
+export RAILWAY_DATABASE_URL='postgresql://...'
+export VERCEL_POSTGRES_URL='postgresql://...'
+./scripts/migrate_railway_to_vercel.sh
+```
+
+#### `migrate_railway_to_vercel.py` (Python)
+Python version of the migration script with identical functionality.
+
+**Usage:**
+```bash
+export RAILWAY_DATABASE_URL='postgresql://...'
+export VERCEL_POSTGRES_URL='postgresql://...'
+python scripts/migrate_railway_to_vercel.py
+```
+
+For complete migration documentation, see [VERCEL_POSTGRES_MIGRATION.md](../VERCEL_POSTGRES_MIGRATION.md).
+
+---
+
 ### 🚀 Main Installation Scripts
 
 #### `install_all_dependencies.sh` (Linux/macOS)
