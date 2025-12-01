@@ -108,7 +108,8 @@ npx vercel --prod
 
 ## 🚀 Deploy Checklist
 
-See [DEPLOY_CHECKLIST.md](./DEPLOY_CHECKLIST.md) for the 8-step deployment guide.
+- **Quick Deploy**: See [DEPLOY_CHECKLIST.md](./DEPLOY_CHECKLIST.md) for the 8-step deployment guide
+- **Edge Network Setup**: See [VERCEL_EDGE_SETUP.md](./VERCEL_EDGE_SETUP.md) for complete Edge Network configuration and <60ms latency setup
 
 ## 📄 License
 

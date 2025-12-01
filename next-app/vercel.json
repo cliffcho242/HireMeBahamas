@@ -9,6 +9,10 @@
     {
       "path": "/api/cron",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/health",
+      "schedule": "*/10 * * * *"
     }
   ],
   "headers": [
