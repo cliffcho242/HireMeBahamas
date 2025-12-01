@@ -140,11 +140,13 @@ The Python backend uses a single connection string with automatic format convers
 # For Railway (private network)
 DATABASE_PRIVATE_URL=postgresql://railway_user:pass@railway.internal:5432/railway
 
-# For Vercel Postgres/Neon (pooled connection)
+# For Vercel Postgres/Neon (pooled connection with postgres:// scheme)
 DATABASE_URL=postgres://user:pass@host/db?sslmode=require&pgbouncer=true&connect_timeout=15
 
-# The backend will automatically convert to:
-# postgresql+asyncpg://user:pass@host/db?sslmode=require&pgbouncer=true&connect_timeout=15
+# The backend will automatically convert the URL scheme:
+# FROM: postgres://user:pass@host/db?sslmode=require&pgbouncer=true&connect_timeout=15
+# TO:   postgresql+asyncpg://user:pass@host/db?sslmode=require&pgbouncer=true&connect_timeout=15
+#       (Changed 'postgres://' to 'postgresql+asyncpg://' for asyncpg driver compatibility)
 ```
 
 ## Migration Guide
