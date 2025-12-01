@@ -46,14 +46,10 @@ services:
       targetCPUPercent: 80
       targetMemoryPercent: 85
     
-    buildCommand: |
-      apt-get update
-      apt-get install -y --no-install-recommends \
-        build-essential \
-        libpq-dev \
-        python3-dev
-      pip install --upgrade pip setuptools wheel
-      pip install -r requirements.txt
+    # ============================================================================
+    # MASTERMIND FIX 2025 — RENDER BUILD COMMAND (COPY-PASTE EXACTLY)
+    # ============================================================================
+    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt --no-cache-dir
     
     # ==========================================================================
     # START COMMAND - Nuclear Configuration

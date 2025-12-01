@@ -3,10 +3,14 @@
   "name": "hiremebahamas-backend",
   "builds": [
     {
-      "src": "final_backend.py",
-      "use": "@vercel/python"
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     }
   ],
+  "installCommand": "pip install --upgrade pip && pip install -r requirements.txt --only-binary=all",
   "routes": [
     {
       "src": "/(.*)",

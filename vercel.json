@@ -1,12 +1,22 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
+  "installCommand": "pip install --upgrade pip && pip install -r requirements.txt --only-binary=all",
   "framework": "vite",
   "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "cd frontend && npm ci",
   "functions": {
     "api/**/*.py": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "runtime": "python3.12"
     }
   },
   "rewrites": [

@@ -1,9 +1,16 @@
-# requirements.txt — FINAL VERCEL-PROOF 2025 VERSION
+# ============================================================================
+# MASTERMIND FIX 2025 — VERCEL API REQUIREMENTS (ZERO BUILD ERRORS)
+# ============================================================================
+
 fastapi==0.115.0
 uvicorn[standard]==0.31.0
 sqlalchemy[asyncio]==2.0.35
-asyncpg==0.29.0
+asyncpg==0.29.0 --only-binary=asyncpg
 pydantic==2.9.2
-python-jose[cryptography]==3.3.0      # THIS LINE KILLS THE 500 ERROR
-pyjwt==2.9.0                         # fallback, some people need both
-python-multipart==0.0.9              # for forms / file uploads
+python-jose[cryptography]==3.3.0
+pyjwt==2.9.0
+python-multipart==0.0.9
+
+# ============================================================================
+# Vercel deployment: pip install --only-binary :all: -r requirements.txt
+# ============================================================================
