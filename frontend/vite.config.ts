@@ -248,13 +248,11 @@ export default defineConfig({
           // UI animation and icons - separate chunk for HTTP/2 multiplexing
           ui: ['framer-motion', '@heroicons/react'],
           // Form handling libraries - loaded on demand
-          forms: ['react-hook-form', '@hookform/resolvers', 'zod', 'yup'],
+          forms: ['react-hook-form', '@hookform/resolvers', 'yup'],
           // Data fetching and state - critical for data loading
           query: ['@tanstack/react-query', 'axios'],
           // Utility libraries
           utils: ['date-fns', 'clsx', 'tailwind-merge'],
-          // State management
-          state: ['zustand', 'immer'],
         },
       },
     },
