@@ -4,20 +4,28 @@ from http.server import BaseHTTPRequestHandler
 
 # Try python-jose first (matches backend), fallback to PyJWT (already in api/requirements.txt)
 try:
-    from jose import jwt, JWTError
+    from jose import jwt, JWTError, ExpiredSignatureError
     JWT_LIB = "jose"
 except ImportError:
     import jwt
-    from jwt import InvalidTokenError as JWTError
+    from jwt import InvalidTokenError as JWTError, ExpiredSignatureError
     JWT_LIB = "pyjwt"
 
 from datetime import datetime
 
 # JWT Secret - matches backend configuration
-JWT_SECRET = os.environ.get("SECRET_KEY", "your-secret-key-change-in-production")
+# SECURITY: Must be set via environment variable in production
+JWT_SECRET = os.environ.get("SECRET_KEY")
+if not JWT_SECRET:
+    # For development/testing only - NEVER use in production
+    if os.environ.get("VERCEL_ENV") == "production":
+        raise RuntimeError("SECRET_KEY environment variable must be set in production")
+    JWT_SECRET = "your-secret-key-change-in-production"
+    
 JWT_ALGORITHM = "HS256"
 
 # Mock user data for demo - in production, fetch from database
+# TODO: Replace with actual database query using environment DATABASE_URL
 MOCK_USERS = {
     "1": {
         "id": 1,
@@ -68,12 +76,8 @@ class handler(BaseHTTPRequestHandler):
         token = auth_header.replace("Bearer ", "")
         
         try:
-            # Decode JWT token (works with both jose and PyJWT)
-            if JWT_LIB == "jose":
-                payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-            else:
-                payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-            
+            # Decode JWT token (unified for both jose and PyJWT)
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
             user_id = payload.get("sub")
             
             if not user_id:
@@ -86,6 +90,7 @@ class handler(BaseHTTPRequestHandler):
                 return
             
             # Get user from mock data (in production, fetch from database)
+            # TODO: Replace with actual database query
             user = MOCK_USERS.get(str(user_id))
             
             if not user:
@@ -105,7 +110,7 @@ class handler(BaseHTTPRequestHandler):
             }
             self.wfile.write(json.dumps(response).encode())
             
-        except jwt.ExpiredSignatureError:
+        except ExpiredSignatureError:
             self._set_headers(401)
             response = {
                 "error": "Unauthorized",
@@ -113,7 +118,7 @@ class handler(BaseHTTPRequestHandler):
             }
             self.wfile.write(json.dumps(response).encode())
             
-        except (jwt.InvalidTokenError, JWTError):
+        except JWTError:
             self._set_headers(401)
             response = {
                 "error": "Unauthorized", 

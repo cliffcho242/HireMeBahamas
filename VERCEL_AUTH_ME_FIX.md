@@ -165,22 +165,29 @@ GET /api/auth/me → 200 OK
 
 ### Current Implementation:
 - ✅ Bearer token authentication
-- ✅ JWT validation
+- ✅ JWT validation (supports both PyJWT and python-jose)
 - ✅ CORS headers
-- ✅ Error handling
+- ✅ Error handling (401, 404, 500)
+- ✅ **Production SECRET_KEY enforcement**
+- ✅ Proper exception handling for both JWT libraries
+- ⚠️ Mock user data (replace with database in production)
 
-### Production Hardening (TODO):
-1. **Move JWT_SECRET to environment variable:**
+### Production Hardening:
+1. **✅ JWT_SECRET environment variable (IMPLEMENTED):**
    ```bash
    # In Vercel Dashboard → Settings → Environment Variables
-   JWT_SECRET=your-actual-secret-key-from-backend
+   SECRET_KEY=your-actual-secret-key-from-backend
    ```
+   - **REQUIRED** in production (enforced by code)
+   - Fallback only allowed in development/testing
+   - Raises RuntimeError if not set in production
 
-2. **Connect to real database:**
+2. **⚠️ Connect to real database (TODO):**
    - Replace `MOCK_USERS` with actual database query
    - Use environment variable for database connection
+   - Remove hardcoded admin user data
 
-3. **Add rate limiting:**
+3. **Rate limiting (TODO):**
    - Use Vercel Edge Config or Redis
    - Prevent brute force attacks
 
