@@ -30,7 +30,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libpq-dev python3-dev
+          sudo apt-get install -y libjpeg-dev libpng-dev libwebp-dev zlib1g-dev
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -49,7 +49,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Install current requirements
-          pip install -r requirements.txt --quiet 2>/dev/null || true
+          pip install --only-binary=:all: -r requirements.txt --quiet 2>/dev/null || true
           
           # Check for outdated packages
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
@@ -69,7 +69,7 @@ jobs:
           pip install --upgrade pip --quiet
           
           # Install backend requirements
-          pip install -r backend/requirements.txt --quiet 2>/dev/null || true
+          pip install --only-binary=:all: -r backend/requirements.txt --quiet 2>/dev/null || true
           
           # Check for outdated packages
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
