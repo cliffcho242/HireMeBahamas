@@ -2,7 +2,7 @@
 # DATABASE ENGINE CONFIGURATION - TIMEOUT FIX
 # =============================================================================
 # DATABASE_URL format (set in Render Environment Variables):
-# postgresql+asyncpg://postgres:YOUR_PASSWORD@dpg-XXXXX.oregon-postgres.render.com/yourdb?sslmode=require&connect_timeout=30&options=-c%20jit=off
+# postgresql+asyncpg://postgres:YOUR_PASSWORD@dpg-XXXXX-a.oregon-postgres.render.com/yourdb?sslmode=require&connect_timeout=30&options=-c%20jit=off
 #
 # Render Settings:
 # - Instance Memory: 1 GB minimum
@@ -20,11 +20,15 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://hiremebahamas_use
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
+# Pool configuration constants
+POOL_SIZE = 3
+MAX_OVERFLOW = 5
+
 # Create async engine with timeout-killing configuration
 engine = create_async_engine(
     DATABASE_URL,
-    pool_size=3,
-    max_overflow=5,
+    pool_size=POOL_SIZE,
+    max_overflow=MAX_OVERFLOW,
     pool_pre_ping=True,
     pool_recycle=300,
     connect_args={
@@ -93,10 +97,10 @@ async def get_pool_status() -> dict:
     """
     pool = engine.pool
     return {
-        "pool_size": pool.size() if hasattr(pool, 'size') else 3,
+        "pool_size": pool.size() if hasattr(pool, 'size') else POOL_SIZE,
         "checked_in": pool.checkedin() if hasattr(pool, 'checkedin') else 0,
         "checked_out": pool.checkedout() if hasattr(pool, 'checkedout') else 0,
         "overflow": pool.overflow() if hasattr(pool, 'overflow') else 0,
         "invalid": pool.invalidatedcount() if hasattr(pool, 'invalidatedcount') else 0,
-        "max_overflow": 5,
+        "max_overflow": MAX_OVERFLOW,
     }

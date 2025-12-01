@@ -3,7 +3,7 @@
 ## DATABASE_URL (Environment Variable)
 
 ```env
-DATABASE_URL=postgresql+asyncpg://postgres:YOUR_PASSWORD@dpg-d4glkqp5pdvs738m9nf0-a.oregon-postgres.render.com/yourdb_XXXX?sslmode=require&connect_timeout=30&options=-c%20jit=off
+DATABASE_URL=postgresql+asyncpg://postgres:YOUR_PASSWORD@dpg-XXXXX-a.oregon-postgres.render.com/yourdb_XXXX?sslmode=require&connect_timeout=30&options=-c%20jit=off
 ```
 
 ## Engine Code (backend/app/database.py)
