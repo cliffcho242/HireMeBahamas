@@ -11,6 +11,19 @@ will fail until the transaction is properly rolled back.
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 
+# Skip all tests in this module if psycopg2 is not installed
+# These tests require the PostgreSQL backend which depends on psycopg2
+try:
+    import psycopg2
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
+
+pytestmark = pytest.mark.skipif(
+    not PSYCOPG2_AVAILABLE,
+    reason="psycopg2 not installed - required for PostgreSQL backend tests"
+)
+
 
 class TestReturnDbConnectionRollback:
     """Tests for return_db_connection rollback behavior."""
