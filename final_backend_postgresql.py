@@ -4188,10 +4188,13 @@ _last_extension_cleanup = None  # Track when we last cleaned up orphaned extensi
 
 # Connection error indicators for detecting transient database issues
 # These patterns indicate network/connection problems that are typically transient
+# Using specific phrases to avoid false positives with generic terms
 CONNECTION_ERROR_PATTERNS = frozenset([
-    "connection", "timed out", "timeout", "refused", "network",
-    "unreachable", "no route", "connection reset", "closed", 
-    "broken pipe", "eof", "ssl error"
+    "connection timed out", "connection refused", "connection reset",
+    "timed out", "connect timeout", "network unreachable", "no route to host",
+    "broken pipe", "connection closed unexpectedly", "server closed the connection",
+    "ssl connection has been closed", "could not connect", "failed to connect",
+    "unable to connect", "lost connection", "connection lost"
 ])
 
 
@@ -4209,6 +4212,8 @@ def _is_connection_error(error_message: str) -> bool:
     Returns:
         True if the error appears to be a connection-related issue
     """
+    if not error_message:
+        return False
     error_lower = error_message.lower()
     return any(pattern in error_lower for pattern in CONNECTION_ERROR_PATTERNS)
 
@@ -4290,10 +4295,12 @@ def periodic_extension_cleanup():
     try:
         conn = get_db_connection()
         if conn is None:
-            # Connection failed - this is a transient connection error
+            # Connection failed - treat as transient since cleanup is non-critical
+            # When the connection pool can't provide a connection, it's typically
+            # due to pool exhaustion, database unreachable, or network issues
             _log_cleanup_warning(
                 "⚠️ Periodic extension cleanup skipped: could not get database connection",
-                is_connection_error=True
+                is_connection_error=True  # Treat as connection error for suppression
             )
             _last_extension_cleanup = datetime.now(timezone.utc)
             return False
