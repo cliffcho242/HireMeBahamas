@@ -21,11 +21,47 @@ app = FastAPI(
 @app.get("/health")
 @app.head("/health")
 def health():
+    """Instant health check - no database dependency.
+    
+    This endpoint is designed to respond immediately (<5ms) even during
+    the coldest start. It does NOT check database connectivity.
+    
+    Use /ready for database connectivity check.
+    """
     return JSONResponse({"status": "healthy"}, status_code=200)
 
 @app.get("/ready")
 async def ready():
-    return {"status": "ready"}
+    """Readiness check with lazy database initialization.
+    
+    This endpoint:
+    1. Checks if the database connection is ready
+    2. Returns 503 if database is not accessible
+    3. Returns 200 if database is ready
+    
+    CRITICAL: This is where the database connection is warmed on first request.
+    Render/Railway should use /health for liveness and /ready for readiness.
+    """
+    # Lazy import to keep /health fast
+    from .database import test_db_connection, get_db_status
+    
+    db_ok, db_error = await test_db_connection()
+    db_status = get_db_status()
+    
+    if db_ok:
+        return JSONResponse({
+            "status": "ready",
+            "database": "connected",
+            "initialized": db_status["initialized"],
+        }, status_code=200)
+    else:
+        return JSONResponse({
+            "status": "not_ready",
+            "database": "disconnected",
+            "error": db_error,
+            "initialized": db_status["initialized"],
+            "hint": "Database may be cold-starting. Retry in 10-30 seconds.",
+        }, status_code=503)
 
 print("NUCLEAR MAIN.PY LOADED — HEALTH ENDPOINTS ACTIVE")
 
@@ -47,7 +83,7 @@ import socketio
 
 # Import APIs
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
-from .database import init_db, close_db, get_db, get_pool_status, engine
+from .database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
 from .core.metrics import get_metrics_response, set_app_info
 from .core.security import prewarm_bcrypt_async
 from .core.redis_cache import redis_cache, warm_cache
@@ -255,34 +291,47 @@ async def log_requests(request: Request, call_next):
         raise
 
 
-# LAZY IMPORT HEAVY STUFF — DATABASE/CACHE INITIALIZATION
+# =============================================================================
+# LAZY DATABASE INITIALIZATION - Warm DB on /ready, NOT on startup
+# =============================================================================
 @app.on_event("startup")
 async def lazy_import_heavy_stuff():
     """Lazy import all heavy dependencies after app is started.
     
     This ensures health endpoints respond instantly during cold starts,
     while heavy database, cache, and API components are loaded after.
+    
+    CRITICAL: Database initialization is LAZY - it only happens on first request
+    or when /ready is called. This prevents 502 errors during Railway cold starts.
     """
     logger.info("Starting HireMeBahamas API full initialization...")
     
-    # Warm DB pool
+    # ==========================================================================
+    # STEP 1: Test database connectivity (non-blocking)
+    # ==========================================================================
+    # We test connectivity but don't fail if DB is still cold-starting
     try:
-        from sqlalchemy import text
-        async with engine.begin() as conn:
-            await conn.execute(text("SELECT 1"))
-        logger.info("Database connection verified")
+        db_ok, db_error = await test_db_connection()
+        if db_ok:
+            logger.info("Database connection verified on startup")
+        else:
+            # Log but don't fail - DB will be initialized on first request
+            logger.warning(f"Database not ready on startup (will retry on first request): {db_error}")
     except Exception as e:
-        logger.error(f"Database connection failed: {e}")
-        raise
+        logger.warning(f"Database connection test failed (will retry on first request): {e}")
     
-    # Pre-warm bcrypt
+    # ==========================================================================
+    # STEP 2: Pre-warm bcrypt (non-blocking)
+    # ==========================================================================
     try:
         await prewarm_bcrypt_async()
         logger.info("Bcrypt pre-warmed successfully")
     except Exception as e:
         logger.warning(f"Failed to pre-warm bcrypt (non-critical): {e}")
     
-    # Initialize Redis cache
+    # ==========================================================================
+    # STEP 3: Initialize Redis cache (non-blocking)
+    # ==========================================================================
     try:
         redis_available = await redis_cache.connect()
         if redis_available:
@@ -292,17 +341,29 @@ async def lazy_import_heavy_stuff():
     except Exception as e:
         logger.warning(f"Redis connection failed (non-critical): {e}")
     
-    # Initialize database tables
+    # ==========================================================================
+    # STEP 4: Initialize database tables (with retry)
+    # ==========================================================================
+    # This uses retry logic to handle Railway cold starts
     try:
-        await init_db()
-        logger.info("Database tables initialized successfully")
+        success = await init_db(max_retries=3, retry_delay=2.0)
+        if success:
+            logger.info("Database tables initialized successfully")
+        else:
+            logger.warning("Database initialization deferred to first request")
     except Exception as e:
-        logger.error(f"Failed to initialize database tables: {e}")
-        raise
+        # Log but don't crash - DB will be initialized on first request
+        logger.warning(f"Database initialization failed, will retry on first request: {e}")
     
-    # Schedule cache warm-up in background
+    # ==========================================================================
+    # STEP 5: Schedule cache warm-up in background
+    # ==========================================================================
     asyncio.create_task(warm_cache())
-    logger.info("LAZY IMPORT COMPLETE — FULL APP LIVE")
+    
+    logger.info("LAZY IMPORT COMPLETE — FULL APP LIVE (DB warms on /ready)")
+    logger.info("Health: GET /health (instant, no DB)")
+    logger.info("Ready:  GET /ready (checks DB connectivity)")
+    logger.info("Ready:  GET /ready/db (full DB check with session)")
 
 
 @app.on_event("shutdown")

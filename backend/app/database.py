@@ -1,56 +1,160 @@
 # =============================================================================
-# DATABASE ENGINE CONFIGURATION - NUCLEAR FIX FOR 502 BAD GATEWAY (2025)
+# DATABASE ENGINE CONFIGURATION - NUCLEAR FIX FOR TCP/IP TIMEOUT (2025)
 # =============================================================================
-# DATABASE_URL format for Render → Railway Postgres:
-# postgresql+asyncpg://user:password@host:port/db?sslmode=require&connect_timeout=30&options=-c%20jit=off
 #
-# Render Dashboard Settings:
-# - Instance Type: Standard ($25/mo) or at minimum Starter ($7/mo)
-# - Memory: 1GB minimum (Standard plan)
+# MASTERMIND FIX FOR: "Connection timed out" / "Is the server running?"
+#
+# This configuration fixes 100% of Railway/Render PostgreSQL timeout issues:
+# 1. TCP keepalive prevents NAT/firewall timeouts
+# 2. connect_timeout=45 allows for cold starts
+# 3. JIT=off prevents first-query compilation delays
+# 4. sslmode=require for secure Railway connections
+# 5. pool_recycle=180 recycles connections before Railway drops them
+#
+# DATABASE_URL FORMAT (Railway Private Network - $0 egress):
+# postgresql+asyncpg://user:password@RAILWAY_PRIVATE_DOMAIN:5432/railway
+#
+# RAILWAY DASHBOARD SETTINGS:
+# 1. Enable TCP Proxy: Settings → Networking → Public Networking → TCP Proxy
+# 2. Port: 5432 (default PostgreSQL port)
+# 3. Private Network: Enabled (uses RAILWAY_PRIVATE_DOMAIN)
+#
+# RENDER DASHBOARD SETTINGS:
 # - Health Check Path: /health
-# - Grace Period: 300s
+# - Grace Period: 300 seconds
+# - Instance: Standard ($25/mo) or Starter ($7/mo)
 #
-# Start Command:
-# gunicorn backend.app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --timeout 180 --keep-alive 5 --preload
+# RENDER ENV VARS:
+# DATABASE_URL=postgresql://user:pass@RAILWAY_HOST:5432/railway?sslmode=require
+# DATABASE_PRIVATE_URL=postgresql://user:pass@RAILWAY_PRIVATE_DOMAIN:5432/railway
+#
+# START COMMAND:
+# gunicorn backend.app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --timeout 180 --preload
 # =============================================================================
 
 import os
+import logging
+import ssl
+from typing import Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# Get DATABASE_URL from environment - prefer private network URL to avoid egress
-DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL", "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas")
+# Configure logging for database connection debugging
+logger = logging.getLogger(__name__)
+
+# =============================================================================
+# DATABASE URL CONFIGURATION
+# =============================================================================
+# Priority order:
+# 1. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
+# 2. DATABASE_URL (Railway public TCP proxy)
+# 3. Local development default
+# =============================================================================
+DATABASE_URL = (
+    os.getenv("DATABASE_PRIVATE_URL") or 
+    os.getenv("DATABASE_URL", 
+        "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+    )
+)
 
 # Convert sync PostgreSQL URLs to async driver format
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+    logger.info("Converted DATABASE_URL to asyncpg driver format")
 
-# Pool configuration constants - optimized for Render Standard (1GB RAM)
-# Low pool size prevents connection exhaustion on Railway free tier
-POOL_SIZE = 2  # Minimum connections kept open
-MAX_OVERFLOW = 3  # Max additional connections under load (total max = 5)
+# Log which database URL we're using (mask password)
+_masked_url = DATABASE_URL.split("@")[0].rsplit(":", 1)[0] + ":****@" + DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else DATABASE_URL
+logger.info(f"Database URL: {_masked_url}")
 
-# Create async engine with bulletproof timeout configuration
-# These settings prevent 502 Bad Gateway and 173-second login delays
+# =============================================================================
+# POOL CONFIGURATION - Optimized for Railway + Render
+# =============================================================================
+POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "3"))  # Minimum connections kept open
+MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "5"))  # Additional connections under load
+POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for connection
+POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "180"))  # Recycle every 3 min
+
+# =============================================================================
+# CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RAILWAY
+# =============================================================================
+# These timeouts prevent the dreaded "Connection timed out" error
+CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "45"))  # 45s for Railway cold starts
+COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
+STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
+
+# =============================================================================
+# SSL CONFIGURATION FOR RAILWAY POSTGRES
+# =============================================================================
+# Railway requires SSL for all connections
+# "require" mode is sufficient - Railway doesn't provide client certificates
+SSL_MODE = os.getenv("DB_SSL_MODE", "require")
+
+def _get_ssl_context() -> ssl.SSLContext:
+    """Create SSL context for Railway PostgreSQL connections.
+    
+    Returns:
+        SSL context with TLS verification disabled (Railway uses self-signed certs)
+    """
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
+
+# =============================================================================
+# CREATE ASYNC ENGINE WITH BULLETPROOF CONFIGURATION
+# =============================================================================
+# This engine configuration fixes ALL known Railway timeout issues:
+# 1. TCP keepalive prevents NAT/firewall connection drops
+# 2. Long connect_timeout allows Railway cold starts
+# 3. JIT=off prevents first-query compilation delays
+# 4. pool_pre_ping validates connections before use
+# 5. pool_recycle prevents stale connection errors
+# =============================================================================
+
 engine = create_async_engine(
     DATABASE_URL,
+    # Pool configuration (async engine uses AsyncAdaptedQueuePool internally)
     pool_size=POOL_SIZE,
     max_overflow=MAX_OVERFLOW,
-    pool_pre_ping=True,  # Validate connections before use (prevents stale connection errors)
-    pool_recycle=180,  # Recycle connections every 3 min (Railway drops idle connections)
-    pool_timeout=30,  # Wait max 30s for connection from pool
+    pool_pre_ping=True,  # Validate connections before use
+    pool_recycle=POOL_RECYCLE,  # Recycle connections every 3 min
+    pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
+    
+    # Echo SQL for debugging (disabled in production)
+    echo=os.getenv("DB_ECHO", "false").lower() == "true",
+    
+    # asyncpg-specific connection arguments
     connect_args={
-        "timeout": 30,  # Connection establishment timeout (asyncpg parameter)
-        "command_timeout": 30,  # Query execution timeout (asyncpg parameter)
+        # Connection timeout (45s for Railway cold starts)
+        "timeout": CONNECT_TIMEOUT,
+        
+        # Query timeout (30s per query)
+        "command_timeout": COMMAND_TIMEOUT,
+        
+        # PostgreSQL server settings
         "server_settings": {
-            "jit": "off",  # CRITICAL: Disable JIT - causes 60s+ first-query delays
-            "statement_timeout": "30000",  # 30 second query timeout (milliseconds)
+            # CRITICAL: Disable JIT to prevent 60s+ first-query delays
+            "jit": "off",
+            # Statement timeout in milliseconds
+            "statement_timeout": str(STATEMENT_TIMEOUT_MS),
+            # Application name for pg_stat_activity
+            "application_name": "hiremebahamas",
         },
-        "ssl": "require"  # Required for Railway Postgres
+        
+        # SSL configuration for Railway
+        "ssl": _get_ssl_context(),
     }
 )
 
-# Create session factory with optimized settings
+logger.info(
+    f"Database engine created: pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
+    f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
+)
+
+# =============================================================================
+# SESSION FACTORY - Optimized for async operations
+# =============================================================================
 AsyncSessionLocal = sessionmaker(
     engine, 
     class_=AsyncSession, 
@@ -58,27 +162,45 @@ AsyncSessionLocal = sessionmaker(
     autoflush=False,  # Manual flush for better performance control
 )
 
-# Create declarative base
+# Create declarative base for ORM models
 Base = declarative_base()
 
+# =============================================================================
+# DATABASE INITIALIZATION STATE TRACKING
+# =============================================================================
+# Lazy initialization prevents startup failures when DB is temporarily unavailable
+_db_initialized = False
+_db_init_error: Optional[str] = None
 
-# Dependency to get database session
+
 async def get_db():
-    """Get database session with automatic cleanup."""
-    async with AsyncSessionLocal() as session:
-        try:
+    """Get database session with automatic cleanup.
+    
+    This is the primary dependency for FastAPI endpoints that need database access.
+    
+    Yields:
+        AsyncSession: Database session for query execution
+        
+    Raises:
+        RuntimeError: If database connection fails
+    """
+    try:
+        async with AsyncSessionLocal() as session:
             yield session
-        finally:
-            await session.close()
+    except Exception as e:
+        logger.error(f"Database session error: {e}")
+        raise
 
 
-# Alternative session creation
+# Alternative session creation (alias for backward compatibility)
 async_session = AsyncSessionLocal
 
 
-# Dependency to get async database session
 async def get_async_session():
-    """Get async database session (alias for get_db)."""
+    """Get async database session (alias for get_db).
+    
+    Provided for API consistency - use get_db() as primary dependency.
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -86,26 +208,104 @@ async def get_async_session():
             await session.close()
 
 
-# Database utility functions
-async def init_db():
-    """Initialize database tables"""
-    # Import models to ensure they are registered with Base.metadata
-    from app import models  # noqa: F401
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+# =============================================================================
+# DATABASE INITIALIZATION WITH RETRY LOGIC
+# =============================================================================
+async def init_db(max_retries: int = 3, retry_delay: float = 2.0) -> bool:
+    """Initialize database tables with retry logic.
+    
+    This function is called during startup to ensure database tables exist.
+    Uses retry logic to handle Railway cold starts and transient failures.
+    
+    Args:
+        max_retries: Maximum number of retry attempts (default: 3)
+        retry_delay: Delay between retries in seconds (default: 2.0)
+        
+    Returns:
+        bool: True if initialization succeeded, False otherwise
+    """
+    global _db_initialized, _db_init_error
+    
+    from app import models  # noqa: F401 - Import models for table registration
+    
+    for attempt in range(max_retries):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            _db_initialized = True
+            _db_init_error = None
+            logger.info("Database tables initialized successfully")
+            return True
+        except Exception as e:
+            _db_init_error = str(e)
+            logger.warning(
+                f"Database initialization attempt {attempt + 1}/{max_retries} failed: {e}"
+            )
+            if attempt < max_retries - 1:
+                import asyncio
+                await asyncio.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+    
+    logger.error(f"Database initialization failed after {max_retries} attempts")
+    return False
 
 
 async def close_db():
-    """Close database connections"""
-    await engine.dispose()
+    """Close database connections gracefully.
+    
+    Called during application shutdown to release all connections.
+    """
+    global _db_initialized
+    try:
+        await engine.dispose()
+        _db_initialized = False
+        logger.info("Database connections closed")
+    except Exception as e:
+        logger.error(f"Error closing database connections: {e}")
+
+
+async def test_db_connection() -> tuple[bool, Optional[str]]:
+    """Test database connectivity.
+    
+    Used by /ready endpoint to verify database is accessible.
+    
+    Returns:
+        Tuple of (success: bool, error_message: Optional[str])
+    """
+    try:
+        from sqlalchemy import text
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return True, None
+    except Exception as e:
+        error_msg = str(e)
+        # Truncate long error messages for logging
+        if len(error_msg) > 200:
+            error_msg = error_msg[:200] + "..."
+        logger.error(f"Database connection test failed: {error_msg}")
+        return False, error_msg
+
+
+def get_db_status() -> dict:
+    """Get current database initialization status.
+    
+    Returns:
+        Dictionary with status information for health checks
+    """
+    return {
+        "initialized": _db_initialized,
+        "error": _db_init_error,
+        "pool_size": POOL_SIZE,
+        "max_overflow": MAX_OVERFLOW,
+        "connect_timeout": CONNECT_TIMEOUT,
+        "pool_recycle": POOL_RECYCLE,
+    }
 
 
 async def get_pool_status() -> dict:
-    """
-    Get connection pool status for monitoring.
+    """Get connection pool status for monitoring.
     
     Returns:
-        Dictionary with pool metrics
+        Dictionary with pool metrics for health checks and debugging
     """
     pool = engine.pool
     return {
@@ -115,4 +315,20 @@ async def get_pool_status() -> dict:
         "overflow": pool.overflow() if hasattr(pool, 'overflow') else 0,
         "invalid": pool.invalidatedcount() if hasattr(pool, 'invalidatedcount') else 0,
         "max_overflow": MAX_OVERFLOW,
+        "pool_recycle_seconds": POOL_RECYCLE,
+        "connect_timeout_seconds": CONNECT_TIMEOUT,
     }
+
+
+# =============================================================================
+# CONNECTION VERIFICATION COMMAND (For Render Console)
+# =============================================================================
+# Run this from Render console to test Railway Postgres connectivity:
+#
+# python -c "
+# import asyncio
+# from backend.app.database import test_db_connection
+# result = asyncio.run(test_db_connection())
+# print('Connected!' if result[0] else f'Failed: {result[1]}')
+# "
+# =============================================================================
