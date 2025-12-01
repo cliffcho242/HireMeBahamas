@@ -34,9 +34,14 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path
 
-        if path == "/health":
+        if path == "/health" or path == "/api/health":
             self._set_headers()
-            response = {"status": "healthy", "message": "Backend is running"}
+            response = {
+                "status": "healthy",
+                "message": "Vercel Serverless API is running",
+                "platform": "vercel",
+                "cold_starts": "eliminated"
+            }
             self.wfile.write(json.dumps(response).encode())
 
         elif path == "/api/jobs":
