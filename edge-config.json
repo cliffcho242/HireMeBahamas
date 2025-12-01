@@ -1,0 +1,226 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-12-01T10:16:00.000Z",
+  "description": "HireMeBahamas Edge Config - Feature Flags & Kill Switches",
+  
+  "featureFlags": {
+    "newSearchUI": {
+      "enabled": true,
+      "description": "New Edge-optimized search interface",
+      "rolloutPercentage": 100
+    },
+    "instantNotifications": {
+      "enabled": true,
+      "description": "Real-time Edge notifications via SSE",
+      "rolloutPercentage": 100
+    },
+    "edgeAuth": {
+      "enabled": true,
+      "description": "Edge-based JWT authentication with rate limiting",
+      "rolloutPercentage": 100
+    },
+    "videoCalls": {
+      "enabled": false,
+      "description": "Video call feature for interviews",
+      "rolloutPercentage": 0
+    },
+    "aiJobMatching": {
+      "enabled": false,
+      "description": "AI-powered job recommendations",
+      "rolloutPercentage": 0
+    },
+    "darkMode": {
+      "enabled": true,
+      "description": "Dark mode theme support",
+      "rolloutPercentage": 100
+    },
+    "socialSharing": {
+      "enabled": true,
+      "description": "Social media sharing for jobs and posts",
+      "rolloutPercentage": 100
+    },
+    "advancedFilters": {
+      "enabled": true,
+      "description": "Advanced job search filters",
+      "rolloutPercentage": 100
+    },
+    "emailVerification": {
+      "enabled": true,
+      "description": "Email verification for new accounts",
+      "rolloutPercentage": 100
+    },
+    "twoFactorAuth": {
+      "enabled": false,
+      "description": "Two-factor authentication",
+      "rolloutPercentage": 0
+    }
+  },
+  
+  "killSwitches": {
+    "disableRegistration": {
+      "active": false,
+      "reason": "",
+      "activatedAt": null
+    },
+    "disableLogin": {
+      "active": false,
+      "reason": "",
+      "activatedAt": null
+    },
+    "disableJobPosting": {
+      "active": false,
+      "reason": "",
+      "activatedAt": null
+    },
+    "disableMessaging": {
+      "active": false,
+      "reason": "",
+      "activatedAt": null
+    },
+    "disableNotifications": {
+      "active": false,
+      "reason": "",
+      "activatedAt": null
+    },
+    "maintenanceMode": {
+      "active": false,
+      "reason": "",
+      "activatedAt": null,
+      "maintenanceMessage": "We're performing scheduled maintenance. Please check back soon."
+    },
+    "readOnlyMode": {
+      "active": false,
+      "reason": "",
+      "activatedAt": null
+    },
+    "emergencyShutdown": {
+      "active": false,
+      "reason": "",
+      "activatedAt": null,
+      "redirectUrl": ""
+    }
+  },
+  
+  "rateLimits": {
+    "login": {
+      "maxRequests": 10,
+      "windowSeconds": 60,
+      "lockoutMinutes": 15
+    },
+    "register": {
+      "maxRequests": 5,
+      "windowSeconds": 3600,
+      "lockoutMinutes": 60
+    },
+    "search": {
+      "maxRequests": 100,
+      "windowSeconds": 60
+    },
+    "api": {
+      "maxRequests": 1000,
+      "windowSeconds": 60
+    },
+    "jobPost": {
+      "maxRequests": 10,
+      "windowSeconds": 3600
+    },
+    "message": {
+      "maxRequests": 100,
+      "windowSeconds": 60
+    }
+  },
+  
+  "abTests": {
+    "landingHero": {
+      "enabled": true,
+      "variants": {
+        "control": 50,
+        "variantA": 25,
+        "variantB": 25
+      }
+    },
+    "jobCardLayout": {
+      "enabled": true,
+      "variants": {
+        "grid": 50,
+        "list": 50
+      }
+    },
+    "ctaColor": {
+      "enabled": true,
+      "variants": {
+        "blue": 34,
+        "green": 33,
+        "orange": 33
+      }
+    },
+    "searchPlacement": {
+      "enabled": false,
+      "variants": {
+        "header": 50,
+        "hero": 50
+      }
+    }
+  },
+  
+  "geoConfig": {
+    "defaultRegion": "US",
+    "supportedRegions": ["US", "BS", "CA", "GB", "JM", "TT", "BB"],
+    "redirects": {
+      "BS": "/bahamas",
+      "JM": "/jamaica",
+      "TT": "/trinidad",
+      "BB": "/barbados"
+    },
+    "blockedRegions": [],
+    "regionalPricing": {
+      "US": { "currency": "USD", "multiplier": 1.0 },
+      "BS": { "currency": "BSD", "multiplier": 1.0 },
+      "CA": { "currency": "CAD", "multiplier": 1.35 },
+      "GB": { "currency": "GBP", "multiplier": 0.79 },
+      "JM": { "currency": "JMD", "multiplier": 155.0 }
+    }
+  },
+  
+  "cacheConfig": {
+    "searchResults": {
+      "ttlSeconds": 300,
+      "staleWhileRevalidate": 60
+    },
+    "jobListings": {
+      "ttlSeconds": 180,
+      "staleWhileRevalidate": 30
+    },
+    "userProfiles": {
+      "ttlSeconds": 600,
+      "staleWhileRevalidate": 120
+    },
+    "staticAssets": {
+      "ttlSeconds": 31536000,
+      "immutable": true
+    }
+  },
+  
+  "edgeRegions": {
+    "primary": ["iad1", "sfo1"],
+    "secondary": ["cdg1", "hnd1", "syd1"],
+    "all": ["iad1", "sfo1", "cdg1", "hnd1", "syd1", "gru1", "sin1", "bom1"]
+  },
+  
+  "monitoring": {
+    "errorThreshold": 5,
+    "latencyThresholdMs": 100,
+    "alertChannels": ["slack", "email"],
+    "samplingRate": 0.1
+  },
+  
+  "security": {
+    "jwtExpiryHours": 24,
+    "refreshTokenDays": 30,
+    "maxSessionsPerUser": 5,
+    "passwordMinLength": 8,
+    "requireSpecialChar": true,
+    "requireNumber": true,
+    "requireUppercase": true
+  }
+}

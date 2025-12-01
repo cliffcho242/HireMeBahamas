@@ -4,13 +4,62 @@
   "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/dist",
   "installCommand": "cd frontend && npm ci",
+  "regions": ["iad1", "sfo1", "cdg1", "hnd1", "syd1"],
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "edge",
+      "memory": 128,
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
+    {
+      "source": "/api/auth/login",
+      "destination": "/api/auth/login/route"
+    },
+    {
+      "source": "/api/notifications/:path*",
+      "destination": "/api/notifications/route"
+    },
+    {
+      "source": "/api/search/jobs/:path*",
+      "destination": "/api/search/jobs/route"
+    },
     {
       "source": "/((?!api/.*).*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, X-Requested-With"
+        },
+        {
+          "key": "Access-Control-Max-Age",
+          "value": "86400"
+        },
+        {
+          "key": "X-Edge-Optimized",
+          "value": "true"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

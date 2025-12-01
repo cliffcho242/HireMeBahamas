@@ -70,3 +70,4 @@ htmlcov/
 .vercel
 .railway
 *.db-journal
+node_modules/
