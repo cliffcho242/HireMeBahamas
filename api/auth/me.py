@@ -11,8 +11,6 @@ except ImportError:
     from jwt import InvalidTokenError as JWTError, ExpiredSignatureError
     JWT_LIB = "pyjwt"
 
-from datetime import datetime
-
 # JWT Secret - matches backend configuration
 # SECURITY: Must be set via environment variable in production
 JWT_SECRET = os.environ.get("SECRET_KEY")
@@ -23,6 +21,10 @@ if not JWT_SECRET:
     JWT_SECRET = "your-secret-key-change-in-production"
     
 JWT_ALGORITHM = "HS256"
+
+# CORS configuration
+# TODO: In production, restrict to specific domains
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "*")
 
 # Mock user data for demo - in production, fetch from database
 # TODO: Replace with actual database query using environment DATABASE_URL
@@ -46,7 +48,8 @@ class handler(BaseHTTPRequestHandler):
     def _set_headers(self, status=200):
         self.send_response(status)
         self.send_header("Content-type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        # SECURITY: Restrict CORS to specific origins in production
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGINS)
         self.send_header(
             "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS"
         )
@@ -127,9 +130,14 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode())
             
         except Exception as e:
+            # Log the full error (in production, send to logging service)
+            import sys
+            print(f"Unexpected error in /api/auth/me: {type(e).__name__}: {e}", file=sys.stderr)
+            
+            # Return generic error to client (don't leak internal details)
             self._set_headers(500)
             response = {
                 "error": "Internal Server Error",
-                "detail": str(e)
+                "detail": "An unexpected error occurred. Please try again later."
             }
             self.wfile.write(json.dumps(response).encode())
