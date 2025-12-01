@@ -241,8 +241,5 @@
       "path": "/api/cron/health",
       "schedule": "*/5 * * * *"
     }
-  ],
-  "env": {
-    "VITE_API_URL": "https://hiremebahamas.vercel.app"
-  }
+  ]
 }
