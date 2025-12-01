@@ -2,13 +2,19 @@
 # HireMeBahamas Backend - Render Deployment Configuration
 # =============================================================================
 # 
-# QUICK FIX FOR 502 ERRORS:
-# The "starter" plan ($7/mo) keeps your service ALWAYS ON - no sleep, no 502s.
-# For free tier: Use external pinger (UptimeRobot) to ping /ping every 5 min.
+# NUCLEAR FIX FOR 502 BAD GATEWAY + 173-SECOND LOGINS (2025)
 #
-# See docs/RENDER_QUICK_START.md for step-by-step instructions
-# See docs/RENDER_502_FIX_GUIDE.md for detailed troubleshooting
-# See docs/HIGH_AVAILABILITY.md for advanced configuration
+# This configuration eliminates cold start timeouts with:
+# 1. Standard plan ($25/mo) with 1GB RAM - prevents OOM
+# 2. Single worker + 180s timeout - survives Railway DB cold starts
+# 3. Health check at /health with 300s grace period
+# 4. Keep-alive background worker pinging every 45s
+#
+# COPY-PASTE THESE DASHBOARD VALUES:
+# - Plan: Standard ($25/mo) or Starter ($7/mo minimum)
+# - Health Check Path: /health
+# - Grace Period: 300 seconds
+# - Health Check Timeout: 30 seconds
 # =============================================================================
 
 services:
@@ -18,102 +24,44 @@ services:
     region: oregon
     
     # ==========================================================================
-    # PLAN SELECTION - Critical for 502 Prevention
+    # PLAN SELECTION - Standard recommended for zero 502s
     # ==========================================================================
-    # 
-    # FREE TIER ($0):
-    #   - Sleeps after 15 minutes of inactivity
-    #   - Causes 502 Bad Gateway on cold start (10-120+ seconds)
-    #   - WORKAROUND: Use external pinger (UptimeRobot free tier)
+    # STARTER ($7/mo, 512MB RAM):
+    #   - Good for low traffic, may have occasional slow cold starts
+    #   - Set WEB_CONCURRENCY=1, WEB_THREADS=2
     #
-    # STARTER PLAN ($7/month) - RECOMMENDED:
-    #   - ALWAYS ON - Never sleeps, no 502 errors ever
-    #   - Instant response times (<1 second) even after hours of inactivity
-    #   - Best for production job platforms
-    #
-    # STANDARD PLAN ($25/month):
-    #   - Always On + Auto-scaling support
-    #   - Best for high-traffic applications
-    #
-    # To change: Render Dashboard → Your Service → Settings → Instance Type
+    # STANDARD ($25/mo, 1GB RAM) - RECOMMENDED:
+    #   - Always On, no 502s, fast responses
+    #   - Set WEB_CONCURRENCY=1, WEB_THREADS=4
     # ==========================================================================
-    plan: starter
+    plan: standard
     
-    # Auto-scaling configuration (requires Standard plan $25/mo or higher)
-    # Render automatically manages scaling based on these thresholds:
-    # - When CPU exceeds targetCPUPercent, new instances are added
-    # - When memory exceeds targetMemoryPercent, new instances are added
-    # - Scaling down occurs after ~5 minutes of reduced load
+    # Auto-scaling (Standard plan and above)
     scaling:
-      minInstances: 1        # Minimum instances (always running)
-      maxInstances: 10       # Maximum instances during peak load
-      targetCPUPercent: 70   # Scale up when average CPU > 70%
-      targetMemoryPercent: 80 # Scale up when average memory > 80%
+      minInstances: 1
+      maxInstances: 3
+      targetCPUPercent: 80
+      targetMemoryPercent: 85
     
     buildCommand: |
       apt-get update
       apt-get install -y --no-install-recommends \
         build-essential \
-        gcc \
-        g++ \
-        make \
-        pkg-config \
-        cmake \
-        autoconf \
-        automake \
-        libtool \
-        postgresql \
-        postgresql-client \
-        postgresql-client-common \
-        postgresql-common \
-        postgresql-contrib \
         libpq-dev \
-        libpq5 \
-        sqlite3 \
-        libsqlite3-dev \
-        libsqlite3-0 \
-        python3-dev \
-        python3-setuptools \
-        python3-wheel \
-        libssl-dev \
-        libffi-dev \
-        ca-certificates \
-        libjpeg-dev \
-        libpng-dev \
-        libtiff-dev \
-        libwebp-dev \
-        zlib1g-dev \
-        libfreetype6-dev \
-        liblcms2-dev \
-        libevent-dev \
-        libxml2-dev \
-        libxslt1-dev \
-        libreadline-dev \
-        libbz2-dev \
-        libncurses5-dev \
-        curl \
-        wget \
-        git
+        python3-dev
       pip install --upgrade pip setuptools wheel
       pip install -r requirements.txt
+    
     # ==========================================================================
-    # START COMMAND - Cold Start Elimination Configuration
+    # START COMMAND - Nuclear Configuration
     # ==========================================================================
-    # 
-    # Uses Gunicorn with --preload to eliminate 30-120s cold starts:
-    #   --preload: Load app BEFORE forking workers (instant first request)
-    #   --config: Use gunicorn.conf.py for worker/thread/timeout settings
-    # 
-    # Alternative: Use start.sh for migrations + preload health check:
-    #   startCommand: bash start.sh
-    # 
-    # For Render Starter (512MB RAM): WEB_CONCURRENCY=2, WEB_THREADS=8
-    # For Render Standard (2GB RAM): WEB_CONCURRENCY=4, WEB_THREADS=8
-    # 
-    # Expected startup time: <5 seconds (vs 30-120s without preload)
-    # Expected first request: <400ms (vs 10-120s cold start)
+    # - workers=1: Prevents OOM on 1GB RAM
+    # - timeout=180: Survives Railway DB cold starts (up to 2 min)
+    # - keep-alive=5: Matches Render load balancer
+    # - preload: Eliminates cold start app loading delay
     # ==========================================================================
     startCommand: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
+    
     envVars:
       - key: FLASK_ENV
         value: production
@@ -127,91 +75,41 @@ services:
         value: "true"
       - key: PYTHON_VERSION
         value: "3.12.0"
-      # ==========================================================================
-      # WORKER CONFIGURATION (Critical for performance)
-      # ==========================================================================
-      # WEB_CONCURRENCY: Number of Gunicorn workers
-      #   - Starter plan (512MB): 2 workers
-      #   - Standard plan (2GB): 4 workers
-      #   - Formula: (2 * CPU cores) + 1, capped by RAM
-      # 
-      # WEB_THREADS: Threads per worker
-      #   - 8 threads handles most I/O-bound workloads
-      #   - Total capacity: WEB_CONCURRENCY * WEB_THREADS = concurrent requests
-      # ==========================================================================
+      # Nuclear configuration - single worker, high timeout
       - key: WEB_CONCURRENCY
-        value: "2"
+        value: "1"
       - key: WEB_THREADS
-        value: "8"
-      # Enable preload (also set in gunicorn.conf.py, but explicit here for clarity)
+        value: "4"
+      - key: GUNICORN_TIMEOUT
+        value: "180"
+      - key: GUNICORN_KEEPALIVE
+        value: "5"
       - key: PRELOAD_APP
         value: "true"
-      # Enable database keepalive thread
+      # Database keepalive thread
       - key: DB_KEEPALIVE_ENABLED
         value: "true"
-      # Trust Render's load balancer for X-Forwarded-* headers
+      # Trust Render's load balancer
       - key: FORWARDED_ALLOW_IPS
         value: "*"
       # DATABASE_URL must be set manually in Render dashboard
-      # to connect to your PostgreSQL database
+      # Format: postgresql://user:pass@host:5432/db?sslmode=require
     
     # ==========================================================================
-    # HEALTH CHECK CONFIGURATION - IMMORTAL SETTINGS
+    # HEALTH CHECK - Nuclear Settings
     # ==========================================================================
-    # 
-    # EXACT RENDER DASHBOARD SETTINGS (copy-paste these values):
-    #   Health Check Path: /health
-    #   Grace Period: 180 (seconds - gives cold boot time to complete)
-    #   Timeout: 10 (seconds - per-request timeout, our endpoint responds in <10ms)
-    #   Interval: 30 (seconds - how often Render checks health)
-    #
-    # These settings make health check failures PHYSICALLY IMPOSSIBLE because:
-    # 1. /health responds instantly (<10ms) with no DB access
-    # 2. Supports both GET and HEAD HTTP methods
-    # 3. 180-second grace period covers any cold start
-    # 4. 10-second timeout is 1000x longer than our response time
-    #
-    # Available endpoints:
-    #   /health        - IMMORTAL health (instant, no DB, responds in <10ms, GET+HEAD)
-    #   /ready         - Database readiness probe (checks Postgres, returns 503 if DB down)
-    #   /ping          - Lightweight ping (fastest, no DB, for external pingers)
-    #   /api/health    - Detailed health (includes DB status, for monitoring)
-    #
-    # External pinger URL: https://hiremebahamas.onrender.com/ping
-    #
-    # ONE-LINE FORCE REDEPLOY COMMAND (after changing healthcheck path):
-    #   In Render Dashboard: Settings → Manual Deploy → Deploy latest commit
-    #   Or: Click "Deploy" button in the service header
+    # Path: /health (instant response, no DB check)
+    # Grace Period: 300s (5 min) - handles worst-case cold start
+    # Timeout: 30s per health check request
+    # Interval: 30s between checks
     # ==========================================================================
     healthCheckPath: /health
 
   # ==========================================================================
-  # KEEP-ALIVE BACKGROUND WORKER - PERMANENT ZERO-COST FIX FOR 502 ERRORS
+  # KEEP-ALIVE BACKGROUND WORKER
   # ==========================================================================
-  # 
-  # This background worker pings the web service every 50 seconds to prevent
-  # it from sleeping due to inactivity on Render's free tier.
-  # 
-  # Benefits:
-  # - Costs $0 (uses Render's free tier for background workers)
-  # - Prevents 502 Bad Gateway errors from cold starts
-  # - Keeps the service always responsive (<1 second response times)
-  # - Runs forever without manual intervention
-  # 
-  # Manual Setup in Render Dashboard:
-  # 1. Go to Render Dashboard → New → Background Worker
-  # 2. Connect your GitHub repository
-  # 3. Set the following:
-  #    - Service Type: Background Worker
-  #    - Name: keep-alive
-  #    - Runtime: Python 3
-  #    - Region: Oregon (same as your web service)
-  #    - Build Command: pip install requests
-  #    - Start Command: python keep_alive.py
-  # 4. Deploy!
-  # 
-  # Note: If using the Starter plan ($7/mo), this worker is not necessary
-  # as the service is always on. However, it provides additional reliability.
+  # Pings /health every 45 seconds to prevent cold starts
+  # Cost: $0 on Render Free tier for Background Workers
   # ==========================================================================
   - type: worker
     name: keep-alive
@@ -227,27 +125,10 @@ services:
         value: https://hiremebahamas.onrender.com
 
   # ==========================================================================
-  # CRON JOB - ALTERNATIVE KEEPALIVE (Recommended for 2025)
+  # CRON JOB - Backup Keepalive
   # ==========================================================================
-  # 
-  # This cron job pings the /health endpoint every 5 minutes to prevent the
-  # web service from sleeping. It's simpler and more reliable than the
-  # background worker approach.
-  # 
-  # Benefits over background worker:
-  # - Uses minimal Docker image (curlimages/curl ~5MB vs full Python runtime)
-  # - Guaranteed execution schedule by Render
-  # - No Python code to maintain
-  # - Can also be used for real scheduled tasks (daily, hourly, etc.)
-  # 
-  # Dashboard Setup (if not using render.yaml):
-  # 1. Render Dashboard → New → Cron Job
-  # 2. Name: keepalive-ping
-  # 3. Schedule: */5 * * * *
-  # 4. Docker Image: curlimages/curl:latest
-  # 5. Command: curl -f -s -o /dev/null https://hiremebahamas.onrender.com/health
-  # 
-  # See docs/RENDER_CRON_JOB_SETUP.md for complete guide
+  # Pings /health every 5 minutes as backup
+  # Uses minimal Docker image (5MB vs full Python)
   # ==========================================================================
   - type: cron
     name: keepalive-ping
@@ -258,16 +139,9 @@ services:
     dockerCommand: curl -f -s -o /dev/null https://hiremebahamas.onrender.com/health
 
   # ==========================================================================
-  # CACHE WARMING CRON JOB - Meta-style Hot Path Caching
+  # CACHE WARMING CRON JOB
   # ==========================================================================
-  # 
-  # This cron job pre-warms the cache every 5 minutes to ensure
-  # sub-100ms response times for frequently accessed data.
-  # 
-  # Benefits:
-  # - Eliminates cache miss latency on popular endpoints
-  # - Keeps hot data in Redis/memory for instant access
-  # - Improves user experience with faster page loads
+  # Pre-warms cache every 5 minutes for sub-100ms responses
   # ==========================================================================
   - type: cron
     name: cache-warmer

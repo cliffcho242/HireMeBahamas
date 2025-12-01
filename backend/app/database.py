@@ -1,40 +1,52 @@
 # =============================================================================
-# DATABASE ENGINE CONFIGURATION - TIMEOUT FIX
+# DATABASE ENGINE CONFIGURATION - NUCLEAR FIX FOR 502 BAD GATEWAY (2025)
 # =============================================================================
-# DATABASE_URL format (set in Render Environment Variables):
-# postgresql+asyncpg://postgres:YOUR_PASSWORD@dpg-XXXXX-a.oregon-postgres.render.com/yourdb?sslmode=require&connect_timeout=30&options=-c%20jit=off
+# DATABASE_URL format for Render → Railway Postgres:
+# postgresql+asyncpg://user:password@host:port/db?sslmode=require&connect_timeout=30&options=-c%20jit=off
 #
-# Render Settings:
-# - Instance Memory: 1 GB minimum
-# - Start Command: gunicorn main:app -k uvicorn.workers.UvicornWorker --workers 1 --preload
+# Render Dashboard Settings:
+# - Instance Type: Standard ($25/mo) or at minimum Starter ($7/mo)
+# - Memory: 1GB minimum (Standard plan)
+# - Health Check Path: /health
+# - Grace Period: 300s
+#
+# Start Command:
+# gunicorn backend.app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --timeout 180 --keep-alive 5 --preload
 # =============================================================================
 
 import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# Get DATABASE_URL from environment
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas")
+# Get DATABASE_URL from environment - prefer private network URL to avoid egress
+DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL", "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas")
 
 # Convert sync PostgreSQL URLs to async driver format
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# Pool configuration constants
-POOL_SIZE = 3
-MAX_OVERFLOW = 5
+# Pool configuration constants - optimized for Render Standard (1GB RAM)
+# Low pool size prevents connection exhaustion on Railway free tier
+POOL_SIZE = 2  # Minimum connections kept open
+MAX_OVERFLOW = 3  # Max additional connections under load (total max = 5)
 
-# Create async engine with timeout-killing configuration
+# Create async engine with bulletproof timeout configuration
+# These settings prevent 502 Bad Gateway and 173-second login delays
 engine = create_async_engine(
     DATABASE_URL,
     pool_size=POOL_SIZE,
     max_overflow=MAX_OVERFLOW,
-    pool_pre_ping=True,
-    pool_recycle=300,
+    pool_pre_ping=True,  # Validate connections before use (prevents stale connection errors)
+    pool_recycle=180,  # Recycle connections every 3 min (Railway drops idle connections)
+    pool_timeout=30,  # Wait max 30s for connection from pool
     connect_args={
-        "connect_timeout": 30,
-        "server_settings": {"jit": "off"},
-        "ssl": "require"
+        "timeout": 30,  # asyncpg uses 'timeout' not 'connect_timeout'
+        "command_timeout": 30,  # Query timeout in seconds
+        "server_settings": {
+            "jit": "off",  # CRITICAL: Disable JIT - causes 60s+ first-query delays
+            "statement_timeout": "30000",  # 30 second query timeout (milliseconds)
+        },
+        "ssl": "require"  # Required for Railway Postgres
     }
 )
 

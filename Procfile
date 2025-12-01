@@ -2,14 +2,19 @@
 # HireMeBahamas Procfile (Heroku/Railway)
 # =============================================================================
 # 
-# COLD START ELIMINATION:
-# Uses --preload to load app BEFORE forking workers, eliminating 30-120s cold starts.
-# First request after boot is instant (<400ms) even after hours of inactivity.
-# 
-# Configuration via environment variables:
-#   WEB_CONCURRENCY=2-4    Workers (2 for 512MB RAM, 4 for 2GB RAM)
-#   WEB_THREADS=8          Threads per worker
-#   PRELOAD_APP=true       Enable preloading (default: true)
+# NUCLEAR FIX FOR 502 BAD GATEWAY (2025)
+#
+# Configuration:
+# - workers=1: Prevents OOM on 512MB-1GB RAM
+# - timeout=180: Survives Railway DB cold starts (up to 2 min)
+# - keep-alive=5: Matches load balancer settings
+# - preload: Eliminates cold start app loading delay
+#
+# Environment variables:
+#   WEB_CONCURRENCY=1    Single worker for low RAM
+#   WEB_THREADS=4        Threads per worker
+#   GUNICORN_TIMEOUT=180 Worker timeout in seconds
+#   PRELOAD_APP=true     Enable app preloading
 # 
 # See gunicorn.conf.py for full configuration details.
 # =============================================================================
@@ -21,5 +26,3 @@ web: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --p
 
 # Optional: Uncomment to enable Celery worker for background tasks
 # worker: celery -A final_backend.celery worker --loglevel=info
-# Optional: Uncomment to enable Flower for Celery monitoring
-# flower: celery -A final_backend.celery flower --port=5555
