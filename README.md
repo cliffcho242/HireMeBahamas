@@ -95,7 +95,20 @@ Base images include all system dependencies pre-installed:
 
 📖 **[Read Docker Base Images Documentation](./DOCKER_BASE_IMAGES.md)** for technical details.
 
-### 🗄️ Railway Database Setup
+### 🗄️ Database Setup
+
+#### Vercel Postgres (Recommended for Vercel Deployments)
+
+Vercel Postgres (powered by Neon) provides serverless PostgreSQL optimized for Vercel:
+
+- ✅ **Free Tier**: 0.5 GB storage (Hobby plan)
+- ✅ **Serverless**: Automatic scaling and hibernation
+- ✅ **Edge Network**: Low latency worldwide
+- ✅ **Simple Setup**: 5-minute configuration
+
+📖 **[Complete Vercel Postgres Setup Guide](./VERCEL_POSTGRES_SETUP.md)** - Step-by-step instructions with connection string configuration, migration guide, and troubleshooting.
+
+#### Railway Postgres (Alternative Option)
 
 For production deployments on Railway, you need to configure PostgreSQL for persistent data storage:
 
