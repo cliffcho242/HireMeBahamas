@@ -1,7 +1,7 @@
 # =============================================================================
 # HireMeBahamas Minimal Requirements (Production Flask Backend)
 # =============================================================================
-# Pruned from 47 packages to 15 core packages
+# Pruned from 47 packages to 11 core packages
 # Removes all FastAPI, async, and unused dependencies
 # =============================================================================
 
@@ -25,7 +25,3 @@ redis==7.1.0
 
 # Configuration
 python-dotenv==1.2.1
-
-# Testing (development only)
-pytest==8.3.5
-pytest-flask==1.3.0
