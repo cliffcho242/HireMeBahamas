@@ -81,6 +81,7 @@ cd ..
 # Install backend dependencies
 print_info "Installing backend dependencies..."
 cd backend
+export CFLAGS="-Wno-conversion"
 python -m pip install -r requirements.txt
 if [ $? -eq 0 ]; then
     print_status "Backend dependencies installed"

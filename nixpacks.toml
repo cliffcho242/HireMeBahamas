@@ -11,6 +11,8 @@ providers = ["python"]
 [variables]
 NIXPACKS_NO_MUSL = "1"
 PYTHON_VERSION = "3.12"
+# Suppress -Wconversion warning from Python 3.13 internal headers during C extension builds
+CFLAGS = "-Wno-conversion"
 
 # Security: Sensitive variables should only be available at runtime via Railway's environment injection
 # The phases configuration ensures packages are installed without exposing secrets

@@ -49,7 +49,7 @@ services:
     # ============================================================================
     # MASTERMIND FIX 2025 — RENDER BUILD COMMAND (COPY-PASTE EXACTLY)
     # ============================================================================
-    buildCommand: pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r requirements.txt
+    buildCommand: export CFLAGS="-Wno-conversion" && pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r requirements.txt
     
     # ==========================================================================
     # START COMMAND - Nuclear Configuration

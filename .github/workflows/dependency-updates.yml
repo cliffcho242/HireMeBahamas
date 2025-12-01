@@ -48,7 +48,8 @@ jobs:
           echo "## Root Requirements (requirements.txt)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Install current requirements
+          # Install current requirements with suppressed compiler warnings
+          export CFLAGS="-Wno-conversion"
           pip install -r requirements.txt --quiet 2>/dev/null || true
           
           # Check for outdated packages
@@ -68,7 +69,8 @@ jobs:
           source /tmp/backend-venv/bin/activate
           pip install --upgrade pip --quiet
           
-          # Install backend requirements
+          # Install backend requirements with suppressed compiler warnings
+          export CFLAGS="-Wno-conversion"
           pip install -r backend/requirements.txt --quiet 2>/dev/null || true
           
           # Check for outdated packages

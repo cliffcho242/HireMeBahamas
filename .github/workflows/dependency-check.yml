@@ -83,6 +83,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest pytest-flask pytest-asyncio
+          export CFLAGS="-Wno-conversion"
           pip install -r requirements.txt
           pip install -r backend/requirements.txt
 

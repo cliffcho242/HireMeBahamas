@@ -32,4 +32,4 @@ jobs:
           JF_URL: ${{ secrets.JF_URL }}
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JF_INSTALL_DEPS_CMD: "pip install -r backend/requirements.txt && cd frontend && npm ci"
+          JF_INSTALL_DEPS_CMD: "export CFLAGS='-Wno-conversion' && pip install -r backend/requirements.txt && cd frontend && npm ci"
