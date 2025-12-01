@@ -6,7 +6,7 @@
 #
 # This is the ONE AND ONLY fix for Railway/Neon PostgreSQL SSL EOF errors:
 # 1. Force TLS 1.3 only - prevents SSL termination bugs
-# 2. ssl=True + CERT_NONE - proper asyncpg SSL context
+# 2. SSLContext + CERT_NONE - proper asyncpg SSL configuration
 # 3. pool_recycle=120 - aggressive recycling before Railway drops connections
 # 4. pool_pre_ping=True - validate connections before use
 # 5. connect_timeout=45 - handle Railway cold starts
@@ -20,7 +20,7 @@
 # DB_SSL_MODE=require
 #
 # RENDER ENV VARS (copy-paste):
-# DATABASE_URL=postgresql://user:pass@RAILWAY_HOST:5432/railway?sslmode=require
+# DATABASE_URL=postgresql+asyncpg://user:pass@RAILWAY_HOST:5432/railway?sslmode=require
 # DB_POOL_RECYCLE=120
 # DB_SSL_MODE=require
 #
