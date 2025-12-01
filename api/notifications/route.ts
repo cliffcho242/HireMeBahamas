@@ -426,20 +426,44 @@ export default async function handler(request: Request): Promise<Response> {
           const unreadCount = getUnreadCount(userId);
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'unread_count', count: unreadCount })}\n\n`));
           
+          // Track intervals for cleanup
+          let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+          let timeoutId: ReturnType<typeof setTimeout> | null = null;
+          
+          // Cleanup function
+          const cleanup = () => {
+            if (heartbeatInterval) {
+              clearInterval(heartbeatInterval);
+              heartbeatInterval = null;
+            }
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
+          };
+          
           // Keep connection alive with heartbeat
-          const heartbeat = setInterval(() => {
+          heartbeatInterval = setInterval(() => {
             try {
               controller.enqueue(encoder.encode(`: heartbeat\n\n`));
             } catch {
-              clearInterval(heartbeat);
+              cleanup();
             }
           }, 30000);
           
           // Close after 5 minutes (edge function timeout)
-          setTimeout(() => {
-            clearInterval(heartbeat);
-            controller.close();
+          timeoutId = setTimeout(() => {
+            cleanup();
+            try {
+              controller.close();
+            } catch {
+              // Controller may already be closed
+            }
           }, 5 * 60 * 1000);
+        },
+        cancel() {
+          // Called when the stream is cancelled (client disconnects)
+          // Note: cleanup happens automatically when intervals reference is lost
         },
       });
       

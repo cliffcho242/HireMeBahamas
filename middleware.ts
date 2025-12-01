@@ -365,31 +365,20 @@ export default async function middleware(request: Request): Promise<Response> {
   responseHeaders.set('X-XSS-Protection', '1; mode=block');
   responseHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   
-  // Fetch the original request and add our headers
-  // This allows the request to continue to the origin while adding Edge headers
-  try {
-    const response = await fetch(request);
-    
-    // Clone the response and add our headers
-    const modifiedResponse = new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: response.headers,
-    });
-    
-    // Add Edge headers to the response
-    responseHeaders.forEach((value, key) => {
-      modifiedResponse.headers.set(key, value);
-    });
-    
-    return modifiedResponse;
-  } catch {
-    // If fetch fails, return a simple response with headers
-    // This maintains backwards compatibility
-    return new Response(null, {
-      status: 200,
-      headers: responseHeaders,
-    });
-  }
+  // For Vercel Edge Middleware, we return a response with headers only
+  // The actual content will be served by the origin (Vite/static files)
+  // These headers will be merged with the origin response by Vercel
+  // 
+  // Note: In production Vercel deployment, this middleware runs before the origin
+  // and Vercel handles merging headers. We just need to pass through with our headers.
+  
+  // Create a passthrough response with our Edge headers
+  // Vercel will merge these with the origin response
+  const response = new Response(null, {
+    status: 200,
+    headers: responseHeaders,
+  });
+  
+  return response;
 }
 

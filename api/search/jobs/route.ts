@@ -410,12 +410,26 @@ export default async function handler(request: Request): Promise<Response> {
     try {
       const backendUrl = process.env.BACKEND_URL || 'https://hiremebahamas.onrender.com';
       
+      // Build query string with all parameters
+      const params = new URLSearchParams();
+      if (query) params.set('search', query);
+      params.set('skip', skip.toString());
+      params.set('limit', limit.toString());
+      
+      // Add filter parameters
+      if (filters.category) params.set('category', String(filters.category));
+      if (filters.location) params.set('location', String(filters.location));
+      if (filters.job_type) params.set('job_type', String(filters.job_type));
+      if (filters.is_remote !== undefined) params.set('is_remote', String(filters.is_remote));
+      if (filters.salary_min) params.set('salary_min', String(filters.salary_min));
+      if (filters.salary_max) params.set('salary_max', String(filters.salary_max));
+      
       // Create AbortController with manual timeout for Edge compatibility
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
       
       try {
-        const backendResponse = await fetch(`${backendUrl}/api/jobs?search=${encodeURIComponent(query)}&skip=${skip}&limit=${limit}`, {
+        const backendResponse = await fetch(`${backendUrl}/api/jobs?${params.toString()}`, {
           headers: { 'X-Edge-Request': 'true' },
           signal: controller.signal,
         });

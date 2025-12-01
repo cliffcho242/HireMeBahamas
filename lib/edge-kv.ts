@@ -92,7 +92,8 @@ export class EdgeKV {
   }
 
   /**
-   * Execute a KV command
+   * Execute a KV command using Vercel KV REST API
+   * Vercel KV uses Redis-compatible REST API endpoints
    */
   private async execute<T>(command: string[]): Promise<T | null> {
     if (this.useMemory) {
@@ -100,21 +101,26 @@ export class EdgeKV {
     }
 
     try {
-      const response = await fetch(`${this.kvUrl}`, {
+      // Vercel KV REST API format
+      // The API expects the command array in the request body
+      const response = await fetch(`${this.kvUrl}/pipeline`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.kvToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(command),
+        body: JSON.stringify([command]),
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`KV Error: ${response.status} - ${errorText}`);
         throw new Error(`KV Error: ${response.status}`);
       }
 
       const data = await response.json();
-      return data.result as T;
+      // Pipeline returns an array of results
+      return (data[0]?.result ?? null) as T;
     } catch (error) {
       console.error('EdgeKV execute error:', error);
       // Fallback to memory
