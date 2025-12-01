@@ -14,10 +14,18 @@ This indicates that the AI service is attempting to use a model that is not avai
 
 This error occurs when:
 
-1. **Model Availability**: The requested AI model (e.g., GPT-4, Claude 3.5 Sonnet, or other premium models) is not included in your GitHub plan
+1. **Model Availability**: The requested AI model (e.g., GPT-4, Claude 3 Sonnet, Gemini Pro, or other premium models) is not included in your GitHub plan
 2. **Plan Restrictions**: Your GitHub subscription (Free, Pro, Team, or Enterprise) has specific model access policies
 3. **API Rate Limits**: You've exceeded the rate limits for model API calls
 4. **Policy Constraints**: Organizational policies restrict access to certain AI models
+5. **Missing API Keys**: For application code, API keys may not be configured for the requested models
+
+**Note**: This repository uses the following premium models in its AI features:
+- `gpt-4` (OpenAI)
+- `claude-3-sonnet-20240229` (Anthropic)
+- `gemini-pro` (Google)
+
+These are optional features and require valid API keys to function.
 
 ## Available Solutions
 
@@ -71,29 +79,90 @@ try {
 
 ## Repository-Specific Guidance
 
-For this repository (HireMeBahamas), the error is likely occurring in:
+For this repository (HireMeBahamas), the error can occur in multiple contexts:
 
 1. **GitHub Copilot Workspace**: When running automated coding tasks
-2. **GitHub Actions**: If using AI-powered analysis or code generation
-3. **CodeRabbit**: If configured with unavailable models
+2. **AI Services in Codebase**: The repository contains AI features with hardcoded model references
+3. **GitHub Actions**: If using AI-powered analysis or code generation
+4. **CodeRabbit**: If configured with unavailable models
 
 ### Current Configuration
 
-This repository is configured with:
+This repository contains the following AI-related configurations:
+
+#### GitHub Configuration
 - `.github/copilot-instructions.md` - Contains development guidelines for Copilot
 - `.coderabbit.yaml` - CodeRabbit configuration (review status disabled)
 
-Neither file explicitly requests specific AI models, which is the recommended approach.
+#### AI Service Files (Contains Hardcoded Model References)
+The repository includes AI features that reference premium models:
+
+**Files with hardcoded model names:**
+- `ai_config.py` - Configures GPT-4, Claude-3 Sonnet, and Gemini Pro models
+- `ai_api_server.py` - Uses GPT-4 and Claude-3 for AI endpoints
+- `advanced_ai_orchestrator.py` - References multiple premium models
+
+**Models referenced:**
+- `gpt-4` (OpenAI GPT-4)
+- `claude-3-sonnet-20240229` (Anthropic Claude 3 Sonnet)
+- `gemini-pro` (Google Gemini Pro)
+
+### Impact on Repository Features
+
+These AI features are **optional** and the core application works without them:
+
+1. **Core Features (No AI Required)**: Job posting, user profiles, authentication, messaging
+2. **AI-Enhanced Features (Require API Keys)**: Profile analysis, job matching AI, resume analysis
+
+To use AI features, you need valid API keys in your `.env` file:
+```bash
+OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
+GOOGLE_API_KEY=your_google_key
+```
+
+### Handling the Error in This Repository
+
+If you encounter the HTTP 400 model error while working on this repository:
+
+1. **For GitHub Copilot Workspace**: The error is plan-related, not code-related. Follow the general solutions above.
+2. **For AI Services**: These are optional features. If you don't have API keys, they will gracefully fail without breaking the app.
+3. **For Development**: You can disable AI features by not setting the API keys in your `.env` file.
 
 ## Prevention
 
 To avoid this error in the future:
 
-1. **Avoid Hardcoding Model Names**: Don't specify premium models in configuration files
+### For GitHub Copilot Usage
+1. **Avoid Requesting Specific Models**: Don't specify premium models when using Copilot
 2. **Use Default Settings**: Let GitHub Copilot automatically select appropriate models
-3. **Implement Error Handling**: Add try-catch blocks for AI API calls
-4. **Document Requirements**: Clearly state if certain features require premium models
-5. **Test with Standard Access**: Ensure the repository works with free/standard GitHub plans
+3. **Document Requirements**: Clearly state if certain features require premium models
+
+### For Application Code (Like This Repository)
+1. **Make AI Features Optional**: Don't require AI services for core functionality
+2. **Implement Fallback Logic**: Add try-catch blocks for AI API calls
+3. **Use Environment Variables**: Store API keys in `.env` files, not in code
+4. **Handle Missing Keys Gracefully**: Don't crash if API keys aren't provided
+5. **Consider Model Alternatives**: Use open-source models when possible
+
+### Example: Graceful AI Feature Handling
+
+```python
+# Good: Optional AI with fallback
+def get_job_recommendations(user_id):
+    try:
+        if os.getenv('OPENAI_API_KEY'):
+            return ai_powered_recommendations(user_id)
+    except Exception as e:
+        logger.warning(f"AI recommendations failed: {e}")
+    
+    # Fallback to simple algorithm
+    return simple_recommendations(user_id)
+
+# Bad: Required AI that breaks without keys
+def get_job_recommendations(user_id):
+    return openai.complete(model="gpt-4", ...)  # Crashes if no key
+```
 
 ## Verification
 
