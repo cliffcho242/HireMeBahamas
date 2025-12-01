@@ -106,12 +106,7 @@ class TestTransactionAbortedRecovery:
                 
                 # Create a connection that simulates aborted transaction state
                 mock_conn = Mock()
-                rollback_called = []
-                
-                def track_rollback():
-                    rollback_called.append(True)
-                
-                mock_conn.rollback = track_rollback
+                mock_conn.rollback = Mock()
                 
                 # Create a mock pool
                 mock_pool_instance = Mock()
@@ -121,4 +116,4 @@ class TestTransactionAbortedRecovery:
                 return_db_connection(mock_conn)
                 
                 # Verify rollback was called to clear any aborted transaction
-                assert len(rollback_called) == 1
+                mock_conn.rollback.assert_called_once()
