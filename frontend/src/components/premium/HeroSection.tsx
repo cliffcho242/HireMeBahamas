@@ -178,14 +178,16 @@ export function TiltCard({
  * Floating particles background
  */
 function FloatingParticles() {
-  const particles = Array.from({ length: 20 }, (_, i) => ({
+  // Generate particles once using useState initializer
+  const [particles] = useState(() => Array.from({ length: 20 }, (_, i) => ({
     id: i,
     size: Math.random() * 6 + 2,
     x: Math.random() * 100,
     y: Math.random() * 100,
     duration: Math.random() * 10 + 10,
     delay: Math.random() * 5,
-  }));
+    randomX: Math.random() * 20 - 10,
+  })));
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -203,7 +205,7 @@ function FloatingParticles() {
           }}
           animate={{
             y: [0, -30, 0],
-            x: [0, Math.random() * 20 - 10, 0],
+            x: [0, particle.randomX, 0],
             opacity: [0.3, 0.8, 0.3],
             scale: [1, 1.2, 1],
           }}

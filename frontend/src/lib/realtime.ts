@@ -640,7 +640,8 @@ export function useRealtime(userId?: string | number) {
     markNotificationsRead,
     isUserOnline,
     getTypingIndicator,
-    socket: socketRef.current,
+    // Use a getter function instead of accessing ref during render
+    getSocket: () => socketRef.current,
   };
 }
 
@@ -699,11 +700,10 @@ export function useTypingIndicator(
  * Hook for online status indicator with green dot
  */
 export function useOnlineStatus(userId: string, isUserOnline: (id: string) => boolean) {
-  const [isOnline, setIsOnline] = useState(false);
+  // Initialize state with the current online status to avoid cascading renders
+  const [isOnline, setIsOnline] = useState(() => isUserOnline(userId));
 
   useEffect(() => {
-    setIsOnline(isUserOnline(userId));
-    
     // Update on status change events
     const handleStatusChange = () => {
       setIsOnline(isUserOnline(userId));
