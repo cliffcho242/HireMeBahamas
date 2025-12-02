@@ -35,12 +35,14 @@ httpx==0.28.1
 
 # Configuration Management
 python-dotenv==1.2.1
+python-decouple==3.8
 
 # Data Validation
 email-validator==2.3.0
 
 # File Upload Handling
 python-multipart==0.0.20
+aiofiles==25.1.0
 
 # Database Drivers (for Postgres connectivity)
 # asyncpg 0.30.0 - binary wheel available, no compilation needed
@@ -48,14 +50,15 @@ asyncpg==0.30.0
 sqlalchemy[asyncio]==2.0.44
 psycopg2-binary==2.9.11
 
-# Additional Backend Dependencies (from backend/requirements.txt)
-Flask==3.0.3
-Flask-CORS==5.0.0
-Flask-Caching==2.3.0
-Flask-Limiter==3.8.0
-gunicorn==23.0.0
-uvicorn[standard]==0.32.0
-redis==5.2.1
+# Media & File Processing
+Pillow==12.0.0
+cloudinary==1.44.1
+
+# Redis for caching (optional - gracefully degrades if not available)
+redis==7.1.0
+
+# OAuth Libraries
+authlib==1.6.5
 
 # ============================================================================
 # DEPLOYMENT NOTES:
@@ -64,4 +67,5 @@ redis==5.2.1
 # 3. No compilation required (no gcc/build-essential needed)
 # 4. python-jose[cryptography] provides 'jose' module for JWT
 # 5. asyncpg provides postgresql+asyncpg:// driver
+# 6. Flask dependencies removed (using FastAPI only)
 # ============================================================================

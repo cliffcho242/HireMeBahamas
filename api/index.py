@@ -12,11 +12,21 @@ import sys
 import logging
 
 # Add api directory and create app alias for backend imports
+# This allows backend_app modules to import using 'from app.' syntax
+# which matches the original backend structure
 api_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, api_dir)
-# Create app module alias so backend_app can import as 'app'
-import backend_app as app
-sys.modules['app'] = app
+
+# Create app module alias for backward compatibility with backend imports
+# backend_app modules use 'from app.xxx import yyy' syntax
+# This mapping ensures those imports resolve correctly
+try:
+    import backend_app as app_module
+    sys.modules['app'] = app_module
+    _MODULE_ALIAS_CREATED = True
+except ImportError as e:
+    _MODULE_ALIAS_CREATED = False
+    logging.error(f"Failed to create module alias: {e}")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -26,18 +36,20 @@ logger = logging.getLogger(__name__)
 MAX_ERROR_MSG_LENGTH = 100
 
 # Import backend routers with graceful fallback
+HAS_BACKEND = False
 try:
+    if not _MODULE_ALIAS_CREATED:
+        raise ImportError("Module aliasing failed - cannot import backend")
+        
     from backend_app.api import auth, posts, jobs, users, messages, notifications
     from backend_app.database import get_db
     from backend_app.core.security import get_current_user
     HAS_BACKEND = True
     logger.info("✅ Backend modules imported successfully")
 except ImportError as e:
-    HAS_BACKEND = False
     logger.warning(f"⚠️  Backend modules not available: {e}")
     logger.warning("Running with placeholder endpoints")
 except Exception as e:
-    HAS_BACKEND = False
     logger.error(f"❌ Error importing backend modules: {e}", exc_info=True)
 
 # Database imports with graceful fallback
