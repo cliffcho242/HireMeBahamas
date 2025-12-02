@@ -48,6 +48,15 @@ asyncpg==0.30.0
 sqlalchemy[asyncio]==2.0.44
 psycopg2-binary==2.9.11
 
+# Additional Backend Dependencies (from backend/requirements.txt)
+Flask==3.0.3
+Flask-CORS==5.0.0
+Flask-Caching==2.3.0
+Flask-Limiter==3.8.0
+gunicorn==23.0.0
+uvicorn[standard]==0.32.0
+redis==5.2.1
+
 # ============================================================================
 # DEPLOYMENT NOTES:
 # 1. Vercel automatically installs from this requirements.txt
