@@ -24,7 +24,8 @@ Before setting up auto-deploy, ensure you have:
    - **Output Directory**: `dist`
 5. Add environment variable:
    - **Name**: `VITE_API_URL`
-   - **Value**: Your Railway backend URL (e.g., `https://your-backend.railway.app`)
+   - **Value**: Your backend URL (e.g., `https://your-backend.vercel.app` or `https://your-backend.railway.app`)
+   - 📖 **[Detailed Guide: Setting VITE_API_URL in Vercel](./VERCEL_ENVIRONMENT_SETUP.md)**
 6. Click **"Deploy"**
 
 #### Step 1.2: Get Vercel Credentials
