@@ -346,6 +346,7 @@ export function InfiniteScroll<T>({
 /**
  * Hook for cursor-based pagination
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCursorPagination<T>(
   fetchFn: (cursor?: string) => Promise<{ items: T[]; nextCursor?: string }>,
   initialItems: T[] = []

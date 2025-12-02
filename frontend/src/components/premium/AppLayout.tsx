@@ -15,6 +15,7 @@ const ThemeContext = createContext<ThemeContextType>({
   setTheme: () => {},
 });
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => useContext(ThemeContext);
 
 interface AppLayoutProps {
@@ -41,24 +42,23 @@ export function AppLayout({
   enablePageTransitions = true,
   defaultTheme = 'system',
 }: AppLayoutProps) {
-  const [theme, setThemeState] = useState<'light' | 'dark'>('light');
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  // Initialize theme state with proper initial value
+  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light';
+    
+    const stored = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    if (stored) return stored;
+    
+    if (defaultTheme === 'system') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return prefersDark ? 'dark' : 'light';
+    }
+    
+    return defaultTheme === 'dark' ? 'dark' : 'light';
+  });
+  
   const [isPulling, setIsPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
-
-  // Initialize theme
-  useEffect(() => {
-    const stored = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    
-    if (stored) {
-      setThemeState(stored);
-    } else if (defaultTheme === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setThemeState(prefersDark ? 'dark' : 'light');
-    } else {
-      setThemeState(defaultTheme as 'light' | 'dark');
-    }
-  }, [defaultTheme]);
 
   // Apply theme to document
   useEffect(() => {
@@ -148,15 +148,8 @@ export function AppLayout({
     };
   }, []);
 
-  // Page transition effect
-  useEffect(() => {
-    if (!enablePageTransitions) return;
-
-    setIsTransitioning(true);
-    const timer = setTimeout(() => setIsTransitioning(false), 400);
-    
-    return () => clearTimeout(timer);
-  }, [enablePageTransitions]);
+  // Page transition effect - removed to prevent cascading renders
+  // Transitions should be triggered by route changes, not by component mount
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
@@ -188,7 +181,7 @@ export function AppLayout({
       {/* Main content with page transition */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={isTransitioning ? 'transitioning' : 'ready'}
+          key="main-content"
           className="min-h-screen"
           initial={enablePageTransitions ? { opacity: 0, filter: 'blur(10px)', scale: 0.98 } : undefined}
           animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
