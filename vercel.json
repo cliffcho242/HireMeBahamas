@@ -1,59 +1,13 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb",
-        "runtime": "python3.12"
-      }
-    },
-    {
-      "src": "api/auth/me.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb",
-        "runtime": "python3.12"
-      }
-    },
-    {
-      "src": "api/cron/health.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb",
-        "runtime": "python3.12"
-      }
-    }
-  ],
   "functions": {
-    "api/**/*.py": {
-      "maxDuration": 30,
-      "memory": 1024,
-      "runtime": "python3.12"
+    "api/main.py": {
+      "runtime": "@vercel/python@1.3.1",
+      "maxDuration": 30
     }
   },
-  "rewrites": [
-    {
-      "source": "/api/auth/me",
-      "destination": "/api/auth/me.py"
-    },
-    {
-      "source": "/api/cron/health",
-      "destination": "/api/cron/health.py"
-    },
-    {
-      "source": "/api/health",
-      "destination": "/api/index.py"
-    },
-    {
-      "source": "/api/ready",
-      "destination": "/api/index.py"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.py"
-    }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "api/main.py" }
   ],
   "headers": [
     {
