@@ -232,7 +232,7 @@ Once the server is running, visit `http://localhost:3000` to start using the app
 
 The app includes the following routes:
 
-- `/`: Display the thee most recent posts
+- `/`: Display the three most recent posts
 - `/posts`: Paginated list view of all posts
 - `/posts/new`: Create a new post
 - `/users/new`: Create a new user
