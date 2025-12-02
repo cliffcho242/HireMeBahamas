@@ -12,8 +12,26 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-// Configuration
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:9999';
+// Configuration - Use same logic as api.ts for consistency
+const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
+
+let SOCKET_URL = 'http://127.0.0.1:9999'; // Default for local development
+
+// If running in browser and no explicit env override
+if (!ENV_API && typeof window !== 'undefined') {
+  const hostname = window.location.hostname;
+  const isProduction = hostname === 'hiremebahamas.com' || 
+                       hostname === 'www.hiremebahamas.com';
+  const isVercel = hostname.includes('.vercel.app');
+  
+  // For Vercel deployments (production or preview), use same-origin
+  if (isProduction || isVercel) {
+    SOCKET_URL = window.location.origin;
+  }
+} else if (ENV_API) {
+  // Use explicit environment variable if provided
+  SOCKET_URL = ENV_API;
+}
 const RECONNECT_DELAY_BASE = 1000;
 const MAX_RECONNECT_DELAY = 30000;
 const TYPING_TIMEOUT = 3000; // Show "typing" for 3 seconds after last keystroke

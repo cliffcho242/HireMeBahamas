@@ -460,7 +460,45 @@ python test_authentication_flow.py
 
 ## 🚀 Deployment
 
-### Automated Deployment (Recommended) ⚡
+### 🎯 Vercel Full-Stack Deployment (Recommended)
+
+**NEW**: Deploy both frontend and backend to Vercel in 10 minutes with $0 cost!
+
+**Benefits:**
+- ✅ **$0/month** - Free tier covers most apps
+- ✅ **<200ms response** - Global edge network
+- ✅ **Zero cold starts** - Always fast
+- ✅ **One deployment** - Frontend + backend together
+- ✅ **Auto HTTPS** - SSL included
+- ✅ **Preview URLs** - Every PR gets a preview
+
+**Quick Start:**
+```bash
+# 1. Push to GitHub
+git push origin main
+
+# 2. Import to Vercel (one-time)
+# Go to https://vercel.com → Import Git Repository
+
+# 3. Add environment variables
+DATABASE_URL=postgresql+asyncpg://...
+SECRET_KEY=your-secret-key
+JWT_SECRET=your-jwt-secret
+
+# 4. Deploy! ✅
+```
+
+📚 **[10-Minute Deployment Guide](./VERCEL_QUICK_DEPLOY.md)** - Get started now!  
+📖 **[Complete Migration Guide](./VERCEL_MIGRATION_GUIDE.md)** - Full details and troubleshooting
+
+**After Vercel is working:**
+- Delete Render services → $0 bill
+- Test login on phone - should be <200ms
+- Check Vercel logs to see requests
+
+---
+
+### Automated Deployment (Legacy - Railway/Render) ⚡
 
 The repository includes GitHub Actions workflows for automatic deployment:
 
@@ -496,11 +534,11 @@ For production deployments requiring high availability:
 
 ### 🔧 Fixing 502 Bad Gateway on Render
 
-If you're experiencing 502 errors after periods of inactivity on Render, this is because Render free tier services sleep after 15 minutes. Solutions:
+If you're experiencing 502 errors after periods of inactivity on Render, this is because Render free tier services sleep after 15 minutes. **Solution: Migrate to Vercel (see above)** for always-on, free deployment.
 
-1. **Upgrade to Paid Plan** ($7/month) - Service stays always on, no cold starts
+Alternative solutions for Render:
+1. **Upgrade to Paid Plan** ($7/month) - Service stays always on
 2. **External Pinger** (Free) - Use UptimeRobot to ping `/ping` every 5 minutes
-3. **Both Combined** - Maximum reliability with monitoring
 
 📚 **Complete Guide**: [docs/RENDER_502_FIX_GUIDE.md](./docs/RENDER_502_FIX_GUIDE.md)
 

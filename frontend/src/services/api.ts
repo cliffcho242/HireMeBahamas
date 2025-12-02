@@ -22,24 +22,28 @@ interface FollowingResponse {
 // Session storage key - must match sessionManager.ts
 const SESSION_KEY = 'hireme_session';
 
-// Derive API base URL with safe production fallback
-// NOTE: Update DEFAULT_PROD_API to your backend URL (Railway, Vercel Serverless, etc.)
-const DEFAULT_PROD_API = import.meta.env.VITE_API_URL || 'https://hiremebahamas-backend-lw6xi9m03-cliffs-projects-a84c76c9.vercel.app';
+// Derive API base URL with Vercel deployment support
+// For Vercel deployments, use same-origin API (deployed together)
+// For local development, use local backend
 const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
-let API_BASE_URL = ENV_API || 'http://127.0.0.1:9999';
 
-// If no env is set and we're on the hiremebahamas.com or vercel domain, use the production backend
-// Use strict hostname matching to prevent URL manipulation attacks
+let API_BASE_URL = 'http://127.0.0.1:9999'; // Default for local development
+
+// If running in browser and no explicit env override
 if (!ENV_API && typeof window !== 'undefined') {
   const hostname = window.location.hostname;
-  // Strict match: only exact domain, www subdomain, or our specific vercel.app subdomain
-  if (
-    hostname === 'hiremebahamas.com' || 
-    hostname === 'www.hiremebahamas.com' ||
-    hostname === 'hiremebahamas.vercel.app'
-  ) {
-    API_BASE_URL = DEFAULT_PROD_API;
+  const isProduction = hostname === 'hiremebahamas.com' || 
+                       hostname === 'www.hiremebahamas.com';
+  const isVercel = hostname.includes('.vercel.app');
+  
+  // For Vercel deployments (production or preview), use same-origin API
+  // This works because both frontend and backend are deployed together
+  if (isProduction || isVercel) {
+    API_BASE_URL = window.location.origin;
   }
+} else if (ENV_API) {
+  // Use explicit environment variable if provided
+  API_BASE_URL = ENV_API;
 }
 
 // Create axios instance with retry logic
