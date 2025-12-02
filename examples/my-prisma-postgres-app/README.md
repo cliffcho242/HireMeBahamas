@@ -16,6 +16,9 @@ Follow these steps to set up and run the application:
 ```bash
 cd my-prisma-postgres-app
 
+# Make the setup script executable (if needed)
+chmod +x setup.sh
+
 # Run the setup script
 ./setup.sh
 ```
