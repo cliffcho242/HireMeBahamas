@@ -3,6 +3,14 @@
 IMMORTAL VERCEL POSTGRES MIGRATION FIX
 Zero-downtime, self-healing database migration for Vercel
 Prevents app from dying during and after migration
+
+Usage:
+    python immortal_vercel_migration_fix.py                # Generate config (no DB required)
+    python immortal_vercel_migration_fix.py --config-only  # Generate config only (explicit)
+    
+    # With DATABASE_URL set in environment:
+    export DATABASE_URL="postgresql://..."
+    python immortal_vercel_migration_fix.py                # Full checks + config generation
 """
 
 import os
@@ -216,10 +224,13 @@ FRONTEND_URL=https://your-app.vercel.app
 """
         return config
     
-    async def run_immortal_checks(self) -> bool:
+    async def run_immortal_checks(self, config_only: bool = False) -> bool:
         """
         Run all immortal checks and fixes
         Returns True if app is ready to deploy
+        
+        Args:
+            config_only: If True, only generate configuration without database checks
         """
         logger.info("=" * 70)
         logger.info("IMMORTAL VERCEL POSTGRES MIGRATION FIX".center(70))
@@ -230,11 +241,34 @@ FRONTEND_URL=https://your-app.vercel.app
         # Check 1: Database URL
         logger.info("Check 1: Database URL Configuration")
         if not self.database_url:
-            logger.error("✗ DATABASE_URL not set")
-            logger.info("ℹ Set DATABASE_URL, POSTGRES_URL, or DATABASE_PRIVATE_URL")
-            return False
-        logger.info(f"✓ DATABASE_URL configured")
+            if config_only:
+                logger.warning("⚠ DATABASE_URL not set - will use placeholder in config")
+                logger.info("ℹ Update the generated config with your actual DATABASE_URL")
+            else:
+                logger.error("✗ DATABASE_URL not set")
+                logger.info("ℹ Set DATABASE_URL, POSTGRES_URL, or DATABASE_PRIVATE_URL")
+                logger.info("ℹ Or use --config-only flag to generate configuration template")
+                return False
+        else:
+            logger.info(f"✓ DATABASE_URL configured")
         logger.info("")
+        
+        # Skip database checks if config_only mode
+        if config_only:
+            logger.info("ℹ Skipping database checks (config-only mode)")
+            logger.info("")
+            
+            # Check 4: Connection pooling config (doesn't require DB connection)
+            logger.info("Check 4: Connection Pooling Configuration")
+            config = await self.configure_connection_pooling()
+            logger.info("")
+            
+            # Success!
+            logger.info("=" * 70)
+            logger.info("✓ CONFIGURATION GENERATED".center(70))
+            logger.info("=" * 70)
+            logger.info("")
+            return True
         
         # Check 2: Connection test
         logger.info("Check 2: Database Connection (Immortal Retry)")
@@ -351,10 +385,13 @@ Your app is now IMMORTAL on Vercel! 🚀
 
 async def main():
     """Main execution function"""
+    # Check for config-only mode
+    config_only = "--config-only" in sys.argv or len(sys.argv) == 1
+    
     fixer = ImmortalMigrationFix()
     
     # Run all checks
-    success = await fixer.run_immortal_checks()
+    success = await fixer.run_immortal_checks(config_only=config_only)
     
     if success:
         # Print deployment instructions
@@ -368,10 +405,15 @@ async def main():
         logger.info(f"✓ Environment configuration saved to: {config_file}")
         logger.info("")
         
+        if config_only:
+            logger.info("ℹ Configuration generated in config-only mode")
+            logger.info("ℹ Set DATABASE_URL and run without --config-only to verify connection")
+        
         sys.exit(0)
     else:
         logger.error("✗ Immortal checks failed")
         logger.info("ℹ Fix the issues above and run again")
+        logger.info("ℹ Or use --config-only to generate configuration without database checks")
         sys.exit(1)
 
 

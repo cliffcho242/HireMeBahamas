@@ -1,0 +1,41 @@
+
+# ============================================================================
+# IMMORTAL VERCEL POSTGRES CONFIGURATION
+# Copy these to: Vercel Dashboard → Settings → Environment Variables
+# ============================================================================
+
+# Database Connection (REQUIRED)
+DATABASE_URL=postgresql://default:PASSWORD@ep-xxxxx.neon.tech:5432/verceldb?sslmode=require
+POSTGRES_URL=postgresql://default:PASSWORD@ep-xxxxx.neon.tech:5432/verceldb?sslmode=require
+
+# Connection Pooling (RECOMMENDED)
+DB_POOL_SIZE=2
+DB_MAX_OVERFLOW=3
+DB_POOL_RECYCLE=120
+DB_POOL_TIMEOUT=30
+
+# SSL/TLS Configuration (REQUIRED)
+DB_SSL_MODE=require
+DB_FORCE_TLS_1_3=true
+
+# Timeouts (RECOMMENDED)
+DB_CONNECT_TIMEOUT=45
+DB_COMMAND_TIMEOUT=30
+DB_STATEMENT_TIMEOUT_MS=30000
+
+# Application (REQUIRED)
+ENVIRONMENT=production
+SECRET_KEY=<generate-with: python3 -c "import secrets; print(secrets.token_urlsafe(32))">
+JWT_SECRET_KEY=<generate-with: python3 -c "import secrets; print(secrets.token_urlsafe(32))">
+
+# Frontend (OPTIONAL)
+FRONTEND_URL=https://your-app.vercel.app
+
+# ============================================================================
+# IMMORTAL FEATURES ENABLED:
+# ✓ Automatic connection retry (10 attempts with exponential backoff)
+# ✓ Connection pooling with pre-ping validation
+# ✓ SSL EOF error prevention (120s connection recycling)
+# ✓ Extended timeouts for cold starts (45s connect, 30s command)
+# ✓ TLS 1.3 enforcement for maximum compatibility
+# ============================================================================
