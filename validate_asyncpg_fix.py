@@ -7,6 +7,9 @@ Validates that asyncpg is correctly installed with binary-only wheels
 import sys
 import subprocess
 
+# Expected asyncpg version
+EXPECTED_ASYNCPG_VERSION = "0.30.0"
+
 def test_asyncpg_installation():
     """Test asyncpg 0.30.0 installation"""
     print("🔍 Testing asyncpg installation...")
@@ -15,11 +18,11 @@ def test_asyncpg_installation():
         import asyncpg
         version = asyncpg.__version__
         
-        if version == "0.30.0":
+        if version == EXPECTED_ASYNCPG_VERSION:
             print(f"✅ asyncpg version: {version} - CORRECT")
             return True
         else:
-            print(f"❌ asyncpg version: {version} - EXPECTED 0.30.0")
+            print(f"❌ asyncpg version: {version} - EXPECTED {EXPECTED_ASYNCPG_VERSION}")
             return False
     except ImportError as e:
         print(f"❌ Failed to import asyncpg: {e}")
