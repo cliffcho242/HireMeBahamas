@@ -57,6 +57,10 @@
 ✅ **Simple routing**: Automatically forwards `/api/auth/me` → `api/auth/me.py`  
 ✅ **Less maintenance**: No need to add new files to config manually  
 
+**Security Note:** The CORS configuration uses `Access-Control-Allow-Origin: *` for development convenience. For production, consider restricting this to your specific frontend domain in the Vercel dashboard settings.
+
+**Cron Jobs:** The health check cron configuration was removed from vercel.json to avoid conflicts. If you need automated health checks, configure them separately in Vercel Dashboard → Settings → Cron Jobs.  
+
 ---
 
 ## 🚀 How to Update VITE_API_URL

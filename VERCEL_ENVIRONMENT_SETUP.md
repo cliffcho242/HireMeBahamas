@@ -185,6 +185,10 @@ The root `vercel.json` has been simplified while maintaining essential configura
 - ✅ `headers`: Includes essential CORS and security headers
 - ✅ No `functions` key = No conflicts with Vercel configuration
 
+**Security Notes:**
+- ⚠️ The `Access-Control-Allow-Origin: *` allows all origins. For production, consider restricting to your frontend domain in Vercel dashboard settings
+- ℹ️ Cron jobs (like health checks) should be configured separately in Vercel dashboard under Settings → Cron Jobs if needed
+
 ---
 
 ## 📚 Related Documentation
