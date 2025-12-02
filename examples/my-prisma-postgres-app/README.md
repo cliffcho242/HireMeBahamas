@@ -11,7 +11,51 @@ Follow these steps to set up and run the application:
 - Node.js 18+ installed
 - A Prisma Postgres account (free tier available at [console.prisma.io](https://console.prisma.io/))
 
-### Setup Instructions
+### Automated Setup (Recommended)
+
+```bash
+cd my-prisma-postgres-app
+
+# Run the setup script
+./setup.sh
+```
+
+The script will:
+1. Install dependencies
+2. Create .env file from template
+3. Generate Prisma Client
+4. Optionally run migrations
+5. Optionally seed the database
+
+### Manual Setup Instructions
+
+```bash
+cd my-prisma-postgres-app
+
+# 1. Install dependencies
+npm install
+
+# 2. Create .env file with DATABASE_URL
+# Copy .env.example to .env and add your API key
+cp .env.example .env
+# Edit .env: DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=YOUR_KEY"
+
+# 3. Generate Prisma Client
+npx prisma generate
+
+# 4. Run migrations
+npx prisma migrate dev --name init
+
+# 5. Seed database (optional)
+npm run db:seed
+
+# 6. Start development server
+npm run dev
+```
+
+### Starting Fresh with Prisma Init
+
+If you want to initialize Prisma from scratch (without our example schema):
 
 ```bash
 cd my-prisma-postgres-app

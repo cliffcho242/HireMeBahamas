@@ -548,6 +548,18 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **Login issues**: Check browser console for errors
 - **API errors**: Verify backend is running on port 8008
 
+## 📚 Examples
+
+Check out the [examples directory](./examples/) for additional sample applications:
+
+- **[Prisma Postgres App](./examples/my-prisma-postgres-app/)** - Complete Next.js application using Prisma with Prisma Postgres (Accelerate)
+  - Learn how to set up Prisma with Next.js 15
+  - Type-safe database access with Prisma Client
+  - Database migrations and seeding
+  - Perfect starting point for modern database-driven apps
+
+See the [examples README](./examples/README.md) for a complete list of available examples.
+
 ## 🎉 What's Next
 
 ### Planned Features
