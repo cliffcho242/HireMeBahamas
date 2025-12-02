@@ -1,8 +1,8 @@
 import os
 from typing import List, Optional
 
-from app.core.security import get_current_user
-from app.core.upload import (
+from ..core.security import get_current_user
+from ..core.upload import (
     ALLOWED_IMAGE_TYPES,
     delete_file,
     extract_filename_from_url,
@@ -12,8 +12,8 @@ from app.core.upload import (
     upload_to_cloudinary,
     upload_to_gcs,
 )
-from app.database import get_db
-from app.models import UploadedFile, User
+from ..database import get_db
+from ..models import UploadedFile, User
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

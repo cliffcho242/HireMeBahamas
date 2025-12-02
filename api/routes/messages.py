@@ -1,9 +1,9 @@
 from typing import List, Optional
 
-from app.core.security import get_current_user
-from app.database import get_db
-from app.models import Conversation, Message, Notification, NotificationType, User
-from app.schemas.message import (
+from ..core.security import get_current_user
+from ..database import get_db
+from ..models import Conversation, Message, Notification, NotificationType, User
+from ..schemas.message import (
     ConversationCreate,
     ConversationResponse,
     MessageCreate,

@@ -1,10 +1,10 @@
 from typing import List, Optional
 from uuid import UUID
 
-from app.core.security import get_current_user
-from app.database import get_db
-from app.models import Job, JobApplication, Review, User
-from app.schemas.review import ReviewCreate, ReviewResponse, ReviewUpdate
+from ..core.security import get_current_user
+from ..database import get_db
+from ..models import Job, JobApplication, Review, User
+from ..schemas.review import ReviewCreate, ReviewResponse, ReviewUpdate
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession

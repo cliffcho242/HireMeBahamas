@@ -1,8 +1,8 @@
 from typing import Optional
 
-from app.core.security import get_current_user
-from app.database import get_db
-from app.models import Notification, NotificationType, User
+from ..core.security import get_current_user
+from ..database import get_db
+from ..models import Notification, NotificationType, User
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession

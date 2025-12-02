@@ -165,8 +165,8 @@ async def get_current_user(
     """Get current authenticated user"""
     try:
         # Import User model here to avoid circular imports
-        from app.database import get_async_session
-        from app.models import User
+        from database import get_async_session
+        from models import User
 
         if db is None:
             async with get_async_session() as session:
@@ -221,8 +221,8 @@ async def get_current_user_optional(
     
     try:
         # Import User model here to avoid circular imports
-        from app.database import get_async_session
-        from app.models import User
+        from database import get_async_session
+        from models import User
 
         token = credentials.credentials
         payload = verify_token(token)

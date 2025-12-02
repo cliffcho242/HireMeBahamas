@@ -1,8 +1,8 @@
 from typing import Optional
 
-from app.core.security import get_current_user
-from app.database import get_db
-from app.models import User
+from ..core.security import get_current_user
+from ..database import get_db
+from ..models import User
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession

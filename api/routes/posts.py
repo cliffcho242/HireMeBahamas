@@ -2,10 +2,10 @@ from typing import List, Optional
 from uuid import UUID
 import logging
 
-from app.core.security import get_current_user
-from app.database import get_db
-from app.models import Post, PostLike, PostComment, User
-from app.schemas.post import (
+from ..core.security import get_current_user
+from ..database import get_db
+from ..models import Post, PostLike, PostComment, User
+from ..schemas.post import (
     PostCreate,
     PostUpdate,
     PostResponse,

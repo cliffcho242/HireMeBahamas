@@ -1,10 +1,10 @@
 import os
 from typing import List
 
-from app.api.auth import get_current_user
-from app.core.upload import ALLOWED_IMAGE_TYPES, delete_file, upload_image
-from app.database import get_db
-from app.models import ProfilePicture, User
+from ..routes.auth import get_current_user
+from ..core.upload import ALLOWED_IMAGE_TYPES, delete_file, upload_image
+from ..database import get_db
+from ..models import ProfilePicture, User
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession

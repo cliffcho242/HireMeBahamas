@@ -7,10 +7,10 @@ from strawberry.fastapi import GraphQLRouter
 from fastapi import Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.graphql.resolvers import Query, Mutation
-from app.database import get_db
-from app.core.security import get_current_user_optional
-from app.models import User
+from ..graphql.resolvers import Query, Mutation
+from ..database import get_db
+from ..core.security import get_current_user_optional
+from ..models import User
 
 logger = logging.getLogger(__name__)
 

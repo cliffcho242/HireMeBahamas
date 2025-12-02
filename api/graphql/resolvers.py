@@ -9,11 +9,11 @@ from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import (
+from ..models import (
     User, Post, PostLike, PostComment, Message, Conversation,
     Notification, Job, Follow
 )
-from app.graphql.types import (
+from ..graphql.types import (
     UserType, PostType, PostAuthorType, CommentType, CommentAuthorType,
     MessageType, MessageSenderType, ConversationType, ConversationParticipantType,
     NotificationType, JobType, FriendType,

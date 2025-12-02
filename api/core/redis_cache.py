@@ -13,7 +13,7 @@ Performance targets:
 - 99th percentile: <10ms
 
 Usage:
-    from app.core.redis_cache import redis_cache, cache_decorator
+    from core.redis_cache import redis_cache, cache_decorator
 
     # Direct cache operations
     await redis_cache.set("user:123", user_data, ttl=300)
@@ -546,8 +546,8 @@ async def warm_cache():
     This should be called on startup and periodically via cron.
     Implements Meta's "hot path" caching strategy.
     """
-    from app.database import AsyncSessionLocal
-    from app.models import User, Post, Job
+    from database import AsyncSessionLocal
+    from models import User, Post, Job
     from sqlalchemy import select, func
     
     logger.info("Starting cache warm-up...")

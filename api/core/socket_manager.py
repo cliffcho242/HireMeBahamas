@@ -2,9 +2,9 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 import socketio
-from app.core.security import verify_token
-from app.database import AsyncSessionLocal
-from app.models import Message, User
+from ..core.security import verify_token
+from ..database import AsyncSessionLocal
+from ..models import Message, User
 from sqlalchemy import select
 
 

@@ -7,7 +7,7 @@ import re
 import hashlib
 from threading import Lock
 
-from app.core.security import (
+from ..core.security import (
     create_access_token,
     decode_access_token,
     get_password_hash,
@@ -16,10 +16,10 @@ from app.core.security import (
     verify_password_async,
     BCRYPT_ROUNDS,
 )
-from app.core.upload import upload_image
-from app.database import get_db
-from app.models import User
-from app.schemas.auth import (
+from ..core.upload import upload_image
+from ..database import get_db
+from ..models import User
+from ..schemas.auth import (
     OAuthLogin,
     PasswordChange,
     Token,

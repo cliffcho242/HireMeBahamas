@@ -1,4 +1,4 @@
-from app.database import Base
+from .database import Base
 from sqlalchemy import Boolean, Column, DateTime, Enum as SQLEnum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship

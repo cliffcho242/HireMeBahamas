@@ -10,7 +10,7 @@ Metrics categories:
 - Application health metrics (uptime, version)
 
 Usage:
-    from app.core.metrics import (
+    from core.metrics import (
         request_counter, 
         request_duration, 
         get_metrics_response
