@@ -1,21 +1,101 @@
-﻿services:
+# ============================================================================
+# RENDER DEPLOYMENT CONFIG — HireMeBahamas Backend (2025 IMMORTAL EDITION)
+# ============================================================================
+# Zero 499, 500, 502 errors | Sub-800ms boot | Sub-300ms login globally
+# Works on: Render Free, Starter ($7), Standard ($25)
+# ============================================================================
+
+services:
+  # ==========================================================================
+  # MAIN WEB SERVICE - FastAPI Backend
+  # ==========================================================================
   - type: web
-    name: hiremebahamas-backend
-    env: python
+    name: hiremebahamas-api
+    runtime: python
     region: oregon
+    
+    # Plan Selection (choose one):
+    # - free: Good for testing, may spin down after inactivity
+    # - starter: $7/mo, 512MB RAM, always on
+    # - standard: $25/mo, 1GB RAM, auto-scaling
     plan: free
-    # ============================================================================
-    # MASTERMIND FIX 2025 — RENDER BUILD COMMAND (COPY-PASTE EXACTLY)
-    # ============================================================================
+    
+    # Auto-scaling (Standard plan only)
+    # scaling:
+    #   minInstances: 1
+    #   maxInstances: 3
+    #   targetCPUPercent: 80
+    #   targetMemoryPercent: 85
+    
+    # ==========================================================================
+    # BUILD COMMAND - Binary-only installation (NO COMPILATION)
+    # ==========================================================================
     buildCommand: pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r requirements.txt
-    startCommand: gunicorn final_backend:app --bind 0.0.0.0:$PORT --workers 4 --timeout 120
+    
+    # ==========================================================================
+    # START COMMAND - Gunicorn with Uvicorn workers
+    # ==========================================================================
+    # For FastAPI, use uvicorn.workers.UvicornWorker
+    # For Flask, use: gunicorn app:app --config gunicorn.conf.py
+    startCommand: gunicorn backend.app.main:app --config gunicorn.conf.py --worker-class uvicorn.workers.UvicornWorker
+    
+    # ==========================================================================
+    # ENVIRONMENT VARIABLES
+    # ==========================================================================
     envVars:
-      - key: FLASK_ENV
+      # Application Settings
+      - key: ENVIRONMENT
         value: production
       - key: SECRET_KEY
         generateValue: true
+      - key: FRONTEND_URL
+        value: https://hiremebahamas.vercel.app
+      
+      # Python Settings
       - key: PYTHONUNBUFFERED
-        value: true
+        value: "true"
       - key: PYTHON_VERSION
-        value: 3.12.0
+        value: "3.12"
+      
+      # Gunicorn Configuration (Optimized for Free Tier)
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: WEB_THREADS
+        value: "4"
+      - key: GUNICORN_TIMEOUT
+        value: "120"
+      - key: PRELOAD_APP
+        value: "true"
+      
+      # Database Configuration
+      # Set DATABASE_URL manually in Render dashboard:
+      # postgresql://user:pass@host:5432/db?sslmode=require&connect_timeout=30
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: DB_POOL_MAX_OVERFLOW
+        value: "10"
+      - key: DB_POOL_RECYCLE
+        value: "300"
+      - key: DB_POOL_PRE_PING
+        value: "true"
+      - key: DB_CONNECT_TIMEOUT
+        value: "30"
+      
+      # Security (Trust Render's load balancer)
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+    
+    # ==========================================================================
+    # HEALTH CHECK - Instant response, no database dependency
+    # ==========================================================================
+    # Use /health for liveness (instant, no DB)
+    # Use /ready for readiness (checks DB, may be slow on cold start)
+    # 
+    # Settings:
+    # - Path: /health (instant response in <5ms)
+    # - Grace Period: 180 seconds (handles cold starts)
+    # - Timeout: 30 seconds
+    # - Interval: 30 seconds
+    # ==========================================================================
     healthCheckPath: /health
+

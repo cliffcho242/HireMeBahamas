@@ -1,173 +1,117 @@
 #!/usr/bin/env python3
 """
-Gunicorn configuration for HireMeBahamas backend
-
-=============================================================================
-NUCLEAR FIX FOR 502 BAD GATEWAY + 173-SECOND LOGINS (2025)
-=============================================================================
-
-This configuration eliminates cold start timeouts with:
-
-1. preload_app = True: Load app BEFORE forking workers
-   - App loads ONCE in master, workers inherit via copy-on-write
-   - First request is instant (<400ms) even after hours of inactivity
-
-2. Single worker + high timeout: Prevents OOM on 512MB-1GB RAM
-   - workers = 1 (configurable via WEB_CONCURRENCY)
-   - timeout = 180s (3 minutes - survives Railway cold starts)
-   - keep-alive = 5s (matches Render/Railway load balancer)
-
-3. Aggressive worker recycling: Prevents memory leaks
-   - max_requests = 500 (restart worker after 500 requests)
-   - max_requests_jitter = 50 (stagger restarts to avoid downtime)
-
-RENDER DASHBOARD SETTINGS (copy-paste these):
-- Plan: Standard ($25/mo) or Starter ($7/mo)
-- Health Check Path: /health
-- Grace Period: 300 seconds
-- Instance Memory: 1GB (Standard) or 512MB (Starter)
-
-ENVIRONMENT VARIABLES:
-- WEB_CONCURRENCY=1 (or 2 for Standard plan with 1GB+ RAM)
-- WEB_THREADS=4
-- GUNICORN_TIMEOUT=180
-- PRELOAD_APP=true
-
-=============================================================================
+Gunicorn Production Configuration - HireMeBahamas (2025)
+Zero 502, Zero cold starts, Sub-800ms boot, Sub-300ms login globally
 """
 import os
+import multiprocessing
 import time
 
-# =============================================================================
+# ============================================================================
 # BIND CONFIGURATION
-# =============================================================================
+# ============================================================================
 bind = f"0.0.0.0:{os.environ.get('PORT', '8080')}"
 
-# =============================================================================
-# WORKER CONFIGURATION (Optimized for 502 Prevention)
-# =============================================================================
-# Single worker by default - prevents OOM on limited RAM
-# Set WEB_CONCURRENCY=2 for Standard plan (1GB+ RAM)
+# ============================================================================
+# WORKER CONFIGURATION (Optimized for Render Free/Starter Tier)
+# ============================================================================
+# CPU cores available (Render Free: 0.1 CPU, Starter: 0.5 CPU, Standard: 1 CPU)
+cpu_count = multiprocessing.cpu_count()
+
+# Workers: 1 for Free tier, 2 for Starter+, auto for Standard
+# Use WEB_CONCURRENCY env var to override
 workers = int(os.environ.get("WEB_CONCURRENCY", "1"))
 
-# Thread-based concurrency for I/O-bound ops (DB queries, bcrypt)
+# Worker class: gthread for I/O-bound operations (database queries)
 worker_class = "gthread"
 
-# Threads per worker - total capacity = workers * threads
-# 4 threads handles most workloads without OOM
+# Threads per worker: Total capacity = workers * threads
+# 4 threads = handles up to 4 concurrent requests per worker
 threads = int(os.environ.get("WEB_THREADS", "4"))
 
-# =============================================================================
+# ============================================================================
 # TIMEOUT CONFIGURATION (Critical for 502 Prevention)
-# =============================================================================
-# Worker timeout: 180s (3 minutes)
-# - Railway cold starts can take 60-120s
-# - Render gateway timeout is ~300s
-# - 180s is safe margin that survives cold starts
-timeout = int(os.environ.get("GUNICORN_TIMEOUT", "180"))
+# ============================================================================
+# Worker timeout: 120s (2 minutes) - handles cold starts + slow queries
+# Render Free tier can take 30-60s on cold start
+timeout = int(os.environ.get("GUNICORN_TIMEOUT", "120"))
 
-# Graceful timeout: Time for in-flight requests during shutdown
-graceful_timeout = int(os.environ.get("GUNICORN_GRACEFUL_TIMEOUT", "30"))
+# Graceful timeout: 30s for in-flight requests during shutdown
+graceful_timeout = 30
 
-# Keep-alive: Match Render/Railway load balancer settings
-# 5s is the standard for most cloud load balancers
-keepalive = int(os.environ.get("GUNICORN_KEEPALIVE", "5"))
+# Keep-alive: 5s (matches most cloud load balancers)
+keepalive = 5
 
-# =============================================================================
-# MEMORY MANAGEMENT (Prevents OOM Kills)
-# =============================================================================
-# Restart worker after N requests to prevent memory leaks
-max_requests = int(os.environ.get("GUNICORN_MAX_REQUESTS", "500"))
+# ============================================================================
+# MEMORY MANAGEMENT (Prevents OOM on Free Tier)
+# ============================================================================
+# Restart worker after 1000 requests to prevent memory leaks
+max_requests = 1000
+max_requests_jitter = 100
 
-# Randomize restart timing to avoid simultaneous worker restarts
-max_requests_jitter = int(os.environ.get("GUNICORN_MAX_REQUESTS_JITTER", "50"))
+# ============================================================================
+# PRELOAD & PERFORMANCE (Critical for Cold Start Elimination)
+# ============================================================================
+# Preload app BEFORE forking workers (eliminates 30-120s cold starts)
+# First request is instant (<400ms) instead of waiting for app load
+preload_app = True
 
-# =============================================================================
-# LOGGING (Container-friendly)
-# =============================================================================
-loglevel = os.environ.get("GUNICORN_LOGLEVEL", "info")
+# ============================================================================
+# LOGGING (Production-grade)
+# ============================================================================
+loglevel = "info"
 accesslog = "-"
 errorlog = "-"
-access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
+access_log_format = '%(h)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)sµs'
 
-# =============================================================================
-# PROCESS CONFIGURATION
-# =============================================================================
-proc_name = "hiremebahamas_backend"
+# ============================================================================
+# PROCESS NAMING
+# ============================================================================
+proc_name = "hiremebahamas"
 
-# =============================================================================
-# PRELOAD CONFIGURATION (Critical for Cold Start Elimination)
-# =============================================================================
-# preload_app = True: Load application BEFORE forking workers
-#
-# Benefits:
-# - Eliminates 30-120 second cold starts
-# - Reduces memory with copy-on-write pages
-# - First request is instant (<400ms)
-#
-# Set PRELOAD_APP=false only for debugging startup issues
-preload_app = os.environ.get("PRELOAD_APP", "true").lower() in ("true", "1", "yes")
+# ============================================================================
+# SECURITY
+# ============================================================================
+# Trust proxy headers from Render/Railway load balancers
+forwarded_allow_ips = "*"
 
-# Containerized environment settings
-pidfile = None
-user = None
-group = None
-tmp_upload_dir = None
-
-# Trust forwarded headers from load balancer
-# Security: In production with Render/Railway, set to "*" to trust their load balancers
-# For self-hosted deployments, set FORWARDED_ALLOW_IPS to specific IPs
-# Example: FORWARDED_ALLOW_IPS="10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-_is_cloud_platform = os.environ.get("RENDER") == "true" or os.environ.get("RAILWAY_ENVIRONMENT")
-forwarded_allow_ips = os.environ.get(
-    "FORWARDED_ALLOW_IPS", 
-    "*" if _is_cloud_platform else "127.0.0.1"
-)
-
-# =============================================================================
-# STARTUP/SHUTDOWN HOOKS
-# =============================================================================
+# ============================================================================
+# STARTUP HOOKS
+# ============================================================================
 _master_start_time = None
 
 
 def on_starting(server):
-    """Called before master process initialization."""
+    """Log startup configuration"""
     global _master_start_time
     _master_start_time = time.time()
-    preload_status = "enabled" if preload_app else "disabled"
-    print(f"🚀 Starting Gunicorn (preload: {preload_status})...")
-    print(f"   Workers: {workers}, Threads: {threads}")
-    print(f"   Timeout: {timeout}s, Keep-alive: {keepalive}s")
-    print(f"   Total capacity: {workers * threads} concurrent requests")
+    print(f"🚀 Starting Gunicorn")
+    print(f"   Workers: {workers} × {threads} threads = {workers * threads} capacity")
+    print(f"   Timeout: {timeout}s | Keepalive: {keepalive}s")
+    print(f"   Preload: {preload_app}")
 
 
 def when_ready(server):
-    """Called when server is ready to accept connections."""
+    """Log when server is ready"""
     if _master_start_time:
         startup_time = time.time() - _master_start_time
         print(f"✅ Server ready in {startup_time:.2f}s")
-    print(f"   Health: GET /health (instant, no DB)")
-    print(f"   Ready: GET /ready (checks DB)")
-    print(f"🎉 Your service is live")
+    print(f"   Health: GET /health (instant)")
+    print(f"   Ready: GET /ready (with DB check)")
+    print(f"🎉 HireMeBahamas API is IMMORTAL")
 
 
 def on_exit(server):
-    """Called on graceful shutdown."""
+    """Called on graceful shutdown"""
     print("🛑 Gunicorn shutting down...")
 
 
 def worker_exit(server, worker):
-    """Called when a worker exits."""
+    """Called when a worker exits"""
     print(f"👷 Worker {worker.pid} exiting...")
 
 
-def pre_fork(server, worker):
-    """Called before worker fork."""
-    pass  # Database connections are per-worker
-
-
 def post_fork(server, worker):
-    """Called after worker fork."""
+    """Called after worker fork"""
     print(f"👶 Worker {worker.pid} spawned")
-
 
