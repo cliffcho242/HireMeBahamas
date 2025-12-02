@@ -11,7 +11,7 @@ version: '3.8'
 services:
   # PostgreSQL Database with High Availability settings
   postgres:
-    image: ghcr.io/railwayapp-templates/postgres-ssl:16.11
+    image: ghcr.io/railwayapp-templates/postgres-ssl:13.23
     environment:
       POSTGRES_DB: hiremebahamas
       POSTGRES_USER: hiremebahamas_user
