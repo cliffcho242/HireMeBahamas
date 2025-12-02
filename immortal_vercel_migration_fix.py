@@ -365,7 +365,6 @@ async def main():
         f.write(env_config)
     
     # Set restrictive file permissions (owner read/write only)
-    import os
     os.chmod(config_file, 0o600)
     
     logger.info(f"✓ Environment configuration saved to: {config_file}")

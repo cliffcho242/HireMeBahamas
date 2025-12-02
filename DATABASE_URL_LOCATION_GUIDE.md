@@ -57,6 +57,8 @@ Vercel Dashboard → HireMeBahamas → Storage → Postgres Database → .env.lo
 postgresql://default:abc123xyz789password@ep-cool-name-123456.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require
 ```
 
+**⚠️ IMPORTANT:** The values above (abc123xyz789password, ep-cool-name-123456, etc.) are placeholder examples only. Your actual DATABASE_URL will contain different randomly-generated credentials and endpoints. Never share your real DATABASE_URL publicly!
+
 **💡 Tips:**
 - The password is the long random string after `default:`
 - The endpoint is the long hostname like `ep-cool-name-123456.us-east-1.aws.neon.tech`
