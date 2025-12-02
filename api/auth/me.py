@@ -17,8 +17,14 @@ except ImportError:
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-JWT_SECRET = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+JWT_SECRET = os.getenv("SECRET_KEY")
+if not JWT_SECRET:
+    raise RuntimeError("SECRET_KEY environment variable must be set")
+    
 JWT_ALGORITHM = "HS256"
+
+# Get allowed origins from environment (comma-separated)
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
 # Mock user data - replace with database query in production
 MOCK_USERS = {
@@ -43,7 +49,7 @@ app = FastAPI(title="Auth Me API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
