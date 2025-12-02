@@ -2,6 +2,7 @@
 """
 MASTER NETWORK FIX - Permanent Solution for HireMeBahamas
 Ensures backend always starts reliably and network never fails
+Cross-platform compatible (Windows, Linux, macOS)
 """
 
 import logging
@@ -40,6 +41,7 @@ def install_required_packages():
         "bcrypt",
         "python-dotenv",
         "requests",
+        "psycopg2-binary",  # Database adapter for PostgreSQL
     ]
 
     import subprocess
@@ -63,6 +65,8 @@ def install_required_packages():
 
 def check_port_availability(port, max_attempts=3):
     """Check if port is available, kill blocking process if needed"""
+    import platform
+    
     for attempt in range(max_attempts):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(1)
@@ -77,19 +81,33 @@ def check_port_availability(port, max_attempts=3):
             f"Port {port} is in use, attempting to free it (attempt {attempt + 1}/{max_attempts})"
         )
 
-        # Try to kill process on Windows
+        # Try to kill process (platform-specific)
         import subprocess
 
         try:
-            subprocess.run(
-                [
-                    "powershell",
-                    "-Command",
-                    f"Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object {{ Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }}",
-                ],
-                capture_output=True,
-                timeout=5,
-            )
+            if platform.system() == "Windows":
+                # Windows-specific command
+                subprocess.run(
+                    [
+                        "powershell",
+                        "-Command",
+                        f"Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object {{ Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }}",
+                    ],
+                    capture_output=True,
+                    timeout=5,
+                )
+            else:
+                # Linux/Unix: use lsof and kill
+                result = subprocess.run(
+                    ["lsof", "-ti", f":{port}"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if result.stdout.strip():
+                    pids = result.stdout.strip().split("\n")
+                    for pid in pids:
+                        subprocess.run(["kill", "-9", pid], capture_output=True)
             time.sleep(2)
         except Exception as e:
             logger.warning(f"Could not kill process on port {port}: {e}")
@@ -166,33 +184,60 @@ def start_backend_server(port=9999):
     return True
 
 
-def configure_windows_networking():
-    """Configure Windows networking for optimal Flask performance"""
-    logger.info("Configuring Windows networking...")
-
+def configure_system_networking():
+    """Configure system networking for optimal Flask performance (platform-aware)"""
+    import platform
     import subprocess
+    
+    system = platform.system()
+    logger.info(f"Configuring networking for {system}...")
 
-    commands = [
-        # Reset network stack
-        "netsh winsock reset",
-        # Reset TCP/IP
-        "netsh int ip reset",
-        # Flush DNS
-        "ipconfig /flushdns",
-        # Enable IPv4
-        "netsh interface ipv4 set global defaultcurhoplimit=64",
-    ]
+    if system == "Windows":
+        commands = [
+            # Reset network stack
+            "netsh winsock reset",
+            # Reset TCP/IP
+            "netsh int ip reset",
+            # Flush DNS
+            "ipconfig /flushdns",
+            # Enable IPv4
+            "netsh interface ipv4 set global defaultcurhoplimit=64",
+        ]
 
-    for cmd in commands:
+        for cmd in commands:
+            try:
+                logger.info(f"Running: {cmd}")
+                subprocess.run(
+                    ["powershell", "-Command", cmd], capture_output=True, timeout=10
+                )
+            except Exception as e:
+                logger.warning(f"Could not run {cmd}: {e}")
+    else:
+        # Linux/Unix networking configuration
+        commands = [
+            # Flush DNS (if systemd-resolved is available)
+            ["systemctl", "is-active", "systemd-resolved"],
+        ]
+        
         try:
-            logger.info(f"Running: {cmd}")
-            subprocess.run(
-                ["powershell", "-Command", cmd], capture_output=True, timeout=10
+            # Check if systemd-resolved is available
+            result = subprocess.run(
+                ["systemctl", "is-active", "systemd-resolved"],
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
+            if result.returncode == 0:
+                logger.info("Flushing DNS cache...")
+                subprocess.run(
+                    ["sudo", "systemd-resolve", "--flush-caches"],
+                    capture_output=True,
+                    timeout=5,
+                )
         except Exception as e:
-            logger.warning(f"Could not run {cmd}: {e}")
+            logger.info(f"DNS flush not needed or unavailable: {e}")
 
-    logger.info("✓ Windows networking configured")
+    logger.info(f"✓ {system} networking configured")
 
 
 def create_network_test():
@@ -253,9 +298,9 @@ def main():
     logger.info("\n[1/5] Installing required packages...")
     install_required_packages()
 
-    # Step 2: Configure Windows networking
-    logger.info("\n[2/5] Configuring Windows networking...")
-    configure_windows_networking()
+    # Step 2: Configure system networking
+    logger.info("\n[2/5] Configuring system networking...")
+    configure_system_networking()
 
     # Step 3: Check and free port
     logger.info("\n[3/5] Checking port availability...")

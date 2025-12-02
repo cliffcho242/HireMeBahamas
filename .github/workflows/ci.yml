@@ -41,6 +41,36 @@ jobs:
         working-directory: ./frontend
         run: npm run build
 
+  validate-vercel-config:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate Vercel configuration
+        run: |
+          python3 scripts/validate_vercel_config.py
+          
+      - name: Validation summary
+        if: always()
+        run: |
+          echo "## Vercel Configuration Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ All vercel.json files are valid" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Vercel configuration validation failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
   test-api:
     runs-on: ubuntu-latest
     permissions:
