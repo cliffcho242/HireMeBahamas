@@ -97,7 +97,37 @@ Base images include all system dependencies pre-installed:
 
 ### 🗄️ Database Setup
 
-#### Vercel Postgres (Recommended for Vercel Deployments)
+#### Vercel Postgres (⭐ Recommended - Best Performance & Integration)
+
+**NEW**: Full Vercel Postgres support with automated migration tools!
+
+Vercel Postgres offers the best integration for this application:
+- ✅ **Zero Cold Starts**: Database stays warm on Vercel's infrastructure
+- ✅ **<50ms Latency**: Direct connection from Vercel Edge & Serverless
+- ✅ **Free Tier**: 0.5GB storage, perfect for development and small apps
+- ✅ **Auto-Scaling**: Serverless architecture scales with your app
+- ✅ **Built-in Pooling**: Connection pooling handled automatically
+- ✅ **Cost Effective**: $0-5/month vs $7-20/month on Railway/Render
+
+**Quick Setup:**
+1. 📖 **[Complete Setup Guide](./VERCEL_POSTGRES_SETUP.md)** - Detailed step-by-step instructions
+2. 📖 **[Migration from Railway/Render](./VERCEL_POSTGRES_MIGRATION_GUIDE.md)** - Zero-downtime migration guide
+3. 📖 **[Quick Start](./docs/VERCEL_POSTGRES_QUICK_START.md)** - 5-minute setup
+
+**Automated Migration:**
+```bash
+# Set environment variables
+export RAILWAY_DATABASE_URL="postgresql://user:pass@railway.app:5432/railway"
+export VERCEL_POSTGRES_URL="postgresql://user:pass@ep-xxxxx.neon.tech:5432/verceldb"
+
+# Run migration (includes verification)
+python scripts/migrate_railway_to_vercel.py
+
+# Verify migration success
+python scripts/verify_vercel_postgres_migration.py
+```
+
+#### Railway Postgres (Alternative)
 
 Vercel Postgres (powered by Neon) provides serverless PostgreSQL optimized for Vercel:
 
