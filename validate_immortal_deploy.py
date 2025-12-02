@@ -22,23 +22,25 @@ def check_requirements():
     with open("requirements.txt", "r") as f:
         content = f.read()
         
+    # Packages with exact versions
     required_packages = [
-        ("fastapi", "0.115.5"),
-        ("uvicorn", "0.32.0"),
-        ("gunicorn", "23.0.0"),
-        ("asyncpg", "0.30.0"),
-        ("sqlalchemy", "2.0.36"),
+        ("fastapi", "==", "0.115.5"),
+        ("uvicorn", "==", "0.32.0"),
+        ("gunicorn", "==", "23.0.0"),
+        ("sqlalchemy", "==", "2.0.36"),
+        ("asyncpg", "", ">=0.29.0,<0.30.0"),  # Version range constraint
     ]
     
     all_found = True
-    for pkg_name, version in required_packages:
+    for pkg_name, operator, version in required_packages:
+        version_spec = f"{operator}{version}"
         # Check for package with version (handles [extras] in package names)
-        if f"{pkg_name}[" in content and f"=={version}" in content:
-            print(f"  ✅ {pkg_name}=={version}")
-        elif f"{pkg_name}=={version}" in content:
-            print(f"  ✅ {pkg_name}=={version}")
+        if f"{pkg_name}[" in content and version_spec in content:
+            print(f"  ✅ {pkg_name}{version_spec}")
+        elif f"{pkg_name}{version_spec}" in content:
+            print(f"  ✅ {pkg_name}{version_spec}")
         else:
-            print(f"  ❌ {pkg_name}=={version} - NOT FOUND")
+            print(f"  ❌ {pkg_name}{version_spec} - NOT FOUND")
             all_found = False
     
     return all_found
