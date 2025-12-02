@@ -647,12 +647,8 @@ async def metrics():
 # VERCEL SERVERLESS HANDLER
 # =============================================================================
 # Mangum wraps the FastAPI app for AWS Lambda / Vercel compatibility
-try:
-    from mangum import Mangum
-    handler = Mangum(app, lifespan="off")
-except ImportError:
-    # Mangum not installed - running locally
-    handler = None
+from mangum import Mangum
+handler = Mangum(app, lifespan="off")
 
 
 if __name__ == "__main__":

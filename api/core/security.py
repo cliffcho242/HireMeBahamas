@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
+import os
+import secrets
 
 import anyio
 from decouple import config
@@ -10,7 +12,17 @@ from passlib.context import CryptContext
 logger = logging.getLogger(__name__)
 
 # Security configuration
-SECRET_KEY = config("SECRET_KEY", default="your-secret-key-change-in-production")
+# CRITICAL: SECRET_KEY must be set in production via environment variable
+SECRET_KEY = config("SECRET_KEY", default=None)
+if not SECRET_KEY:
+    # In production, fail fast if SECRET_KEY is not set
+    env = os.getenv("ENVIRONMENT", "development").lower()
+    if env in ("production", "prod"):
+        raise ValueError("SECRET_KEY environment variable must be set in production")
+    # For development, generate a temporary key (will change on restart)
+    SECRET_KEY = secrets.token_urlsafe(32)
+    logger.warning("⚠️  Using temporary SECRET_KEY for development. Set SECRET_KEY env var for production!")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
 
