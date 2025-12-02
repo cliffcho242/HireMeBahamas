@@ -37,7 +37,7 @@
     "graphql": "^16.9.0",
     "graphql-ws": "^5.16.0",
     "idb-keyval": "^6.2.1",
-    "lucide-react": "^0.294.0",
+    "lucide-react": "^0.400.0",
     "react": "^18.2.0",
     "react-apple-signin-auth": "^1.1.2",
     "react-dom": "^18.2.0",
