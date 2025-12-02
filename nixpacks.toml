@@ -12,6 +12,10 @@ PYTHON_VERSION = "3.12"
 # Removed: build-essential, gcc, g++, make, pkg-config, libpq-dev, python3-dev
 # Why: asyncpg 0.29.0 has pre-built wheels for all platforms
 # Result: Faster builds, smaller images, zero build errors
+# 
+# NOTE: If binary wheels are unavailable for your platform/architecture:
+# 1. Use requirements-psycopg.txt instead (has wheels for ALL platforms)
+# 2. Or add back build tools temporarily (see git history for full list)
 # ============================================================================
 [phases.setup]
 # Runtime dependencies only - NO build tools needed
