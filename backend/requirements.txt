@@ -15,7 +15,8 @@ aiosqlite==0.21.0
 alembic==1.13.1
 
 # Authentication & Security
-python-jose[cryptography]==3.5.0
+python-jose[cryptography]==3.3.0
+PyJWT==2.9.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.2
 
@@ -66,7 +67,6 @@ pytest-asyncio==0.25.2
 authlib==1.6.5
 google-auth==2.41.1
 google-auth-oauthlib==1.2.3
-PyJWT==2.10.1
 
 # GraphQL
 strawberry-graphql[fastapi]==0.240.4
