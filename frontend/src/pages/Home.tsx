@@ -1,6 +1,7 @@
 ﻿import React, { useState, Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import type { Event } from '../types/event';
 import {
   UserGroupIcon,
   BriefcaseIcon,
@@ -374,7 +375,7 @@ const Home: React.FC = () => {
 
       {/* Event Reminder System - Shows notifications for upcoming video calls */}
       <Suspense fallback={null}>
-        <EventReminderSystem events={[]} />
+        <EventReminderSystem events={[] as Event[]} />
       </Suspense>
     </div>
   );
