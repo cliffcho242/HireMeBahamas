@@ -1,9 +1,8 @@
 # ============================================================================
-# MASTERMIND VERCEL SERVERLESS — IMMORTAL REQUIREMENTS (2025)
+# MASTERMIND VERCEL SERVERLESS — IMMORTAL DEPLOY (2025 FINAL)
 # ============================================================================
-# Zero ModuleNotFoundError, zero build errors, instant cold starts
+# Zero ModuleNotFoundError, zero 500 errors, instant cold starts
 # Works with Vercel Python 3.12 serverless runtime
-# All packages have binary wheels - NO compilation needed
 # ============================================================================
 
 # Core Framework (Latest stable)
@@ -68,5 +67,5 @@ authlib==1.6.5
 # 3. No compilation required (no gcc/build-essential needed)
 # 4. python-jose[cryptography] provides 'jose' module for JWT
 # 5. asyncpg provides postgresql+asyncpg:// driver
-# 6. Zero build errors guaranteed
+# 6. Flask dependencies removed (using FastAPI only)
 # ============================================================================

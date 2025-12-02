@@ -11,7 +11,6 @@
       "memory": 1024
     }
   },
-  "_comment_memory": "1024MB allocated for image processing, file uploads, and database operations. Can be reduced to 512MB for cost optimization if not handling large files.",
   "rewrites": [
     {
       "source": "/api/auth/:path*",
