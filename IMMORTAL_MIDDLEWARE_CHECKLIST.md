@@ -42,6 +42,14 @@ setup_middleware(app)
 
 ### 1.3 Update Vercel Configuration
 ```bash
+# The existing api/main.py already imports from backend/app/main.py
+# So vercel.json correctly points to api/main.py as the entry point
+# 
+# For reference:
+# - api/main.py imports from backend/app/main.py and wraps with Mangum
+# - This allows Vercel to find the handler at api/main.py
+# - The middleware setup happens in backend/app/main.py
+
 # Backup current vercel.json
 cp vercel.json vercel_backup_$(date +%Y%m%d).json
 

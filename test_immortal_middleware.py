@@ -12,14 +12,14 @@ Tests all middleware components:
 import sys
 import os
 
-# Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+# Get the project root directory (where this test file is located)
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 def test_middleware_syntax():
     """Test that middleware.py has valid Python syntax"""
     import py_compile
-    middleware_path = os.path.join(os.path.dirname(__file__), 'backend', 'app', 'core', 'middleware.py')
+    middleware_path = os.path.join(PROJECT_ROOT, 'backend', 'app', 'core', 'middleware.py')
     
     try:
         py_compile.compile(middleware_path, doraise=True)
@@ -33,7 +33,7 @@ def test_middleware_syntax():
 def test_main_immortal_syntax():
     """Test that main_immortal.py has valid Python syntax"""
     import py_compile
-    main_path = os.path.join(os.path.dirname(__file__), 'backend', 'app', 'main_immortal.py')
+    main_path = os.path.join(PROJECT_ROOT, 'backend', 'app', 'main_immortal.py')
     
     try:
         py_compile.compile(main_path, doraise=True)
@@ -46,7 +46,7 @@ def test_main_immortal_syntax():
 
 def test_requirements_immortal():
     """Test that requirements_immortal.txt contains all necessary dependencies"""
-    req_path = os.path.join(os.path.dirname(__file__), 'requirements_immortal.txt')
+    req_path = os.path.join(PROJECT_ROOT, 'requirements_immortal.txt')
     
     with open(req_path, 'r') as f:
         content = f.read()
@@ -77,7 +77,7 @@ def test_requirements_immortal():
 def test_vercel_config():
     """Test that vercel_immortal.json is valid JSON with correct structure"""
     import json
-    vercel_path = os.path.join(os.path.dirname(__file__), 'vercel_immortal.json')
+    vercel_path = os.path.join(PROJECT_ROOT, 'vercel_immortal.json')
     
     with open(vercel_path, 'r') as f:
         config = json.load(f)
@@ -108,7 +108,7 @@ def test_vercel_config():
 
 def test_checklist_exists():
     """Test that deployment checklist exists and has required sections"""
-    checklist_path = os.path.join(os.path.dirname(__file__), 'IMMORTAL_MIDDLEWARE_CHECKLIST.md')
+    checklist_path = os.path.join(PROJECT_ROOT, 'IMMORTAL_MIDDLEWARE_CHECKLIST.md')
     
     with open(checklist_path, 'r') as f:
         content = f.read()
@@ -147,7 +147,7 @@ def test_checklist_exists():
 
 def test_middleware_file_structure():
     """Test that middleware.py contains all required components"""
-    middleware_path = os.path.join(os.path.dirname(__file__), 'backend', 'app', 'core', 'middleware.py')
+    middleware_path = os.path.join(PROJECT_ROOT, 'backend', 'app', 'core', 'middleware.py')
     
     with open(middleware_path, 'r') as f:
         content = f.read()
@@ -176,7 +176,7 @@ def test_middleware_file_structure():
 
 def test_middleware_features():
     """Test that middleware has all required features documented"""
-    middleware_path = os.path.join(os.path.dirname(__file__), 'backend', 'app', 'core', 'middleware.py')
+    middleware_path = os.path.join(PROJECT_ROOT, 'backend', 'app', 'core', 'middleware.py')
     
     with open(middleware_path, 'r') as f:
         content = f.read()

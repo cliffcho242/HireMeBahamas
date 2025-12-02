@@ -380,10 +380,10 @@ except ImportError:
 # =============================================================================
 # LOCAL DEVELOPMENT
 # =============================================================================
-if __name__ == "__main__":
+if __name__ == '__main__':
     import uvicorn
     uvicorn.run(
-        "app.main:app",
+        "main_immortal:app",  # Use module name when running from backend/app directory
         host="0.0.0.0",
         port=8000,
         reload=False,
