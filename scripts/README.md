@@ -25,6 +25,27 @@ scripts\install_all_dependencies.bat
 
 ### 🔄 Database Migration Scripts
 
+#### `verify_vercel_postgres_migration.py` (NEW!)
+Comprehensive verification script to validate Vercel Postgres migration success.
+
+**Features:**
+- Connection testing with SSL/TLS verification
+- Table structure validation
+- Row count verification
+- Index verification
+- Performance benchmarking
+- Colored terminal output with detailed status
+
+**Usage:**
+```bash
+export DATABASE_URL='postgresql://default:pass@ep-xxxxx.neon.tech:5432/verceldb?sslmode=require'
+python scripts/verify_vercel_postgres_migration.py
+```
+
+**Exit Codes:**
+- `0`: All checks passed
+- `1`: One or more checks failed
+
 #### `migrate_railway_to_vercel.sh` (Shell)
 Zero-downtime migration from Railway Postgres to Vercel Postgres (Neon).
 
@@ -49,9 +70,31 @@ Python version of the migration script with identical functionality.
 export RAILWAY_DATABASE_URL='postgresql://...'
 export VERCEL_POSTGRES_URL='postgresql://...'
 python scripts/migrate_railway_to_vercel.py
+
+# Set old database to read-only after migration
+python scripts/migrate_railway_to_vercel.py --set-readonly
 ```
 
-For complete migration documentation, see [VERCEL_POSTGRES_MIGRATION.md](../VERCEL_POSTGRES_MIGRATION.md).
+**Complete Migration Workflow:**
+```bash
+# 1. Export and import data
+python scripts/migrate_railway_to_vercel.py
+
+# 2. Verify migration success
+python scripts/verify_vercel_postgres_migration.py
+
+# 3. Update DATABASE_URL in Vercel Dashboard
+
+# 4. Test application
+
+# 5. Set old database to read-only (7-day grace period)
+python scripts/migrate_railway_to_vercel.py --set-readonly
+```
+
+For complete migration documentation, see:
+- [VERCEL_POSTGRES_MIGRATION_GUIDE.md](../VERCEL_POSTGRES_MIGRATION_GUIDE.md) - Complete guide
+- [VERCEL_POSTGRES_QUICK_REFERENCE.md](../VERCEL_POSTGRES_QUICK_REFERENCE.md) - Quick reference
+- [VERCEL_POSTGRES_MIGRATION_CHECKLIST.md](../VERCEL_POSTGRES_MIGRATION_CHECKLIST.md) - Post-migration checklist
 
 ---
 

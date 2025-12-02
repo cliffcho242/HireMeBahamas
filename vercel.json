@@ -11,5 +11,9 @@
       "src": "/api/(.*)",
       "dest": "api/$1"
     }
-  ]
+  ],
+  "env": {
+    "DATABASE_URL": "@postgres_url",
+    "POSTGRES_URL": "@postgres_url"
+  }
 }
