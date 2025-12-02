@@ -23,25 +23,25 @@ import { createClient } from 'graphql-ws';
 import { onError } from '@apollo/client/link/error';
 import { get, set, del } from 'idb-keyval';
 
-// API URL configuration
-// NOTE: Update DEFAULT_PROD_API to your backend URL (Railway, Vercel Serverless, etc.)
+// API URL configuration - Use same logic as api.ts for consistency
 const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
-const DEFAULT_PROD_API = ENV_API || 'https://hiremebahamas-backend-lw6xi9m03-cliffs-projects-a84c76c9.vercel.app';
 
-let API_BASE_URL = ENV_API || 'http://127.0.0.1:9999';
+let API_BASE_URL = 'http://127.0.0.1:9999'; // Default for local development
 
-// If no env is set and we're on the hiremebahamas.com or vercel domain, use the production backend
-// Use strict hostname matching to prevent URL manipulation attacks
+// If running in browser and no explicit env override
 if (!ENV_API && typeof window !== 'undefined') {
   const hostname = window.location.hostname;
-  // Strict match: only exact domain, www subdomain, or our specific vercel.app subdomain
-  if (
-    hostname === 'hiremebahamas.com' || 
-    hostname === 'www.hiremebahamas.com' || 
-    hostname === 'hiremebahamas.vercel.app'
-  ) {
-    API_BASE_URL = DEFAULT_PROD_API;
+  const isProduction = hostname === 'hiremebahamas.com' || 
+                       hostname === 'www.hiremebahamas.com';
+  const isVercel = hostname.includes('.vercel.app');
+  
+  // For Vercel deployments (production or preview), use same-origin
+  if (isProduction || isVercel) {
+    API_BASE_URL = window.location.origin;
   }
+} else if (ENV_API) {
+  // Use explicit environment variable if provided
+  API_BASE_URL = ENV_API;
 }
 
 const GRAPHQL_ENDPOINT = `${API_BASE_URL}/api/graphql`;
