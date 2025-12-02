@@ -1,49 +1,58 @@
 # ============================================================================
-# MASTERMIND VERCEL SERVERLESS — IMMORTAL DEPLOY (2025)
+# MASTERMIND VERCEL SERVERLESS — IMMORTAL DEPLOY (2025 FINAL)
 # ============================================================================
 # Zero ModuleNotFoundError, zero 500 errors, instant cold starts
+# Works with Vercel Python 3.12 serverless runtime
 # ============================================================================
 
-# Core Framework
+# Core Framework (Latest stable)
 fastapi==0.115.6
 pydantic==2.10.3
 pydantic-settings==2.7.0
 
-# Serverless Handler (Vercel)
+# Serverless Handler (Vercel/AWS Lambda compatibility)
 mangum==0.19.0
 
 # Authentication & Security — CRITICAL: python-jose[cryptography] for JWT
+# The 'jose' module comes from python-jose, NOT python-jwt
 python-jose[cryptography]==3.3.0
+
+# Cryptography dependencies (ensures 'jose' module works)
 cryptography==43.0.3
 ecdsa==0.19.0
 pyasn1==0.6.1
 rsa==4.9
 
-# Alternative JWT (fallback)
+# Alternative JWT library (fallback/compatibility)
 PyJWT==2.9.0
 
 # Password Hashing
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.2
 
-# HTTP & Networking
+# HTTP Client
 httpx==0.28.1
 
-# Configuration
+# Configuration Management
 python-dotenv==1.2.1
 
 # Data Validation
 email-validator==2.3.0
 
-# File Handling
+# File Upload Handling
 python-multipart==0.0.20
 
-# Database (if needed)
+# Database Drivers (for Postgres connectivity)
+# asyncpg 0.30.0 - binary wheel available, no compilation needed
 asyncpg==0.30.0
 sqlalchemy[asyncio]==2.0.44
 psycopg2-binary==2.9.11
 
 # ============================================================================
-# CRITICAL DEPENDENCIES FOR python-jose[cryptography]
-# Ensures 'jose' module is available, not 'python-jose'
+# DEPLOYMENT NOTES:
+# 1. Vercel automatically installs from this requirements.txt
+# 2. All packages have binary wheels for Python 3.12
+# 3. No compilation required (no gcc/build-essential needed)
+# 4. python-jose[cryptography] provides 'jose' module for JWT
+# 5. asyncpg provides postgresql+asyncpg:// driver
 # ============================================================================
