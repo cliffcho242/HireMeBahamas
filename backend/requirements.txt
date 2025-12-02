@@ -45,7 +45,7 @@ email-validator==2.3.0
 
 # File Handling & Media
 python-multipart==0.0.20
-cloudinary==1.38.0
+cloudinary==1.44.1
 Pillow==12.0.0
 python-magic
 google-cloud-storage==3.6.0
