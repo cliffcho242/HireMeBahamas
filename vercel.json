@@ -12,6 +12,14 @@
   ],
   "routes": [
     {
+      "src": "/api/auth/me",
+      "dest": "/api/auth/me.py"
+    },
+    {
+      "src": "/api/cron/health",
+      "dest": "/api/cron/health.py"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/index.py"
     },

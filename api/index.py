@@ -35,11 +35,10 @@ app.add_middleware(
 # ============================================================================
 # ROOT ENDPOINT - API Information
 # ============================================================================
-@app.get("/")
 @app.get("/api")
 async def root():
     """
-    Root endpoint providing API information and available routes.
+    API root endpoint providing information and available routes.
     Useful for debugging and API discovery.
     """
     return {
