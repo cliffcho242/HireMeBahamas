@@ -40,6 +40,14 @@ class ImmortalMigrationFix:
         self.max_retries = 10
         self.retry_delay = 5
         
+    def _has_database_url(self) -> bool:
+        """Check if any database URL environment variable is set"""
+        return bool(
+            os.getenv("DATABASE_PRIVATE_URL") or
+            os.getenv("POSTGRES_URL") or
+            os.getenv("DATABASE_URL")
+        )
+    
     def _get_database_url(self) -> str:
         """Get database URL with fallback chain"""
         url = (
@@ -385,19 +393,15 @@ Your app is now IMMORTAL on Vercel! 🚀
 
 async def main():
     """Main execution function"""
+    fixer = ImmortalMigrationFix()
+    
     # Check for config-only mode:
     # 1. Explicit --config-only flag
     # 2. No DATABASE_URL set (will use config-only mode automatically)
     explicit_config_only = "--config-only" in sys.argv
-    no_database_url = not (
-        os.getenv("DATABASE_PRIVATE_URL") or
-        os.getenv("POSTGRES_URL") or
-        os.getenv("DATABASE_URL")
-    )
+    no_database_url = not fixer._has_database_url()
     
     config_only = explicit_config_only or no_database_url
-    
-    fixer = ImmortalMigrationFix()
     
     # Run all checks
     success = await fixer.run_immortal_checks(config_only=config_only)
