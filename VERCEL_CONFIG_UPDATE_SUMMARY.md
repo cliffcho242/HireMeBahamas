@@ -10,24 +10,39 @@
 - `rewrites` with specific mappings
 - Headers and crons configuration
 
-**After (Simplified):**
+**After (Simplified but Complete):**
 ```json
 {
   "version": 2,
   "builds": [
     {
       "src": "api/**/*.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "runtime": "python3.12"
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "dest": "/api/$1",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
     },
     {
       "src": "/(.*)",
-      "dest": "/"
+      "dest": "/",
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+      }
     }
   ]
 }
@@ -36,6 +51,8 @@
 ### Key Benefits
 
 ✅ **Wildcard builds**: `api/**/*.py` automatically includes all Python files  
+✅ **Maintains runtime config**: 50MB memory limit and Python 3.12 specified  
+✅ **Includes essential headers**: CORS and security headers preserved  
 ✅ **No functions key**: Eliminates Vercel configuration conflicts  
 ✅ **Simple routing**: Automatically forwards `/api/auth/me` → `api/auth/me.py`  
 ✅ **Less maintenance**: No need to add new files to config manually  

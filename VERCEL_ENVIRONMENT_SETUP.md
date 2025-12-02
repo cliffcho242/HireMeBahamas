@@ -137,9 +137,9 @@ Should return a success response.
 
 ## 🎯 Current Configuration
 
-### Root vercel.json (Simplified)
+### Root vercel.json (Simplified but Complete)
 
-The root `vercel.json` has been simplified to avoid conflicts:
+The root `vercel.json` has been simplified while maintaining essential configuration:
 
 ```json
 {
@@ -147,17 +147,32 @@ The root `vercel.json` has been simplified to avoid conflicts:
   "builds": [
     {
       "src": "api/**/*.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "runtime": "python3.12"
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "dest": "/api/$1",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
     },
     {
       "src": "/(.*)",
-      "dest": "/"
+      "dest": "/",
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+      }
     }
   ]
 }
@@ -165,7 +180,9 @@ The root `vercel.json` has been simplified to avoid conflicts:
 
 **What this does:**
 - ✅ `builds`: Treats every `.py` file in `/api` as a Serverless Function
+- ✅ `config`: Maintains 50MB memory limit and Python 3.12 runtime
 - ✅ `routes`: Automatically forwards `/api/auth/me` → `api/auth/me.py`
+- ✅ `headers`: Includes essential CORS and security headers
 - ✅ No `functions` key = No conflicts with Vercel configuration
 
 ---
