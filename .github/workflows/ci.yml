@@ -58,7 +58,7 @@ jobs:
     # 3. Using secrets would add complexity without security benefit
     services:
       postgres:
-        image: ghcr.io/railwayapp-templates/postgres-ssl:16.11
+        image: ghcr.io/railwayapp-templates/postgres-ssl:13.23
         env:
           POSTGRES_DB: hiremebahamas_test
           POSTGRES_USER: testuser
