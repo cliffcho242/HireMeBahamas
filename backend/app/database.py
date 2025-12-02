@@ -44,11 +44,13 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Priority order:
 # 1. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
-# 2. DATABASE_URL (Railway public TCP proxy)
-# 3. Local development default
+# 2. POSTGRES_URL (Vercel Postgres primary connection)
+# 3. DATABASE_URL (Standard PostgreSQL connection)
+# 4. Local development default
 # =============================================================================
 DATABASE_URL = (
     os.getenv("DATABASE_PRIVATE_URL") or 
+    os.getenv("POSTGRES_URL") or
     os.getenv("DATABASE_URL", 
         "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
     )
