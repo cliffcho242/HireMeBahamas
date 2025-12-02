@@ -7,10 +7,17 @@
   "builds": [
     {
       "src": "api/**/*.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxDuration": 10
+      }
     }
   ],
   "routes": [
+    {
+      "src": "/api/auth/me",
+      "dest": "api/auth/me.py"
+    },
     {
       "src": "/api/(.*)",
       "dest": "api/$1"
