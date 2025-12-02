@@ -356,22 +356,33 @@ async def main():
     # Run all checks
     success = await fixer.run_immortal_checks()
     
+    # Always generate env config file for reference (even if checks fail)
+    env_config = fixer.generate_vercel_env_config()
+    config_file = "vercel_env_config.txt"
+    with open(config_file, "w") as f:
+        f.write(env_config)
+    logger.info(f"✓ Environment configuration saved to: {config_file}")
+    logger.info("")
+    
     if success:
         # Print deployment instructions
         fixer.print_deployment_instructions()
         
-        # Generate env config file
-        env_config = fixer.generate_vercel_env_config()
-        config_file = "vercel_env_config.txt"
-        with open(config_file, "w") as f:
-            f.write(env_config)
-        logger.info(f"✓ Environment configuration saved to: {config_file}")
+        logger.info("=" * 70)
+        logger.info("✓ ALL CHECKS PASSED - READY TO DEPLOY".center(70))
+        logger.info("=" * 70)
         logger.info("")
         
         sys.exit(0)
     else:
-        logger.error("✗ Immortal checks failed")
-        logger.info("ℹ Fix the issues above and run again")
+        logger.error("=" * 70)
+        logger.error("✗ Some checks failed".center(70))
+        logger.error("=" * 70)
+        logger.info("")
+        logger.info("ℹ Configuration file generated successfully!")
+        logger.info("ℹ Review vercel_env_config.txt and set environment variables")
+        logger.info("ℹ Then run this script again to verify connection")
+        logger.info("")
         sys.exit(1)
 
 
