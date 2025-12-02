@@ -45,9 +45,9 @@ Vercel Dashboard → HireMeBahamas → Storage → Postgres Database → .env.lo
    - Click: **".env.local"** tab (between "Quickstart" and "Data")
    - You'll see environment variables like:
      ```
-     POSTGRES_URL="postgresql://default:abc123...@ep-name-12345.region.aws.neon.tech:5432/verceldb"
-     POSTGRES_PRISMA_URL="postgresql://default:abc123...@ep-name-12345-pooler.region.aws.neon.tech:5432/verceldb?pgbouncer=true"
-     POSTGRES_URL_NON_POOLING="postgresql://default:abc123...@ep-name-12345.region.aws.neon.tech:5432/verceldb"
+     POSTGRES_URL="postgresql://default:abc123...@ep-name-12345.region.aws.neon.tech:5432/verceldb?sslmode=require"
+     POSTGRES_PRISMA_URL="postgresql://default:abc123...@ep-name-12345-pooler.region.aws.neon.tech:5432/verceldb?sslmode=require&pgbouncer=true"
+     POSTGRES_URL_NON_POOLING="postgresql://default:abc123...@ep-name-12345.region.aws.neon.tech:5432/verceldb?sslmode=require"
      ```
    - **COPY** the value of **`POSTGRES_URL`** (the first one)
    - This is your **DATABASE_URL** ✅

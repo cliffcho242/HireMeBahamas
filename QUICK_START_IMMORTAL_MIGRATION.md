@@ -58,10 +58,10 @@ postgresql://default:ABC123xyz...@ep-cool-name-123456.us-east-1.aws.neon.tech:54
 
 **Required Variables (paste these):**
 
-| Variable Name | Where to Get the Value | Example |
-|---------------|------------------------|---------|
-| `DATABASE_URL` | From Step 2.1 above (Vercel Storage → Postgres → .env.local tab) | `postgresql://default:ABC123...` |
-| `POSTGRES_URL` | Same as DATABASE_URL | `postgresql://default:ABC123...` |
+| Variable Name | Where to Get the Value | Example Format |
+|---------------|------------------------|----------------|
+| `DATABASE_URL` | From Step 2.1 above (Vercel Storage → Postgres → .env.local tab) | `postgresql://default:ABC123...@ep-xxx.neon.tech:5432/verceldb?sslmode=require` |
+| `POSTGRES_URL` | Same as DATABASE_URL | `postgresql://default:ABC123...@ep-xxx.neon.tech:5432/verceldb?sslmode=require` |
 | `SECRET_KEY` | Generate: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` | `k7TyN9mL...` |
 | `JWT_SECRET_KEY` | Generate: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` | `p8QxW2hM...` |
 | `ENVIRONMENT` | Type: `production` | `production` |
