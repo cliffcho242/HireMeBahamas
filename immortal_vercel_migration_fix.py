@@ -385,8 +385,17 @@ Your app is now IMMORTAL on Vercel! 🚀
 
 async def main():
     """Main execution function"""
-    # Check for config-only mode
-    config_only = "--config-only" in sys.argv or len(sys.argv) == 1
+    # Check for config-only mode:
+    # 1. Explicit --config-only flag
+    # 2. No DATABASE_URL set (will use config-only mode automatically)
+    explicit_config_only = "--config-only" in sys.argv
+    no_database_url = not (
+        os.getenv("DATABASE_PRIVATE_URL") or
+        os.getenv("POSTGRES_URL") or
+        os.getenv("DATABASE_URL")
+    )
+    
+    config_only = explicit_config_only or no_database_url
     
     fixer = ImmortalMigrationFix()
     
@@ -407,7 +416,7 @@ async def main():
         
         if config_only:
             logger.info("ℹ Configuration generated in config-only mode")
-            logger.info("ℹ Set DATABASE_URL and run without --config-only to verify connection")
+            logger.info("ℹ Set DATABASE_URL and run again to verify database connection")
         
         sys.exit(0)
     else:
