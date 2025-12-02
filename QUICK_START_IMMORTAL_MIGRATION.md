@@ -21,15 +21,60 @@ python immortal_vercel_migration_fix.py
 
 ### Step 2️⃣: Set Environment Variables in Vercel Dashboard
 
-1. Open `vercel_env_config.txt`
-2. Go to [Vercel Dashboard](https://vercel.com/dashboard) → Your Project → Settings → Environment Variables
-3. Add each variable from the config file
+📍 **Need help finding where to get/paste the DATABASE_URL?**  
+👉 See [DATABASE_URL_LOCATION_GUIDE.md](./DATABASE_URL_LOCATION_GUIDE.md) for exact click-by-click instructions with screenshots locations.
 
-**Key variables to set:**
-- `DATABASE_URL` - Your Vercel Postgres connection string
-- `SECRET_KEY` - Generate with: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`
-- `JWT_SECRET_KEY` - Generate with: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`
-- All connection pooling and timeout settings from the config file
+#### 2.1: Get Your Vercel Postgres Database URL
+
+**Exact Location to FIND your DATABASE_URL:**
+
+1. Go to: **https://vercel.com/dashboard** (login if needed)
+2. Click on your project: **HireMeBahamas**
+3. Click the **"Storage"** tab in the top navigation
+4. If you don't have a database yet:
+   - Click **"Create Database"**
+   - Select **"Postgres"** (powered by Neon)
+   - Click **"Continue"**
+   - Choose your plan (Hobby = Free, Pro = Paid)
+   - Click **"Create"**
+5. Once created, click on your Postgres database name
+6. In the database dashboard, click the **".env.local"** tab
+7. **COPY** the `POSTGRES_URL` value (it starts with `postgresql://...`)
+
+**Your DATABASE_URL looks like:**
+```
+postgresql://default:ABC123xyz...@ep-cool-name-123456.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require
+```
+
+#### 2.2: Paste Environment Variables to Vercel
+
+**Exact Location to PASTE your environment variables:**
+
+1. Go to: **https://vercel.com/dashboard**
+2. Click on your project: **HireMeBahamas**  
+3. Click **"Settings"** in the top navigation
+4. Click **"Environment Variables"** in the left sidebar
+5. For each variable, click **"Add New"**:
+
+**Required Variables (paste these):**
+
+| Variable Name | Where to Get the Value | Example |
+|---------------|------------------------|---------|
+| `DATABASE_URL` | From Step 2.1 above (Vercel Storage → Postgres → .env.local tab) | `postgresql://default:ABC123...` |
+| `POSTGRES_URL` | Same as DATABASE_URL | `postgresql://default:ABC123...` |
+| `SECRET_KEY` | Generate: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` | `k7TyN9mL...` |
+| `JWT_SECRET_KEY` | Generate: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` | `p8QxW2hM...` |
+| `ENVIRONMENT` | Type: `production` | `production` |
+
+**Optional but Recommended Variables (from `vercel_env_config.txt`):**
+- `DB_POOL_SIZE=2`
+- `DB_MAX_OVERFLOW=3`
+- `DB_POOL_RECYCLE=120`
+- `DB_CONNECT_TIMEOUT=45`
+- `DB_COMMAND_TIMEOUT=30`
+- `FRONTEND_URL=https://your-app.vercel.app`
+
+**Important:** For each variable, make sure to select **"All Environments"** (Production, Preview, Development) before clicking "Save".
 
 ---
 
@@ -37,8 +82,8 @@ python immortal_vercel_migration_fix.py
 
 ```bash
 # Set source and target database URLs
-export RAILWAY_DATABASE_URL="postgresql://user:password@host:5432/database"
-export VERCEL_POSTGRES_URL="postgresql://default:PASSWORD@ep-xxxxx.neon.tech:5432/verceldb?sslmode=require"
+export RAILWAY_DATABASE_URL="postgresql://user:password@railway.app.host:5432/railway"
+export VERCEL_POSTGRES_URL="postgresql://default:YOUR_PASSWORD@ep-xxxxx-xxx.region.aws.neon.tech:5432/verceldb?sslmode=require"
 
 # Run migration
 python scripts/migrate_railway_to_vercel.py

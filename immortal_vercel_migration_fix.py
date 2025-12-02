@@ -359,9 +359,17 @@ async def main():
     # Always generate env config file for reference (even if checks fail)
     env_config = fixer.generate_vercel_env_config()
     config_file = "vercel_env_config.txt"
+    
+    # Create config file with restrictive permissions
     with open(config_file, "w") as f:
         f.write(env_config)
+    
+    # Set restrictive file permissions (owner read/write only)
+    import os
+    os.chmod(config_file, 0o600)
+    
     logger.info(f"✓ Environment configuration saved to: {config_file}")
+    logger.info(f"✓ File permissions set to 0600 (owner read/write only)")
     logger.info("")
     
     if success:
