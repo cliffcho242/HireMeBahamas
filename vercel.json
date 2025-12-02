@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "buildCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r api/requirements.txt",
   "builds": [
     {
       "src": "api/index.py",
@@ -8,9 +9,24 @@
         "maxLambdaSize": "50mb",
         "runtime": "python3.12"
       }
+    },
+    {
+      "src": "api/auth/me.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "runtime": "python3.12"
+      }
+    },
+    {
+      "src": "api/cron/health.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "runtime": "python3.12"
+      }
     }
   ],
-  "installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r api/requirements.txt",
   "functions": {
     "api/**/*.py": {
       "maxDuration": 30,
@@ -18,33 +34,26 @@
       "runtime": "python3.12"
     }
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/health",
-      "destination": "/api/index.py"
+      "src": "/api/auth/me",
+      "dest": "/api/auth/me.py"
     },
     {
-      "source": "/api/ready",
-      "destination": "/api/index.py"
+      "src": "/api/cron/health",
+      "dest": "/api/cron/health.py"
     },
     {
-      "source": "/api/cron/health",
-      "destination": "/api/cron/health.py"
+      "src": "/api/health",
+      "dest": "/api/index.py"
     },
     {
-      "source": "/api/auth/me",
-      "destination": "/api/auth/me.py"
+      "src": "/api/ready",
+      "dest": "/api/index.py"
     },
     {
-      "source": "/api/:path*",
-      "destination": "/api/index.py"
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/health",
-      "destination": "/api/health",
-      "permanent": false
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
     }
   ],
   "headers": [
