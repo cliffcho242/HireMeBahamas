@@ -33,6 +33,40 @@ app.add_middleware(
 )
 
 # ============================================================================
+# ROOT ENDPOINT - API Information
+# ============================================================================
+@app.get("/")
+@app.get("/api")
+async def root():
+    """
+    Root endpoint providing API information and available routes.
+    Useful for debugging and API discovery.
+    """
+    return {
+        "name": "HireMeBahamas API",
+        "version": "1.0.0",
+        "platform": "vercel-serverless",
+        "status": "operational",
+        "endpoints": {
+            "health": "/api/health",
+            "ready": "/api/ready",
+            "auth": {
+                "login": "POST /api/auth/login",
+                "register": "POST /api/auth/register",
+                "me": "GET /api/auth/me"
+            },
+            "jobs": {
+                "list": "GET /api/jobs",
+                "create": "POST /api/jobs"
+            },
+            "posts": {
+                "list": "GET /api/posts",
+                "create": "POST /api/posts"
+            }
+        }
+    }
+
+# ============================================================================
 # INSTANT HEALTH CHECK (No DB) - Responds in <5ms
 # ============================================================================
 @app.get("/api/health")
