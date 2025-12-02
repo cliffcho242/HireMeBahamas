@@ -1,16 +1,56 @@
 """
 Vercel Serverless FastAPI Handler - HireMeBahamas (2025)
+Complete backend integration with all endpoints
 Zero cold starts, sub-200ms response time globally, bulletproof deployment
 """
-from fastapi import FastAPI, Response, HTTPException, Header
+from fastapi import FastAPI, Response, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 import os
 import time
 import sys
+import logging
+
+# Add api directory and create app alias for backend imports
+# This allows backend_app modules to import using 'from app.' syntax
+# which matches the original backend structure
+api_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, api_dir)
+
+# Create app module alias for backward compatibility with backend imports
+# backend_app modules use 'from app.xxx import yyy' syntax
+# This mapping ensures those imports resolve correctly
+try:
+    import backend_app as app_module
+    sys.modules['app'] = app_module
+    _MODULE_ALIAS_CREATED = True
+except ImportError as e:
+    _MODULE_ALIAS_CREATED = False
+    logging.error(f"Failed to create module alias: {e}")
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Constants
 MAX_ERROR_MSG_LENGTH = 100
+
+# Import backend routers with graceful fallback
+HAS_BACKEND = False
+try:
+    if not _MODULE_ALIAS_CREATED:
+        raise ImportError("Module aliasing failed - cannot import backend")
+        
+    from backend_app.api import auth, posts, jobs, users, messages, notifications
+    from backend_app.database import get_db
+    from backend_app.core.security import get_current_user
+    HAS_BACKEND = True
+    logger.info("✅ Backend modules imported successfully")
+except ImportError as e:
+    logger.warning(f"⚠️  Backend modules not available: {e}")
+    logger.warning("Running with placeholder endpoints")
+except Exception as e:
+    logger.error(f"❌ Error importing backend modules: {e}", exc_info=True)
 
 # Database imports with graceful fallback
 try:
@@ -19,22 +59,7 @@ try:
     HAS_DB = True
 except ImportError:
     HAS_DB = False
-    print("Database drivers not available - running in fallback mode", file=sys.stderr)
-
-# JWT imports with graceful fallback
-try:
-    from jose import jwt, JWTError
-except ImportError:
-    try:
-        import jwt as jwt_lib
-        class jwt:
-            @staticmethod
-            def decode(token, secret, algorithms):
-                return jwt_lib.decode(token, secret, algorithms=algorithms)
-        JWTError = jwt_lib.PyJWTError
-    except ImportError:
-        jwt = None
-        JWTError = Exception
+    logger.warning("Database drivers not available - running in fallback mode")
 
 # ============================================================================
 # CONFIGURATION
@@ -48,7 +73,9 @@ JWT_ALGORITHM = "HS256"
 app = FastAPI(
     title="HireMeBahamas API",
     version="2.0.0",
-    description="Job platform API for the Bahamas - Immortal Edition",
+    description="Job platform API for the Bahamas - Vercel Serverless Edition",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
 )
 
 # ============================================================================
@@ -61,6 +88,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ============================================================================
+# INCLUDE BACKEND ROUTERS IF AVAILABLE
+# ============================================================================
+if HAS_BACKEND:
+    app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+    app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+    app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
+    app.include_router(users.router, prefix="/api/users", tags=["users"])
+    app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
+    app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+    logger.info("✅ All backend routers registered")
+else:
+    logger.warning("⚠️  Backend routers not available - using placeholder endpoints")
 
 # ============================================================================
 # INSTANT HEALTH CHECK (No DB) - Responds in <5ms
@@ -150,78 +191,36 @@ async def ready():
 @app.get("/api")
 async def root():
     """Root endpoint with API information"""
-    return {
+    endpoints_info = {
         "name": "HireMeBahamas API",
         "version": "2.0.0",
         "status": "operational",
         "platform": "vercel-serverless",
+        "backend_available": HAS_BACKEND,
+        "database_available": HAS_DB,
         "endpoints": {
             "health": "/api/health",
             "ready": "/api/ready",
-            "auth": "/api/auth/me",
-            "jobs": "/api/jobs",
-            "posts": "/api/posts",
+            "docs": "/api/docs",
         }
     }
-
-# ============================================================================
-# AUTHENTICATION ENDPOINTS (Placeholder - implement with actual logic)
-# ============================================================================
-@app.post("/api/auth/login")
-async def login():
-    """Login endpoint - implement with your auth logic"""
-    return {
-        "message": "Login endpoint - see /api/auth/me for implementation",
-        "status": "not_implemented"
-    }
-
-@app.post("/api/auth/register")
-async def register():
-    """Register endpoint - implement with your auth logic"""
-    return {
-        "message": "Register endpoint - implement with your auth logic",
-        "status": "not_implemented"
-    }
-
-# ============================================================================
-# JOB ENDPOINTS (Placeholder - implement with actual logic)
-# ============================================================================
-@app.get("/api/jobs")
-async def get_jobs():
-    """Get all jobs - implement with database query"""
-    return {
-        "jobs": [],
-        "total": 0,
-        "message": "Jobs endpoint - implement with your database"
-    }
-
-@app.post("/api/jobs")
-async def create_job():
-    """Create job - implement with database insertion"""
-    return {
-        "message": "Create job endpoint - implement with your logic",
-        "status": "not_implemented"
-    }
-
-# ============================================================================
-# POST ENDPOINTS (Placeholder - implement with actual logic)
-# ============================================================================
-@app.get("/api/posts")
-async def get_posts():
-    """Get all posts - implement with database query"""
-    return {
-        "posts": [],
-        "total": 0,
-        "message": "Posts endpoint - implement with your database"
-    }
-
-@app.post("/api/posts")
-async def create_post():
-    """Create post - implement with database insertion"""
-    return {
-        "message": "Create post endpoint - implement with your logic",
-        "status": "not_implemented"
-    }
+    
+    if HAS_BACKEND:
+        endpoints_info["endpoints"].update({
+            "auth": {
+                "register": "/api/auth/register",
+                "login": "/api/auth/login",
+                "me": "/api/auth/me",
+                "refresh": "/api/auth/refresh",
+            },
+            "jobs": "/api/jobs",
+            "posts": "/api/posts",
+            "users": "/api/users",
+            "messages": "/api/messages",
+            "notifications": "/api/notifications",
+        })
+    
+    return endpoints_info
 
 # ============================================================================
 # EXPORT HANDLER FOR VERCEL

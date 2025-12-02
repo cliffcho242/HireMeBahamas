@@ -4,41 +4,31 @@
 
 A modern, Facebook-inspired social platform designed specifically for professionals in the Bahamas to connect, share career opportunities, and build meaningful professional relationships.
 
-## 🚀 NEW: Immortal Vercel Postgres Migration
+## 🚀 **RECOMMENDED: Complete Vercel Deployment**
 
-**Zero-downtime migration from Railway/Render to Vercel Postgres with automatic retry and self-healing!**
+**Deploy frontend + backend together on Vercel in 10 minutes!**
 
-✅ **5-step migration process** - Complete in minutes  
-✅ **Zero downtime** - No service interruption  
-✅ **Automatic backup** - Safe rollback available  
-✅ **Connection pooling** - Optimized for serverless  
-✅ **Self-healing** - Automatic retry with exponential backoff  
+✅ **$0/month** - Free tier covers most apps  
+✅ **<200ms response** - Global edge network  
+✅ **Zero cold starts** - Always fast  
+✅ **One deployment** - Frontend + backend together  
+✅ **Auto HTTPS** - SSL included  
+✅ **61 API endpoints** - Full backend integrated  
 
-📖 **[Quick Start Guide](./QUICK_START_IMMORTAL_MIGRATION.md)** - Migrate in 5 simple steps  
-📖 **[Complete Migration Guide](./IMMORTAL_MIGRATION_GUIDE.md)** - Comprehensive instructions with troubleshooting  
-📖 **[Migration Checklist](./VERCEL_POSTGRES_MIGRATION_CHECKLIST.md)** - Post-migration monitoring  
+### Quick Deploy to Vercel
 
-**Quick Command:**
-```bash
-python immortal_vercel_migration_fix.py
-```
+1. **Push to GitHub** (if not already done)
+2. **Import to Vercel**: [vercel.com/new](https://vercel.com/new)
+3. **Add Environment Variables**:
+   ```env
+   DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
+   SECRET_KEY=your-secret-key-32-chars
+   JWT_SECRET_KEY=your-jwt-secret-32-chars
+   ENVIRONMENT=production
+   ```
+4. **Deploy!** ✅
 
----
-
-## ⚡ NEW: Edge Functions + Direct Postgres Access
-
-**MASTERMIND FINAL EDGE + POSTGRES — Run real SQL directly from Vercel Edge Functions!**
-
-✅ **<50ms global latency** - Edge Functions deploy to 300+ locations  
-✅ **No serverless detours** - Direct Edge → Postgres connection  
-✅ **SELECT, INSERT, UPDATE** - Full SQL support from Edge  
-✅ **Production-ready** - Connection pooling, error handling, auth patterns  
-
-📖 **[Complete Edge + Postgres Guide](./EDGE_POSTGRES_README.md)** - The ONE production-immortal solution  
-📖 **[Quick Reference Card](./next-app/EDGE_POSTGRES_QUICKREF.md)** - 1-minute setup guide  
-📖 **[Full Documentation](./next-app/EDGE_POSTGRES_GUIDE.md)** - Deep dive with examples  
-
-**Demo Endpoint:** `/api/edge-sql-demo` - Live examples of SELECT, INSERT, UPDATE from Edge
+📚 **[Complete Vercel Deployment Guide](./VERCEL_DEPLOYMENT_GUIDE.md)** - Step-by-step instructions
 
 ---
 

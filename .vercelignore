@@ -1,34 +1,71 @@
-# Vercel ignore file - exclude backend files from frontend deployment
+# Vercel ignore file - Keep api/ directory but exclude unnecessary files
 
-# Backend Python files (exclude Flask backend, but NOT api/ serverless functions)
-backend/**/*.py
-backend/requirements.txt
-backend/pyproject.toml
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Database files (local only)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Development files
+.env.local
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Test files
+test_*.py
+*_test.py
+pytest.ini
+.pytest_cache/
+
+# Legacy deployment configs (not needed for Vercel)
 nixpacks.toml
 railway.json
 Procfile
-*.db
-*.sqlite3
+Dockerfile
+docker-compose.yml
+render.yaml
 
-# Backend directories
-backend/
-**/__pycache__/
-
-# Development files
-*.log
-.env
-.venv/
-venv/
-
-# Admin panel (if separate deployment)
-admin_panel/
-
-# Documentation and scripts not needed in production
-*.md
+# Scripts and automation (keep minimal)
 *.ps1
-*.sh
 *.bat
+
+# Backend source directory (we use api/backend_app copy)
+backend/
+
+# Examples and admin panel
+admin_panel/
+examples/
+next-app/
+my-prisma-postgres-app/
+
+# Documentation
+*.md
+!README.md
 
 # Git files
 .git/
 .gitignore
+.gitattributes
+
