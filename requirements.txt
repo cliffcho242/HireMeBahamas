@@ -12,8 +12,10 @@ uvicorn[standard]==0.32.0
 gunicorn==23.0.0
 
 # Database - Binary-only installation (NO COMPILATION)
+# CRITICAL: asyncpg 0.29.0 has pre-built wheels for all platforms
+# Use --only-binary=:all: flag during pip install to force binary wheels
 sqlalchemy[asyncio]==2.0.36
-asyncpg==0.30.0
+asyncpg==0.29.0
 psycopg2-binary==2.9.10
 
 # Data Validation

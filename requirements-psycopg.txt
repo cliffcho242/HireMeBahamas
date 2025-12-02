@@ -2,36 +2,47 @@
 # NUCLEAR ALTERNATIVE — ZERO WHEELS, ZERO COMPILE (psycopg[binary])
 # ============================================================================
 # Use this if asyncpg STILL fails for any reason
-# psycopg[binary] has pre-built wheels for EVERY platform
+# psycopg[binary] has pre-built wheels for EVERY platform (x86_64, ARM64, etc.)
 # 100% drop-in replacement for asyncpg with SQLAlchemy
+# Install: pip install --upgrade pip && pip install --only-binary=:all: -r requirements-psycopg.txt
 # ============================================================================
 
 # Core Framework & Server
-fastapi==0.115.0
-uvicorn[standard]==0.31.0
-gunicorn==22.0.0
+fastapi==0.115.5
+uvicorn[standard]==0.32.0
+gunicorn==23.0.0
 
 # Database - NUCLEAR OPTION: psycopg[binary] instead of asyncpg
-sqlalchemy[asyncio]==2.0.35
-psycopg[binary,pool]==3.1.18
+# psycopg v3 has async support built-in, works with SQLAlchemy 2.0+
+sqlalchemy[asyncio]==2.0.36
+psycopg[binary,pool]==3.2.1
+psycopg2-binary==2.9.10
 
 # Data Validation
-pydantic==2.9.2
+pydantic==2.10.2
+pydantic-settings==2.6.1
 
 # Authentication & Security
 python-jose[cryptography]==3.3.0
-pyjwt==2.9.0
+pyjwt[crypto]==2.10.1
+passlib[bcrypt]==1.7.4
 
-# File Uploads
-python-multipart==0.0.9
+# File Uploads & Utilities
+python-multipart==0.0.18
+python-dotenv==1.0.1
 
 # ============================================================================
-# INSTALLATION:
-# pip install --upgrade pip && pip install -r requirements-psycopg.txt
+# INSTALLATION INSTRUCTIONS:
+# 1. Install: pip install --upgrade pip setuptools wheel
+# 2. Install: pip install --only-binary=:all: -r requirements-psycopg.txt
 # 
 # DATABASE_URL CHANGE REQUIRED:
-# OLD: postgresql+asyncpg://user:pass@host:5432/db
-# NEW: postgresql+psycopg://user:pass@host:5432/db
+# OLD (asyncpg): postgresql+asyncpg://user:pass@host:5432/db
+# NEW (psycopg):  postgresql+psycopg://user:pass@host:5432/db
 # 
-# NO CODE CHANGES NEEDED - psycopg[binary] is SQLAlchemy-compatible
+# CODE CHANGES (if needed in database.py or similar):
+# Replace: DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+# With:    DATABASE_URL.replace("postgresql://", "postgresql+psycopg://")
+# 
+# NO OTHER CODE CHANGES NEEDED - psycopg[binary] is SQLAlchemy-compatible
 # ============================================================================

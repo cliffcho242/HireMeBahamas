@@ -10,7 +10,7 @@
       }
     }
   ],
-  "installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r api/requirements.txt",
+  "installCommand": "pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r api/requirements.txt",
   "functions": {
     "api/**/*.py": {
       "maxDuration": 30,

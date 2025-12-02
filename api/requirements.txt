@@ -10,7 +10,9 @@ fastapi==0.115.5
 pydantic==2.10.2
 
 # Database - Binary-only (NO COMPILATION)
-asyncpg==0.30.0
+# CRITICAL: asyncpg 0.29.0 has pre-built wheels for all platforms
+# Use --only-binary=:all: flag during pip install to force binary wheels
+asyncpg==0.29.0
 sqlalchemy[asyncio]==2.0.36
 
 # Serverless Handler (Vercel)

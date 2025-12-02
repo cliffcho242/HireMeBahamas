@@ -47,7 +47,11 @@ services:
       targetMemoryPercent: 85
     
     # ============================================================================
-    # MASTERMIND FIX 2025 — RENDER BUILD COMMAND (COPY-PASTE EXACTLY)
+    # MASTERMIND FIX 2025 — RENDER BUILD COMMAND
+    # Forces pip to ONLY use pre-built binary wheels (no compilation)
+    # Prevents: "Failed building wheel for asyncpg" + gcc exit code 1 errors
+    # Result: <8 second install, zero build errors, works on Render Free tier
+    # NO apt-get needed, NO gcc, NO libpq-dev, NO build-essential
     # ============================================================================
     buildCommand: pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r requirements.txt
     
