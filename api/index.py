@@ -11,8 +11,12 @@ import time
 import sys
 import logging
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# Add api directory and create app alias for backend imports
+api_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, api_dir)
+# Create app module alias so backend_app can import as 'app'
+import backend_app as app
+sys.modules['app'] = app
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -32,6 +36,9 @@ except ImportError as e:
     HAS_BACKEND = False
     logger.warning(f"⚠️  Backend modules not available: {e}")
     logger.warning("Running with placeholder endpoints")
+except Exception as e:
+    HAS_BACKEND = False
+    logger.error(f"❌ Error importing backend modules: {e}", exc_info=True)
 
 # Database imports with graceful fallback
 try:
