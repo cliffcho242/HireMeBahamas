@@ -26,8 +26,12 @@ def check_requirements():
         ("fastapi", "0.115.5"),
         ("uvicorn", "0.32.0"),
         ("gunicorn", "23.0.0"),
-        ("asyncpg", "0.30.0"),
         ("sqlalchemy", "2.0.36"),
+    ]
+    
+    # Special checks for packages with version ranges
+    version_range_packages = [
+        ("asyncpg", ">=0.29.0,<0.30.0"),
     ]
     
     all_found = True
@@ -39,6 +43,14 @@ def check_requirements():
             print(f"  ✅ {pkg_name}=={version}")
         else:
             print(f"  ❌ {pkg_name}=={version} - NOT FOUND")
+            all_found = False
+    
+    # Check version range packages
+    for pkg_name, version_range in version_range_packages:
+        if f"{pkg_name}{version_range}" in content:
+            print(f"  ✅ {pkg_name}{version_range}")
+        else:
+            print(f"  ❌ {pkg_name}{version_range} - NOT FOUND")
             all_found = False
     
     return all_found
