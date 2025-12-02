@@ -98,16 +98,28 @@ def check_port_availability(port, max_attempts=3):
                 )
             else:
                 # Linux/Unix: use lsof and kill
-                result = subprocess.run(
-                    ["lsof", "-ti", f":{port}"],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                )
-                if result.stdout.strip():
-                    pids = result.stdout.strip().split("\n")
-                    for pid in pids:
-                        subprocess.run(["kill", "-9", pid], capture_output=True)
+                try:
+                    result = subprocess.run(
+                        ["lsof", "-ti", f":{port}"],
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                    )
+                    if result.stdout.strip():
+                        pids = result.stdout.strip().split("\n")
+                        for pid in pids:
+                            try:
+                                subprocess.run(["kill", "-9", pid], capture_output=True, timeout=2)
+                            except subprocess.TimeoutExpired:
+                                logger.warning(f"Timeout killing process {pid}")
+                            except Exception as e:
+                                logger.warning(f"Failed to kill process {pid}: {e}")
+                except FileNotFoundError:
+                    logger.warning("lsof command not found. Install with: sudo apt-get install lsof")
+                except subprocess.TimeoutExpired:
+                    logger.warning(f"lsof command timed out")
+                except Exception as e:
+                    logger.warning(f"Error using lsof: {e}")
             time.sleep(2)
         except Exception as e:
             logger.warning(f"Could not kill process on port {port}: {e}")

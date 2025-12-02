@@ -51,7 +51,19 @@ VALID_FUNCTION_PROPS: Set[str] = {
 
 
 def validate_no_comments(data: Dict, path: str = "") -> List[str]:
-    """Check for properties starting with _ which are often used as comments."""
+    """
+    Check for properties starting with _ which are often used as comments.
+    
+    Recursively validates a dictionary for underscore-prefixed keys that are not
+    allowed in Vercel configuration files.
+    
+    Args:
+        data: Dictionary to validate (can be nested)
+        path: Current path in the object tree (used for error reporting)
+    
+    Returns:
+        List of validation error messages
+    """
     issues = []
     
     for key, value in data.items():
@@ -92,9 +104,9 @@ def validate_vercel_json(file_path: Path) -> Tuple[bool, List[str]]:
     comment_issues = validate_no_comments(data)
     issues.extend(comment_issues)
     
-    # Check top-level properties
+    # Check top-level properties (excluding underscore-prefixed which are already caught)
     for key in data.keys():
-        if key not in VALID_TOP_LEVEL_PROPS and not key.startswith("_"):
+        if not key.startswith("_") and key not in VALID_TOP_LEVEL_PROPS:
             issues.append(
                 f"Unknown top-level property '{key}' may not be supported by Vercel"
             )

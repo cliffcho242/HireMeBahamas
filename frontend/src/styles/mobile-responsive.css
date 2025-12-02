@@ -16,13 +16,15 @@ html {
   text-size-adjust: 100%;
 }
 
-/* Smooth scrolling for mobile */
-* {
+/* Smooth scrolling for scrollable containers (not all elements) */
+.mobile-scroll-container {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Remove tap highlight */
-* {
+/* Remove tap highlight only from interactive elements where custom feedback is provided */
+button,
+a,
+.interactive {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
 }
