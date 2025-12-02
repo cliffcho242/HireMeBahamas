@@ -16,10 +16,6 @@
       "destination": "/api/auth/me.py"
     },
     {
-      "source": "/api/cron/health",
-      "destination": "/api/cron/health.py"
-    },
-    {
       "source": "/api/:path*",
       "destination": "/api/index.py"
     }

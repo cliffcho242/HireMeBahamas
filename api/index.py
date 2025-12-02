@@ -9,6 +9,9 @@ import os
 import time
 import sys
 
+# Constants
+MAX_ERROR_MSG_LENGTH = 100
+
 # Database imports with graceful fallback
 try:
     from sqlalchemy.ext.asyncio import create_async_engine
@@ -133,7 +136,7 @@ async def ready():
         }
         
     except Exception as e:
-        error_msg = str(e)[:100]  # Limit error message length
+        error_msg = str(e)[:MAX_ERROR_MSG_LENGTH]  # Limit error message length for security
         return Response(
             content=f'{{"status":"not_ready","database":"disconnected","error":"{error_msg}"}}',
             status_code=503,

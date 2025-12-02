@@ -204,13 +204,5 @@ async def health():
 # ============================================================================
 handler = Mangum(app, lifespan="off")
 
-# Cleanup on shutdown
-async def cleanup():
-    """Cleanup database connections"""
-    if db_engine:
-        await db_engine.dispose()
-
-# Register cleanup
-import atexit
-import asyncio
-atexit.register(lambda: asyncio.run(cleanup()) if db_engine else None)
+# Note: Cleanup is handled automatically by Vercel's serverless runtime
+# No explicit cleanup needed as connections are short-lived per request
