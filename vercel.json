@@ -4,24 +4,23 @@
   "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/dist",
   "installCommand": "cd frontend && npm ci",
-  "builds": [
+  "functions": {
+    "api/**/*.py": {
+      "runtime": "python3.12",
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
     {
-      "src": "api/**/*.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxDuration": 10
-      }
+      "source": "/api/auth/me",
+      "destination": "/api/auth/me.py"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index.py"
     }
   ],
   "routes": [
-    {
-      "src": "/api/auth/me",
-      "dest": "api/auth/me.py"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "api/$1"
-    },
     {
       "handle": "filesystem"
     },

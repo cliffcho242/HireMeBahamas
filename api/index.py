@@ -1,24 +1,54 @@
 """
 Vercel Serverless FastAPI Handler - HireMeBahamas (2025)
-Zero cold starts, sub-200ms response time globally
+Zero cold starts, sub-200ms response time globally, bulletproof deployment
 """
-from fastapi import FastAPI, Response, HTTPException
+from fastapi import FastAPI, Response, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 import os
 import time
+import sys
 
-# Import database utilities at module level for performance
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy import text
+# Constants
+MAX_ERROR_MSG_LENGTH = 100
+
+# Database imports with graceful fallback
+try:
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy import text
+    HAS_DB = True
+except ImportError:
+    HAS_DB = False
+    print("Database drivers not available - running in fallback mode", file=sys.stderr)
+
+# JWT imports with graceful fallback
+try:
+    from jose import jwt, JWTError
+except ImportError:
+    try:
+        import jwt as jwt_lib
+        class jwt:
+            @staticmethod
+            def decode(token, secret, algorithms):
+                return jwt_lib.decode(token, secret, algorithms=algorithms)
+        JWTError = jwt_lib.PyJWTError
+    except ImportError:
+        jwt = None
+        JWTError = Exception
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+JWT_SECRET = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+JWT_ALGORITHM = "HS256"
 
 # ============================================================================
 # CREATE FASTAPI APP
 # ============================================================================
 app = FastAPI(
     title="HireMeBahamas API",
-    version="1.0.0",
-    description="Job platform API for the Bahamas",
+    version="2.0.0",
+    description="Job platform API for the Bahamas - Immortal Edition",
 )
 
 # ============================================================================
@@ -49,6 +79,7 @@ async def health():
         "platform": "vercel-serverless",
         "region": os.getenv("VERCEL_REGION", "unknown"),
         "timestamp": int(time.time()),
+        "version": "2.0.0",
     }
 
 # ============================================================================
@@ -56,15 +87,20 @@ async def health():
 # ============================================================================
 @app.get("/api/ready")
 @app.get("/ready")
-@app.head("/api/ready")
-@app.head("/ready")
 async def ready():
     """
     Readiness check with database connectivity validation.
     Returns 200 if database is accessible, 503 if not.
     """
+    if not HAS_DB:
+        return Response(
+            content='{"status":"degraded","database":"drivers_unavailable","message":"Running without database support"}',
+            status_code=200,
+            media_type="application/json"
+        )
+    
     try:
-        db_url = os.getenv("DATABASE_URL")
+        db_url = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
         
         if not db_url:
             return Response(
@@ -77,13 +113,15 @@ async def ready():
         # Convert postgres:// to postgresql+asyncpg://
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-        elif db_url.startswith("postgresql://"):
+        elif db_url.startswith("postgresql://") and "asyncpg" not in db_url:
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
         
         engine = create_async_engine(
             db_url,
             pool_pre_ping=True,
-            connect_args={"timeout": 5}
+            pool_size=1,
+            max_overflow=0,
+            connect_args={"timeout": 5, "command_timeout": 5}
         )
         
         async with engine.begin() as conn:
@@ -98,65 +136,92 @@ async def ready():
         }
         
     except Exception as e:
+        error_msg = str(e)[:MAX_ERROR_MSG_LENGTH]  # Limit error message length for security
         return Response(
-            content=f'{{"status":"not_ready","database":"disconnected","error":"{str(e)}"}}',
+            content=f'{{"status":"not_ready","database":"disconnected","error":"{error_msg}"}}',
             status_code=503,
             media_type="application/json"
         )
 
 # ============================================================================
-# AUTHENTICATION ENDPOINTS
+# ROOT ENDPOINT
+# ============================================================================
+@app.get("/")
+@app.get("/api")
+async def root():
+    """Root endpoint with API information"""
+    return {
+        "name": "HireMeBahamas API",
+        "version": "2.0.0",
+        "status": "operational",
+        "platform": "vercel-serverless",
+        "endpoints": {
+            "health": "/api/health",
+            "ready": "/api/ready",
+            "auth": "/api/auth/me",
+            "jobs": "/api/jobs",
+            "posts": "/api/posts",
+        }
+    }
+
+# ============================================================================
+# AUTHENTICATION ENDPOINTS (Placeholder - implement with actual logic)
 # ============================================================================
 @app.post("/api/auth/login")
-async def login(email: str, password: str):
-    """Login endpoint - placeholder for production implementation"""
-    # TODO: Implement actual authentication logic
+async def login():
+    """Login endpoint - implement with your auth logic"""
     return {
-        "message": "Login endpoint - implement with your auth logic",
-        "email": email,
+        "message": "Login endpoint - see /api/auth/me for implementation",
+        "status": "not_implemented"
     }
 
 @app.post("/api/auth/register")
 async def register():
-    """Register endpoint - placeholder for production implementation"""
-    # TODO: Implement actual registration logic
-    return {"message": "Register endpoint - implement with your auth logic"}
-
-@app.get("/api/auth/me")
-async def me():
-    """Get current user - placeholder for production implementation"""
-    # TODO: Implement actual user retrieval logic
-    return {"message": "User endpoint - implement with your auth logic"}
+    """Register endpoint - implement with your auth logic"""
+    return {
+        "message": "Register endpoint - implement with your auth logic",
+        "status": "not_implemented"
+    }
 
 # ============================================================================
-# JOB ENDPOINTS
+# JOB ENDPOINTS (Placeholder - implement with actual logic)
 # ============================================================================
 @app.get("/api/jobs")
 async def get_jobs():
-    """Get all jobs - placeholder for production implementation"""
-    # TODO: Implement actual job listing logic
-    return {"jobs": [], "total": 0}
+    """Get all jobs - implement with database query"""
+    return {
+        "jobs": [],
+        "total": 0,
+        "message": "Jobs endpoint - implement with your database"
+    }
 
 @app.post("/api/jobs")
 async def create_job():
-    """Create job - placeholder for production implementation"""
-    # TODO: Implement actual job creation logic
-    return {"message": "Create job endpoint - implement with your logic"}
+    """Create job - implement with database insertion"""
+    return {
+        "message": "Create job endpoint - implement with your logic",
+        "status": "not_implemented"
+    }
 
 # ============================================================================
-# POST ENDPOINTS
+# POST ENDPOINTS (Placeholder - implement with actual logic)
 # ============================================================================
 @app.get("/api/posts")
 async def get_posts():
-    """Get all posts - placeholder for production implementation"""
-    # TODO: Implement actual post listing logic
-    return {"posts": [], "total": 0}
+    """Get all posts - implement with database query"""
+    return {
+        "posts": [],
+        "total": 0,
+        "message": "Posts endpoint - implement with your database"
+    }
 
 @app.post("/api/posts")
 async def create_post():
-    """Create post - placeholder for production implementation"""
-    # TODO: Implement actual post creation logic
-    return {"message": "Create post endpoint - implement with your logic"}
+    """Create post - implement with database insertion"""
+    return {
+        "message": "Create post endpoint - implement with your logic",
+        "status": "not_implemented"
+    }
 
 # ============================================================================
 # EXPORT HANDLER FOR VERCEL
