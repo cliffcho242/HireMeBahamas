@@ -28,7 +28,6 @@ def check_requirements():
         ("gunicorn", "23.0.0"),
         ("asyncpg", "0.30.0"),
         ("sqlalchemy", "2.0.36"),
-        ("mangum", "0.19.0"),
     ]
     
     all_found = True
@@ -120,6 +119,11 @@ def check_imports():
     """Test if all imports work"""
     print("\n🐍 Testing Python imports...")
     try:
+        # Add current directory to path for imports
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        
         # Test Vercel API
         from api.index import app
         print(f"  ✅ api.index imports successfully")

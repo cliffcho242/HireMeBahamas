@@ -8,6 +8,10 @@ from mangum import Mangum
 import os
 import time
 
+# Import database utilities at module level for performance
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import text
+
 # ============================================================================
 # CREATE FASTAPI APP
 # ============================================================================
@@ -60,7 +64,6 @@ async def ready():
     Returns 200 if database is accessible, 503 if not.
     """
     try:
-        # Lazy import to keep /health instant
         db_url = os.getenv("DATABASE_URL")
         
         if not db_url:
@@ -71,9 +74,6 @@ async def ready():
             )
         
         # Test database connection
-        from sqlalchemy.ext.asyncio import create_async_engine
-        from sqlalchemy import text
-        
         # Convert postgres:// to postgresql+asyncpg://
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)

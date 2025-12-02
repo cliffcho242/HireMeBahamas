@@ -25,6 +25,9 @@ passlib[bcrypt]==1.7.4
 python-multipart==0.0.18
 python-dotenv==1.0.1
 
+# Serverless Handler (Vercel-specific)
+mangum==0.19.0
+
 # ============================================================================
 # CRITICAL: Use --only-binary=:all: flag to prevent asyncpg compilation
 # Vercel will automatically use this in build if set in vercel.json

@@ -34,9 +34,6 @@ python-dotenv==1.0.1
 redis==5.2.1
 hiredis==3.0.0
 
-# Serverless Handler (for Vercel)
-mangum==0.19.0
-
 # ============================================================================
 # CRITICAL: Always use --only-binary=:all: flag during install
 # This prevents asyncpg from attempting source builds

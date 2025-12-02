@@ -32,17 +32,25 @@ def get_engine():
     
     if _engine is None:
         db_url = get_database_url()
+        
+        # Get configurable timeout values from environment
+        connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
+        command_timeout = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))
+        pool_size = int(os.getenv("DB_POOL_SIZE", "2"))
+        max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "3"))
+        pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "300"))
+        
         _engine = create_async_engine(
             db_url,
-            pool_size=2,              # Small pool for serverless
-            max_overflow=3,           # Limited overflow
-            pool_recycle=300,         # Recycle connections every 5 minutes
-            pool_pre_ping=True,       # Validate connections before use
+            pool_size=pool_size,           # Small pool for serverless
+            max_overflow=max_overflow,     # Limited overflow
+            pool_recycle=pool_recycle,     # Recycle connections every 5 minutes
+            pool_pre_ping=True,            # Validate connections before use
             connect_args={
-                "timeout": 10,        # Connection timeout
-                "command_timeout": 30, # Query timeout
+                "timeout": connect_timeout,        # Connection timeout
+                "command_timeout": command_timeout, # Query timeout
             },
-            echo=False,               # Disable SQL logging in production
+            echo=False,                    # Disable SQL logging in production
         )
     
     return _engine
