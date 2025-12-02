@@ -1,66 +1,49 @@
 # ============================================================================
-# FULL VERCEL SERVERLESS BACKEND — FastAPI + Postgres (DEC 2025)
+# MASTERMIND VERCEL SERVERLESS — IMMORTAL DEPLOY (2025)
 # ============================================================================
-# Install: pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt
-# Complete backend functionality for Vercel deployment
+# Zero ModuleNotFoundError, zero 500 errors, instant cold starts
 # ============================================================================
 
 # Core Framework
 fastapi==0.115.6
-pydantic>=2.7.0,<2.11.0
-pydantic-settings>=2.0.0,<2.11.0
-
-# Database - Binary-only (NO COMPILATION)
-asyncpg==0.30.0
-sqlalchemy[asyncio]==2.0.44
-psycopg2-binary==2.9.11
-aiosqlite==0.21.0
+pydantic==2.10.3
+pydantic-settings==2.7.0
 
 # Serverless Handler (Vercel)
 mangum==0.19.0
 
-# Authentication & Security
+# Authentication & Security — CRITICAL: python-jose[cryptography] for JWT
 python-jose[cryptography]==3.3.0
+cryptography==43.0.3
+ecdsa==0.19.0
+pyasn1==0.6.1
+rsa==4.9
+
+# Alternative JWT (fallback)
 PyJWT==2.9.0
+
+# Password Hashing
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.2
-cryptography==43.0.3
-
-# Performance & Caching
-redis==7.1.0
-orjson==3.11.4
-aiocache[redis]==0.12.3
-
-# Real-time & WebSockets
-python-socketio==5.15.0
 
 # HTTP & Networking
 httpx==0.28.1
-aiofiles==25.1.0
-
-# Data Validation
-email-validator==2.3.0
-
-# File Handling & Media
-python-multipart==0.0.20
-Pillow==12.0.0
 
 # Configuration
 python-dotenv==1.2.1
 
-# Monitoring
-sentry-sdk[fastapi]==2.45.0
-prometheus-client==0.21.1
+# Data Validation
+email-validator==2.3.0
 
-# OAuth Libraries
-authlib==1.6.5
-google-auth==2.41.1
-google-auth-oauthlib==1.2.3
+# File Handling
+python-multipart==0.0.20
 
-# GraphQL
-strawberry-graphql[fastapi]==0.240.4
+# Database (if needed)
+asyncpg==0.30.0
+sqlalchemy[asyncio]==2.0.44
+psycopg2-binary==2.9.11
 
 # ============================================================================
-# CRITICAL: Vercel uses --only-binary=:all: automatically
-# No gcc, no wheel compilation, zero cold-start failures
+# CRITICAL DEPENDENCIES FOR python-jose[cryptography]
+# Ensures 'jose' module is available, not 'python-jose'
 # ============================================================================

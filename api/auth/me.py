@@ -7,12 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 import os
 
-# Try python-jose first (matches backend), fallback to PyJWT
-try:
-    from jose import jwt, JWTError, ExpiredSignatureError
-except ImportError:
-    import jwt
-    from jwt import InvalidTokenError as JWTError, ExpiredSignatureError
+# Import jose from python-jose[cryptography] package
+from jose import jwt, JWTError, ExpiredSignatureError
 
 # ============================================================================
 # CONFIGURATION
