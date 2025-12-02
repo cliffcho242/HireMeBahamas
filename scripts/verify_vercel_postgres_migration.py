@@ -6,14 +6,32 @@ Validates database migration from Railway/Render to Vercel Postgres
 Usage:
     python scripts/verify_vercel_postgres_migration.py
     
+    # For CI/CD (non-interactive mode)
+    NON_INTERACTIVE=true python scripts/verify_vercel_postgres_migration.py
+    
+    # Custom table list
+    VERIFY_TABLES="users,posts,jobs" python scripts/verify_vercel_postgres_migration.py
+    
 Environment Variables Required:
     VERCEL_POSTGRES_URL or DATABASE_URL - Vercel Postgres connection string
+    
+Environment Variables Optional:
+    NON_INTERACTIVE - Set to 'true' to skip user prompts (default: false)
+    VERIFY_TABLES - Comma-separated list of tables to verify (default: users,posts,jobs,messages,notifications)
 """
 
 import os
 import sys
 from urllib.parse import urlparse
 import asyncio
+
+# Check for required dependencies at startup
+try:
+    import asyncpg
+except ImportError:
+    print("ERROR: asyncpg is not installed")
+    print("Install with: pip install asyncpg")
+    sys.exit(1)
 
 
 class Colors:
@@ -71,7 +89,8 @@ def get_database_url() -> str:
             raise ValueError("Invalid URL format")
         
         # Check if it's a Neon/Vercel Postgres URL
-        if 'neon.tech' not in parsed.hostname:
+        non_interactive = os.environ.get('NON_INTERACTIVE', 'false').lower() == 'true'
+        if 'neon.tech' not in parsed.hostname and not non_interactive:
             print_warning(f"Database host ({parsed.hostname}) doesn't appear to be Vercel Postgres (Neon)")
             print_warning("Expected hostname to contain 'neon.tech'")
             response = input("Continue anyway? (y/N): ")
@@ -88,9 +107,8 @@ async def test_connection(db_url: str) -> bool:
     """Test database connectivity"""
     print_header("TESTING DATABASE CONNECTION")
     
+    # asyncpg is already imported and verified at startup
     try:
-        import asyncpg
-        
         # Convert to asyncpg format if needed
         if db_url.startswith('postgresql+asyncpg://'):
             db_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
@@ -113,10 +131,6 @@ async def test_connection(db_url: str) -> bool:
         await conn.close()
         return True
         
-    except ImportError:
-        print_error("asyncpg not installed")
-        print_info("Install with: pip install asyncpg")
-        return False
     except Exception as e:
         print_error(f"Connection failed: {e}")
         return False
@@ -189,15 +203,26 @@ async def check_row_counts(db_url: str) -> bool:
         
         conn = await asyncpg.connect(db_url, timeout=30)
         
-        # Tables to check
-        tables = ['users', 'posts', 'jobs', 'messages', 'notifications']
+        # Get tables to check from environment or use defaults
+        default_tables = 'users,posts,jobs,messages,notifications'
+        tables_str = os.environ.get('VERIFY_TABLES', default_tables)
+        tables = [t.strip() for t in tables_str.split(',')]
         
-        print_info("Table row counts:")
+        print_info(f"Checking row counts for tables: {', '.join(tables)}")
         total_rows = 0
         
         for table in tables:
             try:
-                count = await conn.fetchval(f'SELECT COUNT(*) FROM {table}')
+                # Use proper identifier quoting to prevent SQL injection
+                # asyncpg doesn't have _quote_name, so we use format with identifier validation
+                # Validate table name contains only safe characters
+                if not table.replace('_', '').isalnum():
+                    print_warning(f"  {table}: Skipped (invalid table name)")
+                    continue
+                
+                # Use asyncpg's built-in identifier quoting
+                query = f'SELECT COUNT(*) FROM "{table}"'
+                count = await conn.fetchval(query)
                 total_rows += count
                 
                 if count > 0:

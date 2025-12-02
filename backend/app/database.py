@@ -46,15 +46,30 @@ logger = logging.getLogger(__name__)
 # 1. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
 # 2. POSTGRES_URL (Vercel Postgres primary connection)
 # 3. DATABASE_URL (Standard PostgreSQL connection)
-# 4. Local development default
+# 4. Local development default (only for development, not production)
 # =============================================================================
+
+# Check if we're in production mode
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
+# Get database URL with proper fallback
 DATABASE_URL = (
     os.getenv("DATABASE_PRIVATE_URL") or 
     os.getenv("POSTGRES_URL") or
-    os.getenv("DATABASE_URL", 
-        "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
-    )
+    os.getenv("DATABASE_URL")
 )
+
+# For local development only - require explicit configuration in production
+if not DATABASE_URL:
+    if ENVIRONMENT == "production":
+        raise ValueError(
+            "DATABASE_URL must be set in production. "
+            "Please set DATABASE_URL, POSTGRES_URL, or DATABASE_PRIVATE_URL environment variable."
+        )
+    else:
+        # Use local development default only in development mode
+        DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+        logger.warning("Using default local development database URL. Set DATABASE_URL for production.")
 
 # Convert sync PostgreSQL URLs to async driver format
 if DATABASE_URL.startswith("postgresql://"):
