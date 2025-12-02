@@ -24,7 +24,7 @@ const SESSION_KEY = 'hireme_session';
 
 // Derive API base URL with safe production fallback
 // NOTE: Update DEFAULT_PROD_API to your backend URL (Railway, Vercel Serverless, etc.)
-const DEFAULT_PROD_API = import.meta.env.VITE_API_URL || 'https://hiremebahamas-backend.up.railway.app';
+const DEFAULT_PROD_API = import.meta.env.VITE_API_URL || 'https://hiremebahamas-backend-lw6xi9m03-cliffs-projects-a84c76c9.vercel.app';
 const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
 let API_BASE_URL = ENV_API || 'http://127.0.0.1:9999';
 

@@ -26,7 +26,7 @@ import { get, set, del } from 'idb-keyval';
 // API URL configuration
 // NOTE: Update DEFAULT_PROD_API to your backend URL (Railway, Vercel Serverless, etc.)
 const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
-const DEFAULT_PROD_API = ENV_API || 'https://hiremebahamas-backend.up.railway.app';
+const DEFAULT_PROD_API = ENV_API || 'https://hiremebahamas-backend-lw6xi9m03-cliffs-projects-a84c76c9.vercel.app';
 
 let API_BASE_URL = ENV_API || 'http://127.0.0.1:9999';
 
