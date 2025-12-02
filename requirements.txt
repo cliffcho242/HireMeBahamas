@@ -38,3 +38,6 @@ hiredis==3.0.0
 # CRITICAL: Always use --only-binary=:all: flag during install
 # This prevents asyncpg from attempting source builds
 # ============================================================================
+
+# Flask Framework
+Flask==3.0.3
