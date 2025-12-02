@@ -4,6 +4,27 @@
 
 A modern, Facebook-inspired social platform designed specifically for professionals in the Bahamas to connect, share career opportunities, and build meaningful professional relationships.
 
+## 🚀 NEW: Immortal Vercel Postgres Migration
+
+**Zero-downtime migration from Railway/Render to Vercel Postgres with automatic retry and self-healing!**
+
+✅ **5-step migration process** - Complete in minutes  
+✅ **Zero downtime** - No service interruption  
+✅ **Automatic backup** - Safe rollback available  
+✅ **Connection pooling** - Optimized for serverless  
+✅ **Self-healing** - Automatic retry with exponential backoff  
+
+📖 **[Quick Start Guide](./QUICK_START_IMMORTAL_MIGRATION.md)** - Migrate in 5 simple steps  
+📖 **[Complete Migration Guide](./IMMORTAL_MIGRATION_GUIDE.md)** - Comprehensive instructions with troubleshooting  
+📖 **[Migration Checklist](./VERCEL_POSTGRES_MIGRATION_CHECKLIST.md)** - Post-migration monitoring  
+
+**Quick Command:**
+```bash
+python immortal_vercel_migration_fix.py
+```
+
+---
+
 ## ⚡ NEW: Edge Functions + Direct Postgres Access
 
 **MASTERMIND FINAL EDGE + POSTGRES — Run real SQL directly from Vercel Edge Functions!**
