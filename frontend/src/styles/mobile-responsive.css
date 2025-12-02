@@ -1,0 +1,428 @@
+/**
+ * Mobile Responsiveness Utilities
+ * Additional CSS utilities for enhanced mobile experience
+ * Complements Tailwind CSS configuration
+ */
+
+/* ========================================
+   MOBILE-SPECIFIC RESETS
+   ======================================== */
+
+/* Prevent text size adjustment on orientation change */
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Smooth scrolling for mobile */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Remove tap highlight */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* ========================================
+   SAFE AREA SUPPORT (Notched Devices)
+   ======================================== */
+
+/* Global safe area variables */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+}
+
+/* Safe area padding utility classes */
+.safe-padding {
+  padding-top: var(--safe-area-inset-top);
+  padding-right: var(--safe-area-inset-right);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+}
+
+.safe-padding-top {
+  padding-top: var(--safe-area-inset-top);
+}
+
+.safe-padding-bottom {
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+/* ========================================
+   TOUCH-FRIENDLY INTERACTIONS
+   ======================================== */
+
+/* Minimum touch target size (44x44px for iOS, 48x48px for Android) */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.touch-target-android {
+  min-width: 48px;
+  min-height: 48px;
+}
+
+/* Remove 300ms tap delay on mobile */
+.fast-tap {
+  touch-action: manipulation;
+}
+
+/* Active state feedback for touch */
+.touch-feedback:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+/* ========================================
+   MOBILE VIEWPORT OPTIMIZATION
+   ======================================== */
+
+/* Prevent horizontal overflow */
+.mobile-container {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Full viewport height accounting for mobile browsers */
+.mobile-full-height {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* ========================================
+   MOBILE-OPTIMIZED SCROLLING
+   ======================================== */
+
+/* Smooth momentum scrolling */
+.mobile-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Horizontal scroll with snap points */
+.mobile-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+}
+
+.scroll-snap-item {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+/* ========================================
+   MOBILE TYPOGRAPHY
+   ======================================== */
+
+/* Prevent text zoom on input focus (iOS) */
+input,
+textarea,
+select {
+  font-size: 16px; /* Minimum to prevent zoom on iOS */
+}
+
+@media (min-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 14px; /* Can be smaller on tablets/desktop */
+  }
+}
+
+/* Readable line length on mobile */
+.mobile-readable {
+  max-width: 65ch; /* Optimal reading width */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ========================================
+   MOBILE NAVIGATION PATTERNS
+   ======================================== */
+
+/* Bottom navigation bar (common on mobile) */
+.mobile-nav-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding-bottom: var(--safe-area-inset-bottom);
+  z-index: 50;
+}
+
+/* Side drawer/menu */
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 80vw;
+  max-width: 320px;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 100;
+}
+
+.mobile-drawer.open {
+  transform: translateX(0);
+}
+
+/* Backdrop overlay */
+.mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 90;
+}
+
+.mobile-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ========================================
+   MOBILE MODALS & BOTTOM SHEETS
+   ======================================== */
+
+/* Bottom sheet (common on mobile) */
+.mobile-bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 90vh;
+  border-radius: 16px 16px 0 0;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding-bottom: var(--safe-area-inset-bottom);
+  z-index: 100;
+}
+
+.mobile-bottom-sheet.open {
+  transform: translateY(0);
+}
+
+/* Drag handle for bottom sheet */
+.mobile-sheet-handle {
+  width: 36px;
+  height: 4px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  margin: 8px auto;
+}
+
+/* ========================================
+   MOBILE FORM OPTIMIZATIONS
+   ======================================== */
+
+/* Larger form inputs on mobile */
+.mobile-input {
+  padding: 12px 16px;
+  font-size: 16px; /* Prevent zoom on iOS */
+  border-radius: 8px;
+}
+
+/* Sticky form buttons on mobile */
+.mobile-form-footer {
+  position: sticky;
+  bottom: 0;
+  padding: 16px;
+  padding-bottom: calc(16px + var(--safe-area-inset-bottom));
+  background: white;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* ========================================
+   MOBILE PERFORMANCE OPTIMIZATIONS
+   ======================================== */
+
+/* Hardware acceleration for smooth animations */
+.gpu-accelerate {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimize for 60fps scrolling */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Will-change for animated elements */
+.will-animate {
+  will-change: transform, opacity;
+}
+
+/* ========================================
+   MOBILE-SPECIFIC UTILITY CLASSES
+   ======================================== */
+
+/* Hide on mobile, show on desktop */
+@media (max-width: 767px) {
+  .mobile-hide {
+    display: none !important;
+  }
+}
+
+/* Show only on mobile */
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* Tablet-specific */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tablet-only {
+    display: block !important;
+  }
+}
+
+@media (max-width: 767px), (min-width: 1024px) {
+  .tablet-only {
+    display: none !important;
+  }
+}
+
+/* ========================================
+   ORIENTATION-SPECIFIC STYLES
+   ======================================== */
+
+/* Portrait mode optimizations */
+@media (orientation: portrait) {
+  .portrait-stack {
+    flex-direction: column;
+  }
+}
+
+/* Landscape mode optimizations */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Compact header in landscape on phones */
+  .landscape-compact-header {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}
+
+/* ========================================
+   MOBILE GESTURE SUPPORT
+   ======================================== */
+
+/* Pull-to-refresh indicator */
+.pull-refresh-indicator {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: top 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pull-refresh-indicator.active {
+  top: 10px;
+}
+
+/* Swipe actions container */
+.swipe-actions {
+  position: relative;
+  overflow: hidden;
+}
+
+.swipe-action-content {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ========================================
+   MOBILE LOADING STATES
+   ======================================== */
+
+/* Skeleton loading optimized for mobile */
+.skeleton-mobile {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ========================================
+   MOBILE-SPECIFIC MEDIA QUERIES
+   ======================================== */
+
+/* Small phones (iPhone SE, etc.) */
+@media (max-width: 374px) {
+  .text-responsive {
+    font-size: 14px;
+  }
+}
+
+/* Standard phones */
+@media (min-width: 375px) and (max-width: 639px) {
+  .text-responsive {
+    font-size: 15px;
+  }
+}
+
+/* Large phones and small tablets */
+@media (min-width: 640px) and (max-width: 767px) {
+  .text-responsive {
+    font-size: 16px;
+  }
+}
+
+/* Tablets */
+@media (min-width: 768px) {
+  .text-responsive {
+    font-size: 16px;
+  }
+}
+
+/* ========================================
+   PRINT STYLES (Mobile-Friendly)
+   ======================================== */
+
+@media print {
+  /* Hide navigation and interactive elements when printing */
+  .mobile-nav-bottom,
+  .mobile-drawer,
+  .mobile-backdrop,
+  .mobile-bottom-sheet {
+    display: none !important;
+  }
+
+  /* Ensure content fits on page */
+  body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+}
