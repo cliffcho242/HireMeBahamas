@@ -661,7 +661,7 @@ railway status
 - [README](./README.md)
 
 ### Need Help?
-- Check [GitHub Issues](https://github.com/cliffcho242/HireMeBahamas/issues)
+- Open a GitHub Issue in the repository
 - Review [Troubleshooting](#troubleshooting) section
 - Consult platform-specific documentation
 

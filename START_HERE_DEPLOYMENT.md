@@ -219,7 +219,7 @@ curl https://your-app.vercel.app/api/health
    - Vercel: https://www.vercel-status.com
    - Railway: https://status.railway.app
    - Render: https://status.render.com
-4. **Open a GitHub Issue**: https://github.com/cliffcho242/HireMeBahamas/issues
+4. **Open a GitHub Issue** in the repository
 
 ---
 
