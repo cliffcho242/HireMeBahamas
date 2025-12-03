@@ -240,6 +240,8 @@ async def log_requests(request: Request, call_next):
     
     Captures detailed information for failed requests (4xx, 5xx) to aid in debugging.
     For authentication endpoints, logs the error detail to help diagnose login issues.
+    
+    ENHANCED: Special logging for /api/auth/* to diagnose login issues.
     """
     request_id = str(uuid.uuid4())[:8]
     start_time = time.time()
@@ -251,11 +253,28 @@ async def log_requests(request: Request, call_next):
     client_ip = request.client.host if request.client else 'unknown'
     user_agent = request.headers.get('user-agent', 'unknown')
     
-    # Log incoming request with more context
-    logger.info(
-        f"[{request_id}] --> {request.method} {request.url.path} "
-        f"from {client_ip} | UA: {user_agent[:50]}..."
-    )
+    # Check if this is an auth endpoint
+    is_auth_endpoint = request.url.path.startswith(AUTH_ENDPOINTS_PREFIX)
+    
+    # Enhanced logging for auth endpoints
+    if is_auth_endpoint:
+        logger.info(
+            f"[{request_id}] ============ AUTH REQUEST START ============\n"
+            f"  Method: {request.method}\n"
+            f"  Path: {request.url.path}\n"
+            f"  Client IP: {client_ip}\n"
+            f"  User-Agent: {user_agent[:100]}\n"
+            f"  Content-Type: {request.headers.get('content-type', 'none')}\n"
+            f"  Has Authorization: {bool(request.headers.get('authorization'))}\n"
+            f"  Origin: {request.headers.get('origin', 'none')}\n"
+            f"  Referer: {request.headers.get('referer', 'none')}"
+        )
+    else:
+        # Log incoming request with more context
+        logger.info(
+            f"[{request_id}] --> {request.method} {request.url.path} "
+            f"from {client_ip} | UA: {user_agent[:50]}..."
+        )
     
     # Process request
     try:
@@ -265,10 +284,20 @@ async def log_requests(request: Request, call_next):
         # Determine log level and capture error details for failed requests
         if response.status_code < 400:
             # Success - log at INFO level
-            logger.info(
-                f"[{request_id}] <-- {response.status_code} {request.method} {request.url.path} "
-                f"in {duration_ms}ms"
-            )
+            if is_auth_endpoint:
+                logger.info(
+                    f"[{request_id}] ============ AUTH REQUEST SUCCESS ============\n"
+                    f"  Status: {response.status_code}\n"
+                    f"  Path: {request.url.path}\n"
+                    f"  Duration: {duration_ms}ms\n"
+                    f"  Client IP: {client_ip}\n"
+                    f"  Result: LOGIN SUCCESSFUL"
+                )
+            else:
+                logger.info(
+                    f"[{request_id}] <-- {response.status_code} {request.method} {request.url.path} "
+                    f"in {duration_ms}ms"
+                )
         else:
             # Client/Server error - log at WARNING/ERROR level with more detail
             log_level = logging.WARNING if response.status_code < 500 else logging.ERROR
@@ -294,6 +323,17 @@ async def log_requests(request: Request, call_next):
                         try:
                             error_data = json.loads(body.decode())
                             error_detail = f" | Error: {error_data.get('detail', 'Unknown error')}"
+                            
+                            # Enhanced logging for auth failures
+                            logger.error(
+                                f"[{request_id}] ============ AUTH REQUEST FAILED ============\n"
+                                f"  Status: {response.status_code}\n"
+                                f"  Path: {request.url.path}\n"
+                                f"  Duration: {duration_ms}ms\n"
+                                f"  Client IP: {client_ip}\n"
+                                f"  Error Detail: {error_data.get('detail', 'Unknown error')}\n"
+                                f"  Full Response: {json.dumps(error_data, indent=2)}"
+                            )
                         except (json.JSONDecodeError, UnicodeDecodeError):
                             error_detail = " | Error: Unable to parse response body"
                         
@@ -307,11 +347,13 @@ async def log_requests(request: Request, call_next):
                 except Exception as e:
                     error_detail = f" | Error reading body: {str(e)}"
             
-            logger.log(
-                log_level,
-                f"[{request_id}] <-- {response.status_code} {request.method} {request.url.path} "
-                f"in {duration_ms}ms from {client_ip}{error_detail}"
-            )
+            if not is_auth_endpoint or not error_detail:
+                # Only log here if we didn't already log enhanced auth error above
+                logger.log(
+                    log_level,
+                    f"[{request_id}] <-- {response.status_code} {request.method} {request.url.path} "
+                    f"in {duration_ms}ms from {client_ip}{error_detail}"
+                )
             
             # Log slow requests separately
             if duration_ms > SLOW_REQUEST_THRESHOLD_MS:

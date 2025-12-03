@@ -2,6 +2,7 @@ import axios from 'axios';
 import { User } from '../types/user';
 import { Job } from '../types/job';
 import { debugLog } from '../utils/debugLogger';
+import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
 
 // API Response Types
 interface UserResponse {
@@ -22,12 +23,16 @@ interface FollowingResponse {
 // Session storage key - must match sessionManager.ts
 const SESSION_KEY = 'hireme_session';
 
-// Derive API base URL with Vercel deployment support
-// For Vercel deployments, use same-origin API (deployed together)
-// For local development, use local backend
-const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
+// Log backend configuration on module load
+if (import.meta.env.DEV) {
+  logBackendConfiguration();
+}
 
-let API_BASE_URL = 'http://127.0.0.1:9999'; // Default for local development
+// Derive API base URL - now using smart backend router
+// This will be overridden on a per-request basis by the backend router
+const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string; VITE_RENDER_API_URL?: string } }).env?.VITE_API_URL;
+
+let API_BASE_URL = 'http://127.0.0.1:8000'; // Default for local development
 
 // If running in browser and no explicit env override
 if (!ENV_API && typeof window !== 'undefined') {
@@ -36,14 +41,32 @@ if (!ENV_API && typeof window !== 'undefined') {
                        hostname === 'www.hiremebahamas.com';
   const isVercel = hostname.includes('.vercel.app');
   
-  // For Vercel deployments (production or preview), use same-origin API
-  // This works because both frontend and backend are deployed together
+  // For Vercel deployments, prefer same-origin (Vercel serverless)
   if (isProduction || isVercel) {
     API_BASE_URL = window.location.origin;
+    
+    console.log('🌐 Production/Vercel deployment detected');
+    console.log('🔗 Using Vercel serverless API at:', API_BASE_URL);
+    
+    // Check if Render backend is also configured
+    const renderUrl = (import.meta as ImportMeta & { env?: { VITE_RENDER_API_URL?: string } }).env?.VITE_RENDER_API_URL;
+    if (renderUrl) {
+      console.log('🚀 Render backend also available at:', renderUrl);
+      console.log('⚡ Dual backend mode: Using smart routing for optimal performance');
+    }
   }
 } else if (ENV_API) {
   // Use explicit environment variable if provided
   API_BASE_URL = ENV_API;
+}
+
+// Log API configuration on startup (development only)
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
+  console.log('=== API CONFIGURATION ===');
+  console.log('API Base URL:', API_BASE_URL);
+  console.log('ENV_API:', ENV_API || 'not set');
+  console.log('Window Origin:', window.location.origin);
+  console.log('========================');
 }
 
 // Create axios instance with retry logic
@@ -97,7 +120,7 @@ const isBackendSleeping = (error: ApiErrorType): boolean => {
   return false;
 };
 
-// Add auth token to requests
+// Add auth token to requests and apply smart backend routing
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -110,6 +133,22 @@ api.interceptors.request.use((config) => {
   }
   if (config._requestStartTime === undefined) {
     config._requestStartTime = Date.now();
+  }
+  
+  // Apply smart backend routing if URL is relative
+  if (config.url && config.url.startsWith('/api/')) {
+    const optimalUrl = getApiUrl(config.url);
+    
+    // Only log routing in development
+    if (import.meta.env.DEV) {
+      console.log('🎯 Smart routing:', config.url, '->', optimalUrl);
+    }
+    
+    // Override the full URL (baseURL + url)
+    // We need to extract just the endpoint part since getApiUrl returns the full URL
+    const urlObj = new URL(optimalUrl);
+    config.baseURL = urlObj.origin;
+    config.url = urlObj.pathname + urlObj.search;
   }
   
   // Enhanced logging for debugging (development only)

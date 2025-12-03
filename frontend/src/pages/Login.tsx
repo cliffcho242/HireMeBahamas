@@ -8,13 +8,16 @@ import AppleSignin from 'react-apple-signin-auth';
 import { getOAuthConfig } from '../utils/oauthConfig';
 import { ApiError, GoogleCredentialResponse, AppleSignInResponse } from '../types';
 import { useLoadingMessages, DEFAULT_AUTH_MESSAGES } from '../hooks/useLoadingMessages';
+import { runConnectionDiagnostic, testConnection, getCurrentApiUrl } from '../utils/connectionTest';
 import {
   UserIcon,
   BriefcaseIcon,
   ChatBubbleLeftRightIcon,
   HeartIcon,
   PhotoIcon,
-  VideoCameraIcon
+  VideoCameraIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 const Login: React.FC = () => {
@@ -24,6 +27,8 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('admin@hiremebahamas.com');
   const [password, setPassword] = useState('AdminPass123!');
   const [submitting, setSubmitting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | null>(null);
+  const [connectionMessage, setConnectionMessage] = useState<string>('');
   
   // Use custom hook for progressive loading messages
   const { loadingMessage, startLoading, stopLoading } = useLoadingMessages({
@@ -40,6 +45,47 @@ const Login: React.FC = () => {
 
   // Get the redirect path from location state (saved by ProtectedRoute)
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+
+  // Test backend connection on mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      setConnectionStatus('checking');
+      
+      // Run diagnostic in console
+      if (import.meta.env.DEV) {
+        await runConnectionDiagnostic();
+      }
+      
+      // Test connection to current API
+      const apiUrl = getCurrentApiUrl();
+      const result = await testConnection(apiUrl);
+      
+      // Also test both backends if in dual mode
+      const renderUrl = import.meta.env.VITE_RENDER_API_URL;
+      if (renderUrl && apiUrl !== renderUrl) {
+        console.log('🔍 Testing Render backend...');
+        const renderResult = await testConnection(renderUrl);
+        console.log('Render backend:', renderResult.success ? '✅ Available' : '❌ Unavailable');
+      }
+      
+      if (result.success) {
+        setConnectionStatus('connected');
+        const backendInfo = renderUrl ? ' (Dual backend: Vercel + Render)' : '';
+        setConnectionMessage(`Connected to backend${backendInfo}`);
+      } else {
+        setConnectionStatus('disconnected');
+        setConnectionMessage(result.message);
+        
+        // Show warning toast
+        toast.error(
+          `Backend connection issue: ${result.message}. Please contact support.`,
+          { duration: 10000 }
+        );
+      }
+    };
+    
+    checkConnection();
+  }, []);
 
   // Redirect authenticated users to home or their intended destination
   useEffect(() => {
@@ -228,8 +274,38 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Connection Status Banner */}
+      {connectionStatus && connectionStatus !== 'connected' && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`fixed top-0 left-0 right-0 z-50 ${
+            connectionStatus === 'checking' 
+              ? 'bg-yellow-500' 
+              : 'bg-red-500'
+          } text-white px-4 py-3 shadow-lg`}
+        >
+          <div className="container mx-auto flex items-center justify-center space-x-2">
+            {connectionStatus === 'checking' ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="font-medium">Checking backend connection...</span>
+              </>
+            ) : (
+              <>
+                <ExclamationTriangleIcon className="h-5 w-5" />
+                <span className="font-medium">Backend connection issue: {connectionMessage}</span>
+              </>
+            )}
+          </div>
+        </motion.div>
+      )}
+      
       {/* Hero Section */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8"  style={{ paddingTop: connectionStatus && connectionStatus !== 'connected' ? '80px' : '32px' }}>
         <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-4rem)]">
           {/* Left Side - Branding */}
           <motion.div
