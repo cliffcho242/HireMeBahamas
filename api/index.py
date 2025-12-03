@@ -2,8 +2,9 @@
 MASTERMIND VERCEL SERVERLESS HANDLER — IMMORTAL DEPLOY 2025
 Zero 404/500 errors, instant cold starts, bulletproof Postgres
 """
-from fastapi import FastAPI, Header, HTTPException, Response
+from fastapi import FastAPI, Header, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from mangum import Mangum
 import os
 import sys
@@ -369,22 +370,12 @@ async def root():
 # ============================================================================
 # CUSTOM 404 EXCEPTION HANDLER
 # ============================================================================
-from fastapi import Request
-from fastapi.responses import JSONResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
-
 @app.exception_handler(404)
-@app.exception_handler(StarletteHTTPException)
-async def custom_404_handler(request: Request, exc):
+async def custom_404_handler(request: Request, exc: HTTPException):
     """
     Custom handler for 404 errors.
     Returns a helpful JSON response instead of Vercel's default error page.
     """
-    # Only handle 404 errors
-    if hasattr(exc, 'status_code') and exc.status_code != 404:
-        # Re-raise non-404 HTTPExceptions
-        raise exc
-    
     path = request.url.path
     logger.warning(f"404 - Route not found: {path}")
     
