@@ -31,6 +31,7 @@ const Friends = lazy(() => import('./pages/Users'));
 const UserProfile = lazy(() => import('./pages/UserProfile'));
 const Download = lazy(() => import('./pages/Download'));
 const DownloadTest = lazy(() => import('./pages/DownloadTest'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Components
 import Navbar from './components/Navbar';
@@ -235,8 +236,8 @@ function AppContent() {
             }
           />
 
-          {/* Catch all route - redirect to login if not authenticated */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* Catch all route - show 404 page instead of redirecting */}
+          <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </main>
