@@ -375,9 +375,19 @@ async def custom_404_handler(request: Request, exc: HTTPException):
     """
     Custom handler for 404 errors.
     Returns a helpful JSON response instead of Vercel's default error page.
+    Logs all 404s to help diagnose routing issues.
     """
     path = request.url.path
-    logger.warning(f"404 - Route not found: {path}")
+    method = request.method
+    headers = dict(request.headers)
+    
+    # Log comprehensive details for debugging
+    logger.warning(
+        f"404 NOT FOUND - {method} {path}\n"
+        f"User-Agent: {headers.get('user-agent', 'unknown')}\n"
+        f"Referer: {headers.get('referer', 'none')}\n"
+        f"Query: {request.url.query}"
+    )
     
     return JSONResponse(
         status_code=404,
@@ -385,6 +395,8 @@ async def custom_404_handler(request: Request, exc: HTTPException):
             "error": "NOT_FOUND",
             "message": f"The requested endpoint '{path}' does not exist",
             "status_code": 404,
+            "method": method,
+            "path": path,
             "available_endpoints": {
                 "health": "/api/health",
                 "ready": "/api/ready",
@@ -396,7 +408,46 @@ async def custom_404_handler(request: Request, exc: HTTPException):
                 "notifications": "/api/notifications/*",
                 "docs": "/api/docs"
             },
-            "backend_status": "available" if HAS_BACKEND else "unavailable - limited endpoints active"
+            "backend_status": "available" if HAS_BACKEND else "unavailable - limited endpoints active",
+            "help": "Check the docs at /api/docs for all available endpoints"
+        }
+    )
+
+# ============================================================================
+# CATCH-ALL API ROUTE HANDLER
+# ============================================================================
+@app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+async def catch_all_api_routes(request: Request, path: str):
+    """
+    Catch-all handler for unregistered API routes.
+    This prevents users from getting cryptic Vercel 404 errors.
+    Returns helpful information about what went wrong.
+    """
+    method = request.method
+    
+    logger.error(
+        f"UNREGISTERED API ROUTE - {method} /api/{path}\n"
+        f"This endpoint is not implemented. Check if the backend router is loaded."
+    )
+    
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "ENDPOINT_NOT_IMPLEMENTED",
+            "message": f"The API endpoint '/{path}' is not implemented",
+            "status_code": 404,
+            "method": method,
+            "path": f"/api/{path}",
+            "backend_loaded": HAS_BACKEND,
+            "suggestion": "This endpoint may need to be added to the backend router, or the backend modules failed to load.",
+            "available_endpoints": {
+                "auth": "/api/auth/* (login, register, me, refresh, verify)",
+                "posts": "/api/posts/* (list, create, update, delete)",
+                "jobs": "/api/jobs/* (list, create, apply)",
+                "users": "/api/users/* (profile, search, follow)",
+                "messages": "/api/messages/* (send, list, read)",
+                "notifications": "/api/notifications/* (list, mark as read)"
+            }
         }
     )
 

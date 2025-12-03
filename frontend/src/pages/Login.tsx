@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,6 +20,7 @@ import {
 const Login: React.FC = () => {
   const { login, loginWithGoogle, loginWithApple, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('admin@hiremebahamas.com');
   const [password, setPassword] = useState('AdminPass123!');
   const [submitting, setSubmitting] = useState(false);
@@ -37,12 +38,15 @@ const Login: React.FC = () => {
   const googleClientId = oauthConfig.google.clientId || '';
   const appleClientId = oauthConfig.apple.clientId || '';
 
-  // Redirect authenticated users to home
+  // Get the redirect path from location state (saved by ProtectedRoute)
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+
+  // Redirect authenticated users to home or their intended destination
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/', { replace: true });
+      navigate(from, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +57,8 @@ const Login: React.FC = () => {
     try {
       await login(email, password);
       toast.success('Welcome back to HireMeBahamas!');
-      navigate('/');
+      // Navigate to intended destination or home
+      navigate(from, { replace: true });
     } catch (error: unknown) {
       const apiError = error as ApiError;
       
@@ -95,7 +100,8 @@ const Login: React.FC = () => {
     try {
       if (credentialResponse.credential) {
         await loginWithGoogle(credentialResponse.credential);
-        navigate('/');
+        // Navigate to intended destination or home
+        navigate(from, { replace: true });
       }
     } catch (error: unknown) {
       const apiError = error as ApiError;
@@ -113,7 +119,8 @@ const Login: React.FC = () => {
     try {
       if (response.authorization?.id_token) {
         await loginWithApple(response.authorization.id_token);
-        navigate('/');
+        // Navigate to intended destination or home
+        navigate(from, { replace: true });
       }
     } catch (error: unknown) {
       const apiError = error as ApiError;

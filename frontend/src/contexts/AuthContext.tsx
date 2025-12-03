@@ -136,8 +136,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               });
             } catch (error) {
               console.error('Auth initialization failed:', error);
-              localStorage.removeItem('token');
-              sessionManager.clearSession();
+              // Only clear session if it's a genuine auth error, not a network error
+              const apiError = error as { code?: string; message?: string };
+              const isNetworkError = apiError?.code === 'ERR_NETWORK' || 
+                                    apiError?.message?.includes('Network Error');
+              
+              if (!isNetworkError) {
+                // Genuine auth failure - clear invalid session
+                localStorage.removeItem('token');
+                sessionManager.clearSession();
+              } else {
+                // Network error - keep session for retry
+                console.warn('Network error during auth init - keeping session for retry');
+              }
             }
           }
         }
@@ -157,6 +168,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setToken(null);
       setUser(null);
       toast.error('Your session has expired. Please log in again.');
+      
+      // Save current location for redirect after login
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login' && currentPath !== '/register') {
+        sessionStorage.setItem('redirectAfterLogin', currentPath);
+      }
       
       // Redirect to login if not already there
       if (window.location.pathname !== '/login') {
