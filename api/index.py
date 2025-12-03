@@ -11,6 +11,7 @@ import sys
 import time
 import logging
 import traceback
+from urllib.parse import urlparse
 
 # Configure logging with more detail for debugging
 logging.basicConfig(
@@ -25,6 +26,52 @@ logger.info("VERCEL SERVERLESS API STARTING")
 logger.info(f"Python version: {sys.version}")
 logger.info(f"Working directory: {os.getcwd()}")
 logger.info("="*60)
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def is_debug_mode() -> bool:
+    """Check if debug mode is enabled.
+    
+    Debug mode shows detailed error messages and diagnostics.
+    Only enabled in development or when explicitly set with DEBUG=true.
+    Preview environments require explicit DEBUG=true to enable.
+    """
+    env = os.getenv("ENVIRONMENT", "").lower()
+    debug_flag = os.getenv("DEBUG", "").lower() == "true"
+    vercel_env = os.getenv("VERCEL_ENV", "").lower()
+    
+    # Development environment always has debug mode
+    if env == "development":
+        return True
+    
+    # Explicit DEBUG=true enables debug mode in any environment
+    if debug_flag:
+        return True
+    
+    # Otherwise, no debug mode
+    return False
+
+
+def is_production_mode() -> bool:
+    """Check if running in production mode.
+    
+    Production mode hides detailed errors and sensitive information.
+    Preview environments are treated as production unless DEBUG=true is set.
+    """
+    env = os.getenv("ENVIRONMENT", "").lower()
+    vercel_env = os.getenv("VERCEL_ENV", "").lower()
+    
+    # Explicit production environment
+    if env == "production" or vercel_env == "production":
+        return True
+    
+    # Preview environments are production-like unless debug is enabled
+    if vercel_env == "preview" and not is_debug_mode():
+        return True
+    
+    return False
 
 # JWT imports with fallback
 try:
@@ -135,7 +182,6 @@ async_session_maker = None
 if DATABASE_URL:
     # Mask sensitive parts of URL for logging
     try:
-        from urllib.parse import urlparse
         parsed = urlparse(DATABASE_URL)
         # Show only scheme and redacted location
         masked_url = f"{parsed.scheme}://***:***@{parsed.hostname if parsed.hostname else '***'}:{parsed.port if parsed.port else '***'}/***"
@@ -207,9 +253,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         f"Traceback:\n{traceback.format_exc()}"
     )
     
-    # Only expose details in development - NOT in production or preview
-    is_dev = (os.getenv("ENVIRONMENT") == "development" or 
-              os.getenv("DEBUG") == "true") and os.getenv("VERCEL_ENV") != "preview"
+    # Use helper function for consistent debug mode detection
+    is_dev = is_debug_mode()
     
     # Return appropriate error response
     return JSONResponse(
@@ -266,9 +311,8 @@ async def log_requests(request, call_next):
             f"Traceback: {traceback.format_exc()}"
         )
         
-        # Only expose details in development - NOT in production or preview
-        is_dev = (os.getenv("ENVIRONMENT") == "development" or 
-                  os.getenv("DEBUG") == "true") and os.getenv("VERCEL_ENV") != "preview"
+        # Use helper function for consistent debug mode detection
+        is_dev = is_debug_mode()
         
         # Return a proper error response instead of letting it crash silently
         return JSONResponse(
@@ -353,12 +397,12 @@ async def diagnostic():
     """
     logger.info("Diagnostic check called")
     
-    # Check if running in debug mode
-    is_debug = os.getenv("DEBUG") == "true" or os.getenv("ENVIRONMENT") == "development"
-    is_production = os.getenv("ENVIRONMENT") == "production" or os.getenv("VERCEL_ENV") == "production"
+    # Use helper functions for consistent environment detection
+    is_debug = is_debug_mode()
+    is_prod = is_production_mode()
     
     # In production without debug mode, return limited info
-    if is_production and not is_debug:
+    if is_prod and not is_debug:
         return {
             "status": "operational",
             "timestamp": int(time.time()),
