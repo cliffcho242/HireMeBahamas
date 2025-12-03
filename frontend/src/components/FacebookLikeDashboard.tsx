@@ -363,7 +363,7 @@ const FacebookLikeDashboard = () => {
 
             {/* Job Feed */}
             <div>
-              {jobPosts.map((job) => (
+              {jobPosts.map((job: DashboardJob) => (
                 <JobCard key={job.id} job={job} />
               ))}
             </div>
