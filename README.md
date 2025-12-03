@@ -10,6 +10,8 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 **📖 [START HERE: Deployment Guide](./START_HERE_DEPLOYMENT.md)** - Your starting point for deployment
 
+**🔗 [DIRECT LINKS: Where to Configure Everything](./DIRECT_LINKS_WHERE_TO_CONFIGURE.md)** - Exact dashboard links for Vercel, Railway, and Render
+
 **🎯 [WHERE TO PUT DATABASE URL](./WHERE_TO_PUT_DATABASE_URL.md)** - Exact instructions showing where to paste your database URL
 
 Choose your deployment guide:
