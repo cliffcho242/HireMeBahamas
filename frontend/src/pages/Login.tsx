@@ -9,6 +9,7 @@ import { getOAuthConfig } from '../utils/oauthConfig';
 import { ApiError, GoogleCredentialResponse, AppleSignInResponse } from '../types';
 import { useLoadingMessages, DEFAULT_AUTH_MESSAGES } from '../hooks/useLoadingMessages';
 import { runConnectionDiagnostic, testConnection, getCurrentApiUrl } from '../utils/connectionTest';
+import { showFriendlyError } from '../utils/friendlyErrors';
 import {
   UserIcon,
   BriefcaseIcon,
@@ -124,64 +125,8 @@ const Login: React.FC = () => {
         console.error('Error object:', error);
       }
       
-      const apiError = error as ApiError;
-      
-      // Log detailed error information for debugging (dev only)
-      if (import.meta.env.DEV && apiError) {
-        console.error('Error code:', apiError.code);
-        console.error('Error message:', apiError.message);
-        console.error('Response status:', apiError.response?.status);
-        console.error('Response data:', apiError.response?.data);
-      }
-      
-      // Check for network errors and provide helpful messages
-      const isNetworkError = apiError?.code === 'ERR_NETWORK' || 
-                            apiError?.code === 'ECONNABORTED' ||
-                            apiError?.message?.includes('Network Error') ||
-                            apiError?.message?.includes('timeout') ||
-                            apiError?.message?.includes('timed out');
-      
-      let message: string;
-      if (isNetworkError) {
-        // Provide more helpful message during slow connections
-        if (apiError?.message?.includes('timed out') || apiError?.code === 'ECONNABORTED') {
-          message = 'The server is taking longer than expected to respond. This often happens during cold starts. Please wait a moment and try again.';
-        } else {
-          message = 'Connection to server failed. Please check your internet connection and try again. The server may be starting up (this can take up to 60 seconds).';
-        }
-        
-        // Only log network details in development
-        if (import.meta.env.DEV) {
-          console.error('NETWORK ERROR DETECTED - Check if API is accessible at:', import.meta.env.VITE_API_URL || window.location.origin);
-        }
-      } else if (apiError?.response?.status === 503) {
-        message = 'Server is starting up. Please wait 30-60 seconds and try again.';
-      } else if (apiError?.response?.status === 504) {
-        message = 'Server request timed out. The server may be under heavy load. Please try again in a moment.';
-      } else if (apiError?.response?.status === 429) {
-        message = 'Too many login attempts. Please wait a minute and try again.';
-      } else if (apiError?.response?.status === 502) {
-        message = 'Server is temporarily unavailable. This usually resolves within a minute. Please try again.';
-      } else if (apiError?.response?.status === 500) {
-        // Server error - show detailed message if available
-        const serverError = apiError?.response?.data?.message || apiError?.response?.data?.detail;
-        message = serverError 
-          ? `Server error: ${serverError}` 
-          : 'Internal server error. Please try again or contact support if the problem persists.';
-        
-        // Only log sensitive details in development
-        if (import.meta.env.DEV) {
-          console.error('SERVER ERROR (500) - Details:', apiError?.response?.data);
-        }
-      } else {
-        message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Login failed. Please try again.';
-      }
-      
-      // Error message shown to user (no sensitive info)
-      if (import.meta.env.DEV) {
-        console.error('Error message shown to user:', message);
-      }
-      toast.error(message, { duration: 6000 }); // Show for 6 seconds for longer messages
+      // Use friendly error handler - NO GENERIC ERRORS!
+      showFriendlyError(error, toast);
     } finally {
       stopLoading();
       setSubmitting(false);
@@ -196,15 +141,13 @@ const Login: React.FC = () => {
         navigate(from, { replace: true });
       }
     } catch (error: unknown) {
-      const apiError = error as ApiError;
       console.error('Google login error:', error);
-      const errorMessage = apiError?.response?.data?.detail || apiError?.message || 'Google sign-in failed';
-      toast.error(errorMessage);
+      showFriendlyError(error, toast);
     }
   };
 
   const handleGoogleError = () => {
-    toast.error('Google sign-in failed. Please try again.');
+    toast.error('Google sign-in failed. Please try again or use email/password login.');
   };
 
   const handleAppleSuccess = async (response: AppleSignInResponse) => {
@@ -215,16 +158,14 @@ const Login: React.FC = () => {
         navigate(from, { replace: true });
       }
     } catch (error: unknown) {
-      const apiError = error as ApiError;
       console.error('Apple login error:', error);
-      const errorMessage = apiError?.response?.data?.detail || apiError?.message || 'Apple sign-in failed';
-      toast.error(errorMessage);
+      showFriendlyError(error, toast);
     }
   };
 
   const handleAppleError = (error: unknown) => {
     console.error('Apple sign-in error:', error);
-    toast.error('Apple sign-in failed. Please try again.');
+    toast.error('Apple sign-in failed. Please try again or use email/password login.');
   };
 
   const features = [
@@ -305,7 +246,7 @@ const Login: React.FC = () => {
       )}
       
       {/* Hero Section */}
-      <div className="container mx-auto px-4 py-8"  style={{ paddingTop: connectionStatus && connectionStatus !== 'connected' ? '80px' : '32px' }}>
+      <div className={`container mx-auto px-4 ${connectionStatus && connectionStatus !== 'connected' ? 'pt-20 pb-8' : 'py-8'}`}>
         <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-4rem)]">
           {/* Left Side - Branding */}
           <motion.div

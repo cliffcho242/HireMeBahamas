@@ -324,15 +324,21 @@ async def log_requests(request: Request, call_next):
                             error_data = json.loads(body.decode())
                             error_detail = f" | Error: {error_data.get('detail', 'Unknown error')}"
                             
-                            # Enhanced logging for auth failures
+                            # Enhanced logging for auth failures - SANITIZED
+                            # Only log non-sensitive error info, never passwords or tokens
+                            safe_error_data = {
+                                'detail': error_data.get('detail', 'Unknown error'),
+                                'status': response.status_code,
+                            }
+                            
                             logger.error(
                                 f"[{request_id}] ============ AUTH REQUEST FAILED ============\n"
                                 f"  Status: {response.status_code}\n"
                                 f"  Path: {request.url.path}\n"
                                 f"  Duration: {duration_ms}ms\n"
                                 f"  Client IP: {client_ip}\n"
-                                f"  Error Detail: {error_data.get('detail', 'Unknown error')}\n"
-                                f"  Full Response: {json.dumps(error_data, indent=2)}"
+                                f"  Error Detail: {safe_error_data['detail']}\n"
+                                f"  Note: Sensitive data (passwords, tokens) not logged for security"
                             )
                         except (json.JSONDecodeError, UnicodeDecodeError):
                             error_detail = " | Error: Unable to parse response body"
