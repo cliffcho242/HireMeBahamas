@@ -137,7 +137,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             } catch (error) {
               console.error('Auth initialization failed:', error);
               // Only clear session if it's a genuine auth error, not a network error
-              const apiError = error as any;
+              const apiError = error as { code?: string; message?: string };
               const isNetworkError = apiError?.code === 'ERR_NETWORK' || 
                                     apiError?.message?.includes('Network Error');
               
