@@ -14,9 +14,27 @@ import traceback
 from urllib.parse import urlparse
 
 # Configure logging with more detail for debugging
+# Check if runtime logs directory exists (e.g., in CI/test environment)
+runtime_log_dir = os.getenv('RUNTIME_LOG_DIR', '/tmp/runtime-logs')
+log_handlers = [logging.StreamHandler()]
+
+if os.path.exists(runtime_log_dir):
+    # Add file handler for runtime logs when directory exists
+    runtime_log_file = os.path.join(runtime_log_dir, 'api-runtime.log')
+    try:
+        file_handler = logging.FileHandler(runtime_log_file, mode='a')
+        file_handler.setFormatter(
+            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        )
+        log_handlers.append(file_handler)
+        print(f"Runtime logs will be written to: {runtime_log_file}")
+    except Exception as e:
+        print(f"Warning: Could not create runtime log file: {e}")
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=log_handlers
 )
 logger = logging.getLogger(__name__)
 
