@@ -2,8 +2,9 @@
 MASTERMIND VERCEL SERVERLESS HANDLER — IMMORTAL DEPLOY 2025
 Zero 404/500 errors, instant cold starts, bulletproof Postgres
 """
-from fastapi import FastAPI, Header, HTTPException, Response
+from fastapi import FastAPI, Header, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from mangum import Mangum
 import os
 import sys
@@ -49,15 +50,21 @@ try:
     api_dir = os.path.dirname(os.path.abspath(__file__))
     sys.path.insert(0, api_dir)
     
-    # Create module alias for backend_app
+    # Create module alias for backend_app BEFORE importing
     import backend_app as app_module
     sys.modules['app'] = app_module
+    
+    # Also ensure backend_app is in sys.path
+    backend_app_path = os.path.join(api_dir, 'backend_app')
+    if backend_app_path not in sys.path:
+        sys.path.insert(0, backend_app_path)
     
     from backend_app.api import auth, posts, jobs, users, messages, notifications
     HAS_BACKEND = True
     logger.info("✅ Backend modules imported successfully")
 except Exception as e:
     logger.warning(f"⚠️  Backend modules not available: {e}")
+    logger.debug(f"Full traceback:", exc_info=True)
 
 # ============================================================================
 # CONFIGURATION
@@ -359,6 +366,39 @@ async def root():
             "docs": "/api/docs",
         }
     }
+
+# ============================================================================
+# CUSTOM 404 EXCEPTION HANDLER
+# ============================================================================
+@app.exception_handler(404)
+async def custom_404_handler(request: Request, exc: HTTPException):
+    """
+    Custom handler for 404 errors.
+    Returns a helpful JSON response instead of Vercel's default error page.
+    """
+    path = request.url.path
+    logger.warning(f"404 - Route not found: {path}")
+    
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "NOT_FOUND",
+            "message": f"The requested endpoint '{path}' does not exist",
+            "status_code": 404,
+            "available_endpoints": {
+                "health": "/api/health",
+                "ready": "/api/ready",
+                "auth": "/api/auth/*",
+                "posts": "/api/posts/*",
+                "jobs": "/api/jobs/*",
+                "users": "/api/users/*",
+                "messages": "/api/messages/*",
+                "notifications": "/api/notifications/*",
+                "docs": "/api/docs"
+            },
+            "backend_status": "available" if HAS_BACKEND else "unavailable - limited endpoints active"
+        }
+    )
 
 # ============================================================================
 # EXPORT HANDLER FOR VERCEL
