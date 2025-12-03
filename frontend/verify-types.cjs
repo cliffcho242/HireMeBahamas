@@ -65,32 +65,82 @@ console.log('✅ tsconfig.json exists');
 
 try {
   const tsconfigContent = fs.readFileSync(tsconfigPath, 'utf8');
-  // Basic validation - check if file has required properties
-  const hasJsx = tsconfigContent.includes('"jsx"');
-  const hasReactJsx = tsconfigContent.includes('react-jsx');
-  const hasInclude = tsconfigContent.includes('"include"');
-  const hasSrc = tsconfigContent.includes('"src"') || tsconfigContent.includes("'src'");
   
-  // Check JSX configuration
-  if (!hasJsx || !hasReactJsx) {
-    console.warn('⚠️  JSX configuration might not be set to "react-jsx"');
-  } else {
-    console.log('✅ JSX configuration appears correct (react-jsx)');
+  // Try to parse with comment removal
+  let withoutComments = tsconfigContent
+    // Remove multi-line comments
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    // Remove single-line comments  
+    .replace(/\/\/[^\n]*/g, '')
+    // Normalize whitespace
+    .replace(/\s+/g, ' ')
+    // Remove trailing commas
+    .replace(/,\s*([}\]])/g, '$1');
+  
+  let tsconfig;
+  let usedFallback = false;
+  
+  try {
+    tsconfig = JSON.parse(withoutComments);
+  } catch (parseError) {
+    // Fallback: Use string-based validation (which is sufficient for our needs)
+    usedFallback = true;
+    
+    const hasJsx = tsconfigContent.includes('"jsx"');
+    const hasReactJsx = tsconfigContent.includes('react-jsx');
+    const hasInclude = tsconfigContent.includes('"include"');
+    const hasSrc = tsconfigContent.includes('"src"');
+    const hasModuleRes = tsconfigContent.includes('"moduleResolution"');
+    
+    if (!hasJsx || !hasReactJsx) {
+      console.warn('⚠️  JSX configuration might not be set to "react-jsx"');
+      process.exit(1);
+    } else {
+      console.log('✅ JSX configuration is correct (react-jsx)');
+    }
+    
+    if (!hasModuleRes) {
+      console.warn('⚠️  moduleResolution might not be configured');
+    } else {
+      console.log('✅ Module resolution configuration found');
+    }
+    
+    if (!hasInclude || !hasSrc) {
+      console.warn('⚠️  src directory might not be included in TypeScript compilation');
+      process.exit(1);
+    } else {
+      console.log('✅ src directory is included in compilation');
+    }
   }
   
-  // Check module resolution
-  const hasModuleResolution = tsconfigContent.includes('"moduleResolution"');
-  if (!hasModuleResolution) {
-    console.warn('⚠️  moduleResolution might not be configured');
-  } else {
-    console.log('✅ Module resolution configuration found');
-  }
-  
-  // Check if src directory is included
-  if (!hasInclude || !hasSrc) {
-    console.warn('⚠️  src directory might not be included in TypeScript compilation');
-  } else {
-    console.log('✅ src directory is included in compilation');
+  // If we successfully parsed, do detailed validation
+  if (!usedFallback) {
+    // Check JSX configuration
+    if (tsconfig.compilerOptions?.jsx !== 'react-jsx') {
+      console.warn('⚠️  JSX is not set to "react-jsx". Current value:', tsconfig.compilerOptions?.jsx || 'not set');
+      process.exit(1);
+    } else {
+      console.log('✅ JSX configuration is correct (react-jsx)');
+    }
+    
+    // Check module resolution
+    const moduleRes = tsconfig.compilerOptions?.moduleResolution;
+    if (moduleRes !== 'bundler' && moduleRes !== 'node' && moduleRes !== 'node16' && moduleRes !== 'nodenext') {
+      console.warn('⚠️  moduleResolution might need adjustment. Current value:', moduleRes || 'not set');
+    } else {
+      console.log('✅ Module resolution configuration is valid (' + moduleRes + ')');
+    }
+    
+    // Check if src directory is included
+    if (!Array.isArray(tsconfig.include) || !tsconfig.include.includes('src')) {
+      console.warn('⚠️  src directory is not included in TypeScript compilation');
+      if (Array.isArray(tsconfig.include)) {
+        console.warn('   Current include:', tsconfig.include);
+      }
+      process.exit(1);
+    } else {
+      console.log('✅ src directory is included in compilation');
+    }
   }
 } catch (error) {
   console.error('❌ Error reading tsconfig.json:', error.message);
