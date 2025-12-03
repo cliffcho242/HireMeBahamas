@@ -98,8 +98,16 @@ DATABASE_URL = (
     os.getenv("POSTGRES_URL")
 )
 
-# CORS origins
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+# CORS origins - Allow all origins for Vercel deployments
+# Vercel preview deployments have dynamic URLs, so we need to be permissive
+# In production, you can restrict this to specific domains
+ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "*")
+if ALLOWED_ORIGINS_ENV == "*":
+    ALLOWED_ORIGINS = ["*"]
+    logger.info("CORS: Allowing all origins (wildcard)")
+else:
+    ALLOWED_ORIGINS = ALLOWED_ORIGINS_ENV.split(",")
+    logger.info(f"CORS: Allowing specific origins: {ALLOWED_ORIGINS}")
 
 # Mock user data for fallback
 MOCK_USERS = {
@@ -123,15 +131,32 @@ MOCK_USERS = {
 db_engine = None
 async_session_maker = None
 
+# Log database configuration status (without exposing credentials)
+if DATABASE_URL:
+    # Mask password in URL for logging
+    masked_url = DATABASE_URL
+    if '@' in masked_url:
+        parts = masked_url.split('@')
+        if ':' in parts[0]:
+            user_part = parts[0].split(':')[0]
+            masked_url = f"{user_part}:****@{parts[1]}"
+    logger.info(f"Database URL configured: {masked_url[:50]}...")
+else:
+    logger.warning("⚠️  DATABASE_URL not configured - API will have limited functionality")
+
 if HAS_DB and DATABASE_URL:
     try:
+        logger.info("Initializing database connection...")
         # Convert postgres:// to postgresql+asyncpg://
         db_url = DATABASE_URL
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            logger.info("Converted postgres:// to postgresql+asyncpg://")
         elif db_url.startswith("postgresql://") and "asyncpg" not in db_url:
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            logger.info("Converted postgresql:// to postgresql+asyncpg://")
         
+        logger.info("Creating database engine with asyncpg...")
         db_engine = create_async_engine(
             db_url,
             pool_pre_ping=True,
@@ -143,10 +168,16 @@ if HAS_DB and DATABASE_URL:
         async_session_maker = sessionmaker(
             db_engine, class_=AsyncSession, expire_on_commit=False
         )
+        logger.info("✅ Database engine created successfully")
     except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
+        logger.error(f"❌ Database initialization failed: {e}\nTraceback: {traceback.format_exc()}")
         db_engine = None
         async_session_maker = None
+else:
+    if not HAS_DB:
+        logger.warning("⚠️  Database drivers not available (sqlalchemy, asyncpg)")
+    if not DATABASE_URL:
+        logger.warning("⚠️  DATABASE_URL not set in environment")
 
 # ============================================================================
 # CREATE FASTAPI APP
