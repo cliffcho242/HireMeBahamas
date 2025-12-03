@@ -108,6 +108,17 @@ Base images include all system dependencies pre-installed:
 
 ### 🗄️ Database Setup
 
+**🔗 NEW: [Complete Database Connection Guide with Direct Links](./DATABASE_CONNECTION_GUIDE.md)** 
+
+This comprehensive guide provides:
+- ✅ **Direct clickable links** to find database URLs on Vercel, Railway, and Render
+- ✅ **Step-by-step instructions** with exact navigation paths
+- ✅ **Copy-paste commands** to connect your database
+- ✅ **Troubleshooting** for common connection issues
+- ✅ **Platform comparison** to help you choose
+
+---
+
 #### Vercel Postgres (⭐ Recommended - Best Performance & Integration)
 
 **NEW**: Full Vercel Postgres support with automated migration tools!
@@ -121,9 +132,10 @@ Vercel Postgres offers the best integration for this application:
 - ✅ **Cost Effective**: $0-5/month vs $7-20/month on Railway/Render
 
 **Quick Setup:**
-1. 📖 **[Complete Setup Guide](./VERCEL_POSTGRES_SETUP.md)** - Detailed step-by-step instructions
-2. 📖 **[Migration from Railway/Render](./VERCEL_POSTGRES_MIGRATION_GUIDE.md)** - Zero-downtime migration guide
-3. 📖 **[Quick Start](./docs/VERCEL_POSTGRES_QUICK_START.md)** - 5-minute setup
+1. 🔗 **[Database Connection Guide](./DATABASE_CONNECTION_GUIDE.md)** - Direct links and complete walkthrough
+2. 📖 **[Complete Setup Guide](./VERCEL_POSTGRES_SETUP.md)** - Detailed step-by-step instructions
+3. 📖 **[Migration from Railway/Render](./VERCEL_POSTGRES_MIGRATION_GUIDE.md)** - Zero-downtime migration guide
+4. 📖 **[Quick Start](./docs/VERCEL_POSTGRES_QUICK_START.md)** - 5-minute setup
 
 **Automated Migration:**
 ```bash
@@ -157,7 +169,8 @@ For production deployments on Railway, you need to configure PostgreSQL for pers
 2. **DATABASE_URL** is automatically configured
 3. **Add required environment variables** (SECRET_KEY, JWT_SECRET_KEY, ENVIRONMENT)
 
-📖 **[Complete Railway DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Step-by-step instructions with screenshots and troubleshooting.
+🔗 **[Database Connection Guide - Railway Section](./DATABASE_CONNECTION_GUIDE.md#railway-setup)** - Direct links and step-by-step instructions  
+📖 **[Complete Railway DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Detailed guide with screenshots and troubleshooting
 
 ### 🗄️ Database Admin Interface
 
