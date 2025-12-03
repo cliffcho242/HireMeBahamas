@@ -300,23 +300,56 @@ app.add_middleware(
 )
 
 # ============================================================================
-# MIDDLEWARE - Request Logging
+# MIDDLEWARE - Request Logging with Enhanced Auth Tracking
 # ============================================================================
 @app.middleware("http")
 async def log_requests(request, call_next):
-    """Log all requests with timing and comprehensive error handling"""
+    """Log all requests with timing and comprehensive error handling
+    
+    Special handling for /api/auth/* endpoints to ensure login issues are visible.
+    """
     start = time.time()
     method = request.method
     path = request.url.path
     
-    logger.info(f"→ {method} {path}")
+    # Get client info for tracking
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")[:100]
+    
+    # Enhanced logging for auth endpoints
+    is_auth_endpoint = path.startswith("/api/auth/")
+    
+    if is_auth_endpoint:
+        logger.info(
+            f"→ AUTH REQUEST: {method} {path}\n"
+            f"  Client IP: {client_ip}\n"
+            f"  User-Agent: {user_agent}\n"
+            f"  Headers: Authorization={bool(request.headers.get('authorization'))}, "
+            f"Content-Type={request.headers.get('content-type', 'none')}"
+        )
+    else:
+        logger.info(f"→ {method} {path}")
     
     try:
         response = await call_next(request)
         duration_ms = int((time.time() - start) * 1000)
         status = response.status_code
         
-        if status >= 400:
+        # Enhanced logging for auth endpoints
+        if is_auth_endpoint:
+            if status >= 400:
+                logger.error(
+                    f"← AUTH FAILED: {status} {method} {path} ({duration_ms}ms)\n"
+                    f"  Client IP: {client_ip}\n"
+                    f"  Status: {status} - LOGIN ATTEMPT FAILED"
+                )
+            else:
+                logger.info(
+                    f"← AUTH SUCCESS: {status} {method} {path} ({duration_ms}ms)\n"
+                    f"  Client IP: {client_ip}\n"
+                    f"  Status: {status} - LOGIN SUCCESSFUL"
+                )
+        elif status >= 400:
             logger.warning(f"← {status} {method} {path} ({duration_ms}ms)")
         else:
             logger.info(f"← {status} {method} {path} ({duration_ms}ms)")
@@ -324,10 +357,21 @@ async def log_requests(request, call_next):
         return response
     except Exception as e:
         duration_ms = int((time.time() - start) * 1000)
-        logger.error(
-            f"← ERROR {method} {path} ({duration_ms}ms): {type(e).__name__}: {str(e)}\n"
-            f"Traceback: {traceback.format_exc()}"
-        )
+        
+        # Enhanced error logging for auth endpoints
+        if is_auth_endpoint:
+            logger.error(
+                f"← AUTH EXCEPTION: {method} {path} ({duration_ms}ms)\n"
+                f"  Client IP: {client_ip}\n"
+                f"  Exception Type: {type(e).__name__}\n"
+                f"  Exception Message: {str(e)}\n"
+                f"  Full Traceback:\n{traceback.format_exc()}"
+            )
+        else:
+            logger.error(
+                f"← ERROR {method} {path} ({duration_ms}ms): {type(e).__name__}: {str(e)}\n"
+                f"Traceback: {traceback.format_exc()}"
+            )
         
         # Use helper function for consistent debug mode detection
         is_dev = is_debug_mode()

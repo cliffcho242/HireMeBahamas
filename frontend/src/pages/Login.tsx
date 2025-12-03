@@ -8,13 +8,17 @@ import AppleSignin from 'react-apple-signin-auth';
 import { getOAuthConfig } from '../utils/oauthConfig';
 import { ApiError, GoogleCredentialResponse, AppleSignInResponse } from '../types';
 import { useLoadingMessages, DEFAULT_AUTH_MESSAGES } from '../hooks/useLoadingMessages';
+import { runConnectionDiagnostic, testConnection, getCurrentApiUrl } from '../utils/connectionTest';
+import { showFriendlyError } from '../utils/friendlyErrors';
 import {
   UserIcon,
   BriefcaseIcon,
   ChatBubbleLeftRightIcon,
   HeartIcon,
   PhotoIcon,
-  VideoCameraIcon
+  VideoCameraIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 const Login: React.FC = () => {
@@ -24,6 +28,8 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('admin@hiremebahamas.com');
   const [password, setPassword] = useState('AdminPass123!');
   const [submitting, setSubmitting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | null>(null);
+  const [connectionMessage, setConnectionMessage] = useState<string>('');
   
   // Use custom hook for progressive loading messages
   const { loadingMessage, startLoading, stopLoading } = useLoadingMessages({
@@ -40,6 +46,47 @@ const Login: React.FC = () => {
 
   // Get the redirect path from location state (saved by ProtectedRoute)
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+
+  // Test backend connection on mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      setConnectionStatus('checking');
+      
+      // Run diagnostic in console
+      if (import.meta.env.DEV) {
+        await runConnectionDiagnostic();
+      }
+      
+      // Test connection to current API
+      const apiUrl = getCurrentApiUrl();
+      const result = await testConnection(apiUrl);
+      
+      // Also test both backends if in dual mode
+      const renderUrl = import.meta.env.VITE_RENDER_API_URL;
+      if (renderUrl && apiUrl !== renderUrl) {
+        console.log('🔍 Testing Render backend...');
+        const renderResult = await testConnection(renderUrl);
+        console.log('Render backend:', renderResult.success ? '✅ Available' : '❌ Unavailable');
+      }
+      
+      if (result.success) {
+        setConnectionStatus('connected');
+        const backendInfo = renderUrl ? ' (Dual backend: Vercel + Render)' : '';
+        setConnectionMessage(`Connected to backend${backendInfo}`);
+      } else {
+        setConnectionStatus('disconnected');
+        setConnectionMessage(result.message);
+        
+        // Show warning toast
+        toast.error(
+          `Backend connection issue: ${result.message}. Please contact support.`,
+          { duration: 10000 }
+        );
+      }
+    };
+    
+    checkConnection();
+  }, []);
 
   // Redirect authenticated users to home or their intended destination
   useEffect(() => {
@@ -78,64 +125,8 @@ const Login: React.FC = () => {
         console.error('Error object:', error);
       }
       
-      const apiError = error as ApiError;
-      
-      // Log detailed error information for debugging (dev only)
-      if (import.meta.env.DEV && apiError) {
-        console.error('Error code:', apiError.code);
-        console.error('Error message:', apiError.message);
-        console.error('Response status:', apiError.response?.status);
-        console.error('Response data:', apiError.response?.data);
-      }
-      
-      // Check for network errors and provide helpful messages
-      const isNetworkError = apiError?.code === 'ERR_NETWORK' || 
-                            apiError?.code === 'ECONNABORTED' ||
-                            apiError?.message?.includes('Network Error') ||
-                            apiError?.message?.includes('timeout') ||
-                            apiError?.message?.includes('timed out');
-      
-      let message: string;
-      if (isNetworkError) {
-        // Provide more helpful message during slow connections
-        if (apiError?.message?.includes('timed out') || apiError?.code === 'ECONNABORTED') {
-          message = 'The server is taking longer than expected to respond. This often happens during cold starts. Please wait a moment and try again.';
-        } else {
-          message = 'Connection to server failed. Please check your internet connection and try again. The server may be starting up (this can take up to 60 seconds).';
-        }
-        
-        // Only log network details in development
-        if (import.meta.env.DEV) {
-          console.error('NETWORK ERROR DETECTED - Check if API is accessible at:', import.meta.env.VITE_API_URL || window.location.origin);
-        }
-      } else if (apiError?.response?.status === 503) {
-        message = 'Server is starting up. Please wait 30-60 seconds and try again.';
-      } else if (apiError?.response?.status === 504) {
-        message = 'Server request timed out. The server may be under heavy load. Please try again in a moment.';
-      } else if (apiError?.response?.status === 429) {
-        message = 'Too many login attempts. Please wait a minute and try again.';
-      } else if (apiError?.response?.status === 502) {
-        message = 'Server is temporarily unavailable. This usually resolves within a minute. Please try again.';
-      } else if (apiError?.response?.status === 500) {
-        // Server error - show detailed message if available
-        const serverError = apiError?.response?.data?.message || apiError?.response?.data?.detail;
-        message = serverError 
-          ? `Server error: ${serverError}` 
-          : 'Internal server error. Please try again or contact support if the problem persists.';
-        
-        // Only log sensitive details in development
-        if (import.meta.env.DEV) {
-          console.error('SERVER ERROR (500) - Details:', apiError?.response?.data);
-        }
-      } else {
-        message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Login failed. Please try again.';
-      }
-      
-      // Error message shown to user (no sensitive info)
-      if (import.meta.env.DEV) {
-        console.error('Error message shown to user:', message);
-      }
-      toast.error(message, { duration: 6000 }); // Show for 6 seconds for longer messages
+      // Use friendly error handler - NO GENERIC ERRORS!
+      showFriendlyError(error, toast);
     } finally {
       stopLoading();
       setSubmitting(false);
@@ -150,15 +141,13 @@ const Login: React.FC = () => {
         navigate(from, { replace: true });
       }
     } catch (error: unknown) {
-      const apiError = error as ApiError;
       console.error('Google login error:', error);
-      const errorMessage = apiError?.response?.data?.detail || apiError?.message || 'Google sign-in failed';
-      toast.error(errorMessage);
+      showFriendlyError(error, toast);
     }
   };
 
   const handleGoogleError = () => {
-    toast.error('Google sign-in failed. Please try again.');
+    toast.error('Google sign-in failed. Please try again or use email/password login.');
   };
 
   const handleAppleSuccess = async (response: AppleSignInResponse) => {
@@ -169,16 +158,14 @@ const Login: React.FC = () => {
         navigate(from, { replace: true });
       }
     } catch (error: unknown) {
-      const apiError = error as ApiError;
       console.error('Apple login error:', error);
-      const errorMessage = apiError?.response?.data?.detail || apiError?.message || 'Apple sign-in failed';
-      toast.error(errorMessage);
+      showFriendlyError(error, toast);
     }
   };
 
   const handleAppleError = (error: unknown) => {
     console.error('Apple sign-in error:', error);
-    toast.error('Apple sign-in failed. Please try again.');
+    toast.error('Apple sign-in failed. Please try again or use email/password login.');
   };
 
   const features = [
@@ -228,8 +215,38 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Connection Status Banner */}
+      {connectionStatus && connectionStatus !== 'connected' && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`fixed top-0 left-0 right-0 z-50 ${
+            connectionStatus === 'checking' 
+              ? 'bg-yellow-500' 
+              : 'bg-red-500'
+          } text-white px-4 py-3 shadow-lg`}
+        >
+          <div className="container mx-auto flex items-center justify-center space-x-2">
+            {connectionStatus === 'checking' ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="font-medium">Checking backend connection...</span>
+              </>
+            ) : (
+              <>
+                <ExclamationTriangleIcon className="h-5 w-5" />
+                <span className="font-medium">Backend connection issue: {connectionMessage}</span>
+              </>
+            )}
+          </div>
+        </motion.div>
+      )}
+      
       {/* Hero Section */}
-      <div className="container mx-auto px-4 py-8">
+      <div className={`container mx-auto px-4 ${connectionStatus && connectionStatus !== 'connected' ? 'pt-20 pb-8' : 'py-8'}`}>
         <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-4rem)]">
           {/* Left Side - Branding */}
           <motion.div
