@@ -15,6 +15,7 @@
     "jsx": "react-jsx",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    
     /* Path resolution */
     "baseUrl": ".",
     "paths": {
