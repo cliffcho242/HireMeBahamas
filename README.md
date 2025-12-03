@@ -15,20 +15,29 @@ A modern, Facebook-inspired social platform designed specifically for profession
 ✅ **Auto HTTPS** - SSL included  
 ✅ **61 API endpoints** - Full backend integrated  
 
+### 📖 Complete Deployment & Database Connection Guides
+
+Choose your deployment platform and follow the step-by-step guide:
+
+- 🌟 **[DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Complete guide with direct links and instructions for Vercel, Railway, and Render
+- ⚡ **[QUICK_DEPLOYMENT_REFERENCE.md](./QUICK_DEPLOYMENT_REFERENCE.md)** - One-page quick reference with all commands and URLs
+- 📚 **[VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md)** - Detailed Vercel Postgres setup
+- 🚂 **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Railway database configuration
+
 ### Quick Deploy to Vercel
 
 1. **Push to GitHub** (if not already done)
 2. **Import to Vercel**: [vercel.com/new](https://vercel.com/new)
 3. **Add Environment Variables**:
    ```env
-   DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
+   DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
    SECRET_KEY=your-secret-key-32-chars
    JWT_SECRET_KEY=your-jwt-secret-32-chars
    ENVIRONMENT=production
    ```
 4. **Deploy!** ✅
 
-📚 **[Complete Vercel Deployment Guide](./VERCEL_DEPLOYMENT_GUIDE.md)** - Step-by-step instructions
+📚 **[Complete Deployment & Connection Guide](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Everything you need to connect your database and deploy to Vercel, Railway, or Render
 
 ---
 
