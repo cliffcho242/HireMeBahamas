@@ -207,8 +207,9 @@ async def global_exception_handler(request: Request, exc: Exception):
         f"Traceback:\n{traceback.format_exc()}"
     )
     
-    # Only expose details in development - NOT in preview environments
-    is_dev = os.getenv("ENVIRONMENT") == "development" or os.getenv("DEBUG") == "true"
+    # Only expose details in development - NOT in production or preview
+    is_dev = (os.getenv("ENVIRONMENT") == "development" or 
+              os.getenv("DEBUG") == "true") and os.getenv("VERCEL_ENV") != "preview"
     
     # Return appropriate error response
     return JSONResponse(
@@ -265,8 +266,9 @@ async def log_requests(request, call_next):
             f"Traceback: {traceback.format_exc()}"
         )
         
-        # Only expose details in development - NOT in preview
-        is_dev = os.getenv("ENVIRONMENT") == "development" or os.getenv("DEBUG") == "true"
+        # Only expose details in development - NOT in production or preview
+        is_dev = (os.getenv("ENVIRONMENT") == "development" or 
+                  os.getenv("DEBUG") == "true") and os.getenv("VERCEL_ENV") != "preview"
         
         # Return a proper error response instead of letting it crash silently
         return JSONResponse(

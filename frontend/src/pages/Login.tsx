@@ -72,13 +72,16 @@ const Login: React.FC = () => {
       // Navigate to intended destination or home
       navigate(from, { replace: true });
     } catch (error: unknown) {
-      console.error('=== LOGIN ERROR ===');
-      console.error('Error object:', error);
+      // Only log detailed error info in development
+      if (import.meta.env.DEV) {
+        console.error('=== LOGIN ERROR ===');
+        console.error('Error object:', error);
+      }
       
       const apiError = error as ApiError;
       
-      // Log detailed error information for debugging
-      if (apiError) {
+      // Log detailed error information for debugging (dev only)
+      if (import.meta.env.DEV && apiError) {
         console.error('Error code:', apiError.code);
         console.error('Error message:', apiError.message);
         console.error('Response status:', apiError.response?.status);
@@ -100,7 +103,11 @@ const Login: React.FC = () => {
         } else {
           message = 'Connection to server failed. Please check your internet connection and try again. The server may be starting up (this can take up to 60 seconds).';
         }
-        console.error('NETWORK ERROR DETECTED - Check if API is accessible at:', import.meta.env.VITE_API_URL || window.location.origin);
+        
+        // Only log network details in development
+        if (import.meta.env.DEV) {
+          console.error('NETWORK ERROR DETECTED - Check if API is accessible at:', import.meta.env.VITE_API_URL || window.location.origin);
+        }
       } else if (apiError?.response?.status === 503) {
         message = 'Server is starting up. Please wait 30-60 seconds and try again.';
       } else if (apiError?.response?.status === 504) {

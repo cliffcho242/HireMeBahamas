@@ -128,26 +128,38 @@ api.interceptors.request.use((config) => {
 // Handle auth errors with automatic retry
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ API Response:', {
-      url: response.config.url,
-      status: response.status,
-      statusText: response.statusText,
-    });
+    // Only log in development to avoid exposing response data
+    if (import.meta.env.DEV) {
+      console.log('✅ API Response:', {
+        url: response.config.url,
+        status: response.status,
+        statusText: response.statusText,
+      });
+    }
     return response;
   },
   async (error) => {
     const config = error.config;
     
-    console.error('❌ API Error:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      message: error.message,
-      code: error.code,
-      data: error.response?.data,
-      baseURL: error.config?.baseURL,
-    });
+    // Log errors - detailed in dev, minimal in production
+    if (import.meta.env.DEV) {
+      console.error('❌ API Error:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        code: error.code,
+        data: error.response?.data,
+        baseURL: error.config?.baseURL,
+      });
+    } else {
+      // Production: minimal error logging
+      console.error('API Error:', {
+        status: error.response?.status,
+        message: error.message,
+      });
+    }
     
     // Check total elapsed time to prevent excessive waiting
     const requestStartTime = config?._requestStartTime;
