@@ -129,11 +129,12 @@ export function getApiUrl(endpoint: string): string {
 function matchesPattern(endpoint: string, pattern: string): boolean {
   // Convert pattern to regex
   // /api/users/:id -> /^\/api\/users\/[^\/]+$/
-  const regexPattern = pattern
-    .replace(/:[^/]+/g, '[^/]+') // :param -> match any non-slash
-    .replace(/\//g, '\\/'); // escape slashes
+  // Escape special regex characters first, then replace :param with pattern
+  const escapedPattern = pattern
+    .replace(/[\\^$*+?.()|[\]{}]/g, '\\$&') // Escape all regex special chars including backslash
+    .replace(/\\:([^/]+)/g, '[^/]+'); // Replace escaped :param with match pattern
   
-  const regex = new RegExp(`^${regexPattern}$`);
+  const regex = new RegExp(`^${escapedPattern}$`);
   return regex.test(endpoint);
 }
 
