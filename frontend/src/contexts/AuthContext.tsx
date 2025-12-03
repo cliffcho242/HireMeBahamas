@@ -87,7 +87,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     } catch (error) {
       console.error('Token refresh failed:', error);
-      throw error;
+      // Don't throw - just log the error to prevent breaking the app
+      // The user can continue using their current token until it expires
     }
   }, [rememberMe]);
 
@@ -177,6 +178,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           await refreshTokenInternal();
         } catch (error) {
           console.error('Auto token refresh failed:', error);
+          // Don't force logout on refresh failure - user might be offline
+          // The token will be validated on next API call if needed
         }
       }
     };
@@ -184,8 +187,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Check every 10 minutes
     const interval = setInterval(checkAndRefresh, 10 * 60 * 1000);
     
-    // Also check immediately
-    checkAndRefresh();
+    // Also check immediately (but don't block initialization)
+    checkAndRefresh().catch((err) => {
+      console.error('Initial token refresh check failed:', err);
+    });
 
     return () => clearInterval(interval);
   }, [token, refreshTokenInternal]);

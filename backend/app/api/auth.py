@@ -387,6 +387,49 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     }
 
 
+@router.post("/refresh", response_model=Token)
+async def refresh_token(current_user: User = Depends(get_current_user)):
+    """Refresh access token
+    
+    Generates a new access token for the authenticated user.
+    This extends the user's session without requiring re-authentication.
+    
+    Returns:
+        New access token and user data
+    """
+    # Create new access token
+    access_token = create_access_token(data={"sub": str(current_user.id)})
+    
+    logger.info(f"Token refreshed for user: {current_user.email} (user_id={current_user.id})")
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": UserResponse.from_orm(current_user),
+    }
+
+
+@router.get("/verify")
+async def verify_session(current_user: User = Depends(get_current_user)):
+    """Verify current session
+    
+    Validates that the provided token is valid and returns user information.
+    This is used by the frontend to verify session validity on app load.
+    
+    Returns:
+        User data if session is valid
+        
+    Raises:
+        HTTPException: 401 if token is invalid or expired
+    """
+    logger.info(f"Session verified for user: {current_user.email} (user_id={current_user.id})")
+    
+    return {
+        "valid": True,
+        "user": UserResponse.from_orm(current_user),
+    }
+
+
 @router.get("/profile", response_model=UserResponse)
 async def get_profile(current_user: User = Depends(get_current_user)):
     """Get current user profile"""
