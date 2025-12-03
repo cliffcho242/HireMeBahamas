@@ -4,6 +4,19 @@
 
 A modern, Facebook-inspired social platform designed specifically for professionals in the Bahamas to connect, share career opportunities, and build meaningful professional relationships.
 
+---
+
+## 🚀 **NEW: Complete Deployment & Connection Guides**
+
+**📖 [START HERE: Deployment Guide](./START_HERE_DEPLOYMENT.md)** - Your starting point for deployment
+
+Choose your deployment guide:
+- 🌟 **[Complete Deployment & Connection Guide](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Step-by-step for all platforms
+- ⚡ **[Quick Deployment Reference](./QUICK_DEPLOYMENT_REFERENCE.md)** - One-page quick reference
+- 🏗️ **[Architecture Diagram](./ARCHITECTURE_DIAGRAM.md)** - Visual connection flows
+
+---
+
 ## 🚀 **RECOMMENDED: Complete Vercel Deployment**
 
 **Deploy frontend + backend together on Vercel in 10 minutes!**
