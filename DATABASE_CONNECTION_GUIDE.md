@@ -275,7 +275,7 @@ Value: production
 
 ## Render Setup
 
-> ⚠️ **Note:** Render is deprecated for this project. We recommend using Vercel or Railway for better performance and lower costs. This section is provided for reference only.
+> ⚠️ **Note:** Render is no longer recommended for this project due to higher costs ($7-25/month vs $0-5/month on Vercel) and slower cold start times. We recommend using Vercel or Railway instead for better performance and lower costs. However, if you're already using Render or prefer it for other reasons, this section provides complete setup instructions.
 
 **Direct Link:** 🔗 [https://dashboard.render.com/](https://dashboard.render.com/)
 
@@ -567,10 +567,10 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
 ## Additional Resources
 
-- **[DATABASE_URL_LOCATION_GUIDE.md](./DATABASE_URL_LOCATION_GUIDE.md)** - Detailed Vercel navigation with screenshots
-- **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Comprehensive Railway setup guide
+- **[DATABASE_URL_LOCATION_GUIDE.md](./DATABASE_URL_LOCATION_GUIDE.md)** - Detailed Vercel navigation with visual guidance
+- **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Comprehensive Railway setup guide with troubleshooting
 - **[VERCEL_DEPLOYMENT_GUIDE.md](./VERCEL_DEPLOYMENT_GUIDE.md)** - Full Vercel deployment walkthrough
-- **[.env.example](./.env.example)** - Template for all environment variables
+- **[.env.example](./.env.example)** - Template for all environment variables with comments
 
 ---
 
@@ -591,4 +591,4 @@ Before your app can connect to the database, ensure you have:
 
 **Need help?** Create an issue on GitHub or check the troubleshooting section above.
 
-**Last Updated:** December 2025
+**Last Updated:** December 2024
