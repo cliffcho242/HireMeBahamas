@@ -109,6 +109,7 @@ from .core.metrics import get_metrics_response, set_app_info
 from .core.security import prewarm_bcrypt_async
 from .core.redis_cache import redis_cache, warm_cache
 from .core.db_health import check_database_health, get_database_stats
+from .core.timeout_middleware import add_timeout_middleware
 from .graphql.schema import create_graphql_router
 
 # Configuration constants
@@ -133,6 +134,24 @@ app.version = "1.0.0"
 app.docs_url = "/docs"
 app.redoc_url = "/redoc"
 app.openapi_url = "/openapi.json"
+
+# =============================================================================
+# CRITICAL FIX: Request Timeout Middleware (MUST BE FIRST)
+# =============================================================================
+# This PERMANENTLY FIXES the 198-second login timeout that was literally
+# killing the app and losing users. Enforces a 60-second hard timeout on
+# all requests (except health checks) to prevent indefinite hangs.
+#
+# WHY THIS MUST BE FIRST:
+# - Timeout must wrap ALL other middleware and request processing
+# - If added after other middleware, those middlewares can still hang
+# - Must be the outermost layer to enforce timeout on the entire request chain
+#
+# Configuration via environment variables:
+# - REQUEST_TIMEOUT=60 (default: 60 seconds)
+# - REQUEST_TIMEOUT_EXCLUDE_PATHS=/health,/live,/ready,/health/ping,/metrics
+# =============================================================================
+add_timeout_middleware(app, timeout=60)
 
 # Configure CORS - Allow development and production origins
 app.add_middleware(

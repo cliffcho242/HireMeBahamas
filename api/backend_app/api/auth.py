@@ -1,5 +1,6 @@
 import uuid
 import time
+import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
 import logging
@@ -316,8 +317,27 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
         )
     
     # Verify password (async to avoid blocking the event loop)
+    # Add timeout to prevent indefinite hangs (defense-in-depth)
     password_verify_start = time.time()
-    password_valid = await verify_password_async(user_data.password, user.hashed_password)
+    try:
+        password_valid = await asyncio.wait_for(
+            verify_password_async(user_data.password, user.hashed_password),
+            timeout=30.0  # 30-second timeout for password verification
+        )
+    except asyncio.TimeoutError:
+        logger.error(
+            f"[{request_id}] Password verification timeout for user: {user_data.email}, "
+            f"user_id: {user.id}, client_ip: {client_ip}. "
+            f"This indicates a potential bcrypt configuration issue."
+        )
+        # Treat timeout as failed authentication for security
+        record_login_attempt(client_ip, False)
+        record_login_attempt(user_data.email, False)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication service timeout. Please try again.",
+        )
+    
     password_verify_ms = int((time.time() - password_verify_start) * 1000)
     
     logger.info(

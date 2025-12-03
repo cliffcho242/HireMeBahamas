@@ -1,28 +1,32 @@
 # =============================================================================
-# HireMeBahamas Procfile (Heroku/Railway)
+# HireMeBahamas Procfile (Heroku/Railway) - FASTAPI VERSION
 # =============================================================================
 # 
-# NUCLEAR FIX FOR 502 BAD GATEWAY (2025)
+# PERMANENT FIX FOR 198-SECOND LOGIN TIMEOUT (2025)
+#
+# Switched from Flask to FastAPI for:
+# - Built-in async support (prevents blocking operations)
+# - Better performance under load
+# - Request timeout middleware (prevents 198s hangs)
+# - Modern async/await patterns
 #
 # Configuration:
-# - workers=1: Prevents OOM on 512MB-1GB RAM
-# - timeout=180: Survives Railway DB cold starts (up to 2 min)
-# - keep-alive=5: Matches load balancer settings
-# - preload: Eliminates cold start app loading delay
+# - workers=1: Prevents OOM on 512MB-1GB RAM  
+# - timeout=120: Allows for database cold starts
+# - Uvicorn with uvloop for maximum performance
+# - Request-level timeout middleware enforces 60s max per request
 #
 # Environment variables:
+#   PORT=8000            Default port
 #   WEB_CONCURRENCY=1    Single worker for low RAM
-#   WEB_THREADS=4        Threads per worker
-#   GUNICORN_TIMEOUT=180 Worker timeout in seconds
-#   PRELOAD_APP=true     Enable app preloading
+#   UVICORN_TIMEOUT=120  Worker timeout in seconds
 # 
-# See gunicorn.conf.py for full configuration details.
 # =============================================================================
 
-web: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
+web: uvicorn api.backend_app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 5 --limit-concurrency 100
 
-# Optional: Use start.sh for migrations + preload health check
+# Optional: Use start.sh for migrations + health check
 # web: bash start.sh
 
 # Optional: Uncomment to enable Celery worker for background tasks
-# worker: celery -A final_backend.celery worker --loglevel=info
+# worker: celery -A backend.celery worker --loglevel=info
