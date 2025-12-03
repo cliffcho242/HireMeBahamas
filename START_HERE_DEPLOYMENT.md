@@ -6,6 +6,12 @@ This guide will help you deploy HireMeBahamas to production in **10-15 minutes**
 
 ---
 
+## 🎯 Quick Question: Where Do I Put the Database URL?
+
+**👉 [WHERE_TO_PUT_DATABASE_URL.md](./WHERE_TO_PUT_DATABASE_URL.md)** - Direct, step-by-step instructions showing exactly where to paste your database URL for Vercel, Railway, or Render.
+
+---
+
 ## 🎯 What You'll Accomplish
 
 By the end of this guide, you'll have:

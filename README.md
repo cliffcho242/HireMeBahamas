@@ -10,6 +10,8 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 **📖 [START HERE: Deployment Guide](./START_HERE_DEPLOYMENT.md)** - Your starting point for deployment
 
+**🎯 [WHERE TO PUT DATABASE URL](./WHERE_TO_PUT_DATABASE_URL.md)** - Exact instructions showing where to paste your database URL
+
 Choose your deployment guide:
 - 🌟 **[Complete Deployment & Connection Guide](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Step-by-step for all platforms
 - ⚡ **[Quick Deployment Reference](./QUICK_DEPLOYMENT_REFERENCE.md)** - One-page quick reference
