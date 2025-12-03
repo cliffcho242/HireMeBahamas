@@ -55,12 +55,38 @@ const Login: React.FC = () => {
     startLoading();
     
     try {
+      // Only log in development mode to avoid exposing PII
+      if (import.meta.env.DEV) {
+        console.log('=== LOGIN ATTEMPT ===');
+        console.log('Email:', email);
+        console.log('API URL:', import.meta.env.VITE_API_URL || 'Same-origin (default)');
+        console.log('Window location:', window.location.origin);
+      }
+      
       await login(email, password);
+      
+      if (import.meta.env.DEV) {
+        console.log('=== LOGIN SUCCESS ===');
+      }
       toast.success('Welcome back to HireMeBahamas!');
       // Navigate to intended destination or home
       navigate(from, { replace: true });
     } catch (error: unknown) {
+      // Only log detailed error info in development
+      if (import.meta.env.DEV) {
+        console.error('=== LOGIN ERROR ===');
+        console.error('Error object:', error);
+      }
+      
       const apiError = error as ApiError;
+      
+      // Log detailed error information for debugging (dev only)
+      if (import.meta.env.DEV && apiError) {
+        console.error('Error code:', apiError.code);
+        console.error('Error message:', apiError.message);
+        console.error('Response status:', apiError.response?.status);
+        console.error('Response data:', apiError.response?.data);
+      }
       
       // Check for network errors and provide helpful messages
       const isNetworkError = apiError?.code === 'ERR_NETWORK' || 
@@ -77,6 +103,11 @@ const Login: React.FC = () => {
         } else {
           message = 'Connection to server failed. Please check your internet connection and try again. The server may be starting up (this can take up to 60 seconds).';
         }
+        
+        // Only log network details in development
+        if (import.meta.env.DEV) {
+          console.error('NETWORK ERROR DETECTED - Check if API is accessible at:', import.meta.env.VITE_API_URL || window.location.origin);
+        }
       } else if (apiError?.response?.status === 503) {
         message = 'Server is starting up. Please wait 30-60 seconds and try again.';
       } else if (apiError?.response?.status === 504) {
@@ -85,11 +116,26 @@ const Login: React.FC = () => {
         message = 'Too many login attempts. Please wait a minute and try again.';
       } else if (apiError?.response?.status === 502) {
         message = 'Server is temporarily unavailable. This usually resolves within a minute. Please try again.';
+      } else if (apiError?.response?.status === 500) {
+        // Server error - show detailed message if available
+        const serverError = apiError?.response?.data?.message || apiError?.response?.data?.detail;
+        message = serverError 
+          ? `Server error: ${serverError}` 
+          : 'Internal server error. Please try again or contact support if the problem persists.';
+        
+        // Only log sensitive details in development
+        if (import.meta.env.DEV) {
+          console.error('SERVER ERROR (500) - Details:', apiError?.response?.data);
+        }
       } else {
         message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Login failed. Please try again.';
       }
       
-      toast.error(message);
+      // Error message shown to user (no sensitive info)
+      if (import.meta.env.DEV) {
+        console.error('Error message shown to user:', message);
+      }
+      toast.error(message, { duration: 6000 }); // Show for 6 seconds for longer messages
     } finally {
       stopLoading();
       setSubmitting(false);

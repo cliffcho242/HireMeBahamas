@@ -10,10 +10,68 @@ import os
 import sys
 import time
 import logging
+import traceback
+from urllib.parse import urlparse
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging with more detail for debugging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
+
+# Log startup information
+logger.info("="*60)
+logger.info("VERCEL SERVERLESS API STARTING")
+logger.info(f"Python version: {sys.version}")
+logger.info(f"Working directory: {os.getcwd()}")
+logger.info("="*60)
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def is_debug_mode() -> bool:
+    """Check if debug mode is enabled.
+    
+    Debug mode shows detailed error messages and diagnostics.
+    Only enabled in development or when explicitly set with DEBUG=true.
+    Preview environments require explicit DEBUG=true to enable.
+    """
+    env = os.getenv("ENVIRONMENT", "").lower()
+    debug_flag = os.getenv("DEBUG", "").lower() == "true"
+    vercel_env = os.getenv("VERCEL_ENV", "").lower()
+    
+    # Development environment always has debug mode
+    if env == "development":
+        return True
+    
+    # Explicit DEBUG=true enables debug mode in any environment
+    if debug_flag:
+        return True
+    
+    # Otherwise, no debug mode
+    return False
+
+
+def is_production_mode() -> bool:
+    """Check if running in production mode.
+    
+    Production mode hides detailed errors and sensitive information.
+    Preview environments are treated as production unless DEBUG=true is set.
+    """
+    env = os.getenv("ENVIRONMENT", "").lower()
+    vercel_env = os.getenv("VERCEL_ENV", "").lower()
+    
+    # Explicit production environment
+    if env == "production" or vercel_env == "production":
+        return True
+    
+    # Preview environments are production-like unless debug is enabled
+    if vercel_env == "preview" and not is_debug_mode():
+        return True
+    
+    return False
 
 # JWT imports with fallback
 try:
@@ -87,8 +145,16 @@ DATABASE_URL = (
     os.getenv("POSTGRES_URL")
 )
 
-# CORS origins
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+# CORS origins - Allow all origins for Vercel deployments
+# Vercel preview deployments have dynamic URLs, so we need to be permissive
+# In production, you can restrict this to specific domains
+ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "*")
+if ALLOWED_ORIGINS_ENV == "*":
+    ALLOWED_ORIGINS = ["*"]
+    logger.info("CORS: Allowing all origins (wildcard)")
+else:
+    ALLOWED_ORIGINS = ALLOWED_ORIGINS_ENV.split(",")
+    logger.info(f"CORS: Allowing specific origins: {ALLOWED_ORIGINS}")
 
 # Mock user data for fallback
 MOCK_USERS = {
@@ -112,15 +178,32 @@ MOCK_USERS = {
 db_engine = None
 async_session_maker = None
 
+# Log database configuration status (without exposing credentials)
+if DATABASE_URL:
+    # Mask sensitive parts of URL for logging
+    try:
+        parsed = urlparse(DATABASE_URL)
+        # Show only scheme and redacted location
+        masked_url = f"{parsed.scheme}://***:***@{parsed.hostname if parsed.hostname else '***'}:{parsed.port if parsed.port else '***'}/***"
+        logger.info(f"Database URL configured: {masked_url}")
+    except Exception:
+        logger.info("Database URL configured (unable to parse for logging)")
+else:
+    logger.warning("⚠️  DATABASE_URL not configured - API will have limited functionality")
+
 if HAS_DB and DATABASE_URL:
     try:
+        logger.info("Initializing database connection...")
         # Convert postgres:// to postgresql+asyncpg://
         db_url = DATABASE_URL
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            logger.info("Converted postgres:// to postgresql+asyncpg://")
         elif db_url.startswith("postgresql://") and "asyncpg" not in db_url:
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            logger.info("Converted postgresql:// to postgresql+asyncpg://")
         
+        logger.info("Creating database engine with asyncpg...")
         db_engine = create_async_engine(
             db_url,
             pool_pre_ping=True,
@@ -132,10 +215,16 @@ if HAS_DB and DATABASE_URL:
         async_session_maker = sessionmaker(
             db_engine, class_=AsyncSession, expire_on_commit=False
         )
+        logger.info("✅ Database engine created successfully")
     except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
+        logger.error(f"❌ Database initialization failed: {e}\nTraceback: {traceback.format_exc()}")
         db_engine = None
         async_session_maker = None
+else:
+    if not HAS_DB:
+        logger.warning("⚠️  Database drivers not available (sqlalchemy, asyncpg)")
+    if not DATABASE_URL:
+        logger.warning("⚠️  DATABASE_URL not set in environment")
 
 # ============================================================================
 # CREATE FASTAPI APP
@@ -147,6 +236,39 @@ app = FastAPI(
     docs_url="/api/docs",
     redoc_url="/api/redoc",
 )
+
+# ============================================================================
+# GLOBAL EXCEPTION HANDLER
+# ============================================================================
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Catch-all exception handler to ensure no error goes unlogged.
+    This is critical for debugging issues in Vercel where logs might not be visible.
+    """
+    logger.error(
+        f"UNHANDLED EXCEPTION: {type(exc).__name__}\n"
+        f"Path: {request.method} {request.url.path}\n"
+        f"Error: {str(exc)}\n"
+        f"Traceback:\n{traceback.format_exc()}"
+    )
+    
+    # Use helper function for consistent debug mode detection
+    is_dev = is_debug_mode()
+    
+    # Return appropriate error response
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "INTERNAL_SERVER_ERROR",
+            "message": "An unexpected error occurred while processing your request",
+            "type": type(exc).__name__ if is_dev else "ServerError",
+            "details": str(exc) if is_dev else None,
+            "path": request.url.path,
+            "method": request.method,
+            "help": "Please try again. If the problem persists, contact support."
+        }
+    )
 
 # ============================================================================
 # CORS MIDDLEWARE
@@ -164,7 +286,7 @@ app.add_middleware(
 # ============================================================================
 @app.middleware("http")
 async def log_requests(request, call_next):
-    """Log all requests with timing"""
+    """Log all requests with timing and comprehensive error handling"""
     start = time.time()
     method = request.method
     path = request.url.path
@@ -184,8 +306,26 @@ async def log_requests(request, call_next):
         return response
     except Exception as e:
         duration_ms = int((time.time() - start) * 1000)
-        logger.error(f"← ERROR {method} {path} ({duration_ms}ms): {e}")
-        raise
+        logger.error(
+            f"← ERROR {method} {path} ({duration_ms}ms): {type(e).__name__}: {str(e)}\n"
+            f"Traceback: {traceback.format_exc()}"
+        )
+        
+        # Use helper function for consistent debug mode detection
+        is_dev = is_debug_mode()
+        
+        # Return a proper error response instead of letting it crash silently
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred",
+                "details": str(e) if is_dev else "Internal server error",
+                "type": type(e).__name__ if is_dev else "ServerError",
+                "path": path,
+                "method": method,
+            }
+        )
 
 # ============================================================================
 # HELPER: GET USER FROM DATABASE
@@ -235,6 +375,7 @@ async def get_user_from_db(user_id: int):
 @app.head("/health")
 async def health():
     """Instant health check - responds in <5ms"""
+    logger.info("Health check called")
     return {
         "status": "healthy",
         "platform": "vercel-serverless",
@@ -243,6 +384,77 @@ async def health():
         "version": "2.0.0",
         "backend": "available" if HAS_BACKEND else "fallback",
         "database": "connected" if db_engine else "unavailable",
+        "jwt": "configured" if JWT_SECRET != "dev-secret-key-change-in-production" else "using_default",
+        "database_url_set": bool(DATABASE_URL),
+    }
+
+@app.get("/api/diagnostic")
+async def diagnostic():
+    """Comprehensive diagnostic endpoint for debugging
+    
+    In production, returns limited information to prevent information disclosure.
+    Set DEBUG=true environment variable to enable full diagnostics.
+    """
+    logger.info("Diagnostic check called")
+    
+    # Use helper functions for consistent environment detection
+    is_debug = is_debug_mode()
+    is_prod = is_production_mode()
+    
+    # In production without debug mode, return limited info
+    if is_prod and not is_debug:
+        return {
+            "status": "operational",
+            "timestamp": int(time.time()),
+            "platform": "vercel-serverless",
+            "message": "Diagnostic details hidden in production. Set DEBUG=true to enable.",
+            "basic_checks": {
+                "backend_available": HAS_BACKEND,
+                "database_available": bool(db_engine),
+            }
+        }
+    
+    # Full diagnostics for development/debug mode
+    # Test database connection
+    db_status = "unavailable"
+    db_error = None
+    if db_engine:
+        try:
+            async with db_engine.begin() as conn:
+                await conn.execute(text("SELECT 1"))
+            db_status = "connected"
+        except Exception as e:
+            db_status = "error"
+            db_error = str(e)[:200]  # Limit error message length
+            logger.error(f"Database test failed: {e}")
+    
+    # Check environment variables (without exposing secrets)
+    env_check = {
+        "DATABASE_URL": "set" if DATABASE_URL else "missing",
+        "SECRET_KEY": "set" if JWT_SECRET != "dev-secret-key-change-in-production" else "using_default",
+        "POSTGRES_URL": "set" if os.getenv("POSTGRES_URL") else "not_set",
+        "VERCEL_ENV": os.getenv("VERCEL_ENV", "not_set"),
+        "ENVIRONMENT": os.getenv("ENVIRONMENT", "not_set"),
+    }
+    
+    return {
+        "status": "operational",
+        "timestamp": int(time.time()),
+        "platform": "vercel-serverless",
+        "debug_mode": is_debug,
+        "checks": {
+            "python_version": sys.version.split()[0],
+            "jose_jwt": HAS_JOSE,
+            "database_drivers": HAS_DB,
+            "backend_modules": HAS_BACKEND,
+            "database_engine": "initialized" if db_engine else "not_initialized",
+            "database_connection": db_status,
+            "database_error": db_error if is_debug else ("error occurred" if db_error else None),
+        },
+        "environment": env_check if is_debug else {
+            "DATABASE_URL": env_check["DATABASE_URL"],
+            "SECRET_KEY": env_check["SECRET_KEY"],
+        },
     }
 
 @app.get("/api/ready")
@@ -334,15 +546,24 @@ async def get_current_user(authorization: str = Header(None)):
 # ============================================================================
 if HAS_BACKEND:
     try:
+        logger.info("Registering backend routers...")
         app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+        logger.info("✅ Auth router registered")
         app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+        logger.info("✅ Posts router registered")
         app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
+        logger.info("✅ Jobs router registered")
         app.include_router(users.router, prefix="/api/users", tags=["users"])
+        logger.info("✅ Users router registered")
         app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
+        logger.info("✅ Messages router registered")
         app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
-        logger.info("✅ All backend routers registered")
+        logger.info("✅ Notifications router registered")
+        logger.info("✅ All backend routers registered successfully")
     except Exception as e:
-        logger.error(f"Failed to register backend routers: {e}")
+        logger.error(f"Failed to register backend routers: {e}\nTraceback: {traceback.format_exc()}")
+else:
+    logger.warning("⚠️  Backend modules not available - using fallback endpoints only")
 
 # ============================================================================
 # ROOT ENDPOINT
