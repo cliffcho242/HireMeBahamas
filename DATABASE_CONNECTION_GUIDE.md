@@ -126,6 +126,8 @@ Vercel Dashboard → Your HireMeBahamas Project → Settings → Environment Var
    ```
    DATABASE_URL=postgresql+asyncpg://default:abc123...@ep-name-12345.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require
    ```
+   
+   > Note: Region format (e.g., `us-east-1.aws.neon.tech`) may vary depending on where you created your database.
 
 5. **Add POSTGRES_URL (optional but recommended):**
    ```
@@ -275,7 +277,7 @@ Value: production
 
 ## Render Setup
 
-> ⚠️ **Note:** Render is no longer recommended for this project due to higher costs ($7-25/month vs $0-5/month on Vercel) and slower cold start times. We recommend using Vercel or Railway instead for better performance and lower costs. However, if you're already using Render or prefer it for other reasons, this section provides complete setup instructions.
+> 💡 **Note:** While Render is still a fully supported and valid deployment option, it has become less cost-effective ($7-25/month) and has slower cold start times compared to newer alternatives like Vercel ($0-5/month) and Railway ($5-20/month). We recommend Vercel or Railway for new deployments to get better performance at lower costs. However, if you're already using Render, are comfortable with its interface, or have specific reasons to prefer it, this section provides complete setup instructions.
 
 **Direct Link:** 🔗 [https://dashboard.render.com/](https://dashboard.render.com/)
 
@@ -521,7 +523,7 @@ Visit these endpoints to diagnose:
 {
   "status": "healthy",
   "database": "connected",
-  "timestamp": "2025-12-03T10:00:00Z"
+  "timestamp": "2024-12-03T10:00:00Z"
 }
 ```
 
