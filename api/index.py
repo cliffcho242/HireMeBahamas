@@ -10,10 +10,21 @@ import os
 import sys
 import time
 import logging
+import traceback
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging with more detail for debugging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
+
+# Log startup information
+logger.info("="*60)
+logger.info("VERCEL SERVERLESS API STARTING")
+logger.info(f"Python version: {sys.version}")
+logger.info(f"Working directory: {os.getcwd()}")
+logger.info("="*60)
 
 # JWT imports with fallback
 try:
@@ -149,6 +160,36 @@ app = FastAPI(
 )
 
 # ============================================================================
+# GLOBAL EXCEPTION HANDLER
+# ============================================================================
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Catch-all exception handler to ensure no error goes unlogged.
+    This is critical for debugging issues in Vercel where logs might not be visible.
+    """
+    logger.error(
+        f"UNHANDLED EXCEPTION: {type(exc).__name__}\n"
+        f"Path: {request.method} {request.url.path}\n"
+        f"Error: {str(exc)}\n"
+        f"Traceback:\n{traceback.format_exc()}"
+    )
+    
+    # Return appropriate error response
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "INTERNAL_SERVER_ERROR",
+            "message": "An unexpected error occurred while processing your request",
+            "type": type(exc).__name__,
+            "details": str(exc) if os.getenv("VERCEL_ENV") != "production" else None,
+            "path": request.url.path,
+            "method": request.method,
+            "help": "Please try again. If the problem persists, contact support."
+        }
+    )
+
+# ============================================================================
 # CORS MIDDLEWARE
 # ============================================================================
 app.add_middleware(
@@ -164,7 +205,7 @@ app.add_middleware(
 # ============================================================================
 @app.middleware("http")
 async def log_requests(request, call_next):
-    """Log all requests with timing"""
+    """Log all requests with timing and comprehensive error handling"""
     start = time.time()
     method = request.method
     path = request.url.path
@@ -184,8 +225,22 @@ async def log_requests(request, call_next):
         return response
     except Exception as e:
         duration_ms = int((time.time() - start) * 1000)
-        logger.error(f"← ERROR {method} {path} ({duration_ms}ms): {e}")
-        raise
+        logger.error(
+            f"← ERROR {method} {path} ({duration_ms}ms): {type(e).__name__}: {str(e)}\n"
+            f"Traceback: {traceback.format_exc()}"
+        )
+        # Return a proper error response instead of letting it crash silently
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred",
+                "details": str(e) if os.getenv("VERCEL_ENV") != "production" else "Internal server error",
+                "type": type(e).__name__,
+                "path": path,
+                "method": method,
+            }
+        )
 
 # ============================================================================
 # HELPER: GET USER FROM DATABASE
@@ -235,6 +290,7 @@ async def get_user_from_db(user_id: int):
 @app.head("/health")
 async def health():
     """Instant health check - responds in <5ms"""
+    logger.info("Health check called")
     return {
         "status": "healthy",
         "platform": "vercel-serverless",
@@ -243,6 +299,52 @@ async def health():
         "version": "2.0.0",
         "backend": "available" if HAS_BACKEND else "fallback",
         "database": "connected" if db_engine else "unavailable",
+        "jwt": "configured" if JWT_SECRET != "dev-secret-key-change-in-production" else "using_default",
+        "database_url_set": bool(DATABASE_URL),
+    }
+
+@app.get("/api/diagnostic")
+async def diagnostic():
+    """Comprehensive diagnostic endpoint for debugging"""
+    logger.info("Diagnostic check called")
+    
+    # Test database connection
+    db_status = "unavailable"
+    db_error = None
+    if db_engine:
+        try:
+            async with db_engine.begin() as conn:
+                await conn.execute(text("SELECT 1"))
+            db_status = "connected"
+        except Exception as e:
+            db_status = "error"
+            db_error = str(e)
+            logger.error(f"Database test failed: {e}")
+    
+    # Check environment variables (without exposing secrets)
+    env_check = {
+        "DATABASE_URL": "set" if DATABASE_URL else "missing",
+        "SECRET_KEY": "set" if JWT_SECRET != "dev-secret-key-change-in-production" else "using_default",
+        "POSTGRES_URL": "set" if os.getenv("POSTGRES_URL") else "not_set",
+        "VERCEL_ENV": os.getenv("VERCEL_ENV", "not_set"),
+        "VERCEL_REGION": os.getenv("VERCEL_REGION", "not_set"),
+    }
+    
+    return {
+        "status": "operational",
+        "timestamp": int(time.time()),
+        "platform": "vercel-serverless",
+        "checks": {
+            "python_version": sys.version.split()[0],
+            "jose_jwt": HAS_JOSE,
+            "database_drivers": HAS_DB,
+            "backend_modules": HAS_BACKEND,
+            "database_engine": "initialized" if db_engine else "not_initialized",
+            "database_connection": db_status,
+            "database_error": db_error,
+        },
+        "environment": env_check,
+        "python_path": sys.path[:3],  # First 3 entries only
     }
 
 @app.get("/api/ready")
@@ -334,15 +436,24 @@ async def get_current_user(authorization: str = Header(None)):
 # ============================================================================
 if HAS_BACKEND:
     try:
+        logger.info("Registering backend routers...")
         app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+        logger.info("✅ Auth router registered")
         app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+        logger.info("✅ Posts router registered")
         app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
+        logger.info("✅ Jobs router registered")
         app.include_router(users.router, prefix="/api/users", tags=["users"])
+        logger.info("✅ Users router registered")
         app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
+        logger.info("✅ Messages router registered")
         app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
-        logger.info("✅ All backend routers registered")
+        logger.info("✅ Notifications router registered")
+        logger.info("✅ All backend routers registered successfully")
     except Exception as e:
-        logger.error(f"Failed to register backend routers: {e}")
+        logger.error(f"Failed to register backend routers: {e}\nTraceback: {traceback.format_exc()}")
+else:
+    logger.warning("⚠️  Backend modules not available - using fallback endpoints only")
 
 # ============================================================================
 # ROOT ENDPOINT

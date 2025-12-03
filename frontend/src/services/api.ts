@@ -112,25 +112,40 @@ api.interceptors.request.use((config) => {
     config._requestStartTime = Date.now();
   }
   
-  console.log('API Request:', config.method?.toUpperCase(), config.url);
+  // Enhanced logging for debugging
+  console.log('🔹 API Request:', {
+    method: config.method?.toUpperCase(),
+    url: config.url,
+    baseURL: config.baseURL,
+    fullURL: `${config.baseURL}${config.url}`,
+    hasAuth: !!token,
+  });
+  
   return config;
 });
 
 // Handle auth errors with automatic retry
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', response.config.url, response.status);
+    console.log('✅ API Response:', {
+      url: response.config.url,
+      status: response.status,
+      statusText: response.statusText,
+    });
     return response;
   },
   async (error) => {
     const config = error.config;
     
-    console.error('API Error:', {
+    console.error('❌ API Error:', {
       url: error.config?.url,
       method: error.config?.method,
       status: error.response?.status,
+      statusText: error.response?.statusText,
       message: error.message,
-      data: error.response?.data
+      code: error.code,
+      data: error.response?.data,
+      baseURL: error.config?.baseURL,
     });
     
     // Check total elapsed time to prevent excessive waiting
