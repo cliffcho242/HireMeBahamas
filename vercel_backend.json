@@ -1,20 +1,18 @@
 {
   "version": 2,
   "name": "hiremebahamas-backend",
-  "builds": [
-    {
-      "src": "final_backend.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+  "functions": {
+    "final_backend.py": {
+      "runtime": "python3.12",
+      "maxDuration": 10,
+      "memory": 1024
     }
-  ],
+  },
   "installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt",
-  "routes": [
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "final_backend.py"
+      "source": "/(.*)",
+      "destination": "/final_backend.py"
     }
   ],
   "env": {
