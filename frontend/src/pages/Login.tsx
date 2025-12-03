@@ -115,12 +115,19 @@ const Login: React.FC = () => {
         message = serverError 
           ? `Server error: ${serverError}` 
           : 'Internal server error. Please try again or contact support if the problem persists.';
-        console.error('SERVER ERROR (500) - Details:', apiError?.response?.data);
+        
+        // Only log sensitive details in development
+        if (import.meta.env.DEV) {
+          console.error('SERVER ERROR (500) - Details:', apiError?.response?.data);
+        }
       } else {
         message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Login failed. Please try again.';
       }
       
-      console.error('Error message shown to user:', message);
+      // Error message shown to user (no sensitive info)
+      if (import.meta.env.DEV) {
+        console.error('Error message shown to user:', message);
+      }
       toast.error(message, { duration: 6000 }); // Show for 6 seconds for longer messages
     } finally {
       stopLoading();

@@ -133,14 +133,15 @@ async_session_maker = None
 
 # Log database configuration status (without exposing credentials)
 if DATABASE_URL:
-    # Mask password in URL for logging
-    masked_url = DATABASE_URL
-    if '@' in masked_url:
-        parts = masked_url.split('@')
-        if ':' in parts[0]:
-            user_part = parts[0].split(':')[0]
-            masked_url = f"{user_part}:****@{parts[1]}"
-    logger.info(f"Database URL configured: {masked_url[:50]}...")
+    # Mask sensitive parts of URL for logging
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(DATABASE_URL)
+        # Show only scheme and redacted location
+        masked_url = f"{parsed.scheme}://***:***@{parsed.hostname if parsed.hostname else '***'}:{parsed.port if parsed.port else '***'}/***"
+        logger.info(f"Database URL configured: {masked_url}")
+    except Exception:
+        logger.info("Database URL configured (unable to parse for logging)")
 else:
     logger.warning("⚠️  DATABASE_URL not configured - API will have limited functionality")
 
@@ -206,8 +207,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         f"Traceback:\n{traceback.format_exc()}"
     )
     
-    # Only expose details in development environment
-    is_dev = os.getenv("VERCEL_ENV") == "preview" or os.getenv("ENVIRONMENT") == "development"
+    # Only expose details in development - NOT in preview environments
+    is_dev = os.getenv("ENVIRONMENT") == "development" or os.getenv("DEBUG") == "true"
     
     # Return appropriate error response
     return JSONResponse(
@@ -215,7 +216,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "error": "INTERNAL_SERVER_ERROR",
             "message": "An unexpected error occurred while processing your request",
-            "type": type(exc).__name__,
+            "type": type(exc).__name__ if is_dev else "ServerError",
             "details": str(exc) if is_dev else None,
             "path": request.url.path,
             "method": request.method,
@@ -264,8 +265,8 @@ async def log_requests(request, call_next):
             f"Traceback: {traceback.format_exc()}"
         )
         
-        # Only expose details in development
-        is_dev = os.getenv("VERCEL_ENV") == "preview" or os.getenv("ENVIRONMENT") == "development"
+        # Only expose details in development - NOT in preview
+        is_dev = os.getenv("ENVIRONMENT") == "development" or os.getenv("DEBUG") == "true"
         
         # Return a proper error response instead of letting it crash silently
         return JSONResponse(
@@ -274,7 +275,7 @@ async def log_requests(request, call_next):
                 "error": "INTERNAL_SERVER_ERROR",
                 "message": "An unexpected error occurred",
                 "details": str(e) if is_dev else "Internal server error",
-                "type": type(e).__name__,
+                "type": type(e).__name__ if is_dev else "ServerError",
                 "path": path,
                 "method": method,
             }
@@ -343,9 +344,31 @@ async def health():
 
 @app.get("/api/diagnostic")
 async def diagnostic():
-    """Comprehensive diagnostic endpoint for debugging"""
+    """Comprehensive diagnostic endpoint for debugging
+    
+    In production, returns limited information to prevent information disclosure.
+    Set DEBUG=true environment variable to enable full diagnostics.
+    """
     logger.info("Diagnostic check called")
     
+    # Check if running in debug mode
+    is_debug = os.getenv("DEBUG") == "true" or os.getenv("ENVIRONMENT") == "development"
+    is_production = os.getenv("ENVIRONMENT") == "production" or os.getenv("VERCEL_ENV") == "production"
+    
+    # In production without debug mode, return limited info
+    if is_production and not is_debug:
+        return {
+            "status": "operational",
+            "timestamp": int(time.time()),
+            "platform": "vercel-serverless",
+            "message": "Diagnostic details hidden in production. Set DEBUG=true to enable.",
+            "basic_checks": {
+                "backend_available": HAS_BACKEND,
+                "database_available": bool(db_engine),
+            }
+        }
+    
+    # Full diagnostics for development/debug mode
     # Test database connection
     db_status = "unavailable"
     db_error = None
@@ -356,7 +379,7 @@ async def diagnostic():
             db_status = "connected"
         except Exception as e:
             db_status = "error"
-            db_error = str(e)
+            db_error = str(e)[:200]  # Limit error message length
             logger.error(f"Database test failed: {e}")
     
     # Check environment variables (without exposing secrets)
@@ -365,13 +388,14 @@ async def diagnostic():
         "SECRET_KEY": "set" if JWT_SECRET != "dev-secret-key-change-in-production" else "using_default",
         "POSTGRES_URL": "set" if os.getenv("POSTGRES_URL") else "not_set",
         "VERCEL_ENV": os.getenv("VERCEL_ENV", "not_set"),
-        "VERCEL_REGION": os.getenv("VERCEL_REGION", "not_set"),
+        "ENVIRONMENT": os.getenv("ENVIRONMENT", "not_set"),
     }
     
     return {
         "status": "operational",
         "timestamp": int(time.time()),
         "platform": "vercel-serverless",
+        "debug_mode": is_debug,
         "checks": {
             "python_version": sys.version.split()[0],
             "jose_jwt": HAS_JOSE,
@@ -379,10 +403,12 @@ async def diagnostic():
             "backend_modules": HAS_BACKEND,
             "database_engine": "initialized" if db_engine else "not_initialized",
             "database_connection": db_status,
-            "database_error": db_error,
+            "database_error": db_error if is_debug else ("error occurred" if db_error else None),
         },
-        "environment": env_check,
-        "python_path": sys.path[:3],  # First 3 entries only
+        "environment": env_check if is_debug else {
+            "DATABASE_URL": env_check["DATABASE_URL"],
+            "SECRET_KEY": env_check["SECRET_KEY"],
+        },
     }
 
 @app.get("/api/ready")
