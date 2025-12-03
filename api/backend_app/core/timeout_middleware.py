@@ -90,7 +90,12 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         
         # Track request start time
         start_time = time.time()
-        request_id = getattr(request.state, 'request_id', 'unknown')
+        request_id = getattr(request.state, 'request_id', None)
+        if not request_id:
+            # Generate request ID if not set by upstream middleware
+            import uuid
+            request_id = str(uuid.uuid4())[:8]
+            request.state.request_id = request_id
         
         try:
             # Enforce timeout using asyncio.wait_for
@@ -146,7 +151,7 @@ def add_timeout_middleware(app: FastAPI, timeout: int = REQUEST_TIMEOUT, exclude
         exclude_paths: List of paths to exclude from timeout (default: from config)
         
     Example:
-        from app.core.timeout_middleware import add_timeout_middleware
+        from api.backend_app.core.timeout_middleware import add_timeout_middleware
         add_timeout_middleware(app, timeout=60)
     """
     app.add_middleware(TimeoutMiddleware, timeout=timeout, exclude_paths=exclude_paths)
