@@ -4,6 +4,25 @@
 
 ---
 
+## ⚡ Quick Links
+
+Choose your platform and jump directly to the setup guide:
+
+| Platform | Best For | Cost | Setup Time | Link |
+|----------|----------|------|------------|------|
+| **Vercel** ⭐ | Production, global users | $0-5/mo | 10 min | [Setup Guide](#vercel-setup---recommended) |
+| **Railway** | Simple deployment | $5-20/mo | 5 min | [Setup Guide](#railway-setup) |
+| **Render** | Legacy projects | $7-25/mo | 15 min | [Setup Guide](#render-setup) |
+| **Local** | Development | $0 | 5 min | [Setup Guide](#local-development-setup) |
+
+**Direct Dashboard Links:**
+- 🔗 [Vercel Dashboard](https://vercel.com/dashboard)
+- 🔗 [Vercel Storage (Create DB)](https://vercel.com/dashboard/stores)
+- 🔗 [Railway Dashboard](https://railway.app/dashboard)
+- 🔗 [Render Dashboard](https://dashboard.render.com/)
+
+---
+
 ## 📋 Table of Contents
 
 1. [Overview](#overview)

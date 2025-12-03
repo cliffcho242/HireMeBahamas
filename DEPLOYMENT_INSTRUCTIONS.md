@@ -14,6 +14,10 @@ git push origin main
 
 ### 2. Set Environment Variables in Vercel
 
+**🔗 [Complete Database Connection Guide](./DATABASE_CONNECTION_GUIDE.md)** - Step-by-step instructions with direct links for Vercel, Railway, and Render.
+
+Quick version for Vercel:
+
 Go to [Vercel Dashboard](https://vercel.com/dashboard) → Your Project → Settings → Environment Variables
 
 Add these **required** variables:
@@ -33,6 +37,8 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 # Or use OpenSSL
 openssl rand -base64 32
 ```
+
+**Need your DATABASE_URL?** See the [Database Connection Guide](./DATABASE_CONNECTION_GUIDE.md#vercel-setup---recommended) for direct links and detailed instructions.
 
 ### 3. Verify Deployment
 
