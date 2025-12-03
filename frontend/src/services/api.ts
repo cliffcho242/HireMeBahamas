@@ -112,14 +112,15 @@ api.interceptors.request.use((config) => {
     config._requestStartTime = Date.now();
   }
   
-  // Enhanced logging for debugging
-  console.log('🔹 API Request:', {
-    method: config.method?.toUpperCase(),
-    url: config.url,
-    baseURL: config.baseURL,
-    fullURL: `${config.baseURL}${config.url}`,
-    hasAuth: !!token,
-  });
+  // Enhanced logging for debugging (development only)
+  if (import.meta.env.DEV) {
+    console.log('🔹 API Request:', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      baseURL: config.baseURL,
+      fullURL: `${config.baseURL}${config.url}`,
+    });
+  }
   
   return config;
 });

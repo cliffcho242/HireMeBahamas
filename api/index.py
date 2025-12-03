@@ -206,6 +206,9 @@ async def global_exception_handler(request: Request, exc: Exception):
         f"Traceback:\n{traceback.format_exc()}"
     )
     
+    # Only expose details in development environment
+    is_dev = os.getenv("VERCEL_ENV") == "preview" or os.getenv("ENVIRONMENT") == "development"
+    
     # Return appropriate error response
     return JSONResponse(
         status_code=500,
@@ -213,7 +216,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "error": "INTERNAL_SERVER_ERROR",
             "message": "An unexpected error occurred while processing your request",
             "type": type(exc).__name__,
-            "details": str(exc) if os.getenv("VERCEL_ENV") != "production" else None,
+            "details": str(exc) if is_dev else None,
             "path": request.url.path,
             "method": request.method,
             "help": "Please try again. If the problem persists, contact support."
@@ -260,13 +263,17 @@ async def log_requests(request, call_next):
             f"← ERROR {method} {path} ({duration_ms}ms): {type(e).__name__}: {str(e)}\n"
             f"Traceback: {traceback.format_exc()}"
         )
+        
+        # Only expose details in development
+        is_dev = os.getenv("VERCEL_ENV") == "preview" or os.getenv("ENVIRONMENT") == "development"
+        
         # Return a proper error response instead of letting it crash silently
         return JSONResponse(
             status_code=500,
             content={
                 "error": "INTERNAL_SERVER_ERROR",
                 "message": "An unexpected error occurred",
-                "details": str(e) if os.getenv("VERCEL_ENV") != "production" else "Internal server error",
+                "details": str(e) if is_dev else "Internal server error",
                 "type": type(e).__name__,
                 "path": path,
                 "method": method,

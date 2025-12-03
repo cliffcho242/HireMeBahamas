@@ -55,14 +55,19 @@ const Login: React.FC = () => {
     startLoading();
     
     try {
-      console.log('=== LOGIN ATTEMPT ===');
-      console.log('Email:', email);
-      console.log('API URL:', import.meta.env.VITE_API_URL || 'Same-origin (default)');
-      console.log('Window location:', window.location.origin);
+      // Only log in development mode to avoid exposing PII
+      if (import.meta.env.DEV) {
+        console.log('=== LOGIN ATTEMPT ===');
+        console.log('Email:', email);
+        console.log('API URL:', import.meta.env.VITE_API_URL || 'Same-origin (default)');
+        console.log('Window location:', window.location.origin);
+      }
       
       await login(email, password);
       
-      console.log('=== LOGIN SUCCESS ===');
+      if (import.meta.env.DEV) {
+        console.log('=== LOGIN SUCCESS ===');
+      }
       toast.success('Welcome back to HireMeBahamas!');
       // Navigate to intended destination or home
       navigate(from, { replace: true });
