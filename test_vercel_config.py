@@ -192,7 +192,7 @@ def main():
     elif functions_result is True:
         print("\n✅ Legacy functions configuration is valid")
         has_valid_config = True
-    elif builds_result is not False and functions_result is not None:
+    elif builds_result is not None and builds_result is not False and functions_result is not None:
         # We have builds section and functions section (modern hybrid approach)
         print("\n✅ Hybrid configuration is valid (builds + functions)")
         has_valid_config = True
