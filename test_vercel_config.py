@@ -184,21 +184,26 @@ def main():
     # Test functions configuration
     functions_result = test_vercel_functions_config(config)
     
-    # Check if either builds or functions (with runtime) is valid
+    # Determine if configuration is valid
+    # Valid cases:
+    # 1. Modern format: builds section is valid (functions optional)
+    # 2. Legacy format: functions section is valid with runtime
+    # 3. Hybrid format: both builds and functions are valid
     has_valid_config = False
+    
     if builds_result is True:
-        print("\n✅ Modern builds configuration is valid")
+        # Modern or hybrid format - builds section is valid
+        print("\n✅ Configuration is valid (builds section)")
         has_valid_config = True
     elif functions_result is True:
-        print("\n✅ Legacy functions configuration is valid")
-        has_valid_config = True
-    elif builds_result is not None and builds_result is not False and functions_result is not None:
-        # We have builds section and functions section (modern hybrid approach)
-        print("\n✅ Hybrid configuration is valid (builds + functions)")
+        # Legacy format - functions section is valid with runtime
+        print("\n✅ Configuration is valid (legacy format with runtime)")
         has_valid_config = True
     
     if not has_valid_config:
         print("\n❌ Configuration has issues")
+        print("  Builds result:", builds_result)
+        print("  Functions result:", functions_result)
         return 1
     
     # Test api/index.py
