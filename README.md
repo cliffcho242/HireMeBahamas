@@ -4,6 +4,23 @@
 
 A modern, Facebook-inspired social platform designed specifically for professionals in the Bahamas to connect, share career opportunities, and build meaningful professional relationships.
 
+---
+
+## 🚀 **NEW: Complete Deployment & Connection Guides**
+
+**📖 [START HERE: Deployment Guide](./START_HERE_DEPLOYMENT.md)** - Your starting point for deployment
+
+**🔗 [DIRECT LINKS: Where to Configure Everything](./DIRECT_LINKS_WHERE_TO_CONFIGURE.md)** - Exact dashboard links for Vercel, Railway, and Render
+
+**🎯 [WHERE TO PUT DATABASE URL](./WHERE_TO_PUT_DATABASE_URL.md)** - Exact instructions showing where to paste your database URL
+
+Choose your deployment guide:
+- 🌟 **[Complete Deployment & Connection Guide](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Step-by-step for all platforms
+- ⚡ **[Quick Deployment Reference](./QUICK_DEPLOYMENT_REFERENCE.md)** - One-page quick reference
+- 🏗️ **[Architecture Diagram](./ARCHITECTURE_DIAGRAM.md)** - Visual connection flows
+
+---
+
 ## 🚀 **RECOMMENDED: Complete Vercel Deployment**
 
 **Deploy frontend + backend together on Vercel in 10 minutes!**
@@ -15,20 +32,29 @@ A modern, Facebook-inspired social platform designed specifically for profession
 ✅ **Auto HTTPS** - SSL included  
 ✅ **61 API endpoints** - Full backend integrated  
 
+### 📖 Complete Deployment & Database Connection Guides
+
+Choose your deployment platform and follow the step-by-step guide:
+
+- 🌟 **[DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Complete guide with direct links and instructions for Vercel, Railway, and Render
+- ⚡ **[QUICK_DEPLOYMENT_REFERENCE.md](./QUICK_DEPLOYMENT_REFERENCE.md)** - One-page quick reference with all commands and URLs
+- 📚 **[VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md)** - Detailed Vercel Postgres setup
+- 🚂 **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Railway database configuration
+
 ### Quick Deploy to Vercel
 
 1. **Push to GitHub** (if not already done)
 2. **Import to Vercel**: [vercel.com/new](https://vercel.com/new)
 3. **Add Environment Variables**:
    ```env
-   DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
+   DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
    SECRET_KEY=your-secret-key-32-chars
    JWT_SECRET_KEY=your-jwt-secret-32-chars
    ENVIRONMENT=production
    ```
 4. **Deploy!** ✅
 
-📚 **[Complete Vercel Deployment Guide](./VERCEL_DEPLOYMENT_GUIDE.md)** - Step-by-step instructions
+📚 **[Complete Deployment & Connection Guide](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Everything you need to connect your database and deploy to Vercel, Railway, or Render
 
 ---
 
