@@ -3,7 +3,6 @@
   "name": "hiremebahamas-backend",
   "functions": {
     "final_backend.py": {
-      "runtime": "python3.9",
       "maxDuration": 10,
       "memory": 1024
     }
