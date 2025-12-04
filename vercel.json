@@ -1,11 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/**/*.py",
-      "use": "@vercel/python@6.1.0"
-    }
-  ],
   "routes": [
     {
       "src": "/api/(.*)",

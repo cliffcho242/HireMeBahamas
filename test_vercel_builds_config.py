@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script to verify vercel.json uses the correct builds format with @vercel/python runtime
+Test script to verify vercel.json uses modern serverless configuration (no builds)
 """
 
 import json
@@ -9,9 +9,9 @@ from pathlib import Path
 
 
 def test_vercel_json_format():
-    """Test that vercel.json uses the builds format with @vercel/python@6.1.0"""
+    """Test that vercel.json uses modern Vercel configuration without deprecated builds"""
     print("=" * 60)
-    print("Vercel Builds Configuration Validation")
+    print("Vercel Modern Configuration Validation")
     print("=" * 60)
     
     vercel_json_path = Path("vercel.json")
@@ -43,56 +43,36 @@ def test_vercel_json_format():
         return False
     print(f"  ✓ Version is {config['version']}")
     
-    # Test 4: Check builds array
-    print("\n4. Testing builds configuration...")
-    if "builds" not in config:
-        print("  ✗ Missing 'builds' array")
+    # Test 4: Verify builds is NOT present (deprecated)
+    print("\n4. Testing for deprecated builds configuration...")
+    if "builds" in config:
+        print("  ⚠ WARNING: 'builds' configuration is deprecated!")
+        print("  Modern Vercel auto-detects Python serverless functions in api/ directory")
+        print("  Consider removing 'builds' section")
         return False
-    
-    builds = config["builds"]
-    if not isinstance(builds, list):
-        print("  ✗ 'builds' should be an array")
-        return False
-    
-    if len(builds) == 0:
-        print("  ✗ 'builds' array is empty")
-        return False
-    
-    print(f"  ✓ Found {len(builds)} build configuration(s)")
-    
-    # Test 5: Check Python build configuration
-    print("\n5. Testing Python build configuration...")
-    python_build = None
-    for build in builds:
-        if "use" in build and "@vercel/python" in build["use"]:
-            python_build = build
-            break
-    
-    if not python_build:
-        print("  ✗ No @vercel/python builder found")
-        return False
-    
-    print(f"  ✓ Python builder found: {python_build['use']}")
-    
-    # Test 6: Verify exact version
-    print("\n6. Testing Python builder version...")
-    if python_build["use"] != "@vercel/python@6.1.0":
-        print(f"  ⚠ Expected @vercel/python@6.1.0, got {python_build['use']}")
-        print("  Note: This might be intentional if using a different version")
     else:
-        print("  ✓ Using @vercel/python@6.1.0 as specified")
+        print("  ✓ No deprecated 'builds' section (using modern auto-detection)")
     
-    # Test 7: Check src pattern
-    print("\n7. Testing source pattern...")
-    if "src" not in python_build:
-        print("  ✗ Missing 'src' pattern in Python build")
-        return False
+    # Test 5: Check functions configuration (optional but recommended)
+    print("\n5. Testing functions configuration...")
+    if "functions" not in config:
+        print("  ⚠ No 'functions' configuration (using defaults)")
+    else:
+        functions = config["functions"]
+        if not isinstance(functions, dict):
+            print("  ✗ 'functions' should be an object")
+            return False
+        print(f"  ✓ Found {len(functions)} function(s) configured")
+        
+        for func_path, func_config in functions.items():
+            print(f"    - {func_path}")
+            if "memory" in func_config:
+                print(f"      Memory: {func_config['memory']} MB")
+            if "maxDuration" in func_config:
+                print(f"      Max Duration: {func_config['maxDuration']}s")
     
-    src_pattern = python_build["src"]
-    print(f"  ✓ Source pattern: {src_pattern}")
-    
-    # Test 8: Check routes configuration
-    print("\n8. Testing routes configuration...")
+    # Test 6: Check routes configuration
+    print("\n6. Testing routes configuration...")
     if "routes" not in config:
         print("  ⚠ No 'routes' array found (optional but recommended)")
     else:
@@ -112,16 +92,33 @@ def test_vercel_json_format():
         if not has_api_route:
             print("  ⚠ No API route found in routes configuration")
     
+    # Test 7: Check that Python API files exist
+    print("\n7. Testing Python API files...")
+    api_dir = Path("api")
+    if not api_dir.exists():
+        print("  ✗ api/ directory not found")
+        return False
+    
+    python_files = list(api_dir.glob("*.py"))
+    if not python_files:
+        print("  ✗ No Python files found in api/ directory")
+        return False
+    
+    print(f"  ✓ Found {len(python_files)} Python file(s) in api/")
+    for py_file in python_files:
+        print(f"    - {py_file.name}")
+    
     print("\n" + "=" * 60)
     print("✅ Vercel configuration validation passed!")
     print("=" * 60)
     print("\nConfiguration Summary:")
     print(f"  - Version: {config['version']}")
-    print(f"  - Builds: {len(config['builds'])}")
-    print(f"  - Python Runtime: {python_build['use']}")
-    print(f"  - Source Pattern: {python_build['src']}")
+    print(f"  - Modern Format: Yes (auto-detects Python functions)")
+    if "functions" in config:
+        print(f"  - Functions: {len(config['functions'])}")
     if "routes" in config:
         print(f"  - Routes: {len(config['routes'])}")
+    print(f"  - Python API Files: {len(python_files)}")
     
     return True
 
