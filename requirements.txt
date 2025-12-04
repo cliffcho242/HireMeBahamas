@@ -25,12 +25,13 @@ psycopg2-binary==2.9.11
 
 # Authentication & Security (with ALL dependencies)
 # CRITICAL: python-jose[cryptography] for JWT - The 'jose' module comes from python-jose
-python-jose[cryptography]==3.4.0
+# Updated to 3.5.0 to fix pyasn1 dependency conflict (allows pyasn1>=0.5.0)
+python-jose[cryptography]==3.5.0
 
 # Cryptography dependencies (ensures 'jose' module works)
 cryptography==43.0.3
 ecdsa==0.19.0
-pyasn1==0.4.8
+# pyasn1 version is now controlled by python-jose 3.5.0 (requires >=0.5.0)
 rsa==4.9
 
 # Alternative JWT library (fallback/compatibility)

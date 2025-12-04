@@ -16,10 +16,11 @@ pydantic-settings==2.7.0
 mangum==0.19.0
 
 # JWT Authentication — python-jose[cryptography]
-python-jose[cryptography]==3.4.0
+# Updated to 3.5.0 to fix pyasn1 dependency conflict (allows pyasn1>=0.5.0)
+python-jose[cryptography]==3.5.0
 cryptography==43.0.3
 ecdsa==0.19.0
-pyasn1==0.4.8
+# pyasn1 version is now controlled by python-jose 3.5.0 (requires >=0.5.0)
 rsa==4.9
 
 # Password Hashing — passlib[bcrypt]
