@@ -635,6 +635,7 @@ else:
 async def root():
     """Root endpoint with API information"""
     return {
+        "message": "HireMeBahamas API",
         "name": "HireMeBahamas API",
         "version": "2.0.0",
         "status": "operational",
