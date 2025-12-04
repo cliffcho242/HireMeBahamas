@@ -130,13 +130,6 @@ Vercel Modern Configuration Validation
 - Eliminates the npm error: `notarget No matching version found for @vercel/python@0.5.0`
 - Configuration is now aligned with Vercel's current best practices
 
-7. Testing source pattern...
-  ✓ Source pattern: api/**/*.py
-
-8. Testing routes configuration...
-  ✓ Found 1 route(s) configured
-  ✓ API route found: /api/(.*) → api/$1
-
 ============================================================
 ✅ Vercel configuration validation passed!
 ============================================================

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script to verify vercel.json uses modern serverless configuration (no builds)
+Test script to verify vercel.json uses modern Vercel configuration without deprecated builds section
 """
 
 import json

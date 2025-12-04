@@ -102,7 +102,9 @@ def test_vercel_functions_config(config):
             print(f"    ✗ File not found: {func_path}")
             all_valid = False
         
-        # Check for runtime (legacy format - optional if using modern auto-detection)
+        # Check for runtime (optional with modern auto-detection, required for legacy format)
+        # Modern Vercel auto-detects Python runtime from api/ directory and requirements.txt
+        # Legacy format requires explicit runtime specification (e.g., "python3.9")
         if func_path.endswith(".py"):
             if "runtime" in func_config:
                 runtime = func_config["runtime"]
