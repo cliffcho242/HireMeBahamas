@@ -61,7 +61,7 @@ The current `vercel.json` now uses a **hybrid configuration** that combines:
 "builds": [
   {
     "src": "api/**/*.py",
-    "use": "@vercel/python@0.5.0"
+    "use": "@vercel/python@6.1.0"
   }
 ]
 ```

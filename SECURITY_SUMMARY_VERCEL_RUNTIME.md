@@ -1,7 +1,7 @@
 # Security Summary: Vercel.json Runtime Update
 
 ## Overview
-This security summary covers the changes made to update the root `vercel.json` configuration to use the modern builds format with `@vercel/python@0.5.0` runtime.
+This security summary covers the changes made to update the root `vercel.json` configuration to use the modern builds format with `@vercel/python@6.1.0` runtime.
 
 ## Changes Summary
 - **File Modified**: `/vercel.json`
@@ -23,7 +23,7 @@ Analysis Result for 'python'. Found 0 alerts:
 ### 2. Configuration Security Review
 
 #### Positive Security Aspects
-1. ✅ **Latest Runtime Version**: Using `@vercel/python@0.5.0` (2025 latest)
+1. ✅ **Latest Runtime Version**: Using `@vercel/python@6.1.0` (2025 latest)
    - Includes latest security patches
    - Addresses known vulnerabilities in older runtimes
    - Better dependency handling and isolation
@@ -56,7 +56,7 @@ Analysis Result for 'python'. Found 0 alerts:
 
 #### Previous Risk: Outdated Runtime
 - **Before**: Used default Python runtime (version unspecified)
-- **After**: Uses explicit `@vercel/python@0.5.0` with latest security updates
+- **After**: Uses explicit `@vercel/python@6.1.0` with latest security updates
 - **Impact**: Reduced risk of known vulnerabilities in Python runtime
 
 #### Previous Risk: Unclear Routing
@@ -96,7 +96,7 @@ Analysis Result for 'python'. Found 0 alerts:
 ### 6. Dependency Security
 
 #### Python Runtime Dependencies
-- Vercel's `@vercel/python@0.5.0` is maintained by Vercel
+- Vercel's `@vercel/python@6.1.0` is maintained by Vercel
 - Includes vetted Python environment with security patches
 - Automatically handles common security concerns:
   - Path traversal prevention
@@ -160,7 +160,7 @@ Analysis Result for 'python'. Found 0 alerts:
 ### Security Status: ✅ **APPROVED**
 
 **Summary**: The changes to `vercel.json` improve the security posture by:
-1. Using the latest Vercel Python runtime (0.5.0) with current security patches
+1. Using the latest Vercel Python runtime (6.1.0) with current security patches
 2. Implementing explicit routing configuration
 3. Following configuration best practices
 4. Introducing no new security vulnerabilities

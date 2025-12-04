@@ -32,7 +32,7 @@ Once this PR is merged, **close PR #456** as it cannot be merged due to unrelate
 
 ### 3. Verify Deployment
 After merging, verify that the Vercel deployment works correctly with the new configuration:
-- Python runtime: `@vercel/python@0.5.0`
+- Python runtime: `@vercel/python@6.1.0`
 - Memory: 1024 MB
 - Max duration: 10 seconds
 - API routes properly configured
@@ -47,7 +47,7 @@ The final `vercel.json` configuration is:
   "builds": [
     {
       "src": "api/**/*.py",
-      "use": "@vercel/python@0.5.0"
+      "use": "@vercel/python@6.1.0"
     }
   ],
   "routes": [

@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def test_vercel_json_format():
-    """Test that vercel.json uses the builds format with @vercel/python@0.5.0"""
+    """Test that vercel.json uses the builds format with @vercel/python@6.1.0"""
     print("=" * 60)
     print("Vercel Builds Configuration Validation")
     print("=" * 60)
@@ -76,11 +76,11 @@ def test_vercel_json_format():
     
     # Test 6: Verify exact version
     print("\n6. Testing Python builder version...")
-    if python_build["use"] != "@vercel/python@0.5.0":
-        print(f"  ⚠ Expected @vercel/python@0.5.0, got {python_build['use']}")
+    if python_build["use"] != "@vercel/python@6.1.0":
+        print(f"  ⚠ Expected @vercel/python@6.1.0, got {python_build['use']}")
         print("  Note: This might be intentional if using a different version")
     else:
-        print("  ✓ Using @vercel/python@0.5.0 as specified")
+        print("  ✓ Using @vercel/python@6.1.0 as specified")
     
     # Test 7: Check src pattern
     print("\n7. Testing source pattern...")
