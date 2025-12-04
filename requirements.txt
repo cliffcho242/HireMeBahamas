@@ -30,7 +30,7 @@ python-jose[cryptography]==3.4.0
 # Cryptography dependencies (ensures 'jose' module works)
 cryptography==43.0.3
 ecdsa==0.19.0
-pyasn1==0.6.1
+pyasn1==0.4.8
 rsa==4.9
 
 # Alternative JWT library (fallback/compatibility)
