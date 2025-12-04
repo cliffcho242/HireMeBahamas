@@ -31,25 +31,19 @@ This PR (`copilot/fix-unable-to-merge-error`) contains:
 Once this PR is merged, **close PR #456** as it cannot be merged due to unrelated histories. The functionality it intended to provide is now included in this PR.
 
 ### 3. Verify Deployment
-After merging, verify that the Vercel deployment works correctly with the new configuration:
-- Python runtime: `@vercel/python@6.1.0`
+After merging, verify that the Vercel deployment works correctly with the modern configuration:
+- Python runtime: Auto-detected from api/ directory
 - Memory: 1024 MB
 - Max duration: 10 seconds
 - API routes properly configured
 
 ## Configuration Summary
 
-The final `vercel.json` configuration is:
+The final `vercel.json` configuration uses modern Vercel format:
 
 ```json
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/**/*.py",
-      "use": "@vercel/python@6.1.0"
-    }
-  ],
   "routes": [
     {
       "src": "/api/(.*)",
@@ -65,11 +59,21 @@ The final `vercel.json` configuration is:
 }
 ```
 
-This is a **hybrid configuration** that:
-- Uses modern `builds` format for Python runtime specification
+This is a **modern configuration** that:
+- Removes deprecated `builds` section
+- Uses automatic Python runtime detection from the `api/` directory
 - Uses `functions` format for memory and timeout configuration
-- Is fully supported by Vercel
+- Is fully supported by current Vercel platform
 - Passes all validation tests
+- Eliminates npm ETARGET errors during deployment
+
+## Benefits of Modern Configuration
+
+- ✅ No more npm errors for @vercel/python versions
+- ✅ Automatic Python runtime detection
+- ✅ Always uses latest compatible runtime
+- ✅ Simpler configuration to maintain
+- ✅ Future-proof against builder version changes
 
 ## Questions?
 
