@@ -17,14 +17,9 @@ mangum==0.19.0
 
 # Authentication & Security — CRITICAL: python-jose[cryptography] for JWT
 # The 'jose' module comes from python-jose, NOT python-jwt
+# python-jose[cryptography] will automatically install compatible versions of:
+# - cryptography, ecdsa, pyasn1, rsa
 python-jose[cryptography]==3.4.0
-
-# Cryptography dependencies (ensures 'jose' module works)
-# Note: python-jose[cryptography] will install compatible versions
-cryptography>=43.0.0
-ecdsa>=0.19.0
-pyasn1
-rsa>=4.9
 
 # Alternative JWT library (fallback/compatibility)
 PyJWT==2.9.0
