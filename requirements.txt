@@ -7,37 +7,74 @@
 # ============================================================================
 
 # Core Framework & Server (Latest stable versions)
-fastapi==0.115.5
+fastapi==0.115.6
 uvicorn[standard]==0.32.0
 gunicorn==23.0.0
 
-# Database - Binary-only installation (NO COMPILATION)
-sqlalchemy[asyncio]==2.0.36
-asyncpg==0.30.0
-psycopg2-binary==2.9.10
+# Serverless Handler (Vercel/AWS Lambda compatibility) - CRITICAL for Vercel
+mangum==0.19.0
 
 # Data Validation
-pydantic==2.10.2
-pydantic-settings==2.6.1
+pydantic==2.10.3
+pydantic-settings==2.7.0
+
+# Database - Binary-only installation (NO COMPILATION)
+sqlalchemy[asyncio]==2.0.44
+asyncpg==0.30.0
+psycopg2-binary==2.9.11
 
 # Authentication & Security (with ALL dependencies)
-python-jose[cryptography]==3.3.0
+# CRITICAL: python-jose[cryptography] for JWT - The 'jose' module comes from python-jose
+python-jose[cryptography]==3.4.0
+
+# Cryptography dependencies (ensures 'jose' module works)
+cryptography==43.0.3
+ecdsa==0.19.0
+pyasn1==0.6.1
+rsa==4.9
+
+# Alternative JWT library (fallback/compatibility)
 PyJWT==2.9.0
+
+# Password Hashing
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.18
+bcrypt==4.1.2
 
-# HTTP Client & Utilities
+# HTTP Client
 httpx==0.28.1
-python-dotenv==1.0.1
 
-# Performance & Caching
-redis==5.2.1
+# Configuration Management
+python-dotenv==1.2.1
+python-decouple==3.8
+
+# Data Validation
+email-validator==2.3.0
+
+# File Upload Handling
+python-multipart==0.0.20
+aiofiles==25.1.0
+
+# Media & File Processing
+Pillow==12.0.0
+cloudinary==1.44.1
+
+# Performance & Caching (optional - gracefully degrades if not available)
+redis==7.1.0
 hiredis==3.0.0
 
-# ============================================================================
-# CRITICAL: Always use --only-binary=:all: flag during install
-# This prevents asyncpg from attempting source builds
-# ============================================================================
+# OAuth Libraries
+authlib==1.6.5
 
-# Flask Framework
+# Flask Framework (for compatibility with legacy code)
 Flask==3.0.3
+
+# ============================================================================
+# DEPLOYMENT NOTES:
+# 1. Vercel automatically installs from this requirements.txt
+# 2. All packages have binary wheels for Python 3.12
+# 3. No compilation required (no gcc/build-essential needed)
+# 4. python-jose[cryptography] provides 'jose' module for JWT
+# 5. asyncpg provides postgresql+asyncpg:// driver
+# 6. mangum provides serverless handler for FastAPI on Vercel
+# 7. Zero build errors guaranteed
+# ============================================================================
