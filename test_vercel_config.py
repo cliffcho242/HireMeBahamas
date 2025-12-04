@@ -102,7 +102,9 @@ def test_vercel_functions_config(config):
             print(f"    ✗ File not found: {func_path}")
             all_valid = False
         
-        # Check for runtime (legacy format - optional if using builds)
+        # Check for runtime (optional with modern auto-detection, required for legacy format)
+        # Modern Vercel auto-detects Python runtime from api/ directory and requirements.txt
+        # Legacy format requires explicit runtime specification (e.g., "python3.9")
         if func_path.endswith(".py"):
             if "runtime" in func_config:
                 runtime = func_config["runtime"]
@@ -114,12 +116,8 @@ def test_vercel_functions_config(config):
                 else:
                     print(f"    ⚠ Unusual runtime: {runtime}")
             else:
-                # Check if builds section handles runtime
-                if "builds" in config:
-                    print(f"    ℹ Runtime specified in 'builds' section (modern format)")
-                else:
-                    print(f"    ✗ Missing 'runtime' for Python function")
-                    all_valid = False
+                # Modern Vercel auto-detects Python runtime from requirements.txt
+                print(f"    ℹ Using auto-detected Python runtime (modern format)")
         
         # Check optional configurations
         if "memory" in func_config:
@@ -188,7 +186,8 @@ def main():
     # Valid cases:
     # 1. Modern format: builds section is valid (functions optional)
     # 2. Legacy format: functions section is valid with runtime
-    # 3. Hybrid format: both builds and functions are valid
+    # 3. Modern auto-detect format: functions section without runtime (Vercel auto-detects)
+    # 4. Hybrid format: both builds and functions are valid
     has_valid_config = False
     
     if builds_result is True:
@@ -198,6 +197,10 @@ def main():
     elif functions_result is True:
         # Legacy format - functions section is valid with runtime
         print("\n✅ Configuration is valid (legacy format with runtime)")
+        has_valid_config = True
+    elif functions_result is not None and functions_result is not False:
+        # Modern auto-detect format - functions section exists
+        print("\n✅ Configuration is valid (modern auto-detect format)")
         has_valid_config = True
     
     if not has_valid_config:
