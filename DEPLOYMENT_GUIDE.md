@@ -55,6 +55,8 @@ curl https://your-project.vercel.app/api/health
 
 ## RECOMMENDED: Quick Free Deployment
 
+**🔗 [Complete Database Connection Guide](./DATABASE_CONNECTION_GUIDE.md)** - Essential reading! Step-by-step instructions with direct links for connecting your database on Vercel, Railway, or Render.
+
 ### Option 1: Vercel (Frontend) + Railway (Backend)
 
 #### A. Deploy Backend to Railway
