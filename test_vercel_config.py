@@ -53,8 +53,9 @@ def test_vercel_functions_config(config):
     for func_path, func_config in functions.items():
         print(f"\n  Testing function: {func_path}")
         
-        # Check if file exists
-        if Path(func_path).exists():
+        # Check if file exists (resolve relative to current directory)
+        file_path = Path(func_path)
+        if file_path.exists():
             print(f"    ✓ File exists: {func_path}")
         else:
             print(f"    ✗ File not found: {func_path}")
@@ -87,6 +88,8 @@ def test_vercel_functions_config(config):
 
 def test_api_index_exists():
     """Test that api/index.py exists and has handler export"""
+    import re
+    
     print("\nTesting api/index.py structure...")
     
     api_index = Path("api/index.py")
@@ -96,11 +99,13 @@ def test_api_index_exists():
     
     print("  ✓ api/index.py exists")
     
-    # Check for handler export
+    # Check for handler export using regex to match assignment patterns
     with open(api_index, "r") as f:
         content = f.read()
     
-    if "handler = " in content or "handler=" in content:
+    # Look for handler assignment (not in comments)
+    handler_pattern = re.compile(r'^\s*handler\s*=\s*', re.MULTILINE)
+    if handler_pattern.search(content):
         print("  ✓ Found handler export")
         return True
     else:
