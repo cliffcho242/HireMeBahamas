@@ -1,5 +1,5 @@
 # Python project configuration for HireMeBahamas Backend
-# Dependencies are managed in requirements.txt and api/requirements.txt
+# Dependencies are managed in requirements.txt
 
 [build-system]
 requires = ["setuptools>=61.0.0", "wheel"]
