@@ -7,7 +7,7 @@
 # ============================================================================
 
 # Core Framework & Server (Latest stable versions)
-fastapi==0.115.5
+fastapi==0.115.6
 uvicorn[standard]==0.32.0
 gunicorn==23.0.0
 
@@ -15,24 +15,24 @@ gunicorn==23.0.0
 mangum==0.19.0
 
 # Database - Binary-only installation (NO COMPILATION)
-sqlalchemy[asyncio]==2.0.36
+sqlalchemy[asyncio]==2.0.44
 asyncpg==0.30.0
-psycopg2-binary==2.9.10
+psycopg2-binary==2.9.11
 
 # Data Validation
-pydantic==2.10.2
-pydantic-settings==2.6.1
+pydantic==2.10.3
+pydantic-settings==2.7.0
 
 # Authentication & Security (with ALL dependencies)
 python-jose[cryptography]==3.4.0
 PyJWT==2.9.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.18
+python-multipart==0.0.20
 authlib==1.6.5
 
 # HTTP Client & Utilities
 httpx==0.28.1
-python-dotenv==1.0.1
+python-dotenv==1.2.1
 python-decouple==3.8
 
 # Data Validation & Email
@@ -46,7 +46,7 @@ Pillow==12.0.0
 cloudinary==1.44.1
 
 # Performance & Caching
-redis==5.2.1
+redis==7.1.0
 hiredis==3.0.0
 
 # ============================================================================
