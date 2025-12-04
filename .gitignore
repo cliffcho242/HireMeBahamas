@@ -82,3 +82,4 @@ node_modules/
 # Drizzle migrations (root)
 drizzle/
 dist/
+vercel.json.backup
