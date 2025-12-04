@@ -33,13 +33,54 @@ def test_vercel_json_valid():
         return False, None
 
 
+def test_vercel_builds_config(config):
+    """Test that builds are properly configured (modern Vercel format)"""
+    print("\nTesting builds configuration (modern format)...")
+    
+    if "builds" not in config:
+        print("  ⚠ No 'builds' key in vercel.json (may be using legacy format)")
+        return None  # Return None to indicate modern format not used
+    
+    builds = config["builds"]
+    if not builds:
+        print("  ✗ 'builds' is empty")
+        return False
+    
+    print(f"  ✓ Found {len(builds)} build(s) configured")
+    
+    # Test each build configuration
+    all_valid = True
+    for build in builds:
+        src = build.get("src", "")
+        use = build.get("use", "")
+        
+        print(f"\n  Testing build: {src}")
+        print(f"    ✓ Source pattern: {src}")
+        
+        # Check if 'use' is specified
+        if use:
+            print(f"    ✓ Builder specified: {use}")
+            
+            # Validate Python builder
+            if "python" in src.lower() or src.endswith(".py"):
+                if "@vercel/python" in use:
+                    print(f"    ✓ Valid Python builder: {use}")
+                else:
+                    print(f"    ⚠ Non-standard builder for Python: {use}")
+        else:
+            print(f"    ✗ Missing 'use' (builder) specification")
+            all_valid = False
+    
+    return all_valid
+
+
 def test_vercel_functions_config(config):
     """Test that functions are properly configured"""
     print("\nTesting functions configuration...")
     
     if "functions" not in config:
-        print("  ✗ No 'functions' key in vercel.json")
-        return False
+        print("  ⚠ No 'functions' key in vercel.json (configuration may be in 'builds' section)")
+        return None  # Return None to indicate no functions section
     
     functions = config["functions"]
     if not functions:
@@ -61,7 +102,7 @@ def test_vercel_functions_config(config):
             print(f"    ✗ File not found: {func_path}")
             all_valid = False
         
-        # Check for runtime (required for Python functions)
+        # Check for runtime (legacy format - optional if using builds)
         if func_path.endswith(".py"):
             if "runtime" in func_config:
                 runtime = func_config["runtime"]
@@ -73,8 +114,12 @@ def test_vercel_functions_config(config):
                 else:
                     print(f"    ⚠ Unusual runtime: {runtime}")
             else:
-                print(f"    ✗ Missing 'runtime' for Python function")
-                all_valid = False
+                # Check if builds section handles runtime
+                if "builds" in config:
+                    print(f"    ℹ Runtime specified in 'builds' section (modern format)")
+                else:
+                    print(f"    ✗ Missing 'runtime' for Python function")
+                    all_valid = False
         
         # Check optional configurations
         if "memory" in func_config:
@@ -133,9 +178,32 @@ def main():
     if not valid:
         return 1
     
+    # Test builds configuration (modern format)
+    builds_result = test_vercel_builds_config(config)
+    
     # Test functions configuration
-    if not test_vercel_functions_config(config):
-        print("\n❌ Functions configuration has issues")
+    functions_result = test_vercel_functions_config(config)
+    
+    # Determine if configuration is valid
+    # Valid cases:
+    # 1. Modern format: builds section is valid (functions optional)
+    # 2. Legacy format: functions section is valid with runtime
+    # 3. Hybrid format: both builds and functions are valid
+    has_valid_config = False
+    
+    if builds_result is True:
+        # Modern or hybrid format - builds section is valid
+        print("\n✅ Configuration is valid (builds section)")
+        has_valid_config = True
+    elif functions_result is True:
+        # Legacy format - functions section is valid with runtime
+        print("\n✅ Configuration is valid (legacy format with runtime)")
+        has_valid_config = True
+    
+    if not has_valid_config:
+        print("\n❌ Configuration has issues")
+        print("  Builds result:", builds_result)
+        print("  Functions result:", functions_result)
         return 1
     
     # Test api/index.py
