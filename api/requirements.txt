@@ -16,7 +16,7 @@ mangum==0.19.0
 
 # Authentication & Security — CRITICAL: python-jose[cryptography] for JWT
 # The 'jose' module comes from python-jose, NOT python-jwt
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.4.0
 
 # Cryptography dependencies (ensures 'jose' module works)
 cryptography==43.0.3
