@@ -8,7 +8,6 @@
       "memory": 1024
     }
   },
-  "installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt",
   "rewrites": [
     {
       "source": "/(.*)",
