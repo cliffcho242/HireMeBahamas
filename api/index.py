@@ -631,24 +631,9 @@ else:
 # ROOT ENDPOINT
 # ============================================================================
 @app.get("/")
-@app.get("/api")
-async def root():
+def root():
     """Root endpoint with API information"""
-    return {
-        "name": "HireMeBahamas API",
-        "version": "2.0.0",
-        "status": "operational",
-        "platform": "vercel-serverless",
-        "backend_available": HAS_BACKEND,
-        "database_available": bool(db_engine),
-        "jwt_configured": JWT_SECRET != "dev-secret-key-change-in-production",
-        "endpoints": {
-            "health": "/api/health",
-            "ready": "/api/ready",
-            "auth_me": "/api/auth/me",
-            "docs": "/api/docs",
-        }
-    }
+    return {"message": "HireMeBahamas API"}
 
 # ============================================================================
 # CUSTOM 404 EXCEPTION HANDLER
