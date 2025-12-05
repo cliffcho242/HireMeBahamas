@@ -126,9 +126,9 @@ logger = logging.getLogger(__name__)
 # GraphQL support (optional - gracefully degrades if strawberry not available)
 # Import after logger is configured
 HAS_GRAPHQL = False
-create_graphql_router = None
+_graphql_router_factory = None
 try:
-    from .graphql.schema import create_graphql_router
+    from .graphql.schema import create_graphql_router as _graphql_router_factory
     HAS_GRAPHQL = True
     logger.info("✅ GraphQL support enabled")
 except ImportError as e:
@@ -582,9 +582,9 @@ app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 
 # Include GraphQL router (if available)
-if HAS_GRAPHQL and create_graphql_router:
+if HAS_GRAPHQL:
     try:
-        graphql_router = create_graphql_router()
+        graphql_router = _graphql_router_factory()
         app.include_router(graphql_router, prefix="/api", tags=["graphql"])
         logger.info("✅ GraphQL router registered at /api/graphql")
     except Exception as e:
