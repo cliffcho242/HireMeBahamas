@@ -1,0 +1,138 @@
+name: Keep-Alive Ping Service
+
+# This workflow prevents your Vercel deployment from going idle
+# by pinging the health endpoint every 5 minutes
+# Ensures users never experience "deployment not found" errors
+
+on:
+  schedule:
+    # Run every 5 minutes (max frequency allowed by GitHub Actions)
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    # Allow manual trigger for testing
+
+concurrency:
+  group: keepalive-ping
+  cancel-in-progress: false  # Never cancel keep-alive pings
+
+jobs:
+  ping-vercel:
+    name: Ping Vercel Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read  # Only read access needed for this workflow
+
+    steps:
+      - name: Ping Production Health Endpoint
+        id: ping-health
+        continue-on-error: true
+        run: |
+          echo "🔄 Pinging Vercel health endpoint..."
+
+          # Get the Vercel URL from secrets/vars
+          VERCEL_URL="${{ secrets.VERCEL_PRODUCTION_URL || vars.VERCEL_PRODUCTION_URL }}"
+
+          if [ -z "$VERCEL_URL" ]; then
+            echo "⚠️ VERCEL_PRODUCTION_URL not configured"
+            echo "Please set VERCEL_PRODUCTION_URL in repository secrets or variables"
+            exit 0
+          fi
+
+          # Ping health endpoint
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 10 \
+            "${VERCEL_URL}/api/health" 2>/dev/null) || true
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Health check successful (HTTP $http_code)"
+            echo "$body" | jq . 2>/dev/null || echo "$body"
+          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
+            echo "⚠️ Unexpected response (HTTP $http_code)"
+            echo "$body"
+          else
+            echo "❌ Health endpoint unreachable"
+          fi
+
+          echo "http_code=$http_code" >> $GITHUB_OUTPUT
+
+      - name: Ping Forever Status Endpoint
+        id: ping-forever
+        continue-on-error: true
+        run: |
+          echo "🔄 Pinging Forever Fix status endpoint..."
+
+          VERCEL_URL="${{ secrets.VERCEL_PRODUCTION_URL || vars.VERCEL_PRODUCTION_URL }}"
+
+          if [ -z "$VERCEL_URL" ]; then
+            exit 0
+          fi
+
+          # Ping forever-status endpoint
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 10 \
+            "${VERCEL_URL}/api/forever-status" 2>/dev/null) || true
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Forever Fix status retrieved"
+            echo "$body" | jq . 2>/dev/null || echo "$body"
+          else
+            echo "⚠️ Forever Fix status unavailable (HTTP $http_code)"
+          fi
+
+      - name: Ping Root Endpoint
+        id: ping-root
+        continue-on-error: true
+        run: |
+          echo "🔄 Pinging root API endpoint..."
+
+          VERCEL_URL="${{ secrets.VERCEL_PRODUCTION_URL || vars.VERCEL_PRODUCTION_URL }}"
+
+          if [ -z "$VERCEL_URL" ]; then
+            exit 0
+          fi
+
+          # Ping root endpoint to warm up serverless functions
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 10 \
+            "${VERCEL_URL}/api" 2>/dev/null) || true
+
+          http_code=$(echo "$response" | tail -n1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Root endpoint responsive"
+          else
+            echo "⚠️ Root endpoint returned HTTP $http_code"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## 🏓 Keep-Alive Ping Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          health_code="${{ steps.ping-health.outputs.http_code }}"
+
+          if [ "$health_code" = "200" ]; then
+            echo "✅ **Status:** Deployment is healthy and responsive" >> $GITHUB_STEP_SUMMARY
+          elif [ -z "$health_code" ]; then
+            echo "⚠️ **Status:** VERCEL_PRODUCTION_URL not configured" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action Required:**" >> $GITHUB_STEP_SUMMARY
+            echo "1. Go to repository Settings → Secrets and variables → Actions" >> $GITHUB_STEP_SUMMARY
+            echo "2. Add a new secret or variable named \`VERCEL_PRODUCTION_URL\`" >> $GITHUB_STEP_SUMMARY
+            echo "3. Set the value to your Vercel deployment URL (e.g., https://your-app.vercel.app)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Status:** Deployment may be experiencing issues (HTTP $health_code)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*This workflow runs every 5 minutes to keep your deployment warm and responsive.*" >> $GITHUB_STEP_SUMMARY
