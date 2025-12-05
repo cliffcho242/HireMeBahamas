@@ -110,7 +110,6 @@ from .core.security import prewarm_bcrypt_async
 from .core.redis_cache import redis_cache, warm_cache
 from .core.db_health import check_database_health, get_database_stats
 from .core.timeout_middleware import add_timeout_middleware
-from .graphql.schema import create_graphql_router
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -123,6 +122,19 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# GraphQL support (optional - gracefully degrades if strawberry not available)
+# Import after logger is configured
+HAS_GRAPHQL = False
+create_graphql_router = None
+try:
+    from .graphql.schema import create_graphql_router
+    HAS_GRAPHQL = True
+    logger.info("✅ GraphQL support enabled")
+except ImportError as e:
+    logger.warning(f"⚠️  GraphQL support disabled (strawberry-graphql not available): {e}")
+except Exception as e:
+    logger.warning(f"⚠️  GraphQL initialization failed (non-critical): {e}")
 
 # =============================================================================
 # RECONFIGURE APP WITH FULL FEATURES (lifespan, docs, etc.)
@@ -569,9 +581,16 @@ app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
 app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 
-# Include GraphQL router
-graphql_router = create_graphql_router()
-app.include_router(graphql_router, prefix="/api", tags=["graphql"])
+# Include GraphQL router (if available)
+if HAS_GRAPHQL and create_graphql_router:
+    try:
+        graphql_router = create_graphql_router()
+        app.include_router(graphql_router, prefix="/api", tags=["graphql"])
+        logger.info("✅ GraphQL router registered at /api/graphql")
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to register GraphQL router (non-critical): {e}")
+else:
+    logger.info("ℹ️  GraphQL router not available (strawberry-graphql not installed)")
 
 
 # Initialize Socket.IO for real-time messaging
