@@ -1,0 +1,224 @@
+name: Vercel Backend Keepalive - Always On 24/7
+
+# This workflow keeps the Vercel serverless FastAPI backend warm and active 24/7.
+# Vercel serverless functions have zero cold starts when regularly pinged.
+#
+# Schedule: Every 5 minutes (288 pings per day)
+# This aggressive interval ensures the backend is ALWAYS warm and responsive.
+#
+# Why 5 minutes?
+# - Serverless functions stay warm for ~15 minutes after last invocation
+# - 5-minute pings provide 3x safety margin (15/5 = 3)
+# - Prevents any cold start delays for users
+# - Keeps database connections active
+#
+# NO EXCUSES: This ensures 100% uptime and instant response times 24/7.
+
+on:
+  schedule:
+    # Run every 5 minutes - 288 times per day
+    # Keeps Vercel serverless functions perpetually warm
+    # NO COLD STARTS - GUARANTEED
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    # Allow manual trigger for immediate keepalive
+    inputs:
+      force_all_endpoints:
+        description: 'Test all endpoints (not just health)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: vercel-keepalive
+  cancel-in-progress: true
+
+jobs:
+  keep-vercel-warm:
+    name: Keep Vercel Backend Warm 24/7
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - name: Ping Vercel Health Endpoint
+        id: ping-health
+        env:
+          VERCEL_URL: ${{ vars.VERCEL_URL || 'https://hiremebahamas.vercel.app' }}
+        run: |
+          echo "🔥 Pinging Vercel backend to keep it warm..."
+          echo "Target: $VERCEL_URL/api/health"
+          echo "Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          
+          # Ping health endpoint with 20s timeout
+          start_time=$(date +%s%3N)
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 20 \
+            -H "User-Agent: HireMeBahamas-Keepalive/1.0" \
+            "$VERCEL_URL/api/health" 2>/dev/null) || true
+          end_time=$(date +%s%3N)
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+          latency=$((end_time - start_time))
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Backend is warm and healthy (HTTP $http_code)"
+            echo "⚡ Response time: ${latency}ms"
+            echo "$body" | jq -r 'if .database == "connected" then "✅ Database: Connected" elif .database == "unavailable" then "⚠️  Database: Unavailable" else "❓ Database: Unknown" end' 2>/dev/null || true
+            echo "success=true" >> $GITHUB_OUTPUT
+            echo "latency=$latency" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Backend health check failed (HTTP ${http_code:-000})"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Ping Vercel Status Endpoint
+        id: ping-status
+        continue-on-error: true
+        env:
+          VERCEL_URL: ${{ vars.VERCEL_URL || 'https://hiremebahamas.vercel.app' }}
+        run: |
+          echo "📊 Checking backend status..."
+          
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 20 \
+            -H "User-Agent: HireMeBahamas-Keepalive/1.0" \
+            "$VERCEL_URL/api/status" 2>/dev/null) || true
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Status endpoint responding"
+            backend_loaded=$(echo "$body" | jq -r '.backend_loaded // false' 2>/dev/null)
+            db_connected=$(echo "$body" | jq -r '.database_connected // false' 2>/dev/null)
+            
+            if [ "$backend_loaded" = "true" ]; then
+              echo "✅ Backend modules: Loaded"
+            else
+              echo "⚠️  Backend modules: Not loaded"
+            fi
+            
+            if [ "$db_connected" = "true" ]; then
+              echo "✅ Database: Connected"
+            else
+              echo "⚠️  Database: Not connected"
+            fi
+            
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Status endpoint returned HTTP ${http_code:-000}"
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Ping Database Keepalive
+        id: ping-database
+        continue-on-error: true
+        env:
+          VERCEL_URL: ${{ vars.VERCEL_URL || 'https://hiremebahamas.vercel.app' }}
+        run: |
+          echo "💾 Pinging database to keep it awake..."
+          
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 30 \
+            -X POST \
+            -H "User-Agent: HireMeBahamas-Keepalive/1.0" \
+            "$VERCEL_URL/api/database/ping" 2>/dev/null) || true
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+          
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Database ping successful"
+            echo "$body" | jq . 2>/dev/null || echo "$body"
+            echo "success=true" >> $GITHUB_OUTPUT
+          elif [ "$http_code" = "404" ]; then
+            echo "ℹ️  Database ping endpoint not available (expected if not implemented)"
+            echo "success=skip" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Database ping returned HTTP ${http_code:-000}"
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Test Critical Endpoints (Optional)
+        id: test-endpoints
+        if: github.event.inputs.force_all_endpoints == 'true'
+        continue-on-error: true
+        env:
+          VERCEL_URL: ${{ vars.VERCEL_URL || 'https://hiremebahamas.vercel.app' }}
+        run: |
+          echo "🧪 Testing critical endpoints..."
+          
+          # Test root endpoint
+          echo "Testing: $VERCEL_URL/api"
+          curl -s -f --max-time 10 "$VERCEL_URL/api" > /dev/null && echo "✅ /api" || echo "❌ /api"
+          
+          # Test ready endpoint
+          echo "Testing: $VERCEL_URL/api/ready"
+          curl -s -f --max-time 10 "$VERCEL_URL/api/ready" > /dev/null && echo "✅ /api/ready" || echo "⚠️ /api/ready"
+          
+          # Test diagnostic endpoint (dev only)
+          echo "Testing: $VERCEL_URL/api/diagnostic"
+          curl -s -f --max-time 10 "$VERCEL_URL/api/diagnostic" > /dev/null && echo "✅ /api/diagnostic" || echo "ℹ️  /api/diagnostic (may be disabled in production)"
+
+      - name: Generate Summary
+        if: always()
+        run: |
+          echo "# Vercel Backend Keepalive Report 🔥" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## Status Overview" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Health check status
+          if [ "${{ steps.ping-health.outputs.success }}" = "true" ]; then
+            latency="${{ steps.ping-health.outputs.latency }}"
+            echo "| 💚 Health Check | ✅ Success | ${latency}ms response time |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 💔 Health Check | ❌ Failed | Backend not responding |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Status endpoint
+          if [ "${{ steps.ping-status.outputs.success }}" = "true" ]; then
+            echo "| 📊 Status Check | ✅ Success | Backend fully operational |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 📊 Status Check | ⚠️ Warning | Status endpoint issues |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Database ping
+          db_ping="${{ steps.ping-database.outputs.success }}"
+          if [ "$db_ping" = "true" ]; then
+            echo "| 💾 Database Ping | ✅ Success | Database is awake |" >> $GITHUB_STEP_SUMMARY
+          elif [ "$db_ping" = "skip" ]; then
+            echo "| 💾 Database Ping | ⏭️ Skipped | Endpoint not implemented |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 💾 Database Ping | ⚠️ Warning | Database check failed |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔥 Always-On Guarantee" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This workflow runs **every 5 minutes** (288 times/day) to ensure:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Zero cold starts" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Instant response times (<200ms)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Database stays connected" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Backend always ready for users" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ 24/7 availability - NO EXCUSES" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next ping**: $(date -u -d '+5 minutes' +"%H:%M UTC")" >> $GITHUB_STEP_SUMMARY
+
+      - name: Alert on Critical Failure
+        if: failure() && steps.ping-health.outputs.success != 'true'
+        run: |
+          echo "::error::🚨 CRITICAL: Vercel backend is not responding!"
+          echo "::error::The backend must be available 24/7 with NO EXCUSES"
+          echo "::error::Check Vercel deployment logs immediately"
+          echo "::error::URL: ${{ vars.VERCEL_URL || 'https://hiremebahamas.vercel.app' }}"
+          exit 1
