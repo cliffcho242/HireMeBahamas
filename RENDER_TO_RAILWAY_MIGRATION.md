@@ -31,10 +31,20 @@ If your HireMeBahamas deployment is still using Render PostgreSQL, you may exper
 
 ```bash
 # Install PostgreSQL client if not already installed
+# For Ubuntu/Debian:
 sudo apt-get install postgresql-client
 
-# Create backup (replace with your Render database URL)
-pg_dump "postgresql://user:pass@host.render.com:5432/db" > hiremebahamas_backup.sql
+# For macOS:
+brew install postgresql
+
+# For Windows:
+# Download from: https://www.postgresql.org/download/windows/
+
+# Export your database URL to avoid exposing credentials in shell history
+export RENDER_DB_URL="postgresql://user:pass@host.render.com:5432/db"
+
+# Create backup using the exported variable
+pg_dump "$RENDER_DB_URL" > hiremebahamas_backup.sql
 ```
 
 ### Step 2: Set Up Railway PostgreSQL
@@ -56,8 +66,11 @@ pg_dump "postgresql://user:pass@host.render.com:5432/db" > hiremebahamas_backup.
 3. Restore your backup:
 
 ```bash
-# Restore backup to Railway (replace with your Railway DATABASE_URL)
-psql "postgresql://user:pass@host.railway.app:PORT/railway" < hiremebahamas_backup.sql
+# Export your Railway database URL to avoid exposing credentials in shell history
+export RAILWAY_DB_URL="postgresql://user:pass@host.railway.app:PORT/railway"
+
+# Restore backup to Railway using the exported variable
+psql "$RAILWAY_DB_URL" < hiremebahamas_backup.sql
 ```
 
 ### Step 4: Update Vercel Environment Variables
