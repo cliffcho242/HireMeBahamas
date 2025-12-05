@@ -21,6 +21,16 @@ This guide covers:
 - ✅ Troubleshooting common deployment issues
 - ✅ Verifying sign-in functionality
 
+### 🔥 **Getting 404: DEPLOYMENT_NOT_FOUND Error?**
+
+📖 **[FIX: Vercel 404 Deployment Error](./VERCEL_DEPLOYMENT_404_FIX.md)**
+
+This comprehensive guide covers:
+- ✅ Fixing Vercel configuration conflicts
+- ✅ Resolving mixed API version issues
+- ✅ Proper serverless function setup
+- ✅ Complete verification steps
+
 **Check your configuration:**
 ```bash
 python3 scripts/check-deployment-config.py
@@ -30,6 +40,7 @@ python3 scripts/check-deployment-config.py
 - Missing `VERCEL_TOKEN`, `VERCEL_ORG_ID`, or `VERCEL_PROJECT_ID` secrets in GitHub
 - `DATABASE_URL`, `SECRET_KEY`, or `JWT_SECRET_KEY` not set in Vercel
 - Database not connected or not accessible
+- Conflicting `vercel.json` configuration files
 
 ---
 
