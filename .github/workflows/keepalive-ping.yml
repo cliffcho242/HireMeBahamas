@@ -20,6 +20,8 @@ jobs:
     name: Ping Vercel Deployment
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    permissions:
+      contents: read  # Only read access needed for this workflow
 
     steps:
       - name: Ping Production Health Endpoint

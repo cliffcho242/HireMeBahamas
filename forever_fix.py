@@ -108,7 +108,12 @@ async def database_keepalive(db_engine):
                 try:
                     logger.info("🔄 Attempting to reconnect to database...")
                     # dispose() is synchronous in SQLAlchemy
-                    await asyncio.get_event_loop().run_in_executor(None, db_engine.dispose)
+                    try:
+                        loop = asyncio.get_running_loop()
+                    except RuntimeError:
+                        # Fallback for older Python or no running loop
+                        loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, db_engine.dispose)
                     await asyncio.sleep(5)
                     consecutive_failures = 0
                     _stats["total_recoveries"] += 1
@@ -350,7 +355,11 @@ def setup_signal_handlers():
         global _shutdown_task_ref
         logger.info("⚠️ Received signal %s, initiating graceful shutdown...", sig)
         try:
-            loop = asyncio.get_event_loop()
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                # Fallback for older Python or no running loop
+                loop = asyncio.get_event_loop()
             if loop.is_running():
                 # Store task reference to prevent garbage collection
                 _shutdown_task_ref = asyncio.ensure_future(graceful_shutdown())

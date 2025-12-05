@@ -801,9 +801,6 @@ async def catch_all_api_routes(request: Request, path: str):
 # ============================================================================
 try:
     # Use relative import from parent directory
-    import os
-    import sys
-    
     # Add parent directory to path only if not already there
     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if parent_dir not in sys.path:
