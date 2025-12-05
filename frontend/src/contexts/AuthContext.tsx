@@ -82,13 +82,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         });
         
         console.log('Token refreshed successfully');
+        return true;
       } else {
         throw new Error('No token in refresh response');
       }
     } catch (error) {
       console.error('Token refresh failed:', error);
-      // Don't throw - just log the error to prevent breaking the app
-      // The user can continue using their current token until it expires
+      
+      // Check if it's an auth error (401/403) - means token is invalid
+      const apiError = error as { response?: { status?: number }; code?: string };
+      if (apiError.response?.status === 401 || apiError.response?.status === 403) {
+        console.warn('Token is invalid or expired. User needs to log in again.');
+        // Force logout to clear invalid state
+        setToken(null);
+        setUser(null);
+        sessionManager.clearSession();
+        return false;
+      }
+      
+      // For network errors, don't clear session - just log and continue
+      // The user can keep using their current token and retry later
+      if (apiError.code === 'ERR_NETWORK' || apiError.code === 'ECONNREFUSED') {
+        console.warn('Network error during token refresh. Will retry later.');
+        return false;
+      }
+      
+      // For other errors, be safe and don't throw
+      return false;
     }
   }, [rememberMe]);
 
@@ -164,7 +184,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Setup session expiration handlers
   useEffect(() => {
-    sessionManager.onExpired(() => {
+    // Handler for session expiring warning (5 minutes before timeout)
+    const handleExpiring = () => {
+      console.warn('Session expiring soon');
+      // Note: Warning threshold is defined in sessionManager (5 minutes)
+      toast('Your session will expire soon. Please save your work.', {
+        duration: 10000,
+        icon: '⏰',
+      });
+    };
+
+    // Handler for session expired
+    const handleExpired = () => {
       setToken(null);
       setUser(null);
       toast.error('Your session has expired. Please log in again.');
@@ -179,7 +210,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
-    });
+    };
+
+    sessionManager.onExpiring(handleExpiring);
+    sessionManager.onExpired(handleExpired);
+
+    // Cleanup function - clean up session manager resources on unmount
+    return () => {
+      // Note: Only cleanup if this is truly the last AuthProvider unmounting
+      // In most apps, AuthProvider stays mounted for the entire session
+      // Uncomment if you need to support dynamic AuthProvider mounting/unmounting
+      // sessionManager.cleanup();
+    };
   }, []);
 
   // Setup automatic token refresh
@@ -369,9 +411,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const logout = () => {
+    // Clear all session data
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    setRememberMeState(false);
     sessionManager.clearSession();
     toast.success('Logged out successfully');
   };

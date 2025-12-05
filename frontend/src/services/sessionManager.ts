@@ -27,6 +27,8 @@ class SessionManager {
   private warningTimer: NodeJS.Timeout | null = null;
   private onSessionExpiring: (() => void) | null = null;
   private onSessionExpired: (() => void) | null = null;
+  private activityListeners: Array<{ event: string; handler: EventListener }> = [];
+  private lastActivityUpdate: number = 0; // Track last update for throttling
 
   constructor() {
     this.setupActivityTracking();
@@ -113,6 +115,16 @@ class SessionManager {
   }
 
   /**
+   * Cleanup all resources (call when app unmounts or user logs out permanently)
+   */
+  cleanup(): void {
+    this.stopActivityTracking();
+    this.cleanupActivityTracking();
+    this.onSessionExpiring = null;
+    this.onSessionExpired = null;
+  }
+
+  /**
    * Update last activity timestamp
    */
   updateActivity(): void {
@@ -121,18 +133,37 @@ class SessionManager {
   }
 
   /**
-   * Setup activity tracking
+   * Setup activity tracking with throttling to reduce overhead
    */
   private setupActivityTracking(): void {
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
     
+    // Throttle activity updates to once per 10 seconds to reduce overhead
+    const THROTTLE_MS = 10000; // 10 seconds
+    
     const handleActivity = () => {
-      this.updateActivity();
+      const now = Date.now();
+      if (now - this.lastActivityUpdate > THROTTLE_MS) {
+        this.lastActivityUpdate = now;
+        this.updateActivity();
+      }
     };
 
+    // Store listeners so we can remove them later
     events.forEach(event => {
       window.addEventListener(event, handleActivity, { passive: true });
+      this.activityListeners.push({ event, handler: handleActivity });
     });
+  }
+
+  /**
+   * Remove activity tracking listeners (for cleanup)
+   */
+  private cleanupActivityTracking(): void {
+    this.activityListeners.forEach(({ event, handler }) => {
+      window.removeEventListener(event, handler);
+    });
+    this.activityListeners = [];
   }
 
   /**
