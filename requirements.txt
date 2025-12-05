@@ -4,6 +4,7 @@
 # Zero 499, 500, 502, 127, asyncpg wheel errors, DATABASE_URL issues FOREVER
 # Boot < 800ms | Login < 300ms globally | Works Render Free + Vercel Serverless
 # Install: pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt
+# Updated: 2025-12-05 - Force fresh install
 # ============================================================================
 
 # Core Framework & Server (Latest stable versions)
