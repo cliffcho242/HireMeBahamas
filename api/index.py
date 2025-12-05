@@ -203,6 +203,8 @@ MOCK_USERS = {
 # ============================================================================
 # DATABASE CONNECTION
 # ============================================================================
+# Reuse backend's database engine if available to avoid creating duplicate connections
+# This prevents resource exhaustion in serverless environments
 db_engine = None
 async_session_maker = None
 
@@ -219,9 +221,25 @@ if DATABASE_URL:
 else:
     logger.warning("⚠️  DATABASE_URL not configured - API will have limited functionality")
 
-if HAS_DB and DATABASE_URL:
+# Use backend's database engine if available, otherwise create fallback engine
+if HAS_BACKEND and HAS_DB:
     try:
-        logger.info("Initializing database connection...")
+        # Import backend database engine (already initialized during backend module import)
+        from backend_app.database import engine as backend_engine
+        from backend_app.database import AsyncSessionLocal as backend_session_maker
+        
+        db_engine = backend_engine
+        async_session_maker = backend_session_maker
+        logger.info("✅ Using backend's database engine (avoiding duplicate connections)")
+    except ImportError as e:
+        logger.warning(f"⚠️  Could not import backend database: {e}")
+    except Exception as e:
+        logger.warning(f"⚠️  Could not reuse backend database engine: {e}")
+
+# Fallback: Create minimal database engine only if backend isn't available
+if db_engine is None and HAS_DB and DATABASE_URL:
+    try:
+        logger.info("Backend database not available, creating fallback database connection...")
         # Convert postgres:// to postgresql+asyncpg://
         db_url = DATABASE_URL
         if db_url.startswith("postgres://"):
@@ -231,7 +249,7 @@ if HAS_DB and DATABASE_URL:
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
             logger.info("Converted postgresql:// to postgresql+asyncpg://")
         
-        logger.info("Creating database engine with asyncpg...")
+        logger.info("Creating fallback database engine with asyncpg...")
         db_engine = create_async_engine(
             db_url,
             pool_pre_ping=True,
@@ -243,16 +261,17 @@ if HAS_DB and DATABASE_URL:
         async_session_maker = sessionmaker(
             db_engine, class_=AsyncSession, expire_on_commit=False
         )
-        logger.info("✅ Database engine created successfully")
+        logger.info("✅ Fallback database engine created successfully")
     except Exception as e:
         logger.error(f"❌ Database initialization failed: {e}\nTraceback: {traceback.format_exc()}")
         db_engine = None
         async_session_maker = None
 else:
-    if not HAS_DB:
-        logger.warning("⚠️  Database drivers not available (sqlalchemy, asyncpg)")
-    if not DATABASE_URL:
-        logger.warning("⚠️  DATABASE_URL not set in environment")
+    if db_engine is None:
+        if not HAS_DB:
+            logger.warning("⚠️  Database drivers not available (sqlalchemy, asyncpg)")
+        if not DATABASE_URL:
+            logger.warning("⚠️  DATABASE_URL not set in environment")
 
 # ============================================================================
 # CREATE FASTAPI APP
