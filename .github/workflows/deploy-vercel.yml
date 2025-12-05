@@ -33,6 +33,27 @@ jobs:
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL || '' }}
 
+      - name: Check Vercel secrets
+        run: |
+          echo "Checking Vercel deployment secrets..."
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "❌ ERROR: VERCEL_TOKEN secret is not set!"
+            echo "📖 Follow the guide: FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
+            echo "🔗 https://github.com/cliffcho242/HireMeBahamas/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
+            exit 1
+          fi
+          if [ -z "${{ secrets.VERCEL_ORG_ID }}" ]; then
+            echo "❌ ERROR: VERCEL_ORG_ID secret is not set!"
+            echo "📖 Follow the guide: FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
+            exit 1
+          fi
+          if [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            echo "❌ ERROR: VERCEL_PROJECT_ID secret is not set!"
+            echo "📖 Follow the guide: FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
+            exit 1
+          fi
+          echo "✅ All Vercel secrets are configured"
+
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
@@ -47,3 +68,11 @@ jobs:
           echo "✅ Deployment complete!"
           echo "Frontend + Backend deployed to Vercel"
           echo "API endpoints available at /api/*"
+          echo ""
+          echo "🔍 Next steps:"
+          echo "1. Verify DATABASE_URL is set in Vercel environment variables"
+          echo "2. Verify SECRET_KEY and JWT_SECRET_KEY are set"
+          echo "3. Test sign-in at your Vercel deployment URL"
+          echo ""
+          echo "📖 Full deployment guide:"
+          echo "   https://github.com/cliffcho242/HireMeBahamas/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"

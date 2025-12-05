@@ -6,13 +6,30 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 ---
 
-## 🚨 **IMPORTANT: Vercel Sign-In Issues?**
+## 🚨 **IMPORTANT: Users Can't Sign In? Fix Deployment Issues**
 
-**If users cannot sign in on your Vercel deployment**, see the fix guide:
+**If users cannot sign in**, your deployment configuration is likely incomplete.
 
-📖 **[URGENT: Fix Vercel Sign-In Issues](./URGENT_FIX_VERCEL_SIGNIN.md)** - 5-minute fix for database connection
+### 🔧 Quick Fix (5 minutes):
 
-**Quick Fix**: Vercel environment variables (DATABASE_URL, SECRET_KEY) need to be configured. [See guide →](./FIX_VERCEL_DATABASE_CONNECTION.md)
+📖 **[COMPLETE FIX GUIDE: Sign-In & Deployment Issues](./FIX_SIGN_IN_DEPLOYMENT_GUIDE.md)**
+
+This guide covers:
+- ✅ Configuring GitHub Secrets for automated deployments
+- ✅ Setting up Vercel environment variables
+- ✅ Connecting PostgreSQL database (Railway/Render)
+- ✅ Troubleshooting common deployment issues
+- ✅ Verifying sign-in functionality
+
+**Check your configuration:**
+```bash
+python3 scripts/check-deployment-config.py
+```
+
+**Common issues:**
+- Missing `VERCEL_TOKEN`, `VERCEL_ORG_ID`, or `VERCEL_PROJECT_ID` secrets in GitHub
+- `DATABASE_URL`, `SECRET_KEY`, or `JWT_SECRET_KEY` not set in Vercel
+- Database not connected or not accessible
 
 ---
 
