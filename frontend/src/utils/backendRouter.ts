@@ -86,10 +86,10 @@ export async function testBackends(): Promise<{
           latency,
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       results.backend = { 
         available: false, 
-        error: error.message || 'Connection failed',
+        error: error instanceof Error ? error.message : 'Connection failed',
         latency: 0,
       };
     }
