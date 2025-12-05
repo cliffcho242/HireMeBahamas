@@ -1,7 +1,7 @@
 # Deployment Fix Summary - PR #445 & #459 Merge Issues
 
 ## Problem
-Pull requests #445 and #459 were unable to merge to main branch, causing deployment failures and app downtime ("app is dying, losing users").
+Pull requests #445 and #459 were unable to merge to main branch, causing deployment failures and app downtime, resulting in service disruption for users.
 
 ## Root Causes Identified
 
@@ -18,6 +18,7 @@ Pull requests #445 and #459 were unable to merge to main branch, causing deploym
 ### 3. Railway Deployment Configuration Mismatch
 - **Status**: **FIXED in this PR**
 - **Issue**: `railway.json` had incorrect startCommand that didn't match Dockerfile
+- **Original Command**: `uvicorn api.backend_app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 5 --limit-concurrency 100`
 - **Fix**: Updated `railway.json` to use `gunicorn final_backend_postgresql:application --config gunicorn.conf.py`
 
 ## Fixes Applied
@@ -25,7 +26,7 @@ Pull requests #445 and #459 were unable to merge to main branch, causing deploym
 ### ✅ Railway Configuration (railway.json)
 **Before:**
 ```json
-"startCommand": "uvicorn api.backend_app.main:app --host 0.0.0.0 --port ${PORT:-8000} ..."
+"startCommand": "uvicorn api.backend_app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 5 --limit-concurrency 100"
 ```
 
 **After:**
