@@ -32,8 +32,9 @@ export async function testConnection(apiUrl: string): Promise<ConnectionTestResu
     console.log(`[ConnectionTest] Testing connection to: ${apiUrl}/api/health`);
     
     // Test health endpoint with timeout
+    // Increased to 30 seconds to accommodate backend cold starts (Railway, Render, etc.)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
     
     const response = await fetch(`${apiUrl}/api/health`, {
       method: 'GET',
@@ -83,7 +84,7 @@ export async function testConnection(apiUrl: string): Promise<ConnectionTestResu
     let errorType = 'UNKNOWN_ERROR';
     
     if (error.name === 'AbortError') {
-      errorMessage = 'Connection timeout - backend is not responding within 10 seconds';
+      errorMessage = 'Connection timeout - backend is starting up or not responding. This can take up to 60 seconds for cold starts. Please wait and try again.';
       errorType = 'TIMEOUT';
     } else if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
       errorMessage = 'Cannot reach backend - check if backend URL is correct and backend is running';
