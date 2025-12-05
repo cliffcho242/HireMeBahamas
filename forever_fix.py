@@ -34,9 +34,17 @@ logger = logging.getLogger("forever_fix")
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
-HEALTH_CHECK_INTERVAL = int(os.getenv("FOREVER_HEALTH_CHECK_INTERVAL", "60"))  # 1 minute
-DB_KEEPALIVE_INTERVAL = int(os.getenv("FOREVER_DB_KEEPALIVE_INTERVAL", "120"))  # 2 minutes
-MAX_CONSECUTIVE_FAILURES = int(os.getenv("FOREVER_MAX_FAILURES", "5"))
+def _get_int_env(key: str, default: int) -> int:
+    """Safely get integer from environment variable."""
+    try:
+        return int(os.getenv(key, str(default)))
+    except (ValueError, TypeError):
+        logger.warning(f"Invalid value for {key}, using default: {default}")
+        return default
+
+HEALTH_CHECK_INTERVAL = _get_int_env("FOREVER_HEALTH_CHECK_INTERVAL", 60)  # 1 minute
+DB_KEEPALIVE_INTERVAL = _get_int_env("FOREVER_DB_KEEPALIVE_INTERVAL", 120)  # 2 minutes
+MAX_CONSECUTIVE_FAILURES = _get_int_env("FOREVER_MAX_FAILURES", 5)
 AUTO_RESTART_ENABLED = os.getenv("FOREVER_AUTO_RESTART", "true").lower() == "true"
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
@@ -99,7 +107,8 @@ async def database_keepalive(db_engine):
                 # Try to reconnect
                 try:
                     logger.info("🔄 Attempting to reconnect to database...")
-                    await db_engine.dispose()
+                    # dispose() is synchronous in SQLAlchemy
+                    await asyncio.get_event_loop().run_in_executor(None, db_engine.dispose)
                     await asyncio.sleep(5)
                     consecutive_failures = 0
                     _stats["total_recoveries"] += 1
@@ -249,8 +258,16 @@ class ForeverFixMiddleware:
             await self.app(scope, receive, send)
             return
         
+        response_started = False
+        
+        async def wrapped_send(message):
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+            await send(message)
+        
         try:
-            await self.app(scope, receive, send)
+            await self.app(scope, receive, wrapped_send)
         except Exception as e:
             # Log the error comprehensively
             logger.error(
@@ -267,20 +284,21 @@ class ForeverFixMiddleware:
             # Increment failure counter
             _stats["consecutive_failures"] += 1
             
-            # Send error response if possible
-            try:
-                await send({
-                    "type": "http.response.start",
-                    "status": 500,
-                    "headers": [[b"content-type", b"application/json"]],
-                })
-                await send({
-                    "type": "http.response.body",
-                    "body": b'{"error":"Internal Server Error","message":"An unexpected error occurred"}',
-                })
-            except Exception:
-                # Response already started or connection closed
-                pass
+            # Send error response only if response hasn't started
+            if not response_started:
+                try:
+                    await send({
+                        "type": "http.response.start",
+                        "status": 500,
+                        "headers": [[b"content-type", b"application/json"]],
+                    })
+                    await send({
+                        "type": "http.response.body",
+                        "body": b'{"error":"Internal Server Error","message":"An unexpected error occurred"}',
+                    })
+                except Exception:
+                    # Connection closed or other error
+                    pass
 
 
 # =============================================================================
@@ -322,13 +340,24 @@ def get_forever_fix_status() -> Dict[str, Any]:
 # =============================================================================
 # SIGNAL HANDLERS
 # =============================================================================
+_shutdown_task_ref = None
+
 def setup_signal_handlers():
     """
     Setup signal handlers for graceful shutdown.
     """
     def signal_handler(sig, frame):
+        global _shutdown_task_ref
         logger.info("⚠️ Received signal %s, initiating graceful shutdown...", sig)
-        asyncio.create_task(graceful_shutdown())
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Store task reference to prevent garbage collection
+                _shutdown_task_ref = asyncio.ensure_future(graceful_shutdown())
+        except RuntimeError:
+            # No event loop running, log and exit
+            logger.warning("No event loop running, exiting immediately")
+            sys.exit(0)
     
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)

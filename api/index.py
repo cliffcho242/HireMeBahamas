@@ -800,8 +800,15 @@ async def catch_all_api_routes(request: Request, path: str):
 # FOREVER FIX INTEGRATION
 # ============================================================================
 try:
+    # Use relative import from parent directory
+    import os
     import sys
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    
+    # Add parent directory to path only if not already there
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+    
     from forever_fix import ForeverFixMiddleware, get_forever_fix_status
     
     # Add Forever Fix middleware to prevent app death
@@ -816,6 +823,8 @@ try:
     
 except ImportError as e:
     logger.warning(f"⚠️ Forever Fix not available: {e}")
+except Exception as e:
+    logger.error(f"❌ Error loading Forever Fix: {e}")
 
 # ============================================================================
 # EXPORT HANDLER FOR VERCEL
