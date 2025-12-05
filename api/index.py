@@ -123,6 +123,7 @@ except ImportError:
 # Backend imports with graceful fallback
 HAS_BACKEND = False
 BACKEND_ERROR = None
+BACKEND_ERROR_SAFE = None  # Sanitized error message for public exposure
 try:
     api_dir = os.path.dirname(os.path.abspath(__file__))
     sys.path.insert(0, api_dir)
@@ -141,8 +142,14 @@ try:
     logger.info("✅ Backend modules imported successfully")
 except Exception as e:
     BACKEND_ERROR = str(e)
+    # Create sanitized error message for public exposure (no file paths or internal structure)
+    error_type = type(e).__name__
+    BACKEND_ERROR_SAFE = f"{error_type}: Backend modules unavailable"
+    
     logger.warning(f"⚠️  Backend modules not available: {e}")
-    logger.warning(f"⚠️  Full traceback: {traceback.format_exc()}")
+    # Only log full traceback in debug mode to avoid exposing internal structure
+    if is_debug_mode():
+        logger.warning(f"⚠️  Full traceback: {traceback.format_exc()}")
     logger.info("Running in FALLBACK MODE with limited API functionality")
 
 # ============================================================================
@@ -454,8 +461,12 @@ async def health():
     }
     
     # Include backend error details if running in fallback mode
-    if not HAS_BACKEND and BACKEND_ERROR:
-        response["backend_error"] = BACKEND_ERROR
+    # Use sanitized error in production, full error only in debug mode
+    if not HAS_BACKEND and BACKEND_ERROR_SAFE:
+        if is_debug_mode():
+            response["backend_error"] = BACKEND_ERROR
+        else:
+            response["backend_error"] = BACKEND_ERROR_SAFE
         response["note"] = "Backend running in fallback mode - some endpoints may have limited functionality"
     
     return response
@@ -466,12 +477,23 @@ async def status():
     """
     Backend status endpoint for frontend health checks.
     Returns detailed status information about backend availability.
+    
+    Security Note: In production mode, only sanitized error messages are returned.
+    Set DEBUG=true for detailed error information (development only).
     """
+    # Use sanitized error in production, full error only in debug mode
+    backend_error_to_show = None
+    if not HAS_BACKEND:
+        if is_debug_mode():
+            backend_error_to_show = BACKEND_ERROR
+        else:
+            backend_error_to_show = BACKEND_ERROR_SAFE
+    
     return {
         "status": "online",
         "backend_loaded": HAS_BACKEND,
         "backend_status": "full" if HAS_BACKEND else "fallback",
-        "backend_error": BACKEND_ERROR if not HAS_BACKEND and BACKEND_ERROR else None,
+        "backend_error": backend_error_to_show,
         "database_available": HAS_DB and bool(DATABASE_URL),
         "database_connected": bool(db_engine) if HAS_DB else False,
         "jwt_configured": JWT_SECRET != "dev-secret-key-change-in-production",
