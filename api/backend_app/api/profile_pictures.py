@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import List
 
 from app.api.auth import get_current_user
@@ -10,6 +11,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/upload")
@@ -76,12 +78,10 @@ async def upload_profile_picture(
         # Re-raise HTTP exceptions (they already have proper status codes)
         raise
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
         logger.error(f"Profile picture upload failed for user {current_user.id}: {type(e).__name__}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Profile picture upload failed. Please try again or contact support if the issue persists."
+            detail="Profile picture upload failed. Please try again or contact support if the issue persists."
         )
 
 
@@ -168,12 +168,10 @@ async def upload_multiple_profile_pictures(
         # Re-raise HTTP exceptions (they already have proper status codes)
         raise
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
         logger.error(f"Multiple profile pictures upload failed for user {current_user.id}: {type(e).__name__}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Multiple profile pictures upload failed. Please try again or contact support if the issue persists."
+            detail="Multiple profile pictures upload failed. Please try again or contact support if the issue persists."
         )
 
 
