@@ -3,8 +3,7 @@
   "name": "hiremebahamas-backend",
   "functions": {
     "final_backend.py": {
-      "maxDuration": 10,
-      "memory": 1024
+      "maxDuration": 10
     }
   },
   "rewrites": [
