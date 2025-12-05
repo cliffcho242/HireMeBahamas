@@ -231,10 +231,9 @@ if HAS_BACKEND and HAS_DB:
         db_engine = backend_engine
         async_session_maker = backend_session_maker
         logger.info("✅ Using backend's database engine (avoiding duplicate connections)")
-    except ImportError as e:
-        logger.warning(f"⚠️  Could not import backend database: {e}")
-    except Exception as e:
-        logger.warning(f"⚠️  Could not reuse backend database engine: {e}")
+    except (ImportError, AttributeError, ModuleNotFoundError) as e:
+        logger.warning(f"⚠️  Could not import backend database modules: {e}")
+        # Fallback will be created below if needed
 
 # Fallback: Create minimal database engine only if backend isn't available
 if db_engine is None and HAS_DB and DATABASE_URL:
@@ -827,27 +826,24 @@ try:
     if parent_dir not in sys.path:
         sys.path.insert(0, parent_dir)
     
-    # Check if forever_fix.py actually exists before importing
-    forever_fix_path = os.path.join(parent_dir, 'forever_fix.py')
-    if os.path.exists(forever_fix_path):
-        from forever_fix import ForeverFixMiddleware, get_forever_fix_status
-        
-        # Add Forever Fix middleware to prevent app death
-        app.add_middleware(ForeverFixMiddleware)
-        logger.info("✅ Forever Fix middleware enabled")
-        
-        # Add status endpoint for monitoring
-        @app.get("/api/forever-status")
-        async def forever_status():
-            """Get Forever Fix system status"""
-            return get_forever_fix_status()
-    else:
-        logger.info("ℹ️  Forever Fix not found (expected in serverless environments like Vercel)")
+    # Try importing - will raise ImportError if not available
+    from forever_fix import ForeverFixMiddleware, get_forever_fix_status
     
-except ImportError as e:
-    logger.info(f"ℹ️  Forever Fix not available (ImportError): {e}")
+    # Add Forever Fix middleware to prevent app death
+    app.add_middleware(ForeverFixMiddleware)
+    logger.info("✅ Forever Fix middleware enabled")
+    
+    # Add status endpoint for monitoring
+    @app.get("/api/forever-status")
+    async def forever_status():
+        """Get Forever Fix system status"""
+        return get_forever_fix_status()
+    
+except ImportError:
+    # Expected in serverless environments where forever_fix.py is not deployed
+    logger.info("ℹ️  Forever Fix not available (expected in serverless environments like Vercel)")
 except Exception as e:
-    # Log as warning but don't crash - this is optional functionality
+    # Log unexpected errors but don't crash - this is optional functionality
     logger.warning(f"⚠️  Could not load Forever Fix (non-critical): {e}")
 
 # ============================================================================
