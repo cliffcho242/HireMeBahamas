@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """
 Test HireMe functionality
+
+Usage:
+  BACKEND_URL=https://your-app.up.railway.app python test_hireme.py
 """
 
+import os
 import requests
 
-# Use production backend URL
-BACKEND_URL = "https://hiremebahamas.onrender.com"
+# Use backend URL from environment variable
+BACKEND_URL = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
 
 
 def test_hireme():

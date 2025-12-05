@@ -1,13 +1,16 @@
 """
-Initialize admin user on Render deployment
-Run this once after deploying to Render
+Initialize admin user on production deployment
+
+Usage:
+  BACKEND_URL=https://your-app.up.railway.app python init_admin_render.py
 """
 
 import json
+import os
 
 import requests
 
-BACKEND_URL = "https://hiremebahamas.onrender.com"
+BACKEND_URL = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
 
 
 def create_admin():

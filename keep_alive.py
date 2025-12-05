@@ -1,27 +1,23 @@
 """
 =============================================================================
-DEPRECATED: KEEP-ALIVE WORKER (No longer needed after Vercel migration)
+DEPRECATED: KEEP-ALIVE WORKER (No longer needed after Vercel + Railway migration)
 =============================================================================
 This file was used for Render Background Service to prevent cold starts.
 
 After migrating to Vercel + Railway:
 - Vercel Edge: No cold starts (edge functions are always warm)
-- Railway: Use Railway's built-in health checks or Vercel Cron Jobs
+- Railway: Use GitHub Actions workflows for keepalive (keep-database-awake.yml)
 
-For legacy reference only. See RENDER_TO_VERCEL_MIGRATION.md for details.
+This file is kept for historical reference only.
 
-OLD DEPLOYMENT (Render - DEPRECATED):
-  - Name: keep-alive
-  - Runtime: Python 3
-  - Build Command: pip install requests
-  - Start Command: python keep_alive.py
-  - Environment: RENDER_EXTERNAL_URL=https://hiremebahamas.onrender.com
+For Railway keepalive, use:
+- .github/workflows/keep-database-awake.yml (runs every 2 minutes)
+- .github/workflows/scheduled-ping.yml (runs every 10 minutes)
 
-NEW ALTERNATIVES:
-  1. Railway Cron Jobs (built-in)
-  2. Vercel Cron Jobs (free, in vercel.json)
-  3. UptimeRobot (free monitoring + pings)
-  4. Cron-job.org (free scheduled pings)
+For external monitoring services:
+  1. UptimeRobot (free monitoring + pings)
+  2. Cron-job.org (free scheduled pings)
+  3. Railway built-in health checks
 =============================================================================
 """
 import os
@@ -29,14 +25,17 @@ import time
 import random
 import requests
 
-# HARDCODED URL — NEVER FAILS
-# Falls back to env var for flexibility in other deployments
-DEFAULT_URL = "https://hiremebahamas.onrender.com"
-_base_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+# Get backend URL from environment variable
+# Default to Railway if not set (since Render is deprecated)
+_base_url = os.getenv("BACKEND_URL", "").strip()
 
-# Validate URL: must be non-empty and have a valid scheme (http/https)
+# Fallback to Railway if no URL provided
 if not _base_url or not _base_url.startswith(("http://", "https://")):
-    _base_url = DEFAULT_URL
+    print("⚠️ WARNING: BACKEND_URL not set. This script is deprecated.")
+    print("   Use GitHub Actions workflows instead:")
+    print("   - .github/workflows/keep-database-awake.yml")
+    print("   - .github/workflows/scheduled-ping.yml")
+    _base_url = os.getenv("RAILWAY_BACKEND_URL", "http://localhost:8000")
 
 HEALTH_URL = _base_url + "/health"
 
