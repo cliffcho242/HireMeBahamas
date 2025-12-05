@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
 """
 Comprehensive API Test - Tests all major endpoints
+
+Usage:
+  # Test Railway backend
+  BACKEND_URL=https://hiremebahamas.up.railway.app python comprehensive_api_test.py
+  
+  # Test Vercel backend
+  BACKEND_URL=https://hiremebahamas.vercel.app python comprehensive_api_test.py
+  
+  # Test local backend
+  BACKEND_URL=http://localhost:8000 python comprehensive_api_test.py
 """
 
 import json
+import os
 from datetime import datetime
 
 import requests
 
-BACKEND_URL = "https://hiremebahamas.onrender.com"
+# Get backend URL from environment variable
+# Default to Vercel deployment if not set
+BACKEND_URL = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
 TEST_EMAIL = "testuser@example.com"
 TEST_PASSWORD = "TestPass123"
 

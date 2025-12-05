@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 """
-Complete Build, Deploy, and Test Solution
-This script ensures the 405 error is permanently fixed
+DEPRECATED: Complete Build, Deploy, and Test Solution
+
+This script was created for Render deployment. After migrating to Vercel + Railway,
+this script is no longer needed.
+
+For deployment, use:
+- Vercel Git integration (automatic on push)
+- GitHub Actions workflows (.github/workflows/)
+- Manual: vercel --prod (in frontend directory)
+
+Usage (if still needed):
+  BACKEND_URL=https://your-app.up.railway.app python complete_fix_and_deploy.py
 """
 import json
 import os
@@ -33,7 +43,7 @@ def verify_backend():
     """Verify backend is accessible"""
     print_section("1. Verifying Backend")
 
-    backend_url = "https://hiremebahamas.onrender.com"
+    backend_url = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
 
     try:
         print("Testing backend health...")
@@ -72,7 +82,7 @@ def test_login_endpoint():
     """Test the login endpoint specifically"""
     print_section("2. Testing Login Endpoint")
 
-    backend_url = "https://hiremebahamas.onrender.com"
+    backend_url = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
 
     try:
         # Test OPTIONS (CORS preflight)
@@ -177,8 +187,9 @@ def build_frontend():
 
     # Set environment variables
     env = os.environ.copy()
-    env["VITE_API_URL"] = "https://hiremebahamas.onrender.com"
-    env["VITE_SOCKET_URL"] = "https://hiremebahamas.onrender.com"
+    backend_url = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
+    env["VITE_API_URL"] = backend_url
+    env["VITE_SOCKET_URL"] = backend_url
     env["VITE_ENABLE_RETRY"] = "true"
     env["VITE_RETRY_ATTEMPTS"] = "5"
     env["VITE_REQUEST_TIMEOUT"] = "45000"

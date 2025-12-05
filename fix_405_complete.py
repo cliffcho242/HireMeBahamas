@@ -2,9 +2,18 @@
 """
 HireMeBahamas 405 Error Fix - Complete Solution
 Uses IntelliSense and automated fixes to resolve login/signup 405 errors
+
+DEPRECATED: This script was created for Render deployment issues.
+After migrating to Vercel + Railway, 405 errors should not occur.
+
+If you're experiencing 405 errors, check:
+1. VITE_API_URL points to correct backend (Railway or Vercel)
+2. Backend is deployed and accessible
+3. CORS is properly configured in backend
 """
 
 import json
+import os
 import requests
 from pathlib import Path
 from datetime import datetime
@@ -13,7 +22,7 @@ import time
 
 class HireBahamas405Fix:
     def __init__(self):
-        self.backend_url = "https://hiremebahamas.onrender.com"
+        self.backend_url = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
         self.fixes_applied = []
         self.verification_results = []
         
@@ -57,9 +66,9 @@ class HireBahamas405Fix:
             with open(vercel_config_path, 'r') as f:
                 config = json.load(f)
             
-            # Fix API URL
+            # Update API URL to use backend_url from class
             old_api_url = config.get("env", {}).get("VITE_API_URL", "")
-            correct_api_url = "https://hiremebahamas.onrender.com"
+            correct_api_url = self.backend_url
             
             if old_api_url != correct_api_url:
                 config["env"] = config.get("env", {})
@@ -99,7 +108,7 @@ class HireBahamas405Fix:
             self.log_fix("Frontend Check", "FAILED", "Frontend directory not found")
             return False
         
-        correct_api_url = "https://hiremebahamas.onrender.com"
+        correct_api_url = self.backend_url
         env_files = [".env", ".env.local", ".env.production"]
         
         for env_file in env_files:
@@ -167,8 +176,9 @@ VITE_REQUEST_TIMEOUT=30000
 
     # Set environment variables for the build
     env = os.environ.copy()
-    env["VITE_API_URL"] = "https://hiremebahamas.onrender.com"
-    env["VITE_SOCKET_URL"] = "https://hiremebahamas.onrender.com"
+    backend_url = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
+    env["VITE_API_URL"] = backend_url
+    env["VITE_SOCKET_URL"] = backend_url
 
     result = subprocess.run(
         ["powershell", "-Command", "npm run build"],
@@ -196,7 +206,8 @@ VITE_REQUEST_TIMEOUT=30000
         for js_file in js_files:
             with open(os.path.join(assets_dir, js_file), "r", encoding="utf-8") as f:
                 content = f.read()
-                if "hiremebahamas.onrender.com" in content:
+                # Check if production backend URL is present
+                if self.backend_url in content:
                     found_correct_url = True
                     print(f"✅ Found production URL in {js_file}")
                     break
@@ -236,7 +247,8 @@ VITE_REQUEST_TIMEOUT=30000
     try:
         import requests
 
-        response = requests.get("https://hiremebahamas.onrender.com/health", timeout=10)
+        backend_url = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
+        response = requests.get(f"{backend_url}/health", timeout=10)
         if response.status_code == 200:
             print("✅ Backend is online and responding")
         else:

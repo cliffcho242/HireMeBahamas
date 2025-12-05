@@ -28,9 +28,8 @@ if (import.meta.env.DEV) {
   logBackendConfiguration();
 }
 
-// Derive API base URL - now using smart backend router
-// This will be overridden on a per-request basis by the backend router
-const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string; VITE_RENDER_API_URL?: string } }).env?.VITE_API_URL;
+// Derive API base URL - using smart backend router
+const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
 
 let API_BASE_URL = 'http://127.0.0.1:8000'; // Default for local development
 
@@ -41,19 +40,12 @@ if (!ENV_API && typeof window !== 'undefined') {
                        hostname === 'www.hiremebahamas.com';
   const isVercel = hostname.includes('.vercel.app');
   
-  // For Vercel deployments, prefer same-origin (Vercel serverless)
+  // For production/Vercel deployments, use same-origin (Vercel serverless)
   if (isProduction || isVercel) {
     API_BASE_URL = window.location.origin;
     
     console.log('🌐 Production/Vercel deployment detected');
     console.log('🔗 Using Vercel serverless API at:', API_BASE_URL);
-    
-    // Check if Render backend is also configured
-    const renderUrl = (import.meta as ImportMeta & { env?: { VITE_RENDER_API_URL?: string } }).env?.VITE_RENDER_API_URL;
-    if (renderUrl) {
-      console.log('🚀 Render backend also available at:', renderUrl);
-      console.log('⚡ Dual backend mode: Using smart routing for optimal performance');
-    }
   }
 } else if (ENV_API) {
   // Use explicit environment variable if provided

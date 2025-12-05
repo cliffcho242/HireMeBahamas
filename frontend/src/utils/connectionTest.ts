@@ -12,7 +12,7 @@ interface ConnectionTestResult {
   details: {
     healthCheck: boolean;
     healthStatus?: number;
-    healthData?: any;
+    healthData?: Record<string, unknown>;
     errorType?: string;
     errorMessage?: string;
     timestamp: number;
@@ -77,21 +77,23 @@ export async function testConnection(apiUrl: string): Promise<ConnectionTestResu
         },
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[ConnectionTest] ❌ Connection test failed:', error);
     
     let errorMessage = 'Unknown error';
     let errorType = 'UNKNOWN_ERROR';
     
-    if (error.name === 'AbortError') {
-      errorMessage = 'Connection timeout - backend is starting up or not responding. This can take up to 60 seconds for cold starts. Please wait and try again.';
-      errorType = 'TIMEOUT';
-    } else if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
-      errorMessage = 'Cannot reach backend - check if backend URL is correct and backend is running';
-      errorType = 'NETWORK_ERROR';
-    } else {
-      errorMessage = error.message || 'Connection failed';
-      errorType = 'CONNECTION_ERROR';
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        errorMessage = 'Connection timeout - backend is starting up or not responding. This can take up to 60 seconds for cold starts. Please wait and try again.';
+        errorType = 'TIMEOUT';
+      } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        errorMessage = 'Cannot reach backend - check if backend URL is correct and backend is running';
+        errorType = 'NETWORK_ERROR';
+      } else {
+        errorMessage = error.message || 'Connection failed';
+        errorType = 'CONNECTION_ERROR';
+      }
     }
     
     return {

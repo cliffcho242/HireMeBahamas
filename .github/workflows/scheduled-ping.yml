@@ -110,80 +110,7 @@ jobs:
             echo "success=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Ping Render Backend
-        id: ping-render
-        continue-on-error: true
-        env:
-          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
-        run: |
-          if [ -z "$RENDER_BACKEND_URL" ]; then
-            echo "ℹ️ RENDER_BACKEND_URL not configured, skipping Render ping"
-            echo "skipped=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
 
-          echo "🏓 Pinging Render app at $RENDER_BACKEND_URL/ping"
-
-          # Simple ping with 30s timeout
-          response=$(curl -s -w "\n%{http_code}" \
-            --max-time 30 \
-            "$RENDER_BACKEND_URL/ping" 2>/dev/null) || true
-
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | head -n -1)
-
-          if [ "$http_code" = "200" ]; then
-            echo "✅ Render app ping successful (HTTP $http_code) - Response: $body"
-            echo "success=true" >> $GITHUB_OUTPUT
-          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
-            echo "⚠️ Render app responded with HTTP $http_code"
-            echo "success=partial" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ Render app did not respond (may be waking up)"
-            echo "🔄 Retrying with longer timeout (60s)..."
-
-            # Second attempt with 60s timeout (for cold starts)
-            response=$(curl -s -w "\n%{http_code}" \
-              --max-time 60 \
-              "$RENDER_BACKEND_URL/ping" 2>/dev/null) || true
-
-            http_code=$(echo "$response" | tail -n1)
-            body=$(echo "$response" | head -n -1)
-
-            if [ "$http_code" = "200" ]; then
-              echo "✅ Render app ping successful after retry (HTTP $http_code) - Response: $body"
-              echo "success=true" >> $GITHUB_OUTPUT
-            else
-              echo "❌ Render app ping failed after retry"
-              echo "success=false" >> $GITHUB_OUTPUT
-            fi
-          fi
-
-      - name: Ping Render Health Endpoint
-        id: health-render
-        continue-on-error: true
-        if: steps.ping-render.outputs.success == 'true' || steps.ping-render.outputs.success == 'partial'
-        env:
-          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
-        run: |
-          echo "📊 Checking Render health at $RENDER_BACKEND_URL/api/health"
-
-          response=$(curl -s -w "\n%{http_code}" \
-            --max-time 30 \
-            "$RENDER_BACKEND_URL/api/health" 2>/dev/null) || true
-
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | head -n -1)
-
-          if [ "$http_code" = "200" ]; then
-            echo "✅ Render health check successful (HTTP $http_code)"
-            # jq is pre-installed on ubuntu-latest runners
-            echo "$body" | jq . 2>/dev/null || echo "$body"
-            echo "success=true" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ Render health check returned HTTP $http_code"
-            echo "success=false" >> $GITHUB_OUTPUT
-          fi
 
       - name: Summary
         run: |
@@ -208,21 +135,7 @@ jobs:
             echo "| Railway | ❌ Failed | Unable to reach app |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          render_ping="${{ steps.ping-render.outputs.success }}"
-          render_health="${{ steps.health-render.outputs.success }}"
-          render_skipped="${{ steps.ping-render.outputs.skipped }}"
 
-          if [ "$render_skipped" = "true" ]; then
-            echo "| Render | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$render_ping" = "true" ]; then
-            health_status="✅ Healthy"
-            [ "$render_health" != "true" ] && health_status="⚠️ Degraded"
-            echo "| Render | ✅ Success | $health_status |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$render_ping" = "partial" ]; then
-            echo "| Render | ⚠️ Partial | Responded with non-200 |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Render | ❌ Failed | Unable to reach app |" >> $GITHUB_STEP_SUMMARY
-          fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "This workflow runs **every 10 minutes** to keep the application active." >> $GITHUB_STEP_SUMMARY
