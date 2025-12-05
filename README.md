@@ -23,10 +23,12 @@ This guide covers:
 
 ### 🔥 **Getting 404: DEPLOYMENT_NOT_FOUND Error?**
 
+⚡ **[QUICK FIX (5 minutes)](./QUICK_FIX_404_DEPLOYMENT.md)** - Fast solution guide
 📖 **[TROUBLESHOOTING: Deployment Not Found](./TROUBLESHOOTING_DEPLOYMENT_NOT_FOUND.md)** - Complete troubleshooting guide
 📖 **[FIX: Vercel 404 Deployment Error](./VERCEL_DEPLOYMENT_404_FIX.md)** - Detailed fix documentation
 
 These comprehensive guides cover:
+- ✅ Quick 5-minute fix for common issues
 - ✅ Step-by-step troubleshooting process
 - ✅ Common causes and solutions
 - ✅ Fixing Vercel configuration conflicts
