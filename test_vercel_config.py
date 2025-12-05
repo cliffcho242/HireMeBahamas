@@ -129,32 +129,47 @@ def test_vercel_functions_config(config):
     return all_valid
 
 
-def test_api_index_exists():
-    """Test that api/index.py exists and has handler export"""
+def test_api_handlers_exist(config):
+    """Test that API handler files exist and have handler export"""
     import re
     
-    print("\nTesting api/index.py structure...")
+    print("\nTesting API handler files...")
     
-    api_index = Path("api/index.py")
-    if not api_index.exists():
-        print("  ✗ api/index.py not found")
-        return False
+    # Get function paths from config
+    functions = config.get("functions", {})
+    if not functions:
+        print("  ⚠ No functions configured")
+        return None
     
-    print("  ✓ api/index.py exists")
+    all_valid = True
+    for func_path in functions.keys():
+        if not func_path.endswith(".py"):
+            continue
+            
+        print(f"\n  Testing handler file: {func_path}")
+        
+        handler_file = Path(func_path)
+        if not handler_file.exists():
+            print(f"    ✗ {func_path} not found")
+            all_valid = False
+            continue
+        
+        print(f"    ✓ {func_path} exists")
+        
+        # Check for handler export using regex to match assignment patterns
+        with open(handler_file, "r") as f:
+            content = f.read()
+        
+        # Look for handler assignment (not in comments)
+        handler_pattern = re.compile(r'^\s*handler\s*=\s*', re.MULTILINE)
+        if handler_pattern.search(content):
+            print(f"    ✓ Found handler export")
+        else:
+            print(f"    ✗ No handler export found")
+            print(f"      Expected: handler = Mangum(app, ...)")
+            all_valid = False
     
-    # Check for handler export using regex to match assignment patterns
-    with open(api_index, "r") as f:
-        content = f.read()
-    
-    # Look for handler assignment (not in comments)
-    handler_pattern = re.compile(r'^\s*handler\s*=\s*', re.MULTILINE)
-    if handler_pattern.search(content):
-        print("  ✓ Found handler export")
-        return True
-    else:
-        print("  ✗ No handler export found")
-        print("    Expected: handler = Mangum(app, ...)")
-        return False
+    return all_valid
 
 
 def main():
@@ -209,9 +224,10 @@ def main():
         print("  Functions result:", functions_result)
         return 1
     
-    # Test api/index.py
-    if not test_api_index_exists():
-        print("\n❌ api/index.py validation failed")
+    # Test API handler files
+    handlers_result = test_api_handlers_exist(config)
+    if handlers_result is False:
+        print("\n❌ API handler validation failed")
         return 1
     
     print("\n" + "=" * 60)
