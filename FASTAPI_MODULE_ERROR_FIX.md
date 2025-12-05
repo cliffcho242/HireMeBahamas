@@ -17,16 +17,11 @@ ModuleNotFoundError: No module named 'fastapi'
 
 ## Root Cause
 
-The `vercel.json` configuration was using a simplified routing approach without explicit build configuration:
+The `vercel.json` configuration was using a simplified routing approach (`rewrites` only) without an explicit build configuration:
 
 ```json
 {
   "version": 2,
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 30
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -36,11 +31,11 @@ The `vercel.json` configuration was using a simplified routing approach without 
 }
 ```
 
-While this modern approach should work with Vercel's automatic detection, it was not triggering the installation of Python dependencies from `api/requirements.txt` during the build process.
+While Vercel's automatic detection should handle this, it was not consistently triggering the installation of Python dependencies from `api/requirements.txt` during the build process, possibly due to build caching or detection issues.
 
 ## Solution
 
-Updated `vercel.json` to explicitly configure the `@vercel/python` builder:
+Updated `vercel.json` to explicitly configure the `@vercel/python` builder while preserving all other configurations:
 
 ```json
 {
@@ -51,12 +46,19 @@ Updated `vercel.json` to explicitly configure the `@vercel/python` builder:
       "use": "@vercel/python"
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.py"
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 30
     }
-  ]
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    }
+  ],
+  "crons": [...],
+  "headers": [...]
 }
 ```
 
@@ -65,15 +67,15 @@ Updated `vercel.json` to explicitly configure the `@vercel/python` builder:
 1. **Explicit Builder**: The `@vercel/python` builder explicitly tells Vercel to treat `api/index.py` as a Python serverless function
 2. **Automatic Dependency Detection**: The builder automatically looks for and installs from `api/requirements.txt`
 3. **Proper Lambda Packaging**: Dependencies are bundled with the Lambda function code
-4. **Changed Routing**: Used `routes` instead of `rewrites` (required when using `builds` configuration)
+4. **Compatible with Modern Vercel**: Uses `rewrites` (modern approach) with explicit `builds` configuration
+5. **Preserves All Features**: Keeps crons, headers, and all other existing configurations intact
 
 ## Files Modified
 
 ### vercel.json
-- Removed `functions` configuration
-- Removed `rewrites` routing
-- Added `builds` configuration with `@vercel/python`
-- Added `routes` configuration for API routing
+- Added `builds` configuration with explicit `@vercel/python` builder
+- Added `functions` configuration for timeout control
+- Preserved existing `rewrites`, `crons`, and `headers` configurations
 
 ## Verification
 
