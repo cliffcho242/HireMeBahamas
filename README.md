@@ -23,17 +23,22 @@ This guide covers:
 
 ### 🔥 **Getting 404: DEPLOYMENT_NOT_FOUND Error?**
 
-📖 **[FIX: Vercel 404 Deployment Error](./VERCEL_DEPLOYMENT_404_FIX.md)**
+⚡ **[QUICK FIX (5 minutes)](./QUICK_FIX_404_DEPLOYMENT.md)** - Fast solution guide
+📖 **[TROUBLESHOOTING: Deployment Not Found](./TROUBLESHOOTING_DEPLOYMENT_NOT_FOUND.md)** - Complete troubleshooting guide
+📖 **[FIX: Vercel 404 Deployment Error](./VERCEL_DEPLOYMENT_404_FIX.md)** - Detailed fix documentation
 
-This comprehensive guide covers:
+These comprehensive guides cover:
+- ✅ Quick 5-minute fix for common issues
+- ✅ Step-by-step troubleshooting process
+- ✅ Common causes and solutions
 - ✅ Fixing Vercel configuration conflicts
 - ✅ Resolving mixed API version issues
 - ✅ Proper serverless function setup
 - ✅ Complete verification steps
 
-**Check your configuration:**
+**Verify your configuration:**
 ```bash
-python3 scripts/check-deployment-config.py
+python3 scripts/verify-vercel-deployment.py
 ```
 
 **Common issues:**
@@ -41,6 +46,7 @@ python3 scripts/check-deployment-config.py
 - `DATABASE_URL`, `SECRET_KEY`, or `JWT_SECRET_KEY` not set in Vercel
 - Database not connected or not accessible
 - Conflicting `vercel.json` configuration files
+- Build failures or missing output directory
 
 ---
 
