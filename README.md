@@ -10,6 +10,12 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 **If users cannot sign in**, your deployment configuration is likely incomplete.
 
+### ⚠️ **Still Using Render PostgreSQL?**
+
+🔄 **[MIGRATE NOW: Render to Railway PostgreSQL](./RENDER_TO_RAILWAY_MIGRATION.md)** - Complete migration guide (30 minutes)
+
+If your database is still connected to Render, this may prevent users from signing in. Railway PostgreSQL is now the recommended database provider with better performance and compatibility.
+
 ### 🔧 Quick Fix (5 minutes):
 
 📖 **[COMPLETE FIX GUIDE: Sign-In & Deployment Issues](./FIX_SIGN_IN_DEPLOYMENT_GUIDE.md)**
@@ -17,7 +23,7 @@ A modern, Facebook-inspired social platform designed specifically for profession
 This guide covers:
 - ✅ Configuring GitHub Secrets for automated deployments
 - ✅ Setting up Vercel environment variables
-- ✅ Connecting PostgreSQL database (Railway/Render)
+- ✅ Connecting PostgreSQL database (Railway recommended)
 - ✅ Troubleshooting common deployment issues
 - ✅ Verifying sign-in functionality
 
