@@ -17,7 +17,26 @@ export interface FriendlyError {
 /**
  * Convert API error to user-friendly format
  */
-export function makeErrorFriendly(error: any): FriendlyError {
+export function makeErrorFriendly(error: unknown): FriendlyError {
+  // Type guard to check if error is an Error-like object
+  const isErrorLike = (err: unknown): err is { 
+    code?: string; 
+    message?: string; 
+    response?: { status?: number; data?: unknown } 
+  } => {
+    return typeof err === 'object' && err !== null;
+  };
+
+  if (!isErrorLike(error)) {
+    return {
+      title: 'Unexpected Error',
+      message: 'An unexpected error occurred. Please try again.',
+      icon: '⚠️',
+      severity: 'warning',
+      actions: ['Try refreshing the page'],
+    };
+  }
+
   // Network errors
   if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
     return {
@@ -54,7 +73,8 @@ export function makeErrorFriendly(error: any): FriendlyError {
   
   // Authentication errors
   if (error.response?.status === 401) {
-    const detail = error.response?.data?.detail || '';
+    const responseData = error.response.data as { detail?: string } | undefined;
+    const detail = responseData?.detail || '';
     
     if (detail.includes('Incorrect email or password')) {
       return {
@@ -149,8 +169,8 @@ export function makeErrorFriendly(error: any): FriendlyError {
   }
   
   // Server errors (500s)
-  if (error.response?.status >= 500) {
-    const status = error.response?.status;
+  if (error.response?.status && error.response.status >= 500) {
+    const status = error.response.status;
     
     if (status === 502) {
       return {
@@ -233,7 +253,13 @@ export function makeErrorFriendly(error: any): FriendlyError {
 /**
  * Display friendly error to user with toast
  */
-export function showFriendlyError(error: any, toast: any): void {
+export function showFriendlyError(
+  error: unknown, 
+  toast: { 
+    error: (message: string, options?: { duration?: number }) => void;
+    (message: string, options?: { duration?: number }): void;
+  }
+): void {
   const friendly = makeErrorFriendly(error);
   
   // Create formatted message with actions
@@ -252,7 +278,14 @@ ${friendly.actions.map((action, i) => `${i + 1}. ${action}`).join('\n')}
   } else if (friendly.severity === 'warning') {
     toast.error(message, { duration: 8000 });
   } else {
-    toast(message, { duration: 6000 });
+    // For info severity, try to call toast as a function if possible
+    const toastFn = toast as unknown as (message: string, options?: { duration?: number }) => void;
+    if (typeof toastFn === 'function') {
+      toastFn(message, { duration: 6000 });
+    } else {
+      // Fallback to error method
+      toast.error(message, { duration: 6000 });
+    }
   }
   
   // Log to console for developers
