@@ -36,7 +36,6 @@ jobs:
     
     outputs:
       railway_status: ${{ steps.check-railway.outputs.status }}
-      render_status: ${{ steps.check-render.outputs.status }}
       overall_status: ${{ steps.summary.outputs.overall_status }}
 
     steps:
@@ -121,38 +120,7 @@ jobs:
           
           echo "latency_ms=$latency_ms" >> $GITHUB_OUTPUT
 
-      - name: Check Render Backend Health
-        id: check-render
-        continue-on-error: true
-        env:
-          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
-        run: |
-          if [ -z "$RENDER_BACKEND_URL" ]; then
-            echo "ℹ️ RENDER_BACKEND_URL not configured"
-            echo "status=skipped" >> $GITHUB_OUTPUT
-            exit 0
-          fi
 
-          echo "🔍 Checking Render backend health..."
-          
-          # Check main health endpoint
-          health_response=$(curl -s -w "\n%{http_code}" \
-            --max-time 30 \
-            "$RENDER_BACKEND_URL/api/health" 2>/dev/null) || true
-          
-          http_code=$(echo "$health_response" | tail -n1)
-          body=$(echo "$health_response" | head -n -1)
-          
-          if [ "$http_code" = "200" ]; then
-            echo "✅ Render backend is healthy (HTTP $http_code)"
-            echo "status=healthy" >> $GITHUB_OUTPUT
-          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
-            echo "⚠️ Render backend returned HTTP $http_code"
-            echo "status=error" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Render backend is unreachable"
-            echo "status=down" >> $GITHUB_OUTPUT
-          fi
 
       - name: Generate Summary
         id: summary
@@ -167,7 +135,6 @@ jobs:
           echo "|---------|--------|---------|" >> $GITHUB_STEP_SUMMARY
           
           railway_status="${{ steps.check-railway.outputs.status }}"
-          render_status="${{ steps.check-render.outputs.status }}"
           railway_latency="${{ steps.railway-latency.outputs.latency_ms }}"
           
           # Railway status
@@ -195,34 +162,15 @@ jobs:
               ;;
           esac
           
-          # Render status
-          case "$render_status" in
-            healthy)
-              echo "| Render Backend | ✅ Healthy | - |" >> $GITHUB_STEP_SUMMARY
-              ;;
-            error)
-              echo "| Render Backend | ❌ Error | HTTP error response |" >> $GITHUB_STEP_SUMMARY
-              ;;
-            down)
-              echo "| Render Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY
-              ;;
-            skipped)
-              echo "| Render Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY
-              ;;
-            *)
-              echo "| Render Backend | ❓ Unknown | Status: $render_status |" >> $GITHUB_STEP_SUMMARY
-              ;;
-          esac
-          
           # Determine overall status
           overall="healthy"
-          if [ "$railway_status" = "down" ] || [ "$render_status" = "down" ]; then
+          if [ "$railway_status" = "down" ]; then
             overall="critical"
-          elif [ "$railway_status" = "error" ] || [ "$render_status" = "error" ]; then
+          elif [ "$railway_status" = "error" ]; then
             overall="error"
-          elif [ "$railway_status" = "degraded" ] || [ "$render_status" = "degraded" ]; then
+          elif [ "$railway_status" = "degraded" ]; then
             overall="degraded"
-          elif [ "$railway_status" = "partial" ] || [ "$render_status" = "partial" ]; then
+          elif [ "$railway_status" = "partial" ]; then
             overall="partial"
           fi
           
@@ -236,13 +184,12 @@ jobs:
 
       - name: Create Issue on Critical Failure
         if: |
-          (steps.check-railway.outputs.status == 'down' || steps.check-render.outputs.status == 'down') &&
+          (steps.check-railway.outputs.status == 'down') &&
           (github.event_name == 'schedule' || github.event.inputs.create_issue_on_failure == 'true')
         uses: actions/github-script@v7
         with:
           script: |
             const railwayStatus = '${{ steps.check-railway.outputs.status }}';
-            const renderStatus = '${{ steps.check-render.outputs.status }}';
             const timestamp = new Date().toISOString();
             
             // Check for existing open issues to avoid duplicates
@@ -261,7 +208,6 @@ jobs:
             // Create issue for downtime
             const services = [];
             if (railwayStatus === 'down') services.push('Railway Backend');
-            if (renderStatus === 'down') services.push('Render Backend');
             
             const title = `🚨 Service Downtime Alert: ${services.join(', ')}`;
             const body = `## Service Downtime Detected
@@ -272,7 +218,6 @@ jobs:
             
             ### Status Details
             - Railway Backend: ${railwayStatus}
-            - Render Backend: ${renderStatus}
             
             ### Recommended Actions
             1. Check service logs on Railway/Render dashboard
