@@ -28,6 +28,7 @@ class SessionManager {
   private onSessionExpiring: (() => void) | null = null;
   private onSessionExpired: (() => void) | null = null;
   private activityListeners: Array<{ event: string; handler: EventListener }> = [];
+  private lastActivityUpdate: number = 0; // Track last update for throttling
 
   constructor() {
     this.setupActivityTracking();
@@ -138,13 +139,12 @@ class SessionManager {
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
     
     // Throttle activity updates to once per 10 seconds to reduce overhead
-    let lastUpdate = 0;
     const THROTTLE_MS = 10000; // 10 seconds
     
     const handleActivity = () => {
       const now = Date.now();
-      if (now - lastUpdate > THROTTLE_MS) {
-        lastUpdate = now;
+      if (now - this.lastActivityUpdate > THROTTLE_MS) {
+        this.lastActivityUpdate = now;
         this.updateActivity();
       }
     };

@@ -250,7 +250,7 @@ api.interceptors.response.use(
       console.error('⚠️ Circuit breaker is OPEN - too many failures. Failing fast.');
       connectionState.setState('error');
       const circuitError = new Error('Service is temporarily unavailable. Please try again in a minute.');
-      circuitBreaker.recordFailure();
+      // Don't record another failure - circuit is already open due to previous failures
       return Promise.reject(circuitError);
     }
     

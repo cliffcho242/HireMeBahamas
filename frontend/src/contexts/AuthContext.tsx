@@ -187,7 +187,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Handler for session expiring warning (5 minutes before timeout)
     const handleExpiring = () => {
       console.warn('Session expiring soon');
-      toast('Your session will expire in 5 minutes. Please save your work.', {
+      // Note: Warning threshold is defined in sessionManager (5 minutes)
+      toast('Your session will expire soon. Please save your work.', {
         duration: 10000,
         icon: '⏰',
       });
@@ -214,10 +215,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     sessionManager.onExpiring(handleExpiring);
     sessionManager.onExpired(handleExpired);
 
-    // Cleanup function
+    // Cleanup function - clean up session manager resources on unmount
     return () => {
-      // Note: sessionManager doesn't support removing specific listeners
-      // This is okay as we only set them once per AuthProvider mount
+      // Note: Only cleanup if this is truly the last AuthProvider unmounting
+      // In most apps, AuthProvider stays mounted for the entire session
+      // Uncomment if you need to support dynamic AuthProvider mounting/unmounting
+      // sessionManager.cleanup();
     };
   }, []);
 
