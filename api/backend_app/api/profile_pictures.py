@@ -72,8 +72,17 @@ async def upload_profile_picture(
             }
         }
 
+    except HTTPException:
+        # Re-raise HTTP exceptions (they already have proper status codes)
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Profile picture upload failed for user {current_user.id}: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Profile picture upload failed. Please try again or contact support if the issue persists."
+        )
 
 
 @router.post("/upload-multiple")
@@ -155,8 +164,17 @@ async def upload_multiple_profile_pictures(
             ]
         }
 
+    except HTTPException:
+        # Re-raise HTTP exceptions (they already have proper status codes)
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Multiple profile pictures upload failed for user {current_user.id}: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Multiple profile pictures upload failed. Please try again or contact support if the issue persists."
+        )
 
 
 @router.get("/list")

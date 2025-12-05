@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import List, Optional
 
 from app.core.security import get_current_user
@@ -19,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/avatar")
@@ -47,8 +49,14 @@ async def upload_avatar(
 
         return {"message": "Avatar uploaded successfully", "file_url": file_url}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        logger.error(f"Avatar upload failed for user {current_user.id}: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Avatar upload failed. Please try again or contact support if the issue persists."
+        )
 
 
 @router.post("/portfolio")
@@ -103,8 +111,14 @@ async def upload_portfolio_images(
             "total_portfolio_images": len(new_portfolio),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        logger.error(f"Portfolio upload failed for user {current_user.id}: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Portfolio upload failed. Please try again or contact support if the issue persists."
+        )
 
 
 @router.delete("/portfolio")
@@ -147,8 +161,14 @@ async def delete_portfolio_image(
             "remaining_images": len(portfolio_images),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+        logger.error(f"Portfolio delete failed for user {current_user.id}: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Portfolio image deletion failed. Please try again or contact support if the issue persists."
+        )
 
 
 @router.post("/document")
@@ -187,8 +207,14 @@ async def upload_document(
             "original_filename": file.filename,
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        logger.error(f"Document upload failed for user {current_user.id}: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Document upload failed. Please try again or contact support if the issue persists."
+        )
 
 
 @router.post("/document-gcs")
@@ -224,8 +250,14 @@ async def upload_document_to_gcs(
             "original_filename": file.filename,
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        logger.error(f"Document GCS upload failed for user {current_user.id}: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Document upload to GCS failed. Please try again or contact support if the issue persists."
+        )
 
 
 @router.get("/my-files")
@@ -285,5 +317,11 @@ async def delete_uploaded_file(
 
         return {"message": "File deleted successfully"}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+        logger.error(f"File delete failed for user {current_user.id}, file {file_id}: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="File deletion failed. Please try again or contact support if the issue persists."
+        )
