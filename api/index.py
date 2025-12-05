@@ -799,29 +799,37 @@ async def catch_all_api_routes(request: Request, path: str):
 # ============================================================================
 # FOREVER FIX INTEGRATION
 # ============================================================================
+# Forever Fix is optional and may not be available in serverless environments
+# where the parent directory is not deployed. This is safe to skip.
 try:
-    # Use relative import from parent directory
-    # Add parent directory to path only if not already there
+    # Attempt to import forever_fix from parent directory
+    # This will only work if the file is deployed (e.g., Railway, local dev)
     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if parent_dir not in sys.path:
         sys.path.insert(0, parent_dir)
     
-    from forever_fix import ForeverFixMiddleware, get_forever_fix_status
-    
-    # Add Forever Fix middleware to prevent app death
-    app.add_middleware(ForeverFixMiddleware)
-    logger.info("✅ Forever Fix middleware enabled")
-    
-    # Add status endpoint for monitoring
-    @app.get("/api/forever-status")
-    async def forever_status():
-        """Get Forever Fix system status"""
-        return get_forever_fix_status()
+    # Check if forever_fix.py actually exists before importing
+    forever_fix_path = os.path.join(parent_dir, 'forever_fix.py')
+    if os.path.exists(forever_fix_path):
+        from forever_fix import ForeverFixMiddleware, get_forever_fix_status
+        
+        # Add Forever Fix middleware to prevent app death
+        app.add_middleware(ForeverFixMiddleware)
+        logger.info("✅ Forever Fix middleware enabled")
+        
+        # Add status endpoint for monitoring
+        @app.get("/api/forever-status")
+        async def forever_status():
+            """Get Forever Fix system status"""
+            return get_forever_fix_status()
+    else:
+        logger.info("ℹ️  Forever Fix not found (expected in serverless environments like Vercel)")
     
 except ImportError as e:
-    logger.warning(f"⚠️ Forever Fix not available: {e}")
+    logger.info(f"ℹ️  Forever Fix not available (ImportError): {e}")
 except Exception as e:
-    logger.error(f"❌ Error loading Forever Fix: {e}")
+    # Log as warning but don't crash - this is optional functionality
+    logger.warning(f"⚠️  Could not load Forever Fix (non-critical): {e}")
 
 # ============================================================================
 # EXPORT HANDLER FOR VERCEL
