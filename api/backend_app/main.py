@@ -96,7 +96,7 @@ import time
 import uuid
 import json
 
-from fastapi import Request, Depends
+from fastapi import Request, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response as StarletteResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -436,6 +436,46 @@ async def full_shutdown():
         logger.info("Database connections closed")
     except Exception as e:
         logger.error(f"Error closing database connections: {e}")
+
+
+# =============================================================================
+# GLOBAL EXCEPTION HANDLER - Catch all unhandled exceptions
+# =============================================================================
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler to catch unhandled exceptions.
+    
+    This prevents FastAPI from returning generic 500 errors and provides
+    meaningful error messages for debugging.
+    
+    Args:
+        request: The incoming request
+        exc: The unhandled exception
+        
+    Returns:
+        JSON response with error details
+    """
+    import traceback
+    
+    # Get request ID if available
+    request_id = getattr(request.state, 'request_id', 'unknown')
+    
+    # Log the full exception with traceback
+    logger.error(
+        f"[{request_id}] Unhandled exception in {request.method} {request.url.path}: "
+        f"{type(exc).__name__}: {str(exc)}"
+    )
+    logger.error(f"[{request_id}] Traceback: {traceback.format_exc()}")
+    
+    # Return a user-friendly error response
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "detail": "An internal server error occurred. Please try again later.",
+            "error_type": type(exc).__name__,
+            "request_id": request_id,
+        }
+    )
 
 
 # Database readiness check endpoint (full database connectivity check)
