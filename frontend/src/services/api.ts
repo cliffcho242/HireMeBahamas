@@ -81,6 +81,35 @@ const BASE_BACKOFF_MS = 5000; // Base for exponential backoff (reduced from 10s)
 const MAX_WAIT_MS = 15000; // Maximum wait time between retries (reduced from 30s)
 const MAX_TOTAL_TIMEOUT = 180000; // 3 minutes maximum total timeout for all retries combined
 
+// Circuit breaker to prevent infinite retry loops
+class CircuitBreaker {
+  private failures: number = 0;
+  private lastFailureTime: number = 0;
+  private readonly threshold = 5; // Open circuit after 5 consecutive failures
+  private readonly resetTimeout = 60000; // Reset after 1 minute
+
+  isOpen(): boolean {
+    // Reset if enough time has passed
+    if (Date.now() - this.lastFailureTime > this.resetTimeout) {
+      this.failures = 0;
+      return false;
+    }
+    return this.failures >= this.threshold;
+  }
+
+  recordFailure(): void {
+    this.failures++;
+    this.lastFailureTime = Date.now();
+  }
+
+  recordSuccess(): void {
+    this.failures = 0;
+    this.lastFailureTime = 0;
+  }
+}
+
+const circuitBreaker = new CircuitBreaker();
+
 // Extend axios config type to include our custom properties
 declare module 'axios' {
   export interface InternalAxiosRequestConfig {
@@ -159,6 +188,9 @@ api.interceptors.request.use((config) => {
 // Handle auth errors with automatic retry
 api.interceptors.response.use(
   (response) => {
+    // Record successful response in circuit breaker
+    circuitBreaker.recordSuccess();
+    
     // Only log in development to avoid exposing response data
     if (import.meta.env.DEV) {
       console.log('✅ API Response:', {
@@ -171,6 +203,14 @@ api.interceptors.response.use(
   },
   async (error) => {
     const config = error.config;
+    
+    // Check circuit breaker first - if open, fail fast
+    if (circuitBreaker.isOpen()) {
+      console.error('⚠️ Circuit breaker is OPEN - too many failures. Failing fast.');
+      const circuitError = new Error('Service is temporarily unavailable. Please try again in a minute.');
+      circuitBreaker.recordFailure();
+      return Promise.reject(circuitError);
+    }
     
     // Log errors - detailed in dev, minimal in production
     if (import.meta.env.DEV) {
@@ -198,6 +238,7 @@ api.interceptors.response.use(
     
     if (elapsedTime > MAX_TOTAL_TIMEOUT) {
       console.error(`Request timeout: Total time exceeded ${MAX_TOTAL_TIMEOUT / 1000} seconds`);
+      circuitBreaker.recordFailure();
       const timeoutError = new Error(`Request timed out after ${Math.round(elapsedTime / 1000)} seconds. Please try again.`);
       return Promise.reject(timeoutError);
     }
@@ -253,6 +294,7 @@ api.interceptors.response.use(
       }
       
       console.error('Max retries reached. Network error persists.');
+      circuitBreaker.recordFailure();
     }
     
     // Handle auth errors
@@ -279,6 +321,11 @@ api.interceptors.response.use(
         // For other endpoints, just log the error but don't force logout
         console.warn('Unauthorized access to:', config.url);
       }
+    }
+    
+    // Record failure in circuit breaker for non-retry errors
+    if (error.response?.status && error.response.status >= 500) {
+      circuitBreaker.recordFailure();
     }
     
     return Promise.reject(error);

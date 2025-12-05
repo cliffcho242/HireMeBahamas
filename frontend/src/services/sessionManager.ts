@@ -27,6 +27,7 @@ class SessionManager {
   private warningTimer: NodeJS.Timeout | null = null;
   private onSessionExpiring: (() => void) | null = null;
   private onSessionExpired: (() => void) | null = null;
+  private activityListeners: Array<{ event: string; handler: EventListener }> = [];
 
   constructor() {
     this.setupActivityTracking();
@@ -113,6 +114,16 @@ class SessionManager {
   }
 
   /**
+   * Cleanup all resources (call when app unmounts or user logs out permanently)
+   */
+  cleanup(): void {
+    this.stopActivityTracking();
+    this.cleanupActivityTracking();
+    this.onSessionExpiring = null;
+    this.onSessionExpired = null;
+  }
+
+  /**
    * Update last activity timestamp
    */
   updateActivity(): void {
@@ -130,9 +141,21 @@ class SessionManager {
       this.updateActivity();
     };
 
+    // Store listeners so we can remove them later
     events.forEach(event => {
       window.addEventListener(event, handleActivity, { passive: true });
+      this.activityListeners.push({ event, handler: handleActivity });
     });
+  }
+
+  /**
+   * Remove activity tracking listeners (for cleanup)
+   */
+  private cleanupActivityTracking(): void {
+    this.activityListeners.forEach(({ event, handler }) => {
+      window.removeEventListener(event, handler);
+    });
+    this.activityListeners = [];
   }
 
   /**
