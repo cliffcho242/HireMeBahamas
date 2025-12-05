@@ -51,11 +51,15 @@ If using Railway, Neon, or another provider:
    - Click **Import**
 
 2. **Configure Project**
+   
+   Configure these settings in the Vercel Project Settings (not in vercel.json):
    - **Framework Preset**: Vite
    - **Root Directory**: `./` (leave as is)
    - **Build Command**: `cd frontend && npm ci && npm run build`
    - **Output Directory**: `frontend/dist`
    - **Install Command**: `cd frontend && npm ci`
+   
+   > **Note**: These build settings should be configured in your Vercel Project Settings dashboard, not in `vercel.json`. The `vercel.json` file is now used only for runtime configuration (rewrites, headers, crons, etc.).
 
 3. **Add Environment Variables**
    
