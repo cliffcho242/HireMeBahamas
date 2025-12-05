@@ -163,7 +163,7 @@ export async function testBackends(): Promise<{
       const latency = Date.now() - start;
       
       if (response.ok) {
-        results.vercel = { available: true, latency };
+        results.vercel = { available: true, latency, error: '' };
       } else {
         results.vercel = { 
           available: false, 
@@ -175,6 +175,7 @@ export async function testBackends(): Promise<{
       results.vercel = { 
         available: false, 
         error: error.message || 'Connection failed',
+        latency: 0,
       };
     }
   }
@@ -190,7 +191,7 @@ export async function testBackends(): Promise<{
       const latency = Date.now() - start;
       
       if (response.ok) {
-        results.render = { available: true, latency };
+        results.render = { available: true, latency, error: '' };
       } else {
         results.render = { 
           available: false, 
@@ -202,6 +203,7 @@ export async function testBackends(): Promise<{
       results.render = { 
         available: false, 
         error: error.message || 'Connection failed',
+        latency: 0,
       };
     }
   }
