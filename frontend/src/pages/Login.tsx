@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import AppleSignin from 'react-apple-signin-auth';
 import { getOAuthConfig } from '../utils/oauthConfig';
-import { ApiError, GoogleCredentialResponse, AppleSignInResponse } from '../types';
+import { GoogleCredentialResponse, AppleSignInResponse } from '../types';
 import { useLoadingMessages, DEFAULT_AUTH_MESSAGES } from '../hooks/useLoadingMessages';
 import { runConnectionDiagnostic, testConnection, getCurrentApiUrl } from '../utils/connectionTest';
 import { showFriendlyError } from '../utils/friendlyErrors';
@@ -17,8 +17,7 @@ import {
   HeartIcon,
   PhotoIcon,
   VideoCameraIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
 const Login: React.FC = () => {
