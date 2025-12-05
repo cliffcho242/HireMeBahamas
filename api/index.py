@@ -122,6 +122,7 @@ except ImportError:
 
 # Backend imports with graceful fallback
 HAS_BACKEND = False
+BACKEND_ERROR = None
 try:
     api_dir = os.path.dirname(os.path.abspath(__file__))
     sys.path.insert(0, api_dir)
@@ -139,8 +140,10 @@ try:
     HAS_BACKEND = True
     logger.info("✅ Backend modules imported successfully")
 except Exception as e:
+    BACKEND_ERROR = str(e)
     logger.warning(f"⚠️  Backend modules not available: {e}")
-    logger.debug(f"Full traceback:", exc_info=True)
+    logger.warning(f"⚠️  Full traceback: {traceback.format_exc()}")
+    logger.info("Running in FALLBACK MODE with limited API functionality")
 
 # ============================================================================
 # CONFIGURATION
@@ -438,7 +441,7 @@ async def get_user_from_db(user_id: int):
 async def health():
     """Instant health check - responds in <5ms"""
     logger.info("Health check called")
-    return {
+    response = {
         "status": "healthy",
         "platform": "vercel-serverless",
         "region": os.getenv("VERCEL_REGION", "unknown"),
@@ -448,6 +451,42 @@ async def health():
         "database": "connected" if db_engine else "unavailable",
         "jwt": "configured" if JWT_SECRET != "dev-secret-key-change-in-production" else "using_default",
         "database_url_set": bool(DATABASE_URL),
+    }
+    
+    # Include backend error details if running in fallback mode
+    if not HAS_BACKEND and BACKEND_ERROR:
+        response["backend_error"] = BACKEND_ERROR
+        response["note"] = "Backend running in fallback mode - some endpoints may have limited functionality"
+    
+    return response
+
+@app.get("/api/status")
+@app.get("/status")
+async def status():
+    """
+    Backend status endpoint for frontend health checks.
+    Returns detailed status information about backend availability.
+    """
+    return {
+        "status": "online",
+        "backend_loaded": HAS_BACKEND,
+        "backend_status": "full" if HAS_BACKEND else "fallback",
+        "backend_error": BACKEND_ERROR if not HAS_BACKEND and BACKEND_ERROR else None,
+        "database_available": HAS_DB and bool(DATABASE_URL),
+        "database_connected": bool(db_engine) if HAS_DB else False,
+        "jwt_configured": JWT_SECRET != "dev-secret-key-change-in-production",
+        "timestamp": int(time.time()),
+        "version": "2.0.0",
+        "environment": os.getenv("ENVIRONMENT", "not_set"),
+        "capabilities": {
+            "auth": HAS_BACKEND,
+            "posts": HAS_BACKEND,
+            "jobs": HAS_BACKEND,
+            "users": HAS_BACKEND,
+            "messages": HAS_BACKEND,
+            "notifications": HAS_BACKEND,
+        },
+        "recommendation": "Backend is fully operational" if HAS_BACKEND else "Backend running in limited mode - some features may not work. Check backend_error for details."
     }
 
 @app.get("/api/diagnostic")
