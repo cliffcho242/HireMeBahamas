@@ -17,29 +17,14 @@ The following legacy properties in `vercel.json` override Vercel's Project Setti
 When these properties are present, Vercel ignores the Build & Development Settings configured in the project dashboard, which can cause confusion and maintenance issues.
 
 ## Solution
-Removed all legacy build properties from the following files:
+Removed legacy build properties from the root `vercel.json` file:
 
-### 1. `next-app/vercel.json`
-**Removed:**
-- `buildCommand: "npm run build"`
-- `outputDirectory: ".next"`
-- `installCommand: "npm install"`
-
-**Why it works:** The `framework: "nextjs"` property tells Vercel to use Next.js framework detection, which automatically handles the build process correctly.
-
-### 2. `vercel_immortal.json`
+### Root `vercel.json`
 **Removed:**
 - `buildCommand: "cd frontend && npm ci && npm run build"`
 - `outputDirectory: "frontend/dist"`
-- `installCommand: "cd frontend && npm ci"`
 
-**Why it works:** The `framework: "vite"` property enables Vite framework auto-detection, which knows how to build the project.
-
-### 3. `vercel_backend.json`
-**Removed:**
-- `installCommand: "pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt"`
-
-**Why it works:** Vercel's Python runtime automatically detects and installs dependencies from `requirements.txt` using the optimal method.
+**Why it works:** These settings should be configured in the Vercel Project Settings dashboard under "Build & Development Settings" instead of in the configuration file. This allows Vercel to properly manage build settings and eliminates the warning.
 
 ## What Was Preserved
 All other important configuration remains intact:
