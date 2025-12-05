@@ -478,7 +478,10 @@ async def warm_cache_endpoint():
     This endpoint should be called by a cron job every 5 minutes
     to keep the cache hot and ensure sub-100ms response times.
     
-    Example Render cron: */5 * * * * curl -X POST https://hiremebahamas.onrender.com/warm-cache
+    Example cron job: */5 * * * * curl -X POST https://your-backend-url/warm-cache
+    
+    For Railway: Use GitHub Actions workflow (scheduled-ping.yml)
+    For Vercel: Add to vercel.json cron configuration
     """
     result = await warm_cache()
     return result
