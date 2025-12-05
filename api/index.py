@@ -797,6 +797,27 @@ async def catch_all_api_routes(request: Request, path: str):
     )
 
 # ============================================================================
+# FOREVER FIX INTEGRATION
+# ============================================================================
+try:
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from forever_fix import ForeverFixMiddleware, get_forever_fix_status
+    
+    # Add Forever Fix middleware to prevent app death
+    app.add_middleware(ForeverFixMiddleware)
+    logger.info("✅ Forever Fix middleware enabled")
+    
+    # Add status endpoint for monitoring
+    @app.get("/api/forever-status")
+    async def forever_status():
+        """Get Forever Fix system status"""
+        return get_forever_fix_status()
+    
+except ImportError as e:
+    logger.warning(f"⚠️ Forever Fix not available: {e}")
+
+# ============================================================================
 # EXPORT HANDLER FOR VERCEL
 # ============================================================================
 handler = Mangum(app, lifespan="off")
