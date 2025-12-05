@@ -30,6 +30,17 @@ const Login: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | null>(null);
   const [connectionMessage, setConnectionMessage] = useState<string>('');
   
+  // Generate particles once on mount for better performance
+  const particles = React.useMemo(() => 
+    Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      delay: Math.random() * 2,
+      duration: 3 + Math.random() * 2,
+    })), []
+  );
+  
   // Use custom hook for progressive loading messages
   const { loadingMessage, startLoading, stopLoading } = useLoadingMessages({
     messages: DEFAULT_AUTH_MESSAGES,
@@ -223,22 +234,22 @@ const Login: React.FC = () => {
 
       {/* Floating Particles */}
       <div className="absolute inset-0 pointer-events-none">
-        {[...Array(20)].map((_, i) => (
+        {particles.map((particle) => (
           <motion.div
-            key={i}
+            key={particle.id}
             className="absolute w-1 h-1 bg-white rounded-full opacity-30"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: particle.left,
+              top: particle.top,
             }}
             animate={{
               y: [0, -30, 0],
               opacity: [0.3, 0.8, 0.3],
             }}
             transition={{
-              duration: 3 + Math.random() * 2,
+              duration: particle.duration,
               repeat: Infinity,
-              delay: Math.random() * 2,
+              delay: particle.delay,
             }}
           />
         ))}
@@ -552,12 +563,12 @@ const Login: React.FC = () => {
                 {/* Google Sign-In - Only show if properly configured */}
                 {isGoogleOAuthEnabled && (
                   <GoogleOAuthProvider clientId={googleClientId}>
-                    <div className="w-full backdrop-blur-xl bg-white/10 border border-white/20 rounded-lg sm:rounded-xl hover:bg-white/15 transition-all overflow-hidden">
+                    <div className="w-full">
                       <GoogleLogin
                         onSuccess={handleGoogleSuccess}
                         onError={handleGoogleError}
                         useOneTap
-                        theme="filled_black"
+                        theme="outline"
                         size="large"
                         text="signin_with"
                         shape="rectangular"
