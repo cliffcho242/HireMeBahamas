@@ -72,6 +72,13 @@ Possible reasons for detection failure:
 
 Added explicit `@vercel/python` builder configuration to `vercel.json`:
 
+**Note**: While the `builds` configuration is considered legacy by Vercel (in favor of automatic detection), it's necessary in this case because:
+1. Automatic detection was failing to install dependencies
+2. The modern `functions`-only approach wasn't working reliably
+3. Explicit builder provides guaranteed dependency installation
+4. This is still fully supported by Vercel for production use
+5. Many production Vercel projects use this approach for reliability
+
 #### Before (Implicit Detection)
 ```json
 {
@@ -309,7 +316,11 @@ The api/index.py properly exports the handler:
 from mangum import Mangum
 from fastapi import FastAPI
 
-app = FastAPI(...)
+# FastAPI application (simplified for example)
+app = FastAPI(
+    title="HireMeBahamas API",
+    version="2.0.0"
+)
 
 # Export handler for Vercel
 handler = Mangum(app, lifespan="off")
