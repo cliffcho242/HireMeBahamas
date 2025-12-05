@@ -6,6 +6,16 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 ---
 
+## 🚨 **IMPORTANT: Vercel Sign-In Issues?**
+
+**If users cannot sign in on your Vercel deployment**, see the fix guide:
+
+📖 **[URGENT: Fix Vercel Sign-In Issues](./URGENT_FIX_VERCEL_SIGNIN.md)** - 5-minute fix for database connection
+
+**Quick Fix**: Vercel environment variables (DATABASE_URL, SECRET_KEY) need to be configured. [See guide →](./FIX_VERCEL_DATABASE_CONNECTION.md)
+
+---
+
 ## 🚀 **NEW: Complete Deployment & Connection Guides**
 
 **📖 [START HERE: Deployment Guide](./START_HERE_DEPLOYMENT.md)** - Your starting point for deployment
