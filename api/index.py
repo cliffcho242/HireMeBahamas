@@ -203,6 +203,8 @@ MOCK_USERS = {
 # ============================================================================
 # DATABASE CONNECTION
 # ============================================================================
+# Reuse backend's database engine if available to avoid creating duplicate connections
+# This prevents resource exhaustion in serverless environments
 db_engine = None
 async_session_maker = None
 
@@ -219,9 +221,24 @@ if DATABASE_URL:
 else:
     logger.warning("⚠️  DATABASE_URL not configured - API will have limited functionality")
 
-if HAS_DB and DATABASE_URL:
+# Use backend's database engine if available, otherwise create fallback engine
+if HAS_BACKEND and HAS_DB:
     try:
-        logger.info("Initializing database connection...")
+        # Import backend database engine (already initialized during backend module import)
+        from backend_app.database import engine as backend_engine
+        from backend_app.database import AsyncSessionLocal as backend_session_maker
+        
+        db_engine = backend_engine
+        async_session_maker = backend_session_maker
+        logger.info("✅ Using backend's database engine (avoiding duplicate connections)")
+    except (ImportError, AttributeError, ModuleNotFoundError) as e:
+        logger.warning(f"⚠️  Could not import backend database modules: {e}")
+        # Fallback will be created below if needed
+
+# Fallback: Create minimal database engine only if backend isn't available
+if db_engine is None and HAS_DB and DATABASE_URL:
+    try:
+        logger.info("Backend database not available, creating fallback database connection...")
         # Convert postgres:// to postgresql+asyncpg://
         db_url = DATABASE_URL
         if db_url.startswith("postgres://"):
@@ -231,7 +248,7 @@ if HAS_DB and DATABASE_URL:
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
             logger.info("Converted postgresql:// to postgresql+asyncpg://")
         
-        logger.info("Creating database engine with asyncpg...")
+        logger.info("Creating fallback database engine with asyncpg...")
         db_engine = create_async_engine(
             db_url,
             pool_pre_ping=True,
@@ -243,16 +260,17 @@ if HAS_DB and DATABASE_URL:
         async_session_maker = sessionmaker(
             db_engine, class_=AsyncSession, expire_on_commit=False
         )
-        logger.info("✅ Database engine created successfully")
+        logger.info("✅ Fallback database engine created successfully")
     except Exception as e:
         logger.error(f"❌ Database initialization failed: {e}\nTraceback: {traceback.format_exc()}")
         db_engine = None
         async_session_maker = None
 else:
-    if not HAS_DB:
-        logger.warning("⚠️  Database drivers not available (sqlalchemy, asyncpg)")
-    if not DATABASE_URL:
-        logger.warning("⚠️  DATABASE_URL not set in environment")
+    if db_engine is None:
+        if not HAS_DB:
+            logger.warning("⚠️  Database drivers not available (sqlalchemy, asyncpg)")
+        if not DATABASE_URL:
+            logger.warning("⚠️  DATABASE_URL not set in environment")
 
 # ============================================================================
 # CREATE FASTAPI APP
@@ -799,13 +817,16 @@ async def catch_all_api_routes(request: Request, path: str):
 # ============================================================================
 # FOREVER FIX INTEGRATION
 # ============================================================================
+# Forever Fix is optional and may not be available in serverless environments
+# where the parent directory is not deployed. This is safe to skip.
 try:
-    # Use relative import from parent directory
-    # Add parent directory to path only if not already there
+    # Attempt to import forever_fix from parent directory
+    # This will only work if the file is deployed (e.g., Railway, local dev)
     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if parent_dir not in sys.path:
         sys.path.insert(0, parent_dir)
     
+    # Try importing - will raise ImportError if not available
     from forever_fix import ForeverFixMiddleware, get_forever_fix_status
     
     # Add Forever Fix middleware to prevent app death
@@ -818,10 +839,12 @@ try:
         """Get Forever Fix system status"""
         return get_forever_fix_status()
     
-except ImportError as e:
-    logger.warning(f"⚠️ Forever Fix not available: {e}")
+except ImportError:
+    # Expected in serverless environments where forever_fix.py is not deployed
+    logger.info("ℹ️  Forever Fix not available (expected in serverless environments like Vercel)")
 except Exception as e:
-    logger.error(f"❌ Error loading Forever Fix: {e}")
+    # Log unexpected errors but don't crash - this is optional functionality
+    logger.warning(f"⚠️  Could not load Forever Fix (non-critical): {e}")
 
 # ============================================================================
 # EXPORT HANDLER FOR VERCEL
