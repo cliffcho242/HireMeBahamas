@@ -85,12 +85,13 @@ const Login: React.FC = () => {
         setConnectionMessage(`Connected to backend${backendInfo}`);
       } else {
         setConnectionStatus('disconnected');
-        setConnectionMessage(result.message);
         
-        // Show warning toast with more helpful message
+        // Use user-friendly message for cold start scenarios
         const helpMessage = result.message.includes('timeout') 
           ? 'Backend is starting up (cold start). This can take 30-60 seconds. Please wait and try logging in.'
           : result.message;
+        
+        setConnectionMessage(helpMessage);
         
         toast.error(
           `Backend connection: ${helpMessage}`,
@@ -267,10 +268,12 @@ const Login: React.FC = () => {
           className={`fixed top-0 left-0 right-0 z-50 ${
             connectionStatus === 'checking' 
               ? 'bg-gradient-to-r from-yellow-500 to-orange-500' 
-              : 'bg-gradient-to-r from-red-500 to-pink-500'
+              : connectionMessage.includes('cold start')
+                ? 'bg-gradient-to-r from-blue-500 to-indigo-500'
+                : 'bg-gradient-to-r from-red-500 to-pink-500'
           } text-white px-4 py-3 shadow-lg backdrop-blur-sm`}
         >
-          <div className="container mx-auto flex items-center justify-center space-x-2">
+          <div className="container mx-auto flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 text-center sm:text-left">
             {connectionStatus === 'checking' ? (
               <>
                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -279,10 +282,20 @@ const Login: React.FC = () => {
                 </svg>
                 <span className="font-medium">Checking backend connection...</span>
               </>
+            ) : connectionMessage.includes('cold start') ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
+                  <span className="font-semibold">⏱️ {connectionMessage}</span>
+                </div>
+              </>
             ) : (
               <>
-                <ExclamationTriangleIcon className="h-5 w-5" />
-                <span className="font-medium">Backend connection issue: {connectionMessage}</span>
+                <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0" />
+                <span className="font-medium">{connectionMessage}</span>
               </>
             )}
           </div>
