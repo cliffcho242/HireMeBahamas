@@ -180,10 +180,10 @@ Vercel Env Variables (Project > Settings > Environment Variables):
 Workflow File:
    .github/workflows/deploy-vercel.yml
 
-Documentation:
-   • VERCEL_DEPLOYMENT_404_FIX.md
-   • FIX_SIGN_IN_DEPLOYMENT_GUIDE.md
-   • TROUBLESHOOTING_DEPLOYMENT_NOT_FOUND.md
+Documentation (in order of use):
+   1. TROUBLESHOOTING_DEPLOYMENT_NOT_FOUND.md (Start here for 404 errors)
+   2. FIX_SIGN_IN_DEPLOYMENT_GUIDE.md (Complete setup guide)
+   3. VERCEL_DEPLOYMENT_404_FIX.md (Detailed technical fixes)
 """)
     
     print_header("✅ Setup Checklist")
@@ -206,9 +206,10 @@ Documentation:
         print(item)
     
     print("\n" + "=" * 60)
-    print("📚 For more help, see:")
-    print("   • FIX_SIGN_IN_DEPLOYMENT_GUIDE.md")
-    print("   • DEPLOYMENT_CONNECTION_GUIDE.md")
+    print("📚 For more help, see (in order):")
+    print("   1. TROUBLESHOOTING_DEPLOYMENT_NOT_FOUND.md (404 error troubleshooting)")
+    print("   2. FIX_SIGN_IN_DEPLOYMENT_GUIDE.md (Complete setup guide)")
+    print("   3. DEPLOYMENT_CONNECTION_GUIDE.md (Database and service connections)")
     print("=" * 60 + "\n")
     
     return 0

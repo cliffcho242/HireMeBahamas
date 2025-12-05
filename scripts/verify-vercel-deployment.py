@@ -241,8 +241,10 @@ def main():
         return 0
     else:
         print("❌ Some checks failed!")
-        print("\n📖 See VERCEL_DEPLOYMENT_404_FIX.md for detailed fix guide")
-        print("📖 See FIX_SIGN_IN_DEPLOYMENT_GUIDE.md for setup instructions")
+        print("\n📖 Troubleshooting guides:")
+        print("   • TROUBLESHOOTING_DEPLOYMENT_NOT_FOUND.md - Complete troubleshooting guide")
+        print("   • VERCEL_DEPLOYMENT_404_FIX.md - Detailed fix documentation")
+        print("   • FIX_SIGN_IN_DEPLOYMENT_GUIDE.md - Setup instructions")
         return 1
 
 if __name__ == "__main__":
