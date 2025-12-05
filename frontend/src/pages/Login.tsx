@@ -276,36 +276,36 @@ const Login: React.FC = () => {
 
       
       {/* Hero Section */}
-      <div className={`container mx-auto px-4 relative z-10 ${connectionStatus && connectionStatus !== 'connected' ? 'pt-20 pb-8' : 'py-8'}`}>
-        <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-4rem)]">
+      <div className={`container mx-auto px-4 sm:px-6 relative z-10 ${connectionStatus && connectionStatus !== 'connected' ? 'pt-20 pb-4 sm:pb-8' : 'py-4 sm:py-8'}`}>
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[calc(100vh-4rem)]">
           {/* Left Side - Branding */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center lg:text-left"
+            className="text-center lg:text-left space-y-4 sm:space-y-6 lg:space-y-0"
           >
             {/* Logo with Glow Effect */}
             <motion.div 
-              className="flex items-center justify-center lg:justify-start mb-8"
+              className="flex items-center justify-center lg:justify-start mb-4 sm:mb-6 lg:mb-8"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             >
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur-xl opacity-60 animate-pulse"></div>
-                <div className="relative w-16 h-16 bg-gradient-to-br from-blue-600 via-cyan-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-2xl">
-                  <span className="text-white font-bold text-2xl">HB</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl sm:rounded-2xl blur-lg sm:blur-xl opacity-60 animate-pulse"></div>
+                <div className="relative w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-600 via-cyan-500 to-blue-700 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl">
+                  <span className="text-white font-bold text-lg sm:text-xl lg:text-2xl">HB</span>
                 </div>
               </div>
-              <h1 className="text-5xl font-bold ml-4 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold ml-3 sm:ml-4 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent">
                 HireMeBahamas
               </h1>
             </motion.div>
 
             {/* Tagline with Shimmer Effect */}
             <motion.h2 
-              className="text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight"
+              className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-white mb-3 sm:mb-4 lg:mb-6 leading-tight px-2 sm:px-0"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
@@ -317,7 +317,7 @@ const Login: React.FC = () => {
             </motion.h2>
 
             <motion.p 
-              className="text-xl text-slate-300 mb-8 max-w-lg mx-auto lg:mx-0"
+              className="text-base sm:text-lg lg:text-xl text-slate-300 mb-4 sm:mb-6 lg:mb-8 max-w-lg mx-auto lg:mx-0 px-2 sm:px-0"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.6 }}
@@ -326,8 +326,8 @@ const Login: React.FC = () => {
               showcase your talents, and discover amazing opportunities.
             </motion.p>
 
-            {/* Features Grid - Glass Morphism */}
-            <div className="grid grid-cols-2 gap-4 max-w-lg mx-auto lg:mx-0">
+            {/* Features Grid - Glass Morphism - Responsive */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4 max-w-lg mx-auto lg:mx-0 px-2 sm:px-0">
               {features.map((feature, index) => (
                 <motion.div
                   key={feature.text}
@@ -337,21 +337,21 @@ const Login: React.FC = () => {
                   whileHover={{ scale: 1.05, y: -5 }}
                   className="group relative cursor-pointer"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-4 shadow-xl hover:shadow-2xl transition-all duration-300">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-xl bg-gradient-to-br ${feature.color === 'text-blue-600' ? 'from-blue-500 to-cyan-500' : feature.color === 'text-purple-600' ? 'from-purple-500 to-pink-500' : feature.color === 'text-green-600' ? 'from-green-500 to-emerald-500' : feature.color === 'text-red-600' ? 'from-red-500 to-rose-500' : feature.color === 'text-yellow-600' ? 'from-yellow-500 to-orange-500' : 'from-indigo-500 to-purple-500'}`}>
-                        <feature.icon className="w-6 h-6 text-white" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl sm:rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 lg:p-4 shadow-xl hover:shadow-2xl transition-all duration-300">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-br ${feature.color === 'text-blue-600' ? 'from-blue-500 to-cyan-500' : feature.color === 'text-purple-600' ? 'from-purple-500 to-pink-500' : feature.color === 'text-green-600' ? 'from-green-500 to-emerald-500' : feature.color === 'text-red-600' ? 'from-red-500 to-rose-500' : feature.color === 'text-yellow-600' ? 'from-yellow-500 to-orange-500' : 'from-indigo-500 to-purple-500'}`}>
+                        <feature.icon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
                       </div>
-                      <span className="text-sm font-medium text-white">{feature.text}</span>
+                      <span className="text-xs sm:text-sm font-medium text-white leading-tight">{feature.text}</span>
                     </div>
                   </div>
                 </motion.div>
               ))}
             </div>
 
-            {/* Stats - Glassmorphism Design */}
-            <div className="mt-12 grid grid-cols-3 gap-4 max-w-lg mx-auto lg:mx-0">
+            {/* Stats - Glassmorphism Design - Responsive */}
+            <div className="mt-6 sm:mt-8 lg:mt-12 grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4 max-w-lg mx-auto lg:mx-0 px-2 sm:px-0">
               <motion.div 
                 className="group relative"
                 whileHover={{ scale: 1.05 }}
@@ -359,10 +359,10 @@ const Login: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-300" />
-                <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-4 text-center shadow-xl">
-                  <div className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">5K+</div>
-                  <div className="text-xs font-medium text-slate-300 mt-1">Professionals</div>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl sm:rounded-2xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-300" />
+                <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 lg:p-4 text-center shadow-xl">
+                  <div className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">5K+</div>
+                  <div className="text-[10px] sm:text-xs font-medium text-slate-300 mt-0.5 sm:mt-1">Professionals</div>
                 </div>
               </motion.div>
               <motion.div 
@@ -372,10 +372,10 @@ const Login: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-300" />
-                <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-4 text-center shadow-xl">
-                  <div className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">1K+</div>
-                  <div className="text-xs font-medium text-slate-300 mt-1">Job Posts</div>
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl sm:rounded-2xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-300" />
+                <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 lg:p-4 text-center shadow-xl">
+                  <div className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">1K+</div>
+                  <div className="text-[10px] sm:text-xs font-medium text-slate-300 mt-0.5 sm:mt-1">Job Posts</div>
                 </div>
               </motion.div>
               <motion.div 
@@ -385,35 +385,35 @@ const Login: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.0 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-300" />
-                <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-4 text-center shadow-xl">
-                  <div className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">500+</div>
-                  <div className="text-xs font-medium text-slate-300 mt-1">Companies</div>
+                <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl sm:rounded-2xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-300" />
+                <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 lg:p-4 text-center shadow-xl">
+                  <div className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">500+</div>
+                  <div className="text-[10px] sm:text-xs font-medium text-slate-300 mt-0.5 sm:mt-1">Companies</div>
                 </div>
               </motion.div>
             </div>
           </motion.div>
 
-          {/* Right Side - Login Form with Ultra Modern Design */}
+          {/* Right Side - Login Form with Ultra Modern Design - Responsive */}
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
-            className="max-w-md mx-auto w-full relative"
+            className="max-w-md mx-auto w-full relative px-2 sm:px-0"
           >
             {/* Glow Effect */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-3xl blur-2xl opacity-30 animate-pulse" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl sm:rounded-3xl blur-xl sm:blur-2xl opacity-30 animate-pulse" />
             
             {/* Glass Morphism Card */}
-            <div className="relative backdrop-blur-2xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-8 hover:shadow-cyan-500/50 transition-all duration-500">
+            <div className="relative backdrop-blur-2xl bg-white/10 border border-white/20 rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 lg:p-8 hover:shadow-cyan-500/50 transition-all duration-500">
               {/* Decorative Elements */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-purple-500/20 to-pink-500/20 rounded-full blur-3xl" />
+              <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full blur-2xl sm:blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-24 sm:w-32 h-24 sm:h-32 bg-gradient-to-tr from-purple-500/20 to-pink-500/20 rounded-full blur-2xl sm:blur-3xl" />
               
               <div className="relative">
-                <div className="text-center mb-8">
+                <div className="text-center mb-4 sm:mb-6 lg:mb-8">
                   <motion.h2 
-                    className="text-3xl font-bold bg-gradient-to-r from-white via-cyan-200 to-blue-200 bg-clip-text text-transparent mb-2"
+                    className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-cyan-200 to-blue-200 bg-clip-text text-transparent mb-2"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
@@ -421,7 +421,7 @@ const Login: React.FC = () => {
                     Welcome Back
                   </motion.h2>
                   <motion.p 
-                    className="text-slate-300"
+                    className="text-sm sm:text-base text-slate-300"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.4 }}
@@ -430,23 +430,23 @@ const Login: React.FC = () => {
                   </motion.p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 lg:space-y-5">
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.5 }}
                   >
-                    <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
+                    <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-white mb-1.5 sm:mb-2">
                       Email or Phone
                     </label>
                     <div className="relative group">
-                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity blur" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg sm:rounded-xl opacity-0 group-hover:opacity-20 transition-opacity blur" />
                       <input
                         id="email"
                         type="text"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="relative w-full px-4 py-3 backdrop-blur-xl bg-white/10 border border-white/30 text-white placeholder-slate-400 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all focus:bg-white/15"
+                        className="relative w-full px-3 sm:px-4 py-2.5 sm:py-3 backdrop-blur-xl bg-white/10 border border-white/30 text-white placeholder-slate-400 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all focus:bg-white/15 text-sm sm:text-base"
                         placeholder="Enter your email"
                         required
                       />
@@ -458,17 +458,17 @@ const Login: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.6 }}
                   >
-                    <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
+                    <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-white mb-1.5 sm:mb-2">
                       Password
                     </label>
                     <div className="relative group">
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity blur" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg sm:rounded-xl opacity-0 group-hover:opacity-20 transition-opacity blur" />
                       <input
                         id="password"
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="relative w-full px-4 py-3 backdrop-blur-xl bg-white/10 border border-white/30 text-white placeholder-slate-400 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all focus:bg-white/15"
+                        className="relative w-full px-3 sm:px-4 py-2.5 sm:py-3 backdrop-blur-xl bg-white/10 border border-white/30 text-white placeholder-slate-400 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all focus:bg-white/15 text-sm sm:text-base"
                         placeholder="Enter your password"
                         required
                       />
@@ -476,7 +476,7 @@ const Login: React.FC = () => {
                   </motion.div>
 
                   <motion.div 
-                    className="flex items-center justify-between text-sm"
+                    className="flex items-center justify-between text-xs sm:text-sm"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.7 }}
@@ -484,7 +484,7 @@ const Login: React.FC = () => {
                     <label className="flex items-center group cursor-pointer">
                       <input 
                         type="checkbox" 
-                        className="rounded border-white/30 bg-white/10 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 transition-all"
+                        className="rounded border-white/30 bg-white/10 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 transition-all w-4 h-4"
                       />
                       <span className="ml-2 text-slate-300 group-hover:text-white transition-colors">Remember me</span>
                     </label>
@@ -506,13 +506,13 @@ const Login: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.8 }}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 rounded-xl transition-all duration-300" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-700 rounded-xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity" />
-                    <span className="relative block py-3 font-semibold text-white">
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 rounded-lg sm:rounded-xl transition-all duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 rounded-lg sm:rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-700 rounded-lg sm:rounded-xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity" />
+                    <span className="relative block py-2.5 sm:py-3 font-semibold text-white text-sm sm:text-base">
                       {isLoading || submitting ? (
                         <span className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin -ml-1 mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
@@ -528,7 +528,7 @@ const Login: React.FC = () => {
               {/* Divider - Only show if OAuth is enabled */}
               {isAnyOAuthEnabled && (
                 <motion.div 
-                  className="relative my-6"
+                  className="relative my-4 sm:my-5 lg:my-6"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.9 }}
@@ -536,15 +536,15 @@ const Login: React.FC = () => {
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-white/20"></div>
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 backdrop-blur-xl bg-white/5 text-slate-300 rounded-full">or continue with</span>
+                  <div className="relative flex justify-center text-xs sm:text-sm">
+                    <span className="px-3 sm:px-4 backdrop-blur-xl bg-white/5 text-slate-300 rounded-full">or continue with</span>
                   </div>
                 </motion.div>
               )}
 
               {/* OAuth Buttons - Modern Glass Design */}
               <motion.div 
-                className="space-y-3"
+                className="space-y-2.5 sm:space-y-3"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.0 }}
@@ -552,7 +552,7 @@ const Login: React.FC = () => {
                 {/* Google Sign-In - Only show if properly configured */}
                 {isGoogleOAuthEnabled && (
                   <GoogleOAuthProvider clientId={googleClientId}>
-                    <div className="w-full backdrop-blur-xl bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all overflow-hidden">
+                    <div className="w-full backdrop-blur-xl bg-white/10 border border-white/20 rounded-lg sm:rounded-xl hover:bg-white/15 transition-all overflow-hidden">
                       <GoogleLogin
                         onSuccess={handleGoogleSuccess}
                         onError={handleGoogleError}
@@ -583,27 +583,27 @@ const Login: React.FC = () => {
                       <button
                         {...props}
                         type="button"
-                        className="w-full flex items-center justify-center space-x-2 py-3 px-4 backdrop-blur-xl bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all group transform hover:scale-[1.02] active:scale-[0.98]"
+                        className="w-full flex items-center justify-center space-x-2 py-2.5 sm:py-3 px-3 sm:px-4 backdrop-blur-xl bg-white/10 border border-white/20 rounded-lg sm:rounded-xl hover:bg-white/15 transition-all group transform hover:scale-[1.02] active:scale-[0.98]"
                       >
-                        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
                         </svg>
-                        <span className="font-medium text-white">Sign in with Apple</span>
+                        <span className="font-medium text-white text-sm sm:text-base">Sign in with Apple</span>
                       </button>
                     )}
                   />
                 )}
 
                 <motion.div 
-                  className="text-center pt-2"
+                  className="text-center pt-1 sm:pt-2"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 1.1 }}
                 >
-                  <span className="text-slate-300">Don't have an account? </span>
+                  <span className="text-xs sm:text-sm text-slate-300">Don't have an account? </span>
                   <Link 
                     to="/register" 
-                    className="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors hover:underline"
+                    className="text-xs sm:text-sm text-cyan-400 hover:text-cyan-300 font-semibold transition-colors hover:underline"
                   >
                     Sign Up
                   </Link>
@@ -612,7 +612,7 @@ const Login: React.FC = () => {
 
               {/* Footer - Glassmorphism Style */}
               <motion.div 
-                className="mt-8 pt-6 border-t border-white/10 text-center text-xs text-slate-400"
+                className="mt-4 sm:mt-6 lg:mt-8 pt-4 sm:pt-5 lg:pt-6 border-t border-white/10 text-center text-[10px] sm:text-xs text-slate-400"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.2 }}
