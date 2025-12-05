@@ -6,13 +6,18 @@ import sys
 import os
 from pathlib import Path
 
-# Add backend directory to Python path for imports
-backend_path = Path(__file__).parent.parent / "backend"
-sys.path.insert(0, str(backend_path))
+# Make backend_app importable as "app" for compatibility
+# In Vercel serverless, only the api/ directory is packaged
+api_dir = Path(__file__).parent
+sys.path.insert(0, str(api_dir))
 
-# Import the FastAPI app from backend
+# Create an alias so "import app" resolves to "backend_app"
+import backend_app
+sys.modules['app'] = backend_app
+
+# Import the FastAPI app from backend_app
 try:
-    from app.main import app
+    from backend_app.main import app
     from mangum import Mangum
     
     # Wrap FastAPI app with Mangum for Vercel serverless compatibility

@@ -61,6 +61,10 @@ redis==7.1.0
 # OAuth Libraries
 authlib==1.6.5
 
+# WebSocket Support (for real-time features)
+python-socketio==5.11.4
+python-engineio==4.9.1
+
 # ============================================================================
 # DEPLOYMENT NOTES:
 # 1. Vercel automatically installs from this requirements.txt
@@ -68,5 +72,5 @@ authlib==1.6.5
 # 3. No compilation required (no gcc/build-essential needed)
 # 4. python-jose[cryptography] provides 'jose' module for JWT
 # 5. asyncpg provides postgresql+asyncpg:// driver
-# 6. Flask dependencies removed (using FastAPI only)
+# 6. python-socketio for WebSocket/real-time communication
 # ============================================================================
