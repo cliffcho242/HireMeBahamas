@@ -47,12 +47,18 @@ self.addEventListener('install', (event) => {
         
         // Cache optional files - failures are OK
         const optionalResults = await Promise.allSettled(
-          optionalUrlsToCache.map(url => 
-            cache.add(url)
-              .then(() => console.log(`[SW] Cached optional file: ${url}`))
-              .catch(e => console.warn(`[SW] Failed to cache optional file ${url}:`, e.message))
-          )
+          optionalUrlsToCache.map(url => cache.add(url))
         );
+        
+        // Log results for each optional file
+        optionalResults.forEach((result, index) => {
+          const url = optionalUrlsToCache[index];
+          if (result.status === 'fulfilled') {
+            console.log(`[SW] ✓ Cached optional file: ${url}`);
+          } else {
+            console.warn(`[SW] ✗ Failed to cache optional file ${url}:`, result.reason?.message || result.reason);
+          }
+        });
         
         const successCount = optionalResults.filter(r => r.status === 'fulfilled').length;
         console.log(`[SW] Cached ${successCount}/${optionalUrlsToCache.length} optional files`);
