@@ -206,9 +206,8 @@ VITE_REQUEST_TIMEOUT=30000
         for js_file in js_files:
             with open(os.path.join(assets_dir, js_file), "r", encoding="utf-8") as f:
                 content = f.read()
-                # Skip checking for legacy Render URL in content
-                # This check is no longer relevant after migration
-                pass
+                # Check if production backend URL is present
+                if self.backend_url in content:
                     found_correct_url = True
                     print(f"✅ Found production URL in {js_file}")
                     break

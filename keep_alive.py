@@ -26,16 +26,15 @@ import random
 import requests
 
 # Get backend URL from environment variable
-# Default to Railway if not set (since Render is deprecated)
 _base_url = os.getenv("BACKEND_URL", "").strip()
 
-# Fallback to Railway if no URL provided
+# Fallback to localhost if no URL provided
 if not _base_url or not _base_url.startswith(("http://", "https://")):
     print("⚠️ WARNING: BACKEND_URL not set. This script is deprecated.")
     print("   Use GitHub Actions workflows instead:")
     print("   - .github/workflows/keep-database-awake.yml")
     print("   - .github/workflows/scheduled-ping.yml")
-    _base_url = os.getenv("RAILWAY_BACKEND_URL", "http://localhost:8000")
+    _base_url = "http://localhost:8000"
 
 HEALTH_URL = _base_url + "/health"
 
