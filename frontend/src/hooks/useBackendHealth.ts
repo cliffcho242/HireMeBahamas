@@ -13,8 +13,8 @@ interface HealthStatus {
 // Configuration for health check retries
 const HEALTH_CHECK_CONFIG = {
   pingTimeout: 5000,          // 5 seconds for quick ping
-  initialTimeout: 10000,      // 10 seconds for first full check
-  wakeUpTimeout: 30000,       // 30 seconds for wake-up retries
+  initialTimeout: 30000,      // 30 seconds for first full check (Railway/Render cold starts)
+  wakeUpTimeout: 45000,       // 45 seconds for wake-up retries
   retryDelays: [2000, 4000, 6000, 10000], // Progressive delays: 2s, 4s, 6s, 10s
   maxRetries: 4,
 };

@@ -76,9 +76,13 @@ const Login: React.FC = () => {
         setConnectionStatus('disconnected');
         setConnectionMessage(result.message);
         
-        // Show warning toast
+        // Show warning toast with more helpful message
+        const helpMessage = result.message.includes('timeout') 
+          ? 'Backend is starting up (cold start). This can take 30-60 seconds. Please wait and try logging in.'
+          : result.message;
+        
         toast.error(
-          `Backend connection issue: ${result.message}. Please contact support.`,
+          `Backend connection: ${helpMessage}`,
           { duration: 10000 }
         );
       }
