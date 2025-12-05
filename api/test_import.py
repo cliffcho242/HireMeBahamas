@@ -2,6 +2,8 @@
 Simple test function to verify Vercel can install and import fastapi.
 This helps diagnose if the issue is with dependency installation or with the main handler.
 """
+import json
+
 
 def handler(event, context):
     """
@@ -42,7 +44,7 @@ def handler(event, context):
         import mangum
         result["mangum"] = {
             "status": "✓ INSTALLED",
-            "version": mangum.__version__ if hasattr(mangum, "__version__") else "unknown",
+            "version": getattr(mangum, "__version__", "unknown"),
         }
     except ImportError as e:
         result["mangum"] = {
@@ -63,10 +65,11 @@ def handler(event, context):
             "error": str(e),
         }
     
-    # List installed packages
+    # List installed packages using importlib.metadata (modern approach)
     try:
-        import pkg_resources
-        installed = [f"{pkg.key}=={pkg.version}" for pkg in pkg_resources.working_set]
+        from importlib import metadata
+        distributions = list(metadata.distributions())
+        installed = [f"{dist.name}=={dist.version}" for dist in distributions]
         result["installed_packages_count"] = len(installed)
         result["sample_packages"] = installed[:10]  # First 10 packages
     except Exception as e:
@@ -77,5 +80,5 @@ def handler(event, context):
         "headers": {
             "Content-Type": "application/json",
         },
-        "body": str(result),
+        "body": json.dumps(result),
     }
