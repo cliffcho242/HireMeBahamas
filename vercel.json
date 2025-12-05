@@ -1,8 +1,12 @@
 {
   "functions": {
-    "api/**/*.py": {
+    "api/index.py": {
       "runtime": "python3.12",
       "maxDuration": 30
+    },
+    "api/cron/*.py": {
+      "runtime": "python3.12",
+      "maxDuration": 10
     }
   },
   "rewrites": [
