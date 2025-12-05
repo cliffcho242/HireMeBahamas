@@ -66,9 +66,6 @@ hiredis==3.0.0
 # OAuth Libraries
 authlib==1.6.5
 
-# Flask Framework (for compatibility with legacy code)
-Flask==3.0.3
-
 # ============================================================================
 # DEPLOYMENT NOTES:
 # 1. Vercel automatically installs from this requirements.txt
