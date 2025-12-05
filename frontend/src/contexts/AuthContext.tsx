@@ -184,7 +184,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Setup session expiration handlers
   useEffect(() => {
-    sessionManager.onExpired(() => {
+    // Handler for session expiring warning (5 minutes before timeout)
+    const handleExpiring = () => {
+      console.warn('Session expiring soon');
+      toast('Your session will expire in 5 minutes. Please save your work.', {
+        duration: 10000,
+        icon: '⏰',
+      });
+    };
+
+    // Handler for session expired
+    const handleExpired = () => {
       setToken(null);
       setUser(null);
       toast.error('Your session has expired. Please log in again.');
@@ -199,7 +209,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
-    });
+    };
+
+    sessionManager.onExpiring(handleExpiring);
+    sessionManager.onExpired(handleExpired);
+
+    // Cleanup function
+    return () => {
+      // Note: sessionManager doesn't support removing specific listeners
+      // This is okay as we only set them once per AuthProvider mount
+    };
   }, []);
 
   // Setup automatic token refresh

@@ -132,13 +132,21 @@ class SessionManager {
   }
 
   /**
-   * Setup activity tracking
+   * Setup activity tracking with throttling to reduce overhead
    */
   private setupActivityTracking(): void {
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
     
+    // Throttle activity updates to once per 10 seconds to reduce overhead
+    let lastUpdate = 0;
+    const THROTTLE_MS = 10000; // 10 seconds
+    
     const handleActivity = () => {
-      this.updateActivity();
+      const now = Date.now();
+      if (now - lastUpdate > THROTTLE_MS) {
+        lastUpdate = now;
+        this.updateActivity();
+      }
     };
 
     // Store listeners so we can remove them later

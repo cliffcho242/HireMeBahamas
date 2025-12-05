@@ -23,6 +23,39 @@ interface FollowingResponse {
 // Session storage key - must match sessionManager.ts
 const SESSION_KEY = 'hireme_session';
 
+// Connection state management for user feedback
+type ConnectionState = 'connected' | 'connecting' | 'disconnected' | 'error';
+
+class ConnectionStateManager {
+  private state: ConnectionState = 'connected';
+  private listeners: Array<(state: ConnectionState) => void> = [];
+
+  getState(): ConnectionState {
+    return this.state;
+  }
+
+  setState(newState: ConnectionState): void {
+    if (this.state !== newState) {
+      this.state = newState;
+      this.notifyListeners();
+    }
+  }
+
+  subscribe(listener: (state: ConnectionState) => void): () => void {
+    this.listeners.push(listener);
+    // Return unsubscribe function
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
+  }
+
+  private notifyListeners(): void {
+    this.listeners.forEach(listener => listener(this.state));
+  }
+}
+
+export const connectionState = new ConnectionStateManager();
+
 // Log backend configuration on module load
 if (import.meta.env.DEV) {
   logBackendConfiguration();
@@ -188,8 +221,9 @@ api.interceptors.request.use((config) => {
 // Handle auth errors with automatic retry
 api.interceptors.response.use(
   (response) => {
-    // Record successful response in circuit breaker
+    // Record successful response in circuit breaker and connection state
     circuitBreaker.recordSuccess();
+    connectionState.setState('connected');
     
     // Only log in development to avoid exposing response data
     if (import.meta.env.DEV) {
@@ -204,9 +238,17 @@ api.interceptors.response.use(
   async (error) => {
     const config = error.config;
     
+    // Update connection state based on error type
+    if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
+      connectionState.setState('disconnected');
+    } else if (error.response?.status && error.response.status >= 500) {
+      connectionState.setState('error');
+    }
+    
     // Check circuit breaker first - if open, fail fast
     if (circuitBreaker.isOpen()) {
       console.error('⚠️ Circuit breaker is OPEN - too many failures. Failing fast.');
+      connectionState.setState('error');
       const circuitError = new Error('Service is temporarily unavailable. Please try again in a minute.');
       circuitBreaker.recordFailure();
       return Promise.reject(circuitError);
@@ -251,6 +293,9 @@ api.interceptors.response.use(
         const attemptNumber = retryCount + 1; // Human-readable attempt number (1-based)
         const isFirstAttempt = retryCount === 0;
         
+        // Set connecting state
+        connectionState.setState('connecting');
+        
         if (isFirstAttempt) {
           console.log('Backend appears to be sleeping or starting up...');
           console.log('This may take up to 1 minute on first request (cold start).');
@@ -284,6 +329,7 @@ api.interceptors.response.use(
       const retryCount = config._retryCount ?? 0;
       
       if (retryCount < MAX_RETRIES) {
+        connectionState.setState('connecting');
         config._retryCount = retryCount + 1;
         console.log(`Retrying request (${retryCount + 1}/${MAX_RETRIES})...`);
         
