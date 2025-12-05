@@ -20,6 +20,11 @@ import urllib.error
 import json
 from typing import Dict, List, Tuple, Optional
 
+# Repository configuration
+GITHUB_OWNER = os.getenv("GITHUB_REPOSITORY_OWNER", "cliffcho242")
+GITHUB_REPO = os.getenv("GITHUB_REPOSITORY", "HireMeBahamas").split("/")[-1]
+GITHUB_REPO_URL = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}"
+
 # Color codes for terminal output
 GREEN = '\033[92m'
 RED = '\033[91m'
@@ -117,7 +122,19 @@ class ConfigChecker:
         return True
     
     def test_backend_connection(self, url: str) -> Tuple[bool, Optional[str]]:
-        """Test if backend API is accessible"""
+        """Test if backend API is accessible
+        
+        Args:
+            url: Base URL of the backend to test (e.g., "http://localhost:8000")
+        
+        Returns:
+            Tuple of (success: bool, message: Optional[str]):
+                - success: True if backend is accessible and healthy
+                - message: Status message from backend or error description
+        
+        Raises:
+            No exceptions raised - errors are caught and returned in the tuple
+        """
         try:
             req = urllib.request.Request(
                 f"{url}/api/health",
@@ -179,7 +196,7 @@ class ConfigChecker:
             print(f"\n{BOLD}Next steps:{RESET}")
             print(f"1. Read: {BLUE}FIX_SIGN_IN_DEPLOYMENT_GUIDE.md{RESET}")
             print(f"2. Configure missing secrets in:")
-            print(f"   - GitHub: https://github.com/cliffcho242/HireMeBahamas/settings/secrets/actions")
+            print(f"   - GitHub: {GITHUB_REPO_URL}/settings/secrets/actions")
             print(f"   - Vercel: https://vercel.com/dashboard (Settings → Environment Variables)")
         print(f"{BOLD}{'=' * 60}{RESET}\n")
     

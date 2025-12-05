@@ -39,7 +39,7 @@ jobs:
           if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
             echo "❌ ERROR: VERCEL_TOKEN secret is not set!"
             echo "📖 Follow the guide: FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
-            echo "🔗 https://github.com/cliffcho242/HireMeBahamas/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
+            echo "🔗 ${{ github.server_url }}/${{ github.repository }}/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
             exit 1
           fi
           if [ -z "${{ secrets.VERCEL_ORG_ID }}" ]; then
@@ -75,4 +75,4 @@ jobs:
           echo "3. Test sign-in at your Vercel deployment URL"
           echo ""
           echo "📖 Full deployment guide:"
-          echo "   https://github.com/cliffcho242/HireMeBahamas/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
+          echo "   ${{ github.server_url }}/${{ github.repository }}/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
