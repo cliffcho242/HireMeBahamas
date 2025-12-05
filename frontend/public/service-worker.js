@@ -11,14 +11,19 @@ const CACHE_NAME = 'hiremebahamas-v3';
 const STATIC_CACHE = 'hiremebahamas-static-v3';
 const DYNAMIC_CACHE = 'hiremebahamas-dynamic-v3';
 
+// Required files that must be cached
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
-  '/sounds/notification.mp3',
   '/offline.html'
+];
+
+// Optional files that are nice to have but not required
+const optionalUrlsToCache = [
+  '/sounds/notification.mp3'
 ];
 
 // =======================================
@@ -28,19 +33,39 @@ self.addEventListener('install', (event) => {
   console.log('[SW] Installing Service Worker...');
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
+      .then(async (cache) => {
         console.log('[SW] Caching app shell');
-        return cache.addAll(urlsToCache).catch((error) => {
-          console.warn('[SW] Some cache files may not have been cached:', error);
-          return Promise.allSettled(
-            urlsToCache.map(url => 
-              cache.add(url).catch(e => console.warn(`[SW] Failed to cache ${url}:`, e))
-            )
-          );
+        
+        // Cache required files - these must succeed
+        try {
+          await cache.addAll(urlsToCache);
+          console.log('[SW] Required files cached successfully');
+        } catch (error) {
+          console.error('[SW] Failed to cache required files:', error);
+          throw error; // Fail installation if required files can't be cached
+        }
+        
+        // Cache optional files - failures are OK
+        const optionalResults = await Promise.allSettled(
+          optionalUrlsToCache.map(url => cache.add(url))
+        );
+        
+        // Log results for each optional file
+        optionalResults.forEach((result, index) => {
+          const url = optionalUrlsToCache[index];
+          if (result.status === 'fulfilled') {
+            console.log(`[SW] ✓ Cached optional file: ${url}`);
+          } else {
+            console.warn(`[SW] ✗ Failed to cache optional file ${url}:`, result.reason?.message || result.reason);
+          }
         });
+        
+        const successCount = optionalResults.filter(r => r.status === 'fulfilled').length;
+        console.log(`[SW] Cached ${successCount}/${optionalUrlsToCache.length} optional files`);
       })
       .catch((error) => {
         console.error('[SW] Cache install failed:', error);
+        throw error;
       })
   );
   // Skip waiting - activate immediately
