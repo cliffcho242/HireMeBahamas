@@ -6,6 +6,7 @@ import { authAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { sessionManager } from '../services/sessionManager';
 import { ApiError } from '../types';
+import { loginWithRetry, registerWithRetry } from '../utils/retryWithBackoff';
 
 interface AuthContextType {
   user: User | null;
@@ -257,7 +258,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (email: string, password: string, remember: boolean = false) => {
     try {
       console.log('AuthContext: Starting login for:', email);
-      const response = await authAPI.login({ email, password });
+      
+      // Use retry logic with user-friendly cold start handling
+      const response = await loginWithRetry(
+        { email, password },
+        (credentials) => authAPI.login(credentials),
+        (message, attempt) => {
+          // Show progress to user during retries
+          console.log(`[Login Retry ${attempt}]`, message);
+          
+          // Only show toast for retry messages (not the first attempt)
+          if (attempt > 0) {
+            toast.loading(message, { 
+              id: 'login-retry',
+              duration: 20000 // Keep showing during the wait
+            });
+          }
+        }
+      );
+      
       console.log('AuthContext: Login response received:', response);
       
       if (!response.access_token) {
@@ -269,6 +288,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         console.error('AuthContext: No user in response:', response);
         throw new Error('No user data received');
       }
+      
+      // Dismiss any retry loading toasts
+      toast.dismiss('login-retry');
       
       // Save to localStorage for backward compatibility
       localStorage.setItem('token', response.access_token);
@@ -290,6 +312,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       toast.success('Login successful!');
     } catch (error: unknown) {
       console.error('AuthContext: Login error:', error);
+      // Dismiss any retry loading toasts
+      toast.dismiss('login-retry');
       // Note: Do not show toast here - let the caller (Login.tsx) handle error display
       // to avoid duplicate toast notifications
       throw error;
@@ -298,10 +322,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const register = async (userData: RegisterData) => {
     try {
-      const response = await authAPI.register(userData);
+      // Use retry logic with user-friendly cold start handling
+      const response = await registerWithRetry(
+        userData,
+        (data) => authAPI.register(data as RegisterData),
+        (message, attempt) => {
+          // Show progress to user during retries
+          console.log(`[Register Retry ${attempt}]`, message);
+          
+          // Only show toast for retry messages (not the first attempt)
+          if (attempt > 0) {
+            toast.loading(message, {
+              id: 'register-retry',
+              duration: 20000
+            });
+          }
+        }
+      );
+      
       if (!response?.access_token || !response?.user) {
         throw new Error(response?.message || 'Registration failed');
       }
+      
+      // Dismiss any retry loading toasts
+      toast.dismiss('register-retry');
       
       localStorage.setItem('token', response.access_token);
       setToken(response.access_token);
@@ -320,6 +364,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       toast.success('Registration successful!');
     } catch (error: unknown) {
       console.error('AuthContext: Registration error:', error);
+      // Dismiss any retry loading toasts
+      toast.dismiss('register-retry');
       // Note: Do not show toast here - let the caller (Register.tsx) handle error display
       // to avoid duplicate toast notifications
       throw error;
