@@ -267,8 +267,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Show progress to user during retries
           console.log(`[Login Retry ${attempt}]`, message);
           
-          // Only show toast for retry messages (not the first attempt)
-          if (attempt > 0) {
+          // Show toast for all retry attempts (attempt starts at 1 for first retry)
+          if (attempt >= 1) {
             toast.loading(message, { 
               id: 'login-retry',
               duration: 20000 // Keep showing during the wait
@@ -330,8 +330,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Show progress to user during retries
           console.log(`[Register Retry ${attempt}]`, message);
           
-          // Only show toast for retry messages (not the first attempt)
-          if (attempt > 0) {
+          // Show toast for all retry attempts (attempt starts at 1 for first retry)
+          if (attempt >= 1) {
             toast.loading(message, {
               id: 'register-retry',
               duration: 20000

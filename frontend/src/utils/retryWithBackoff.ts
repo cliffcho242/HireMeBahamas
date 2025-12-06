@@ -10,6 +10,8 @@
  * retries with user-friendly messaging.
  */
 
+import { debugLog } from './debugLogger';
+
 export interface RetryOptions {
   maxRetries?: number;
   baseDelay?: number;
@@ -71,8 +73,17 @@ function hasColdStartMessage(error: unknown): boolean {
   }
   
   const message = error.message?.toLowerCase() || '';
-  const responseData = error.response?.data as { message?: string; detail?: string } | undefined;
-  const responseMessage = (responseData?.message || responseData?.detail || '').toLowerCase();
+  
+  // Safely check response data with type guard
+  let responseMessage = '';
+  if (error.response?.data && typeof error.response.data === 'object') {
+    const data = error.response.data as Record<string, unknown>;
+    if (typeof data.message === 'string') {
+      responseMessage = data.message.toLowerCase();
+    } else if (typeof data.detail === 'string') {
+      responseMessage = data.detail.toLowerCase();
+    }
+  }
   
   return (
     message.includes('cold start') ||
@@ -210,9 +221,7 @@ export async function loginWithRetry<T>(
         }
         
         // Log for debugging
-        if (import.meta.env.DEV) {
-          console.log(`[Retry ${attempt}]`, message, 'Error:', error);
-        }
+        debugLog.log(`[Login Retry ${attempt}]`, message, 'Error:', error);
       },
       shouldRetry: (error) => {
         if (!isApiError(error)) {
