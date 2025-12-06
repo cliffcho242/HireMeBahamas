@@ -78,4 +78,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD sh -c 'curl -f http://localhost:${PORT:-8080}/health || exit 1'
 
-CMD ["sh", "-c", "gunicorn final_backend_postgresql:application --config gunicorn.conf.py"]
+CMD ["sh", "-c", "uvicorn api.backend_app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 5 --limit-concurrency 100"]
