@@ -1,17 +1,7 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    }
-  ],
   "functions": {
-    "api/index.py": {
-      "runtime": "python3.12",
-      "maxDuration": 30
-    },
-    "api/cron/*.py": {
+    "api/**/*.py": {
       "runtime": "python3.12",
       "maxDuration": 30
     }
