@@ -5,6 +5,23 @@
 # Responds in <5ms even on coldest start. Render cannot kill this.
 # =============================================================================
 import os
+import sys
+
+# CRITICAL: Set up module path aliases BEFORE any backend_app imports
+# This allows imports like "from app.core.security" to work correctly
+# when running directly (not through api/index.py)
+if 'app' not in sys.modules:
+    backend_app_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(backend_app_dir)
+    
+    # Add parent directory to path so we can import backend_app
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+    
+    # Create module alias: app -> backend_app
+    import backend_app as app_module
+    sys.modules['app'] = app_module
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
@@ -100,7 +117,15 @@ from fastapi import Request, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response as StarletteResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-import socketio
+
+# Optional Socket.IO support for real-time features
+try:
+    import socketio
+    HAS_SOCKETIO = True
+except ImportError:
+    HAS_SOCKETIO = False
+    socketio = None
+    # Logger not available yet, will log later
 
 # Import APIs
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
@@ -633,62 +658,69 @@ else:
     logger.info("ℹ️  GraphQL router not available (strawberry-graphql not installed)")
 
 
-# Initialize Socket.IO for real-time messaging
-sio = socketio.AsyncServer(
-    async_mode='asgi',
-    cors_allowed_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-    ]
-)
+# Initialize Socket.IO for real-time messaging (if available)
+if HAS_SOCKETIO:
+    sio = socketio.AsyncServer(
+        async_mode='asgi',
+        cors_allowed_origins=[
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://hiremebahamas.com",
+            "https://www.hiremebahamas.com",
+        ]
+    )
 
-# Create Socket.IO ASGI app
-socket_app = socketio.ASGIApp(sio, app)
+    # Create Socket.IO ASGI app
+    socket_app = socketio.ASGIApp(sio, app)
 
-
-# Socket.IO event handlers
-@sio.event
-async def connect(sid, environ, auth_data):
-    """Handle client connection"""
-    logger.info(f"Client connected: {sid}")
-    await sio.emit('connected', {'sid': sid}, room=sid)
-
-
-@sio.event
-async def disconnect(sid):
-    """Handle client disconnection"""
-    logger.info(f"Client disconnected: {sid}")
+    # Socket.IO event handlers
+    @sio.event
+    async def connect(sid, environ, auth_data):
+        """Handle client connection"""
+        logger.info(f"Client connected: {sid}")
+        await sio.emit('connected', {'sid': sid}, room=sid)
 
 
-@sio.event
-async def join_conversation(sid, data):
-    """Join a conversation room"""
-    conversation_id = data.get('conversation_id')
-    if conversation_id:
-        await sio.enter_room(sid, f"conversation_{conversation_id}")
-        logger.info(f"Client {sid} joined conversation {conversation_id}")
+    @sio.event
+    async def disconnect(sid):
+        """Handle client disconnection"""
+        logger.info(f"Client disconnected: {sid}")
 
 
-@sio.event
-async def leave_conversation(sid, data):
-    """Leave a conversation room"""
-    conversation_id = data.get('conversation_id')
-    if conversation_id:
-        await sio.leave_room(sid, f"conversation_{conversation_id}")
-        logger.info(f"Client {sid} left conversation {conversation_id}")
+    @sio.event
+    async def join_conversation(sid, data):
+        """Join a conversation room"""
+        conversation_id = data.get('conversation_id')
+        if conversation_id:
+            await sio.enter_room(sid, f"conversation_{conversation_id}")
+            logger.info(f"Client {sid} joined conversation {conversation_id}")
 
 
-@sio.event
-async def typing(sid, data):
-    """Handle typing indicator"""
-    conversation_id = data.get('conversation_id')
-    is_typing = data.get('is_typing')
-    if conversation_id:
-        await sio.emit('typing', data, room=f"conversation_{conversation_id}", skip_sid=sid)
+    @sio.event
+    async def leave_conversation(sid, data):
+        """Leave a conversation room"""
+        conversation_id = data.get('conversation_id')
+        if conversation_id:
+            await sio.leave_room(sid, f"conversation_{conversation_id}")
+            logger.info(f"Client {sid} left conversation {conversation_id}")
+
+
+    @sio.event
+    async def typing(sid, data):
+        """Handle typing indicator"""
+        conversation_id = data.get('conversation_id')
+        is_typing = data.get('is_typing')
+        if conversation_id:
+            await sio.emit('typing', data, room=f"conversation_{conversation_id}", skip_sid=sid)
+    
+    logger.info("✅ Socket.IO initialized for real-time messaging")
+else:
+    sio = None
+    socket_app = app
+    logger.info("ℹ️  Socket.IO not available - real-time features disabled")
+
 
 
 # Root endpoint
@@ -728,8 +760,14 @@ if __name__ == "__main__":
     import uvicorn
 
     # Production mode - no reload, multiple workers for better performance
+    # Use the correct module path based on whether we're in standalone mode or not
+    # When running as: python -m api.backend_app.main
+    # Or from Railway/Docker: uvicorn api.backend_app.main:app
+    module_path = "api.backend_app.main:socket_app" if HAS_SOCKETIO else "api.backend_app.main:app"
+    
+    logger.info(f"Starting uvicorn with module: {module_path}")
     uvicorn.run(
-        "app.main:app",
+        module_path,
         host="0.0.0.0",
         port=8000,
         reload=False,
