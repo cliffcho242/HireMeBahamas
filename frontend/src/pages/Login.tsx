@@ -24,8 +24,8 @@ const Login: React.FC = () => {
   const { login, loginWithGoogle, loginWithApple, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('admin@hiremebahamas.com');
-  const [password, setPassword] = useState('AdminPass123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | null>(null);
   const [connectionMessage, setConnectionMessage] = useState<string>('');
@@ -447,7 +447,7 @@ const Login: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                   >
-                    Welcome Back
+                    Log In to Your Account
                   </motion.h2>
                   <motion.p 
                     className="text-sm sm:text-base text-slate-300"
@@ -455,7 +455,7 @@ const Login: React.FC = () => {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.4 }}
                   >
-                    Sign in to continue your journey
+                    Enter your credentials to continue
                   </motion.p>
                 </div>
 
@@ -548,7 +548,7 @@ const Login: React.FC = () => {
                           {loadingMessage}
                         </span>
                       ) : (
-                        'Sign In'
+                        'Log In'
                       )}
                     </span>
                   </motion.button>
@@ -566,7 +566,7 @@ const Login: React.FC = () => {
                     <div className="w-full border-t border-white/20"></div>
                   </div>
                   <div className="relative flex justify-center text-xs sm:text-sm">
-                    <span className="px-3 sm:px-4 backdrop-blur-xl bg-white/5 text-slate-300 rounded-full">or continue with</span>
+                    <span className="px-3 sm:px-4 backdrop-blur-xl bg-white/5 text-slate-300 rounded-full">or log in with</span>
                   </div>
                 </motion.div>
               )}
@@ -634,7 +634,7 @@ const Login: React.FC = () => {
                     to="/register" 
                     className="text-xs sm:text-sm text-cyan-400 hover:text-cyan-300 font-semibold transition-colors hover:underline"
                   >
-                    Sign Up
+                    Create Account
                   </Link>
                 </motion.div>
               </motion.div>

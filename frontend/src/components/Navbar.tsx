@@ -181,13 +181,13 @@ const Navbar: React.FC = () => {
                   to="/login"
                   className="text-gray-700 hover:text-blue-600 px-4 py-2 rounded-xl font-medium transition-colors"
                 >
-                  Sign In
+                  Log In
                 </Link>
                 <Link
                   to="/register"
                   className="bg-blue-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-blue-700 transition-colors"
                 >
-                  Sign Up
+                  Create Account
                 </Link>
               </div>
             )}
@@ -286,14 +286,14 @@ const Navbar: React.FC = () => {
                     className="block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white text-center hover:bg-blue-700"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Sign Up
+                    Create Account
                   </Link>
                   <Link
                     to="/login"
                     className="block px-3 py-2 rounded-md text-base font-medium text-blue-600 text-center hover:text-blue-700"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Sign In
+                    Log In
                   </Link>
                 </div>
               </div>
