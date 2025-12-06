@@ -31,11 +31,26 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Check Railway Configuration
+        id: check-railway
+        run: |
+          if [ -z "${{ secrets.RAILWAY_TOKEN }}" ]; then
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "⚠️ RAILWAY_TOKEN not configured - skipping Railway deployment"
+            echo "📖 To enable Railway deployment, add RAILWAY_TOKEN to GitHub Secrets"
+            echo "🔗 See: FIX_SIGN_IN_DEPLOYMENT_GUIDE.md for setup instructions"
+          else
+            echo "configured=true" >> $GITHUB_OUTPUT
+            echo "✅ Railway credentials configured"
+          fi
+
       - name: Install Railway CLI
+        if: steps.check-railway.outputs.configured == 'true'
         run: |
           curl -fsSL https://railway.app/install.sh | sh
 
       - name: Deploy to Railway
+        if: steps.check-railway.outputs.configured == 'true'
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
@@ -43,11 +58,13 @@ jobs:
           railway up
 
       - name: Wait for deployment to complete
+        if: steps.check-railway.outputs.configured == 'true'
         run: |
           echo "⏳ Waiting 60 seconds for deployment to complete..."
           sleep 60
       
       - name: Wake up database and verify health
+        if: steps.check-railway.outputs.configured == 'true'
         env:
           RAILWAY_BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
         run: |
@@ -114,3 +131,25 @@ jobs:
           echo "   Check the Railway dashboard for deployment status"
           # Don't fail the workflow - deployment might still be completing
           exit 0
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "## Railway Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-railway.outputs.configured }}" = "true" ]; then
+            echo "✅ Railway deployment attempted" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Status**: Deployment job completed" >> $GITHUB_STEP_SUMMARY
+            echo "**Note**: Check Railway dashboard for final deployment status" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⏭️ Railway deployment skipped" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Reason**: RAILWAY_TOKEN not configured in GitHub Secrets" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### To Enable Railway Deployment:" >> $GITHUB_STEP_SUMMARY
+            echo "1. Get your Railway token from https://railway.app/account/tokens" >> $GITHUB_STEP_SUMMARY
+            echo "2. Add it as RAILWAY_TOKEN in GitHub repository secrets" >> $GITHUB_STEP_SUMMARY
+            echo "3. Add RAILWAY_PROJECT_ID if not already configured" >> $GITHUB_STEP_SUMMARY
+            echo "4. See FIX_SIGN_IN_DEPLOYMENT_GUIDE.md for detailed instructions" >> $GITHUB_STEP_SUMMARY
+          fi

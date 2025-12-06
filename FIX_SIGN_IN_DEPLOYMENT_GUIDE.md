@@ -26,10 +26,12 @@ You need to add these secrets to your GitHub repository:
 
 #### Optional Secrets (for Railway backend):
 
-| Secret Name | How to Get It |
-|------------|---------------|
-| `RAILWAY_TOKEN` | https://railway.app/account/tokens |
-| `RAILWAY_PROJECT_ID` | Railway Project → Settings |
+| Secret Name | How to Get It | When Needed |
+|------------|---------------|-------------|
+| `RAILWAY_TOKEN` | https://railway.app/account/tokens | If using Railway for backend hosting |
+| `RAILWAY_PROJECT_ID` | Railway Project → Settings | If using Railway for backend hosting |
+
+**Note:** Railway deployment is optional. If you're using Vercel serverless backend (recommended), you can skip these secrets. The deployment workflow will automatically skip Railway deployment if these secrets are not configured.
 
 ### Step 2: Configure Vercel Environment Variables
 
@@ -178,10 +180,36 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
 **Solution:**
 
+Railway deployment is optional and will be automatically skipped if not configured. If you want to use Railway:
+
 1. Verify `RAILWAY_TOKEN` is set in GitHub Secrets
 2. Verify `RAILWAY_PROJECT_ID` is correct
 3. Check if you have Railway CLI access
 4. Note: Railway backend is optional if using Vercel serverless backend
+
+**To skip Railway deployment entirely:**
+- Simply don't add the `RAILWAY_TOKEN` secret to GitHub
+- The workflow will automatically skip Railway deployment steps
+- The build will succeed with a warning message
+
+### Issue: "Vercel deployment workflow skipped"
+
+**Solution:**
+
+If you see "Vercel deployment skipped" in your GitHub Actions logs:
+
+1. This means one or more required Vercel secrets are missing
+2. Check that all three secrets are configured:
+   - `VERCEL_TOKEN`
+   - `VERCEL_ORG_ID`
+   - `VERCEL_PROJECT_ID`
+3. Follow the setup instructions above to add missing secrets
+4. The workflow will not fail - it will just skip deployment with a warning
+
+**Why this is designed this way:**
+- Allows the repository to work without requiring all deployment services
+- You can set up deployments incrementally
+- CI tests will still run even if deployments are not configured
 
 ### Viewing Vercel Logs
 
@@ -266,16 +294,18 @@ Expected responses:
 
 After completing the setup, verify everything is working:
 
-- [ ] Vercel deployment succeeds in GitHub Actions
-- [ ] Vercel project shows latest deployment as "Ready"
-- [ ] `https://hiremebahamas.vercel.app` loads successfully
-- [ ] `https://hiremebahamas.vercel.app/api/health` returns 200 OK
-- [ ] Database connection shown as "connected" in health check
+- [ ] GitHub Actions workflows complete successfully (may skip deployment if secrets not configured)
+- [ ] If Vercel configured: Vercel project shows latest deployment as "Ready"
+- [ ] If Vercel configured: `https://hiremebahamas.vercel.app` loads successfully
+- [ ] If Vercel configured: `https://hiremebahamas.vercel.app/api/health` returns 200 OK
+- [ ] If Vercel configured: Database connection shown as "connected" in health check
 - [ ] Sign-in page loads without errors
 - [ ] Can sign in with test credentials: `admin@hiremebahamas.com` / `AdminPass123!`
 - [ ] After sign-in, redirected to homepage
 - [ ] User profile shows in top-right corner
 - [ ] Can navigate to different pages without logging out
+
+**Note:** If you haven't configured deployment secrets yet, that's OK! The CI tests will still run and verify code quality. You can set up deployments later.
 
 ---
 
