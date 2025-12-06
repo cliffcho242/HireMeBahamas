@@ -3,12 +3,18 @@
  * 
  * Provides intelligent retry logic with user-friendly messaging for operations
  * that may fail due to backend cold starts or temporary network issues.
+ * 
+ * Note: This retry logic is at the application layer (login/register operations)
+ * and works in conjunction with the axios interceptor retry logic in api.ts.
+ * The axios layer handles network-level retries, while this handles operation-level
+ * retries with user-friendly messaging.
  */
 
 export interface RetryOptions {
   maxRetries?: number;
   baseDelay?: number;
   maxDelay?: number;
+  backoffIncrement?: number;
   onRetry?: (attempt: number, error: unknown) => void;
   shouldRetry?: (error: unknown) => boolean;
 }
@@ -20,25 +26,38 @@ export interface ApiErrorType {
 }
 
 /**
+ * Type guard to check if error is API-like
+ */
+function isApiError(error: unknown): error is ApiErrorType {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    ('response' in error || 'code' in error || 'message' in error)
+  );
+}
+
+/**
  * Check if an error indicates a cold start or temporary server unavailability
  */
 function isColdStartError(error: unknown): boolean {
-  const apiError = error as ApiErrorType;
+  if (!isApiError(error)) {
+    return false;
+  }
   
   // Check for common cold start indicators
   const isColdStart = 
     // Server unavailable
-    apiError.response?.status === 503 ||
+    error.response?.status === 503 ||
     // Bad gateway (server starting)
-    apiError.response?.status === 502 ||
+    error.response?.status === 502 ||
     // Gateway timeout (server taking too long to start)
-    apiError.response?.status === 504 ||
+    error.response?.status === 504 ||
     // Connection refused
-    apiError.code === 'ECONNREFUSED' ||
+    error.code === 'ECONNREFUSED' ||
     // Timeout during startup
-    (apiError.code === 'ECONNABORTED' && apiError.message?.includes('timeout')) ||
+    (error.code === 'ECONNABORTED' && error.message?.includes('timeout')) ||
     // Network error during cold start
-    apiError.code === 'ERR_NETWORK';
+    error.code === 'ERR_NETWORK';
     
   return isColdStart;
 }
@@ -47,9 +66,12 @@ function isColdStartError(error: unknown): boolean {
  * Check if error message or response indicates cold start
  */
 function hasColdStartMessage(error: unknown): boolean {
-  const apiError = error as ApiErrorType;
-  const message = apiError.message?.toLowerCase() || '';
-  const responseData = apiError.response?.data as { message?: string; detail?: string } | undefined;
+  if (!isApiError(error)) {
+    return false;
+  }
+  
+  const message = error.message?.toLowerCase() || '';
+  const responseData = error.response?.data as { message?: string; detail?: string } | undefined;
   const responseMessage = (responseData?.message || responseData?.detail || '').toLowerCase();
   
   return (
@@ -90,6 +112,7 @@ export async function retryWithBackoff<T>(
     maxRetries = 3,
     baseDelay = 20000, // 20 seconds for cold starts
     maxDelay = 60000,  // 60 seconds maximum
+    backoffIncrement = 10000, // 10 seconds increment per retry
     onRetry,
     shouldRetry,
   } = options;
@@ -120,9 +143,9 @@ export async function retryWithBackoff<T>(
         throw error;
       }
 
-      // Calculate delay with exponential backoff
+      // Calculate delay with linear backoff (avoids compounding with axios retries)
       // For cold starts: 20s, 30s, 40s, 50s (capped at maxDelay)
-      const delay = Math.min(baseDelay + (attempt * 10000), maxDelay);
+      const delay = Math.min(baseDelay + (attempt * backoffIncrement), maxDelay);
       
       // Notify about retry
       if (onRetry) {
@@ -169,7 +192,6 @@ export async function loginWithRetry<T>(
       maxRetries: 3,
       baseDelay: 20000, // 20 seconds for cold starts
       onRetry: (attempt, error) => {
-        const apiError = error as ApiErrorType;
         const isColdStart = isColdStartError(error) || hasColdStartMessage(error);
         
         let message: string;
@@ -189,24 +211,26 @@ export async function loginWithRetry<T>(
         
         // Log for debugging
         if (import.meta.env.DEV) {
-          console.log(`[Retry ${attempt}]`, message, 'Error:', apiError);
+          console.log(`[Retry ${attempt}]`, message, 'Error:', error);
         }
       },
       shouldRetry: (error) => {
-        const apiError = error as ApiErrorType;
+        if (!isApiError(error)) {
+          return true;
+        }
         
         // Don't retry on authentication failures (wrong credentials)
-        if (apiError.response?.status === 401) {
+        if (error.response?.status === 401) {
           return false;
         }
         
         // Don't retry on rate limiting
-        if (apiError.response?.status === 429) {
+        if (error.response?.status === 429) {
           return false;
         }
         
         // Don't retry on validation errors
-        if (apiError.response?.status === 422 || apiError.response?.status === 400) {
+        if (error.response?.status === 422 || error.response?.status === 400) {
           return false;
         }
         
@@ -225,9 +249,9 @@ export async function loginWithRetry<T>(
  * @param onProgress - Callback for progress updates
  * @returns Promise that resolves with registration response
  */
-export async function registerWithRetry<T>(
-  userData: unknown,
-  registerFn: (userData: unknown) => Promise<T>,
+export async function registerWithRetry<T, D = unknown>(
+  userData: D,
+  registerFn: (userData: D) => Promise<T>,
   onProgress?: (message: string, attempt: number) => void
 ): Promise<T> {
   return retryWithBackoff(
@@ -250,20 +274,22 @@ export async function registerWithRetry<T>(
         }
       },
       shouldRetry: (error) => {
-        const apiError = error as ApiErrorType;
+        if (!isApiError(error)) {
+          return true;
+        }
         
         // Don't retry on validation errors (bad input)
-        if (apiError.response?.status === 422 || apiError.response?.status === 400) {
+        if (error.response?.status === 422 || error.response?.status === 400) {
           return false;
         }
         
         // Don't retry on conflicts (email already exists)
-        if (apiError.response?.status === 409) {
+        if (error.response?.status === 409) {
           return false;
         }
         
         // Don't retry on rate limiting
-        if (apiError.response?.status === 429) {
+        if (error.response?.status === 429) {
           return false;
         }
         

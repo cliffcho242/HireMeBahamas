@@ -325,7 +325,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Use retry logic with user-friendly cold start handling
       const response = await registerWithRetry(
         userData,
-        (data) => authAPI.register(data as RegisterData),
+        (data) => authAPI.register(data),
         (message, attempt) => {
           // Show progress to user during retries
           console.log(`[Register Retry ${attempt}]`, message);
