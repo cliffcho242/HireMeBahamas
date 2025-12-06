@@ -38,21 +38,24 @@ jobs:
         run: |
           echo "Checking Vercel deployment secrets..."
           
+          CONFIGURED=true
+          
           if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
             echo "⚠️ WARNING: VERCEL_TOKEN secret is not set"
-            echo "configured=false" >> $GITHUB_OUTPUT
+            CONFIGURED=false
           elif [ -z "${{ secrets.VERCEL_ORG_ID }}" ]; then
             echo "⚠️ WARNING: VERCEL_ORG_ID secret is not set"
-            echo "configured=false" >> $GITHUB_OUTPUT
+            CONFIGURED=false
           elif [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
             echo "⚠️ WARNING: VERCEL_PROJECT_ID secret is not set"
-            echo "configured=false" >> $GITHUB_OUTPUT
+            CONFIGURED=false
           else
             echo "✅ All Vercel secrets are configured"
-            echo "configured=true" >> $GITHUB_OUTPUT
           fi
           
-          if [ "${{ steps.check-vercel.outputs.configured }}" != "true" ]; then
+          echo "configured=$CONFIGURED" >> $GITHUB_OUTPUT
+          
+          if [ "$CONFIGURED" != "true" ]; then
             echo ""
             echo "⏭️ Skipping Vercel deployment - secrets not configured"
             echo "📖 To enable Vercel deployment, add the required secrets:"
