@@ -760,8 +760,14 @@ if __name__ == "__main__":
     import uvicorn
 
     # Production mode - no reload, multiple workers for better performance
+    # Use the correct module path based on whether we're in standalone mode or not
+    # When running as: python -m api.backend_app.main
+    # Or from Railway/Docker: uvicorn api.backend_app.main:app
+    module_path = "api.backend_app.main:socket_app" if HAS_SOCKETIO else "api.backend_app.main:app"
+    
+    logger.info(f"Starting uvicorn with module: {module_path}")
     uvicorn.run(
-        "app.main:app",
+        module_path,
         host="0.0.0.0",
         port=8000,
         reload=False,
