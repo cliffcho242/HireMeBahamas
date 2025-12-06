@@ -14,15 +14,18 @@
 # DATABASE_URL FORMAT (copy-paste):
 # postgresql+asyncpg://user:password@host:5432/database?sslmode=require
 #
-# RAILWAY ENV VARS (copy-paste):
+# RAILWAY ENV VARS (for Railway deployment - copy-paste):
 # DATABASE_URL=${DATABASE_URL}  # Auto-injected by Railway
 # DB_POOL_RECYCLE=120
 # DB_SSL_MODE=require
 #
-# RENDER ENV VARS (copy-paste):
+# VERCEL/OTHER PLATFORMS (connecting to Railway Postgres - copy-paste):
 # DATABASE_URL=postgresql+asyncpg://user:pass@RAILWAY_HOST:5432/railway?sslmode=require
 # DB_POOL_RECYCLE=120
 # DB_SSL_MODE=require
+#
+# ⚠️  IMPORTANT: This application is configured for Railway PostgreSQL.
+# ⚠️  If you're migrating from Render PostgreSQL, update DATABASE_URL to point to Railway.
 #
 # After deployment: Zero SSL EOF errors, zero connection drops, zero log spam.
 # =============================================================================

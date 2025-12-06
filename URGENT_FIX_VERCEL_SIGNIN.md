@@ -4,28 +4,29 @@
 Users cannot sign in to HireMeBahamas on Vercel because the database connection is not properly configured.
 
 ## Root Cause
-The Render service (https://dashboard.render.com/project/prj-d3qjl56mcj7s73bpil6g) is still active with its PostgreSQL database, but Vercel environment variables are not configured to connect to it (or Railway PostgreSQL).
+The application may still be connected to Render PostgreSQL database, which can cause backend connectivity issues preventing users from signing in. The recommended deployment uses Railway PostgreSQL for better performance and reliability.
+
+**⚠️ If you're still using Render PostgreSQL**: Follow the [Render to Railway Migration Guide](./RENDER_TO_RAILWAY_MIGRATION.md) to migrate to Railway PostgreSQL (recommended, 30 minutes).
+
+**If you're already using Railway**: Verify that Vercel environment variables are properly configured to connect to Railway PostgreSQL.
 
 ## Quick Solution
 
 ### Step 1: Identify Your Database Location
 
-Your database is on either:
-- **Render** (https://dashboard.render.com/project/prj-d3qjl56mcj7s73bpil6g)
+Your database should be on **Railway** (recommended):
 - **Railway** (https://railway.app/dashboard)
 
-### Step 2: Get Database Connection URL
+**⚠️ If you're still using Render PostgreSQL**: 
+Follow the **[Render to Railway Migration Guide](./RENDER_TO_RAILWAY_MIGRATION.md)** before proceeding with this fix.
 
-#### If on Render:
-1. Go to https://dashboard.render.com/project/prj-d3qjl56mcj7s73bpil6g
-2. Click on your PostgreSQL database ("hiremebahamas db")
-3. Copy the **External Database URL**
+### Step 2: Get Railway Database Connection URL
 
-#### If on Railway:
 1. Go to https://railway.app/dashboard
 2. Click on your HireMeBahamas project
 3. Click on the PostgreSQL service
-4. Copy `DATABASE_URL` or `DATABASE_PRIVATE_URL`
+4. Go to **Variables** tab
+5. Copy `DATABASE_URL` (for external connections like Vercel)
 
 ### Step 3: Configure Vercel Environment Variables
 
@@ -35,10 +36,13 @@ Your database is on either:
 4. Add these variables:
 
 ```bash
-DATABASE_URL = [Your PostgreSQL URL from Step 2]
+DATABASE_URL = [Your Railway PostgreSQL URL from Step 2]
 SECRET_KEY = [Generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"]
 JWT_SECRET_KEY = [Generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"]
 ENVIRONMENT = production
+DB_POOL_RECYCLE = 120
+DB_SSL_MODE = require
+DB_CONNECT_TIMEOUT = 45
 ```
 
 ### Step 4: Redeploy
@@ -77,11 +81,11 @@ This will check:
 
 ## Architecture
 
-Current setup should be:
+Current recommended setup:
 - **Frontend**: Vercel (https://hiremebahamas.vercel.app)
 - **Backend**: Vercel Serverless Functions (`/api/*`)
-- **Database**: Railway PostgreSQL OR Render PostgreSQL
-- **Old Render Backend**: Should be suspended/deleted
+- **Database**: Railway PostgreSQL (recommended)
+- **Old Render Backend**: Should be decommissioned (see migration guide)
 
 ## Key Files
 

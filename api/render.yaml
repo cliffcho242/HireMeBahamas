@@ -1,6 +1,14 @@
 # ============================================================================
 # RENDER DEPLOYMENT CONFIG — HireMeBahamas Backend (2025 IMMORTAL EDITION)
 # ============================================================================
+# ⚠️  DEPRECATED: This configuration is for legacy Render deployments only.
+# ⚠️  CURRENT DEPLOYMENT: Vercel (frontend + serverless backend) + Railway PostgreSQL
+# ⚠️  
+# ⚠️  If you're setting up HireMeBahamas, use Vercel deployment instead.
+# ⚠️  See: DEPLOYMENT_CONNECTION_GUIDE.md or START_HERE_DEPLOYMENT.md
+# ⚠️  
+# ⚠️  This file is kept for reference and backward compatibility only.
+# ============================================================================
 # Zero 499, 500, 502 errors | Sub-800ms boot | Sub-300ms login globally
 # Works on: Render Free, Starter ($7), Standard ($25)
 # ============================================================================
