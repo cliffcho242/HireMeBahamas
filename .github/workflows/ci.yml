@@ -252,29 +252,30 @@ jobs:
             exit 1
           fi
           
-          # Check for required fields
+          # Check for build command (optional for API-only)
           if grep -q "buildCommand" vercel.json; then
             echo "✅ Build command configured"
           else
-            echo "⚠️  No build command found"
+            echo "ℹ️  No build command found (OK for API-only deployment)"
           fi
           
+          # Check for output directory (optional for API-only)
           if grep -q "outputDirectory" vercel.json; then
             echo "✅ Output directory configured"
           else
-            echo "❌ Output directory missing"
-            exit 1
+            echo "ℹ️  No output directory found (OK for API-only deployment)"
           fi
           
-          if grep -q '"api/' vercel.json; then
+          # Check for API functions configuration (required)
+          if grep -q '"api/' vercel.json || grep -q '"functions"' vercel.json; then
             echo "✅ API functions configured"
           else
-            echo "❌ API functions missing"
+            echo "❌ API functions missing - vercel.json must have functions or builds configuration"
             exit 1
           fi
           
           echo ""
-          echo "=== All Vercel Configuration Checks Passed ==="
+          echo "=== Vercel Configuration Checks Passed ==="
 
       - name: Verify API structure
         run: |

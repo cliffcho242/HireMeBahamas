@@ -34,27 +34,41 @@ jobs:
           VITE_API_URL: ${{ secrets.VITE_API_URL || '' }}
 
       - name: Check Vercel secrets
+        id: check-vercel
         run: |
           echo "Checking Vercel deployment secrets..."
+          
+          CONFIGURED=true
+          
           if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
-            echo "❌ ERROR: VERCEL_TOKEN secret is not set!"
-            echo "📖 Follow the guide: FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
+            echo "⚠️ WARNING: VERCEL_TOKEN secret is not set"
+            CONFIGURED=false
+          elif [ -z "${{ secrets.VERCEL_ORG_ID }}" ]; then
+            echo "⚠️ WARNING: VERCEL_ORG_ID secret is not set"
+            CONFIGURED=false
+          elif [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            echo "⚠️ WARNING: VERCEL_PROJECT_ID secret is not set"
+            CONFIGURED=false
+          else
+            echo "✅ All Vercel secrets are configured"
+          fi
+          
+          echo "configured=$CONFIGURED" >> $GITHUB_OUTPUT
+          
+          if [ "$CONFIGURED" != "true" ]; then
+            echo ""
+            echo "⏭️ Skipping Vercel deployment - secrets not configured"
+            echo "📖 To enable Vercel deployment, add the required secrets:"
+            echo "   • VERCEL_TOKEN"
+            echo "   • VERCEL_ORG_ID"
+            echo "   • VERCEL_PROJECT_ID"
+            echo ""
+            echo "🔗 Setup guide: FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
             echo "🔗 ${{ github.server_url }}/${{ github.repository }}/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
-            exit 1
           fi
-          if [ -z "${{ secrets.VERCEL_ORG_ID }}" ]; then
-            echo "❌ ERROR: VERCEL_ORG_ID secret is not set!"
-            echo "📖 Follow the guide: FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
-            exit 1
-          fi
-          if [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
-            echo "❌ ERROR: VERCEL_PROJECT_ID secret is not set!"
-            echo "📖 Follow the guide: FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
-            exit 1
-          fi
-          echo "✅ All Vercel secrets are configured"
 
       - name: Deploy to Vercel
+        if: steps.check-vercel.outputs.configured == 'true'
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -64,6 +78,7 @@ jobs:
           working-directory: ./
 
       - name: Verify deployment
+        if: steps.check-vercel.outputs.configured == 'true'
         run: |
           echo "✅ Deployment complete!"
           echo "Frontend + Backend deployed to Vercel"
@@ -76,3 +91,34 @@ jobs:
           echo ""
           echo "📖 Full deployment guide:"
           echo "   ${{ github.server_url }}/${{ github.repository }}/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
+      
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "## Vercel Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-vercel.outputs.configured }}" = "true" ]; then
+            echo "✅ Vercel deployment completed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Frontend**: Deployed to Vercel" >> $GITHUB_STEP_SUMMARY
+            echo "**Backend**: Serverless functions deployed" >> $GITHUB_STEP_SUMMARY
+            echo "**API**: Available at /api/*" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+            echo "1. ✅ Configure environment variables in Vercel dashboard" >> $GITHUB_STEP_SUMMARY
+            echo "2. ✅ Test the deployment at your Vercel URL" >> $GITHUB_STEP_SUMMARY
+            echo "3. ✅ Verify sign-in functionality" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⏭️ Vercel deployment skipped" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Reason**: Required secrets not configured" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### To Enable Vercel Deployment:" >> $GITHUB_STEP_SUMMARY
+            echo "1. Get your Vercel token from https://vercel.com/account/tokens" >> $GITHUB_STEP_SUMMARY
+            echo "2. Find your Vercel Org ID and Project ID in project settings" >> $GITHUB_STEP_SUMMARY
+            echo "3. Add these as GitHub repository secrets:" >> $GITHUB_STEP_SUMMARY
+            echo "   - VERCEL_TOKEN" >> $GITHUB_STEP_SUMMARY
+            echo "   - VERCEL_ORG_ID" >> $GITHUB_STEP_SUMMARY
+            echo "   - VERCEL_PROJECT_ID" >> $GITHUB_STEP_SUMMARY
+            echo "4. See [FIX_SIGN_IN_DEPLOYMENT_GUIDE.md](${{ github.server_url }}/${{ github.repository }}/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md) for details" >> $GITHUB_STEP_SUMMARY
+          fi
