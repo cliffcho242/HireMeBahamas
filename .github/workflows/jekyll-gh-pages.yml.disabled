@@ -1,3 +1,8 @@
+# DISABLED: This workflow was disabled to prevent duplicate GitHub Pages deployments.
+# The repository has 420+ markdown files, and both Jekyll and static workflows were
+# processing all of them, causing excessive rendering output and conflicts.
+# Only the static.yml workflow is now active, deploying just the docs/ directory.
+#
 # Sample workflow for building and deploying a Jekyll site to GitHub Pages
 name: Deploy Jekyll with GitHub Pages dependencies preinstalled
 
