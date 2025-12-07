@@ -200,13 +200,13 @@ jobs:
           
           # Health check status
           health_status="${{ steps.ping-health.outputs.status }}"
-          if [ "${{ steps.ping-health.outputs.success }}" = "true" ] || [ "$health_status" = "healthy" ]; then
+          if [ "$health_status" = "healthy" ]; then
             latency="${{ steps.ping-health.outputs.latency }}"
             echo "| 💚 Health Check | ✅ Success | ${latency}ms response time |" >> $GITHUB_STEP_SUMMARY
           elif [ "$health_status" = "not_found" ]; then
-            echo "| 💚 Health Check | ⚠️  Not Found (404) | Backend endpoint not accessible - check Vercel deployment |" >> $GITHUB_STEP_SUMMARY
+            echo "| 💛 Health Check | ⚠️  Not Found (404) | Backend endpoint not accessible - check Vercel deployment |" >> $GITHUB_STEP_SUMMARY
           elif [ "$health_status" = "unreachable" ]; then
-            echo "| 💚 Health Check | ⚠️  Unreachable | Cannot connect - verify Vercel URL and deployment status |" >> $GITHUB_STEP_SUMMARY
+            echo "| 💛 Health Check | ⚠️  Unreachable | Cannot connect - verify Vercel URL and deployment status |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| 💔 Health Check | ❌ Failed | Backend not responding (status: ${health_status:-unknown}) |" >> $GITHUB_STEP_SUMMARY
           fi
@@ -244,9 +244,8 @@ jobs:
         if: always()
         run: |
           health_status="${{ steps.ping-health.outputs.status }}"
-          health_success="${{ steps.ping-health.outputs.success }}"
           
-          if [ "$health_success" = "true" ] || [ "$health_status" = "healthy" ]; then
+          if [ "$health_status" = "healthy" ]; then
             echo "✅ Keepalive successful - backend is responding normally"
             exit 0
           elif [ "$health_status" = "not_found" ] || [ "$health_status" = "unreachable" ]; then
