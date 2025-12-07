@@ -783,6 +783,8 @@ async def catch_all_api_routes(request: Request, path: str):
     Catch-all handler for unregistered API routes.
     This prevents users from getting cryptic Vercel 404 errors.
     Returns helpful information about what went wrong.
+    
+    Security: In production mode, returns limited information to prevent disclosure.
     """
     method = request.method
     
@@ -791,14 +793,21 @@ async def catch_all_api_routes(request: Request, path: str):
         f"This endpoint is not implemented. Check if the backend router is loaded."
     )
     
-    return JSONResponse(
-        status_code=404,
-        content={
-            "error": "ENDPOINT_NOT_IMPLEMENTED",
-            "message": f"The API endpoint '/{path}' is not implemented",
-            "status_code": 404,
-            "method": method,
-            "path": f"/{path}",
+    # Use helper function for consistent environment detection
+    is_debug = is_debug_mode()
+    
+    # Base response
+    response = {
+        "error": "ENDPOINT_NOT_IMPLEMENTED",
+        "message": f"The API endpoint '/{path}' is not implemented",
+        "status_code": 404,
+        "method": method,
+        "path": f"/{path}",
+    }
+    
+    # Add detailed debugging information only in debug mode
+    if is_debug:
+        response.update({
             "backend_loaded": HAS_BACKEND,
             "suggestion": "This endpoint may need to be added to the backend router, or the backend modules failed to load.",
             "available_endpoints": {
@@ -809,7 +818,11 @@ async def catch_all_api_routes(request: Request, path: str):
                 "messages": "/api/messages/* (send, list, read)",
                 "notifications": "/api/notifications/* (list, mark as read)"
             }
-        }
+        })
+    
+    return JSONResponse(
+        status_code=404,
+        content=response
     )
 
 # ============================================================================
@@ -832,9 +845,15 @@ try:
     logger.info("✅ Forever Fix middleware enabled")
     
     # Add status endpoint for monitoring
+    # Note: This endpoint is public but doesn't expose sensitive information
     @app.get("/forever-status")
     async def forever_status():
-        """Get Forever Fix system status"""
+        """
+        Get Forever Fix system status for monitoring.
+        
+        This is a public monitoring endpoint that provides system health information.
+        It does not expose sensitive configuration or credentials.
+        """
         return get_forever_fix_status()
     
 except ImportError:
