@@ -16,6 +16,8 @@ Examples:
 import sys
 import json
 import os
+import urllib.request
+import urllib.error
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -180,9 +182,6 @@ def check_api_smart_routing() -> List[Tuple[bool, str]]:
 
 def test_deployment_url(url: str) -> List[Tuple[bool, str]]:
     """Test a deployed URL."""
-    import urllib.request
-    import urllib.error
-    
     results = []
     
     # Test health endpoint
