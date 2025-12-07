@@ -279,8 +279,8 @@ app = FastAPI(
     title="HireMeBahamas API",
     version="2.0.0",
     description="Job platform API for the Bahamas - Vercel Serverless",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 # ============================================================================
@@ -459,9 +459,9 @@ async def get_user_from_db(user_id: int):
 # ============================================================================
 # HEALTH ENDPOINTS
 # ============================================================================
-@app.get("/api/health")
+# Note: Vercel's rewrite rule routes /api/* to /api/index.py
+# So FastAPI only sees the path AFTER /api/, meaning /api/health becomes /health
 @app.get("/health")
-@app.head("/api/health")
 @app.head("/health")
 async def health():
     """Instant health check - responds in <5ms"""
@@ -489,7 +489,6 @@ async def health():
     
     return response
 
-@app.get("/api/status")
 @app.get("/status")
 async def status():
     """
@@ -529,7 +528,7 @@ async def status():
         "recommendation": "Backend is fully operational" if HAS_BACKEND else "Backend running in limited mode - some features may not work. Check backend_error for details."
     }
 
-@app.get("/api/diagnostic")
+@app.get("/diagnostic")
 async def diagnostic():
     """Comprehensive diagnostic endpoint for debugging
     
@@ -598,7 +597,6 @@ async def diagnostic():
         },
     }
 
-@app.get("/api/ready")
 @app.get("/ready")
 async def ready():
     """Readiness check with database validation"""
@@ -635,7 +633,7 @@ async def ready():
 # ============================================================================
 # AUTH ME ENDPOINT
 # ============================================================================
-@app.get("/api/auth/me")
+@app.get("/auth/me")
 async def get_current_user(authorization: str = Header(None)):
     """Get current authenticated user from JWT token"""
     
@@ -685,20 +683,21 @@ async def get_current_user(authorization: str = Header(None)):
 # ============================================================================
 # INCLUDE BACKEND ROUTERS IF AVAILABLE
 # ============================================================================
+# Note: Vercel routes /api/* to this function, so routers should use paths WITHOUT /api prefix
 if HAS_BACKEND:
     try:
         logger.info("Registering backend routers...")
-        app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+        app.include_router(auth.router, prefix="/auth", tags=["auth"])
         logger.info("✅ Auth router registered")
-        app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+        app.include_router(posts.router, prefix="/posts", tags=["posts"])
         logger.info("✅ Posts router registered")
-        app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
+        app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
         logger.info("✅ Jobs router registered")
-        app.include_router(users.router, prefix="/api/users", tags=["users"])
+        app.include_router(users.router, prefix="/users", tags=["users"])
         logger.info("✅ Users router registered")
-        app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
+        app.include_router(messages.router, prefix="/messages", tags=["messages"])
         logger.info("✅ Messages router registered")
-        app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+        app.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
         logger.info("✅ Notifications router registered")
         logger.info("✅ All backend routers registered successfully")
     except Exception as e:
@@ -710,7 +709,6 @@ else:
 # ROOT ENDPOINT
 # ============================================================================
 @app.get("/")
-@app.get("/api")
 async def root():
     """Root endpoint with API information"""
     return {
@@ -779,7 +777,7 @@ async def custom_404_handler(request: Request, exc: HTTPException):
 # ============================================================================
 # CATCH-ALL API ROUTE HANDLER
 # ============================================================================
-@app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 async def catch_all_api_routes(request: Request, path: str):
     """
     Catch-all handler for unregistered API routes.
@@ -789,7 +787,7 @@ async def catch_all_api_routes(request: Request, path: str):
     method = request.method
     
     logger.error(
-        f"UNREGISTERED API ROUTE - {method} /api/{path}\n"
+        f"UNREGISTERED API ROUTE - {method} /{path}\n"
         f"This endpoint is not implemented. Check if the backend router is loaded."
     )
     
@@ -800,7 +798,7 @@ async def catch_all_api_routes(request: Request, path: str):
             "message": f"The API endpoint '/{path}' is not implemented",
             "status_code": 404,
             "method": method,
-            "path": f"/api/{path}",
+            "path": f"/{path}",
             "backend_loaded": HAS_BACKEND,
             "suggestion": "This endpoint may need to be added to the backend router, or the backend modules failed to load.",
             "available_endpoints": {
@@ -834,7 +832,7 @@ try:
     logger.info("✅ Forever Fix middleware enabled")
     
     # Add status endpoint for monitoring
-    @app.get("/api/forever-status")
+    @app.get("/forever-status")
     async def forever_status():
         """Get Forever Fix system status"""
         return get_forever_fix_status()
