@@ -55,12 +55,16 @@ logger = logging.getLogger(__name__)
 # Check if we're in production mode
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
-# Get database URL with proper fallback
+# Get database URL with proper fallback and strip any whitespace
 DATABASE_URL = (
     os.getenv("DATABASE_PRIVATE_URL") or 
     os.getenv("POSTGRES_URL") or
     os.getenv("DATABASE_URL")
 )
+
+# Strip whitespace from DATABASE_URL if present
+if DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.strip()
 
 # For local development only - require explicit configuration in production
 if not DATABASE_URL:
