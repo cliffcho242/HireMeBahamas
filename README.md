@@ -130,8 +130,8 @@ cd frontend && npm run dev    # Frontend (terminal 2)
 **Or generate secrets manually:**
 ```bash
 # Generate all secrets at once
-echo "JWT_SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')"
-echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(24))')"
+echo "JWT_SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+echo "SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
 ```
 
 ---

@@ -8,6 +8,13 @@
 # Usage: ./scripts/generate_secrets.sh
 #================================================================
 
+# Check if Python 3 is available
+if ! command -v python3 &> /dev/null; then
+    echo "Error: Python 3 is required but not found"
+    echo "Please install Python 3.6 or higher"
+    exit 1
+fi
+
 echo "================================================"
 echo "🔐 HireMeBahamas Secret Generator"
 echo "================================================"

@@ -8,10 +8,10 @@ Run this in your terminal to generate all secrets:
 
 ```bash
 # Generate JWT_SECRET_KEY (32-byte hex)
-echo "JWT_SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')"
+echo "JWT_SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 
 # Generate SECRET_KEY (24-byte hex) 
-echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(24))')"
+echo "SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
 ```
 
 **OR** use the automated script:
