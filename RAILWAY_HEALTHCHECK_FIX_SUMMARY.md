@@ -1,12 +1,54 @@
-# Railway Deployment Healthcheck Fix - Summary
+# Railway Deployment Healthcheck Fix - Summary (Updated December 2025)
 
-## Problem Statement
+## Latest Issue (December 2025)
 Railway deployment was failing with:
 - "Attempt #1-7 failed with service unavailable"
 - "1/1 replicas never became healthy!"
 - "Healthcheck failed!"
+- Path: /health
+- Retry window: 1m40s
 
 The healthcheck endpoint was not responding correctly, preventing successful deployment.
+
+## Latest Root Cause (December 2025)
+
+**Configuration Conflict in railway.json:**
+The `railway.json` file had a `startCommand` that overrode `nixpacks.toml`, starting the wrong backend:
+- ❌ railway.json tried to start: `uvicorn api.backend_app.main:app` (FastAPI backend - not configured for Railway)
+- ✅ nixpacks.toml correctly starts: `gunicorn final_backend_postgresql:application` (Flask backend - production-ready)
+
+## Latest Fix (December 2025)
+
+**Updated railway.json:**
+```json
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 180,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10,
+    "numReplicas": 1
+  }
+}
+```
+
+**Key Changes:**
+1. ✅ Removed `startCommand` field - Let nixpacks.toml control startup
+2. ✅ Increased `healthcheckTimeout` from 100s to 180s - Allow for Railway cold starts
+
+**Why This Works:**
+- Nixpacks now controls startup via `gunicorn final_backend_postgresql:application --config gunicorn.conf.py`
+- Flask backend has instant `/health` endpoint (<10ms response)
+- 180s timeout accommodates Railway cold starts + database initialization
+- No conflicting startup commands
+
+---
+
+## Previous Issues and Fixes (Historical Reference)
 
 ## Root Causes Identified
 
