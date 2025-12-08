@@ -11,9 +11,26 @@ from pathlib import Path
 api_dir = Path(__file__).parent
 sys.path.insert(0, str(api_dir))
 
-# Create an alias so "import app" resolves to "backend_app"
+# Create comprehensive module alias so "import app" and "from app.core.X" work
 import backend_app
 sys.modules['app'] = backend_app
+
+# CRITICAL FIX: Also alias all submodules so "from app.core.X" works
+# When we do sys.modules['app'] = backend_app, Python doesn't automatically
+# resolve app.core to backend_app.core, so we must explicitly alias each submodule
+import backend_app.core
+sys.modules['app.core'] = backend_app.core
+
+# Dynamically alias all core submodules to handle all "from app.core.X" imports
+_core_modules = ['security', 'upload', 'concurrent', 'metrics', 'redis_cache', 
+                 'socket_manager', 'cache', 'db_health', 'timeout_middleware']
+for _module_name in _core_modules:
+    try:
+        _module = __import__(f'backend_app.core.{_module_name}', fromlist=[''])
+        sys.modules[f'app.core.{_module_name}'] = _module
+    except ImportError:
+        # Skip modules that might not be available (graceful degradation)
+        pass
 
 # Import the FastAPI app from backend_app
 try:

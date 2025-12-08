@@ -128,9 +128,28 @@ try:
     api_dir = os.path.dirname(os.path.abspath(__file__))
     sys.path.insert(0, api_dir)
     
-    # Create module alias for backend_app BEFORE importing
+    # Create comprehensive module alias for backend_app BEFORE importing
+    # This allows imports like "from app.core.security import ..." to work
     import backend_app as app_module
     sys.modules['app'] = app_module
+    
+    # CRITICAL FIX: Also alias all submodules so "from app.core.X" works
+    # When we do sys.modules['app'] = backend_app, Python doesn't automatically
+    # resolve app.core to backend_app.core, so we must explicitly alias each submodule
+    import backend_app.core
+    sys.modules['app.core'] = backend_app.core
+    
+    # Dynamically alias all core submodules to handle all "from app.core.X" imports
+    # This ensures any module under backend_app.core can be accessed as app.core.X
+    _core_modules = ['security', 'upload', 'concurrent', 'metrics', 'redis_cache', 
+                     'socket_manager', 'cache', 'db_health', 'timeout_middleware']
+    for _module_name in _core_modules:
+        try:
+            _module = __import__(f'backend_app.core.{_module_name}', fromlist=[''])
+            sys.modules[f'app.core.{_module_name}'] = _module
+        except ImportError:
+            # Skip modules that might not be available (graceful degradation)
+            pass
     
     # Also ensure backend_app is in sys.path
     backend_app_path = os.path.join(api_dir, 'backend_app')

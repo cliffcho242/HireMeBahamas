@@ -18,9 +18,25 @@ if 'app' not in sys.modules:
     if parent_dir not in sys.path:
         sys.path.insert(0, parent_dir)
     
-    # Create module alias: app -> backend_app
+    # Create comprehensive module alias: app -> backend_app
+    # CRITICAL FIX: Also alias all submodules so "from app.core.X" works
     import backend_app as app_module
     sys.modules['app'] = app_module
+    
+    # Alias core submodules explicitly
+    import backend_app.core
+    sys.modules['app.core'] = backend_app.core
+    
+    # Dynamically alias all core submodules to handle all "from app.core.X" imports
+    _core_modules = ['security', 'upload', 'concurrent', 'metrics', 'redis_cache', 
+                     'socket_manager', 'cache', 'db_health', 'timeout_middleware']
+    for _module_name in _core_modules:
+        try:
+            _module = __import__(f'backend_app.core.{_module_name}', fromlist=[''])
+            sys.modules[f'app.core.{_module_name}'] = _module
+        except ImportError:
+            # Skip modules that might not be available (graceful degradation)
+            pass
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
