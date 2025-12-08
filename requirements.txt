@@ -1,12 +1,22 @@
 # ============================================================================
-# MASTERMIND FINAL IMMORTAL DEPLOY — FastAPI + Postgres (2025)
+# MASTERMIND FINAL IMMORTAL DEPLOY — Flask/FastAPI Dual Support (2025)
 # ============================================================================
 # Zero 499, 500, 502, 127, asyncpg wheel errors, DATABASE_URL issues FOREVER
 # Boot < 800ms | Login < 300ms globally | Works Render Free + Vercel Serverless
+# 
+# Railway Deployment: Uses Flask backend (final_backend_postgresql.py)
+# Vercel Deployment: Uses FastAPI backend (api/backend_app/main.py)
+#
 # Install: pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt
 # ============================================================================
 
 # Core Framework & Server (Latest stable versions)
+# Flask is used by Railway deployment (final_backend_postgresql.py)
+# FastAPI is used by Vercel/alternative deployments
+flask==3.1.0
+flask-cors==5.0.0
+flask-caching==2.3.0
+flask-limiter==3.8.0
 fastapi==0.115.6
 uvicorn[standard]==0.32.0
 gunicorn==23.0.0
