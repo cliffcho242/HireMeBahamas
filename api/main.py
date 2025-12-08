@@ -21,12 +21,16 @@ sys.modules['app'] = backend_app
 import backend_app.core
 sys.modules['app.core'] = backend_app.core
 
-# Import and alias specific core modules that are commonly used
-import backend_app.core.security
-sys.modules['app.core.security'] = backend_app.core.security
-
-import backend_app.core.upload
-sys.modules['app.core.upload'] = backend_app.core.upload
+# Dynamically alias all core submodules to handle all "from app.core.X" imports
+_core_modules = ['security', 'upload', 'concurrent', 'metrics', 'redis_cache', 
+                 'socket_manager', 'cache', 'db_health', 'timeout_middleware']
+for _module_name in _core_modules:
+    try:
+        _module = __import__(f'backend_app.core.{_module_name}', fromlist=[''])
+        sys.modules[f'app.core.{_module_name}'] = _module
+    except ImportError:
+        # Skip modules that might not be available (graceful degradation)
+        pass
 
 # Import the FastAPI app from backend_app
 try:

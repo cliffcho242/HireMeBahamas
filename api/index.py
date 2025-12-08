@@ -139,12 +139,17 @@ try:
     import backend_app.core
     sys.modules['app.core'] = backend_app.core
     
-    # Import all core submodules and alias them too
-    import backend_app.core.security
-    sys.modules['app.core.security'] = backend_app.core.security
-    
-    import backend_app.core.upload
-    sys.modules['app.core.upload'] = backend_app.core.upload
+    # Dynamically alias all core submodules to handle all "from app.core.X" imports
+    # This ensures any module under backend_app.core can be accessed as app.core.X
+    _core_modules = ['security', 'upload', 'concurrent', 'metrics', 'redis_cache', 
+                     'socket_manager', 'cache', 'db_health', 'timeout_middleware']
+    for _module_name in _core_modules:
+        try:
+            _module = __import__(f'backend_app.core.{_module_name}', fromlist=[''])
+            sys.modules[f'app.core.{_module_name}'] = _module
+        except ImportError:
+            # Skip modules that might not be available (graceful degradation)
+            pass
     
     # Also ensure backend_app is in sys.path
     backend_app_path = os.path.join(api_dir, 'backend_app')
