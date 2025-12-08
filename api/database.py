@@ -14,6 +14,9 @@ def get_database_url():
     """Get and validate DATABASE_URL from environment"""
     db_url = os.getenv("DATABASE_URL", "")
     
+    # Strip whitespace from database URL to prevent connection errors
+    db_url = db_url.strip()
+    
     if not db_url:
         raise ValueError("DATABASE_URL environment variable not set")
     

@@ -56,11 +56,13 @@ logger = logging.getLogger(__name__)
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 # Get database URL with proper fallback
-DATABASE_URL = (
+# Strip whitespace to prevent connection errors from misconfigured environment variables
+raw_url = (
     os.getenv("DATABASE_PRIVATE_URL") or 
     os.getenv("POSTGRES_URL") or
     os.getenv("DATABASE_URL")
 )
+DATABASE_URL = raw_url.strip() if raw_url else None
 
 # For local development only - require explicit configuration in production
 if not DATABASE_URL:
