@@ -75,7 +75,7 @@ def validate_environment():
         try:
             __import__(module)
             print(f"  ✅ {module}")
-        except ImportError:
+        except ImportError as e:
             print(f"  ❌ {module} - NOT INSTALLED")
             missing_modules.append(module)
             errors.append(f"Missing required module: {module}")
