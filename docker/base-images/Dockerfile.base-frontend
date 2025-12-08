@@ -2,7 +2,7 @@
 # This image contains all apk system dependencies pre-installed
 # to speed up deployments and prevent build timeouts
 
-FROM node:18-alpine
+FROM node:20-alpine
 
 LABEL maintainer="HireMeBahamas"
 LABEL description="Base image for HireMeBahamas frontend with all system dependencies"
