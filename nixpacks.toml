@@ -90,4 +90,5 @@ aptPkgs = [
 # Migration runs automatically in final_backend_postgresql.py
 # PostgreSQL connection is configured via DATABASE_URL environment variable
 # Use gunicorn config file which properly reads PORT from environment with fallback to 8080
-cmd = "gunicorn final_backend_postgresql:application --config gunicorn.conf.py"
+# Run startup validation first to catch configuration issues early
+cmd = "python validate_startup.py && gunicorn final_backend_postgresql:application --config gunicorn.conf.py"
