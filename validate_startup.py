@@ -63,10 +63,10 @@ def validate_environment():
     # Check Python dependencies
     print("\n📦 Checking Python dependencies...")
     required_modules = [
-        "flask",
+        "fastapi",
         "psycopg2",
         "bcrypt",
-        "jwt",
+        "uvicorn",
         "gunicorn",
     ]
     
