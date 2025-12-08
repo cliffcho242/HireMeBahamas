@@ -39,7 +39,7 @@ anyio==4.6.0
 
 # Performance & Caching
 redis==5.2.1
-hiredis==3.0.0
+hiredis==3.1.0
 
 # Real-time (optional - can be removed if not using Socket.IO)
 python-socketio==5.15.0
