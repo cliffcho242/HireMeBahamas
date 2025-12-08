@@ -18,6 +18,9 @@ mangum==0.19.0
 pydantic==2.10.3
 pydantic-settings==2.7.0
 
+# Async utilities (required for async password hashing)
+anyio==4.7.0
+
 # Database - Binary-only installation (NO COMPILATION)
 sqlalchemy[asyncio]==2.0.44
 asyncpg==0.30.0
