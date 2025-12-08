@@ -6,6 +6,7 @@ pydantic==2.9.2
 # Database
 psycopg2-binary==2.9.9
 sqlalchemy==2.0.35
+asyncpg==0.30.0
 
 # Authentication & Security
 python-jose[cryptography]==3.5.0
