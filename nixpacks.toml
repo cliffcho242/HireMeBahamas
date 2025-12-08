@@ -25,11 +25,8 @@ aptPkgs = [
     "pkg-config",
     
     # PostgreSQL client and development libraries (REQUIRED for psycopg2 and PostgreSQL connectivity)
-    "postgresql",
+    # NOTE: Do NOT install postgresql server package - Railway provides PostgreSQL as a managed service
     "postgresql-client",
-    "postgresql-client-common",
-    "postgresql-common",
-    "postgresql-contrib",
     "libpq-dev",
     "libpq5",
     
