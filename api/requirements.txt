@@ -64,7 +64,7 @@ cloudinary==1.44.1
 
 # Performance & Caching (optional - gracefully degrades if not available)
 redis==7.1.0
-hiredis==3.0.0
+hiredis==3.1.0
 
 # OAuth Libraries
 authlib==1.6.5
