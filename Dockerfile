@@ -73,9 +73,9 @@ RUN useradd -m -u 1000 appuser && \
 
 USER appuser
 
-EXPOSE 8080
+EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD sh -c 'curl -f http://localhost:${PORT:-8080}/health || exit 1'
+    CMD sh -c 'curl -f http://localhost:${PORT:-8000}/health || exit 1'
 
 CMD ["sh", "-c", "uvicorn api.backend_app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 5 --limit-concurrency 100"]
