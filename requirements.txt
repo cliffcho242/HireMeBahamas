@@ -66,6 +66,9 @@ hiredis==3.0.0
 # OAuth Libraries
 authlib==1.6.5
 
+# Real-time Communication (Socket.IO for real-time features)
+python-socketio==5.15.0
+
 # ============================================================================
 # DEPLOYMENT NOTES:
 # 1. Vercel automatically installs from this requirements.txt
