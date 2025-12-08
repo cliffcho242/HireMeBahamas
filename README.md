@@ -108,6 +108,34 @@ Choose your deployment platform and follow the step-by-step guide:
 
 ---
 
+## ⚡ Quick Local Development Setup
+
+**Get started in 2 minutes!**
+
+```bash
+# 1. Generate secrets and create .env files automatically
+./scripts/quick_local_setup.sh
+
+# 2. Install dependencies
+pip install -r requirements.txt
+cd frontend && npm install && cd ..
+
+# 3. Start the application
+python app.py                 # Backend (terminal 1)
+cd frontend && npm run dev    # Frontend (terminal 2)
+```
+
+📖 **[Complete Quick Setup Guide](./QUICK_SETUP_COMMANDS.md)** - Detailed instructions for generating secrets, creating .env files, and troubleshooting
+
+**Or generate secrets manually:**
+```bash
+# Generate all secrets at once
+echo "JWT_SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')"
+echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(24))')"
+```
+
+---
+
 ## 🚀 Production Mode (Recommended for Local Development)
 
 **NEW**: Run HireMeBahamas in full production mode with PostgreSQL!
@@ -150,14 +178,16 @@ This runs the app with:
 
 **Quick Setup (New Users):**
 ```bash
-# Run the simple setup script
-./simple_setup.sh
+# Run the automated local setup script (generates secrets and creates .env files)
+./scripts/quick_local_setup.sh
 
 # Or manually:
 cp .env.example .env  # Then edit with your settings
 pip install -r requirements.txt
 cd frontend && npm install
 ```
+
+📖 **[Quick Setup Commands Guide](./QUICK_SETUP_COMMANDS.md)** - Complete guide for generating secrets and creating .env files
 
 ## 🚀 Auto-Deploy Enabled
 
