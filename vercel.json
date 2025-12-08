@@ -4,6 +4,10 @@
     {
       "src": "api/index.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "api/cron/health.py",
+      "use": "@vercel/python"
     }
   ],
   "functions": {
