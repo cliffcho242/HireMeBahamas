@@ -10,13 +10,8 @@ import os
 import sys
 from urllib.parse import urlparse, parse_qs
 
-# Add api directory to path for imports
-api_dir = os.path.join(os.path.dirname(__file__), 'api')
-if api_dir not in sys.path:
-    sys.path.insert(0, api_dir)
-
-# Import the actual utility function
-from db_url_utils import ensure_sslmode
+# Import the actual utility function from the api package
+from api.db_url_utils import ensure_sslmode
 
 
 def test_ssl_mode_enforcement():

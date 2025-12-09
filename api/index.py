@@ -13,14 +13,7 @@ import logging
 import traceback
 from urllib.parse import urlparse
 from typing import Optional, List, Dict, Union, Any
-
-# Import database URL utilities from the same package
-# Note: db_url_utils.py is in the same directory (api/) so this should always work
-api_dir = os.path.dirname(os.path.abspath(__file__))
-if api_dir not in sys.path:
-    sys.path.insert(0, api_dir)
-
-from db_url_utils import ensure_sslmode
+from .db_url_utils import ensure_sslmode
 
 
 def inject_typing_exports(module):
