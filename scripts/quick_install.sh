@@ -64,8 +64,13 @@ install_python_deps() {
     
     # Use pip cache and quiet mode
     if [ -f "$PROJECT_ROOT/requirements.txt" ]; then
-        pip install --quiet --upgrade pip
-        pip install --quiet -r "$PROJECT_ROOT/requirements.txt"
+        if [ "$EUID" -eq 0 ]; then
+            pip install --quiet --upgrade --root-user-action=ignore pip
+            pip install --quiet --root-user-action=ignore -r "$PROJECT_ROOT/requirements.txt"
+        else
+            pip install --quiet --upgrade pip
+            pip install --quiet -r "$PROJECT_ROOT/requirements.txt"
+        fi
         success "Python dependencies installed"
     else
         warn "requirements.txt not found - skipping Python packages"

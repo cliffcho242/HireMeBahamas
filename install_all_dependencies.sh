@@ -145,11 +145,20 @@ source venv/bin/activate
 
 # Upgrade pip
 echo "Upgrading pip..."
-pip install --upgrade pip setuptools wheel
+# Check if running as root and add flag accordingly
+if [ "$EUID" -eq 0 ]; then
+    pip install --upgrade --root-user-action=ignore pip setuptools wheel
+else
+    pip install --upgrade pip setuptools wheel
+fi
 
 # Install backend dependencies
 echo "Installing backend Python packages..."
-pip install -r requirements.txt
+if [ "$EUID" -eq 0 ]; then
+    pip install --root-user-action=ignore -r requirements.txt
+else
+    pip install -r requirements.txt
+fi
 
 echo "Backend dependencies installed successfully!"
 
