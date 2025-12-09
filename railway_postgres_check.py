@@ -17,6 +17,7 @@ Exit codes:
 
 import os
 import sys
+from urllib.parse import urlparse
 
 
 def check_railway_postgres():
@@ -66,16 +67,13 @@ def check_railway_postgres():
     
     elif database_url and "postgres" in database_url:
         print("⚠️  WARNING: DATABASE_URL detected but doesn't point to Railway")
-        # Safely extract host from URL
+        # Safely parse URL using urllib
         try:
-            if '@' in database_url:
-                after_at = database_url.split('@')[1]
-                host = after_at.split(':')[0] if ':' in after_at else after_at.split('/')[0]
-                print(f"   Current URL host: {host}")
-            else:
-                print(f"   Current URL format: unexpected")
-        except (IndexError, AttributeError):
-            print(f"   Current URL: <unable to parse>")
+            parsed = urlparse(database_url)
+            host = parsed.hostname or "unknown"
+            print(f"   Current URL host: {host}")
+        except Exception as e:
+            print(f"   Current URL: <unable to parse> ({e})")
         print("\n   ⚠️  If you see 'root execution not permitted' errors, this is the cause!")
         warnings.append("Non-Railway PostgreSQL detected")
     
