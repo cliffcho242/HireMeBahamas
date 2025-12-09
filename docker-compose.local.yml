@@ -34,8 +34,10 @@ services:
     image: postgres:16-alpine
     user: postgres  # CRITICAL: Run as postgres user, not root
                     # - Prevents security vulnerabilities
-                    # - Required for Railway (root execution not permitted)
-                    # - Railway doesn't support PostgreSQL init as root then switch user
+                    # - Shows best practice for running PostgreSQL in containers
+                    # - For Railway: Use MANAGED PostgreSQL database, NOT containers
+                    # - This docker-compose is LOCAL DEVELOPMENT ONLY
+                    # - NEVER deploy this to Railway (causes "root execution not permitted")
     environment:
       POSTGRES_DB: hiremebahamas
       POSTGRES_USER: hiremebahamas_user

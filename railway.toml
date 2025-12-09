@@ -1,22 +1,35 @@
+# ============================================================================
 # Railway Configuration for HireMeBahamas Backend
+# ============================================================================
 # This file configures the Python backend service ONLY
 # 
-# ⚠️ CRITICAL: PostgreSQL Configuration
+# 🚨🚨🚨 CRITICAL: PostgreSQL Configuration 🚨🚨🚨
 # ====================================
-# DO NOT deploy PostgreSQL as a container service!
-# Railway will throw: "root execution of the PostgreSQL server is not permitted"
+# ❌ DO NOT deploy PostgreSQL as a container service!
+# ❌ DO NOT use docker-compose on Railway!
+# ❌ DO NOT deploy this repository as a PostgreSQL service!
+# 
+# If you see this error:
+#   "root execution of the PostgreSQL server is not permitted"
+#   "Mounting volume on: /var/lib/containers/railwayapp/bind-mounts"
+# 
+# YOU HAVE MISCONFIGURED RAILWAY!
 # 
 # ✅ CORRECT Setup:
 #    1. In Railway Dashboard → + New → Database → PostgreSQL
-#    2. Use Railway's managed PostgreSQL database service
+#    2. Use Railway's MANAGED PostgreSQL database service
 #    3. Railway auto-injects DATABASE_URL environment variable
+#    4. Your backend service connects to the managed database
 # 
-# ❌ WRONG Setup:
-#    - Adding PostgreSQL from container image
-#    - Deploying docker-compose.yml files
-#    - Installing postgresql server packages
+# ❌ WRONG Setup (causes the error above):
+#    • Deploying this repo as a PostgreSQL service
+#    • Adding PostgreSQL from container image
+#    • Deploying docker-compose.yml files
+#    • Installing postgresql server packages
 # 
-# For detailed instructions, see: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md
+# 📖 QUICK FIX: RAILWAY_POSTGRES_QUICKFIX.md (5 minutes)
+# 📖 DETAILED GUIDE: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md
+# ============================================================================
 
 [build]
 builder = "NIXPACKS"

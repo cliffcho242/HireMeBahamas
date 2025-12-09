@@ -1,28 +1,83 @@
-# Railway Ignore File
-# Only deploy Python backend files
+# ============================================================================
+# Railway Ignore File - CRITICAL CONFIGURATION
+# ============================================================================
+# This file determines what gets deployed to Railway.
+# INCORRECT configuration here can cause the error:
+#   "root execution of the PostgreSQL server is not permitted"
+# ============================================================================
 
-# CRITICAL: Exclude docker-compose files to prevent confusion
+# ⚠️ CRITICAL: Exclude docker-compose files to prevent PostgreSQL container deployment
 # docker-compose files are for LOCAL DEVELOPMENT ONLY
 # Railway provides managed PostgreSQL - DO NOT deploy PostgreSQL containers
+# If you see "root execution not permitted" error, you deployed docker-compose by mistake
 docker-compose*.yml
 docker-compose*.yaml
 .dockerignore
+Dockerfile.local
+Dockerfile.dev
 
 # Exclude root package.json to prevent npm/Node.js detection
 # Frontend apps (next-app, frontend) are deployed separately on Vercel
+# Only Python backend should be deployed on Railway
 package.json
 package-lock.json
 next-app/
 examples/
 
+# Exclude frontend and admin directories - backend only
 admin_panel/
 frontend/
 node_modules/
+
+# Exclude version control and IDE files
 .git/
 .vscode/
+.idea/
+
+# Exclude Python cache and test files
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Exclude log files
 *.log
-.env.local
+logs/
+
+# Exclude test files
 test_*
 *_test.py
+tests/
+
+# Exclude local environment files (Railway uses dashboard environment variables)
+.env
+.env.local
+.env.*.local
+
+# Exclude documentation (not needed at runtime)
+*.md
+docs/
+
+# Exclude CI/CD and configuration files
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# ============================================================================
+# REMINDER: Railway PostgreSQL Setup
+# ============================================================================
+# If you see "root execution of the PostgreSQL server is not permitted":
+# 1. You have PostgreSQL deployed as a container service (WRONG)
+# 2. Delete the PostgreSQL service from Railway Dashboard
+# 3. Add: + New → Database → PostgreSQL (managed database)
+# 4. Redeploy backend service
+# 
+# Documentation: RAILWAY_POSTGRES_QUICKFIX.md
+# ============================================================================
