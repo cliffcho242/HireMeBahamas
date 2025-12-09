@@ -12,6 +12,25 @@ import time
 import logging
 import traceback
 from urllib.parse import urlparse
+from typing import Optional, List, Dict, Union, Any
+
+
+def inject_typing_exports(module):
+    """Inject typing module exports into a module's namespace.
+    
+    This is required for Pydantic to properly evaluate forward references
+    when modules are aliased. When Pydantic evaluates forward references,
+    it looks in the module's __dict__ for type names like Optional, List, etc.
+    
+    Args:
+        module: The module object to inject typing exports into
+    """
+    module.__dict__['Optional'] = Optional
+    module.__dict__['List'] = List
+    module.__dict__['Dict'] = Dict
+    module.__dict__['Union'] = Union
+    module.__dict__['Any'] = Any
+
 
 # Configure logging with more detail for debugging
 # Check if runtime logs directory exists (e.g., in CI/test environment)
@@ -132,12 +151,14 @@ try:
     # This allows imports like "from app.core.security import ..." to work
     import backend_app as app_module
     sys.modules['app'] = app_module
+    inject_typing_exports(app_module)
     
     # CRITICAL FIX: Also alias all submodules so "from app.core.X" works
     # When we do sys.modules['app'] = backend_app, Python doesn't automatically
     # resolve app.core to backend_app.core, so we must explicitly alias each submodule
     import backend_app.core
     sys.modules['app.core'] = backend_app.core
+    inject_typing_exports(backend_app.core)
     
     # Dynamically alias all core submodules to handle all "from app.core.X" imports
     # This ensures any module under backend_app.core can be accessed as app.core.X
@@ -147,6 +168,26 @@ try:
         try:
             _module = __import__(f'backend_app.core.{_module_name}', fromlist=[''])
             sys.modules[f'app.core.{_module_name}'] = _module
+            inject_typing_exports(_module)
+        except ImportError:
+            # Skip modules that might not be available (graceful degradation)
+            pass
+    
+    # CRITICAL FIX: Alias schemas submodules to fix Pydantic forward reference resolution
+    # When Pydantic evaluates forward references like "Optional[str]", it looks for
+    # these types in the module's __dict__. Without this, aliased schema modules
+    # (app.schemas.*) won't have typing exports available, causing PydanticUndefinedAnnotation errors.
+    import backend_app.schemas
+    sys.modules['app.schemas'] = backend_app.schemas
+    inject_typing_exports(backend_app.schemas)
+    
+    # Dynamically alias all schema submodules to handle all "from app.schemas.X" imports
+    _schema_modules = ['auth', 'job', 'message', 'post', 'review']
+    for _module_name in _schema_modules:
+        try:
+            _module = __import__(f'backend_app.schemas.{_module_name}', fromlist=[''])
+            sys.modules[f'app.schemas.{_module_name}'] = _module
+            inject_typing_exports(_module)
         except ImportError:
             # Skip modules that might not be available (graceful degradation)
             pass
