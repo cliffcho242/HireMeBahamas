@@ -13,9 +13,10 @@ import time
 bind = f"0.0.0.0:{os.environ.get('PORT', '8080')}"
 
 # ============================================================================
-# WORKER CONFIGURATION (Optimized for Render Free/Starter Tier)
+# WORKER CONFIGURATION (Optimized for Cloud Platforms)
 # ============================================================================
-# CPU cores available (Render Free: 0.1 CPU, Starter: 0.5 CPU, Standard: 1 CPU)
+# Optimized for Railway, Render, and similar PaaS platforms
+# Typical CPU allocation: Free tier: 0.1-0.5 CPU, Paid: 1+ CPU
 cpu_count = multiprocessing.cpu_count()
 
 # Workers: 1 for Free tier, 2 for Starter+, auto for Standard
@@ -33,7 +34,7 @@ threads = int(os.environ.get("WEB_THREADS", "4"))
 # TIMEOUT CONFIGURATION (Critical for 502 Prevention)
 # ============================================================================
 # Worker timeout: 120s (2 minutes) - handles cold starts + slow queries
-# Render Free tier can take 30-60s on cold start
+# Cloud platforms (Railway/Render) can take 30-60s on cold start
 timeout = int(os.environ.get("GUNICORN_TIMEOUT", "120"))
 
 # Graceful timeout: 30s for in-flight requests during shutdown
@@ -78,7 +79,7 @@ proc_name = "hiremebahamas"
 # ============================================================================
 # SECURITY
 # ============================================================================
-# Trust proxy headers from Render/Railway load balancers
+# Trust proxy headers from cloud platform load balancers (Railway, Render, etc.)
 forwarded_allow_ips = "*"
 
 # ============================================================================
