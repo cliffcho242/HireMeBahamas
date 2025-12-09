@@ -58,7 +58,7 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 # Get database URL with proper fallback
 # Strip whitespace to prevent connection errors from misconfigured environment variables
 raw_url = (
-    os.getenv("DATABASE_PRIVATE_URL") or 
+    os.getenv("DATABASE_PRIVATE_URL") or
     os.getenv("POSTGRES_URL") or
     os.getenv("DATABASE_URL")
 )

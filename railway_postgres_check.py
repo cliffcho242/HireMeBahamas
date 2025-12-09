@@ -29,10 +29,10 @@ def print_critical_notice():
     
     # If we detect PostgreSQL container indicators, print urgent warning
     if ("postgres" in railway_service) or (pgdata and postgres_user):
-        print("\n" + "🚨" * 40)
-        print("🚨 CRITICAL: POSTGRESQL MISCONFIGURATION DETECTED 🚨")
-        print("🚨" * 40)
-        print("\n⚠️  THIS REPOSITORY SHOULD NOT BE DEPLOYED AS A POSTGRESQL SERVICE!")
+        print("\n" + "=" * 80)
+        print("🚨 [CRITICAL] POSTGRESQL MISCONFIGURATION DETECTED")
+        print("=" * 80)
+        print("\n⚠️  [WARNING] THIS REPOSITORY SHOULD NOT BE DEPLOYED AS A POSTGRESQL SERVICE!")
         print("\n❌ If you see this error:")
         print('   "root" execution of the PostgreSQL server is not permitted')
         print("\n✅ YOU NEED TO:")
@@ -40,7 +40,7 @@ def print_critical_notice():
         print("   2. Add managed database: + New → Database → PostgreSQL")
         print("   3. Redeploy your backend service")
         print("\n📖 FIX GUIDE: RAILWAY_POSTGRES_QUICKFIX.md")
-        print("🚨" * 40 + "\n")
+        print("=" * 80 + "\n")
 
 
 def check_railway_postgres():
@@ -137,11 +137,11 @@ def check_railway_postgres():
     postgres_indicators = [v for v in postgres_service_vars.values() if v]
     
     if postgres_indicators:
-        print("🚨 CRITICAL WARNING: PostgreSQL server environment variables detected!")
+        print("🚨 [CRITICAL WARNING] PostgreSQL server environment variables detected!")
         print("   Found variables:", ", ".join([k for k, v in postgres_service_vars.items() if v]))
         print("\n   ❌ This is a MISCONFIGURATION - PostgreSQL is running as a container!")
         print("   instead of using Railway's managed database.")
-        print("\n   🔥 This WILL cause these errors:")
+        print("\n   🔥 [ERROR] This WILL cause these errors:")
         print("   • 'root execution of the PostgreSQL server is not permitted'")
         print("   • 'Mounting volume on: /var/lib/containers/railwayapp/bind-mounts'")
         print("   • 'possible system security compromise'")
@@ -151,7 +151,7 @@ def check_railway_postgres():
         print("   3. Redeploy backend service")
         print("\n   📖 QUICK FIX GUIDE: RAILWAY_POSTGRES_QUICKFIX.md")
         print("   📖 DETAILED GUIDE: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md")
-        warnings.append("PostgreSQL server environment variables detected - MISCONFIGURED!")
+        warnings.append("PostgreSQL server environment variables detected (misconfigured)")
     else:
         print("✅ No PostgreSQL server environment variables detected")
         print("   (This is correct - your app should only CONNECT to PostgreSQL)")
