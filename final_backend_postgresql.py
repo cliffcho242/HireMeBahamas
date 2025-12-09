@@ -17,7 +17,7 @@ import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
 from psycopg2 import pool
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 
 import bcrypt
 import jwt
@@ -922,12 +922,18 @@ if USE_POSTGRESQL:
     # Helps identify the application source in database logs and pg_stat_activity
     APPLICATION_NAME = os.getenv("APPLICATION_NAME", "hiremebahamas-backend")
 
+    # URL decode credentials to handle special characters in username/password
+    # For example, if password is "p@ss%word!", it will be encoded as "p%40ss%25word%21"
+    # We need to decode it back to the original form for authentication
+    username = unquote(parsed.username) if parsed.username else None
+    password = unquote(parsed.password) if parsed.password else None
+    
     DB_CONFIG = {
         "host": parsed.hostname,
         "port": port,
         "database": database,
-        "user": parsed.username,
-        "password": parsed.password,
+        "user": username,
+        "password": password,
         "sslmode": sslmode,
         "application_name": APPLICATION_NAME,
     }
@@ -1589,8 +1595,31 @@ def _get_connection_pool():
                         f"✅ PostgreSQL pool: min={DB_POOL_MIN_CONNECTIONS}, max={DB_POOL_MAX_CONNECTIONS}, "
                         f"timeout={DB_CONNECT_TIMEOUT}s, jit=off, keepalive={keepalive_status}"
                     )
-                except Exception as e:
+                except psycopg2.OperationalError as e:
+                    error_str = str(e)
                     print(f"⚠️ Failed to create connection pool: {e}")
+                    
+                    # Provide helpful diagnostics for common connection errors
+                    if "password authentication failed" in error_str:
+                        print("❌ DATABASE CONNECTION ERROR: Password authentication failed")
+                        print("   This usually means:")
+                        print("   1. The password in DATABASE_URL is incorrect")
+                        print("   2. The password contains special characters that need URL encoding")
+                        print("   3. The database user doesn't exist or is deactivated")
+                        print("")
+                        print("   Solution:")
+                        print("   - Verify DATABASE_URL has the correct password")
+                        print("   - Ensure special characters are URL-encoded (e.g., '@' becomes '%40')")
+                        print(f"   - Check database user '{DB_CONFIG['user']}' exists and has correct password")
+                        print("   - Verify DATABASE_URL format: postgresql://user:password@host:5432/database")
+                    elif "could not connect to server" in error_str:
+                        print("❌ DATABASE CONNECTION ERROR: Cannot reach database server")
+                        print(f"   Host: {DB_CONFIG['host']}, Port: {DB_CONFIG['port']}")
+                        print("   This usually means:")
+                        print("   1. Database server is down or not accessible")
+                        print("   2. Network/firewall blocking connection")
+                        print("   3. Wrong host or port in DATABASE_URL")
+                    
                     # Pool creation failed, will fall back to direct connections
                     return None
     
@@ -4404,6 +4433,23 @@ def database_keepalive_worker():
             if i < DB_KEEPALIVE_WARMUP_PING_COUNT - 1:
                 time.sleep(DB_KEEPALIVE_WARMUP_PING_DELAY_SECONDS)
                 
+        except psycopg2.OperationalError as e:
+            error_msg = str(e)
+            # Provide more detailed diagnostics for common errors
+            if "password authentication failed" in error_msg:
+                print(f"⚠️ Initial database keepalive ping {i + 1}/{DB_KEEPALIVE_WARMUP_PING_COUNT} failed: PASSWORD AUTHENTICATION ERROR")
+                print("   The database password appears to be incorrect or the user doesn't exist.")
+                print("   Please verify DATABASE_URL environment variable has correct credentials.")
+            elif "could not connect to server" in error_msg:
+                print(f"⚠️ Initial database keepalive ping {i + 1}/{DB_KEEPALIVE_WARMUP_PING_COUNT} failed: CONNECTION ERROR")
+                print("   Cannot reach database server. Check network/firewall settings.")
+            else:
+                print(f"⚠️ Initial database keepalive ping {i + 1}/{DB_KEEPALIVE_WARMUP_PING_COUNT} failed: {error_msg[:100]}")
+            
+            _keepalive_consecutive_failures += 1
+            # Wait a bit longer before retry on failure
+            if i < DB_KEEPALIVE_WARMUP_PING_COUNT - 1:
+                time.sleep(DB_KEEPALIVE_WARMUP_PING_DELAY_SECONDS * DB_KEEPALIVE_WARMUP_RETRY_DELAY_MULTIPLIER)
         except Exception as e:
             error_msg = str(e)[:100]
             print(f"⚠️ Initial database keepalive ping {i + 1}/{DB_KEEPALIVE_WARMUP_PING_COUNT} failed: {error_msg}")
