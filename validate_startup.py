@@ -35,8 +35,8 @@ def validate_environment():
         print("⚠️  PORT not set - will use default 8080")
         warnings.append("PORT not set")
     
-    # Check DATABASE_URL
-    database_url = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
+    # Check DATABASE_URL (multiple sources)
+    database_url = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL")
     if database_url:
         # Don't print the full URL (contains credentials)
         db_host = "***"
@@ -49,8 +49,33 @@ def validate_environment():
                 pass
         print(f"✅ DATABASE_URL configured: {db_host}")
     else:
-        print("⚠️  DATABASE_URL not set - app will warn but continue")
-        warnings.append("DATABASE_URL not set")
+        # Check for individual PostgreSQL environment variables
+        pghost = os.getenv("PGHOST")
+        pgport = os.getenv("PGPORT")
+        pguser = os.getenv("PGUSER")
+        pgpassword = os.getenv("PGPASSWORD")
+        pgdatabase = os.getenv("PGDATABASE")
+        
+        missing_pg_vars = []
+        if not pghost:
+            missing_pg_vars.append("PGHOST")
+        if not pgport:
+            missing_pg_vars.append("PGPORT")
+        if not pguser:
+            missing_pg_vars.append("PGUSER")
+        if not pgpassword:
+            missing_pg_vars.append("PGPASSWORD")
+        if not pgdatabase:
+            missing_pg_vars.append("PGDATABASE")
+        
+        if missing_pg_vars:
+            print(f"❌ DATABASE_URL not set and missing individual variables: {', '.join(missing_pg_vars)}")
+            print("   Required variables: PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, DATABASE_URL")
+            print("   Configure DATABASE_URL or all individual PG* variables in Railway dashboard")
+            errors.append("DATABASE_URL not configured and missing required PG* variables")
+        else:
+            print(f"✅ Individual PostgreSQL variables configured (PGHOST={pghost})")
+            warnings.append("Using individual PG* variables instead of DATABASE_URL")
     
     # Check SECRET_KEY
     secret_key = os.getenv("SECRET_KEY")

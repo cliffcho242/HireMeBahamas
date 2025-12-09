@@ -46,7 +46,8 @@ logger = logging.getLogger(__name__)
 # 1. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
 # 2. POSTGRES_URL (Vercel Postgres primary connection)
 # 3. DATABASE_URL (Standard PostgreSQL connection)
-# 4. Local development default (only for development, not production)
+# 4. Construct from individual PG* variables (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE)
+# 5. Local development default (only for development, not production)
 # =============================================================================
 
 # Check if we're in production mode
@@ -59,12 +60,38 @@ DATABASE_URL = (
     os.getenv("DATABASE_URL")
 )
 
-# For local development only - require explicit configuration in production
+# If DATABASE_URL is not provided, try to construct it from individual PG* variables
 if not DATABASE_URL:
-    if ENVIRONMENT == "production":
+    pghost = os.getenv("PGHOST")
+    pgport = os.getenv("PGPORT", "5432")
+    pguser = os.getenv("PGUSER")
+    pgpassword = os.getenv("PGPASSWORD")
+    pgdatabase = os.getenv("PGDATABASE")
+    
+    # Check if all required individual variables are present
+    if pghost and pguser and pgpassword and pgdatabase:
+        from urllib.parse import quote_plus
+        # URL-encode password to handle special characters
+        encoded_password = quote_plus(pgpassword)
+        DATABASE_URL = f"postgresql+asyncpg://{pguser}:{encoded_password}@{pghost}:{pgport}/{pgdatabase}"
+        logger.info("Constructed DATABASE_URL from individual PG* environment variables")
+    elif ENVIRONMENT == "production":
+        # In production, we need either DATABASE_URL or all individual PG* variables
+        missing_vars = []
+        if not pghost:
+            missing_vars.append("PGHOST")
+        if not pguser:
+            missing_vars.append("PGUSER")
+        if not pgpassword:
+            missing_vars.append("PGPASSWORD")
+        if not pgdatabase:
+            missing_vars.append("PGDATABASE")
+        
         raise ValueError(
-            "DATABASE_URL must be set in production. "
-            "Please set DATABASE_URL, POSTGRES_URL, or DATABASE_PRIVATE_URL environment variable."
+            f"DATABASE_URL must be set in production. "
+            f"Please set DATABASE_URL, POSTGRES_URL, DATABASE_PRIVATE_URL, "
+            f"or all individual variables (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE). "
+            f"Missing: {', '.join(missing_vars)}"
         )
     else:
         # Use local development default only in development mode
