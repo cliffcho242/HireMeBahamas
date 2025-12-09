@@ -21,6 +21,22 @@ sys.modules['app'] = backend_app
 import backend_app.core
 sys.modules['app.core'] = backend_app.core
 
+# CRITICAL FIX FOR PYDANTIC: Inject typing module exports into aliased modules
+# When Pydantic evaluates forward references, it looks in the module's __dict__
+# for type names like Optional, List, Dict, etc. Since we're aliasing modules,
+# we need to ensure these typing constructs are available in the aliased namespace.
+from typing import Optional, List, Dict, Union, Any
+backend_app.__dict__['Optional'] = Optional
+backend_app.__dict__['List'] = List
+backend_app.__dict__['Dict'] = Dict
+backend_app.__dict__['Union'] = Union
+backend_app.__dict__['Any'] = Any
+backend_app.core.__dict__['Optional'] = Optional
+backend_app.core.__dict__['List'] = List
+backend_app.core.__dict__['Dict'] = Dict
+backend_app.core.__dict__['Union'] = Union
+backend_app.core.__dict__['Any'] = Any
+
 # Dynamically alias all core submodules to handle all "from app.core.X" imports
 _core_modules = ['security', 'upload', 'concurrent', 'metrics', 'redis_cache', 
                  'socket_manager', 'cache', 'db_health', 'timeout_middleware']
@@ -28,6 +44,12 @@ for _module_name in _core_modules:
     try:
         _module = __import__(f'backend_app.core.{_module_name}', fromlist=[''])
         sys.modules[f'app.core.{_module_name}'] = _module
+        # Also inject typing exports into each submodule
+        _module.__dict__['Optional'] = Optional
+        _module.__dict__['List'] = List
+        _module.__dict__['Dict'] = Dict
+        _module.__dict__['Union'] = Union
+        _module.__dict__['Any'] = Any
     except ImportError:
         # Skip modules that might not be available (graceful degradation)
         pass
