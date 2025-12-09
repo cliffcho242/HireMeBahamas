@@ -784,15 +784,12 @@ def log_request_end(response):
 # (RAILWAY_TCP_PROXY_DOMAIN used by DATABASE_PUBLIC_URL).
 # We prefer DATABASE_PRIVATE_URL > DATABASE_URL to minimize costs.
 
-# Check which DATABASE_URL environment variable is available
-_db_private_url = os.getenv("DATABASE_PRIVATE_URL")
-_db_public_url = os.getenv("DATABASE_URL")
-
-if _db_private_url:
-    DATABASE_URL = _db_private_url
+# Check which DATABASE_URL environment variable is available and log it
+if os.getenv("DATABASE_PRIVATE_URL"):
+    DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL")
     print("✅ Using DATABASE_PRIVATE_URL (Railway private network - $0 egress)")
-elif _db_public_url:
-    DATABASE_URL = _db_public_url
+elif os.getenv("DATABASE_URL"):
+    DATABASE_URL = os.getenv("DATABASE_URL")
     print("✅ Using DATABASE_URL")
 else:
     DATABASE_URL = None
@@ -1994,6 +1991,7 @@ def get_db_connection():
                         print("   2. Ensure it points to the correct database with valid credentials")
                         print("")
                     # Don't retry authentication errors - they won't succeed without config change
+                    logger.error("Skipping retries for authentication error - DATABASE_URL credentials must be updated")
                     break
                 
                 # Handle SSL-related errors by trying with sslmode=prefer

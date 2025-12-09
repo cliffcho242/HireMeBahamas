@@ -26,6 +26,10 @@ except ImportError as e:
     sys.exit(1)
 
 
+# Minimum expected password length for validation warning
+MIN_PASSWORD_LENGTH = 8
+
+
 def mask_password(url):
     """Mask password in URL for safe logging."""
     if not url or "@" not in url:
@@ -66,8 +70,8 @@ def parse_and_validate_url(url):
         
         if not password:
             issues.append("Missing password")
-        elif len(password) < 8:
-            issues.append("Password seems too short (< 8 chars) - might be truncated")
+        elif len(password) < MIN_PASSWORD_LENGTH:
+            issues.append(f"Password seems too short (< {MIN_PASSWORD_LENGTH} chars) - might be truncated")
         
         if not hostname:
             issues.append("Missing hostname")
@@ -121,6 +125,14 @@ def test_connection(conn_params):
     """Test actual database connection."""
     print("\n🔌 Testing database connection...")
     
+    # Determine SSL mode based on hostname
+    # Use 'prefer' for localhost (better compatibility), 'require' for cloud databases
+    hostname = conn_params["host"]
+    is_local = hostname in ("localhost", "127.0.0.1", "::1")
+    sslmode = "prefer" if is_local else "require"
+    
+    print(f"   SSL mode: {sslmode} ({'local database' if is_local else 'cloud database'})")
+    
     try:
         # Attempt connection
         conn = psycopg2.connect(
@@ -130,7 +142,7 @@ def test_connection(conn_params):
             user=conn_params["user"],
             password=conn_params["password"],
             connect_timeout=10,
-            sslmode="require",
+            sslmode=sslmode,
         )
         
         print("✅ Connection successful!")
