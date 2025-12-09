@@ -99,14 +99,14 @@ If you need to configure individual PostgreSQL variables (PGHOST, PGPORT, etc.),
 
 If your `DATABASE_URL` is:
 ```
-postgresql://postgres:mypassword123@containers-us-west-100.railway.app:6379/railway
+postgresql://postgres:mypassword123@containers-us-west-100.railway.app:5432/railway
 ```
 
 Then extract:
 - `PGUSER` = `postgres`
 - `PGPASSWORD` = `mypassword123`
 - `PGHOST` = `containers-us-west-100.railway.app`
-- `PGPORT` = `6379`
+- `PGPORT` = `5432`
 - `PGDATABASE` = `railway`
 
 #### Step 2: Add Variables to Backend Service
@@ -126,8 +126,8 @@ Value: postgres.railway.internal
 ##### 2. PGPORT
 ```bash
 Variable Name: PGPORT
-Value: 6379
-# OR for private network:
+Value: 5432
+# OR for private network (always):
 Value: 5432
 ```
 
