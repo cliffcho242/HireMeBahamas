@@ -19,6 +19,7 @@ class NotificationType(str, enum.Enum):
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
@@ -94,6 +95,7 @@ class User(Base):
 
 class Job(Base):
     __tablename__ = "jobs"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(200), nullable=False)
@@ -124,6 +126,7 @@ class Job(Base):
 
 class JobApplication(Base):
     __tablename__ = "job_applications"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
@@ -140,6 +143,7 @@ class JobApplication(Base):
 
 class Conversation(Base):
     __tablename__ = "conversations"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     participant_1_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -161,6 +165,7 @@ class Conversation(Base):
 
 class Message(Base):
     __tablename__ = "messages"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
@@ -179,6 +184,7 @@ class Message(Base):
 
 class Review(Base):
     __tablename__ = "reviews"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
@@ -200,6 +206,7 @@ class Review(Base):
 
 class UploadedFile(Base):
     __tablename__ = "uploaded_files"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -216,6 +223,7 @@ class UploadedFile(Base):
 
 class Follow(Base):
     __tablename__ = "follows"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     follower_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -229,6 +237,7 @@ class Follow(Base):
 
 class Notification(Base):
     __tablename__ = "notifications"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -246,6 +255,7 @@ class Notification(Base):
 
 class ProfilePicture(Base):
     __tablename__ = "profile_pictures"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -261,6 +271,7 @@ class ProfilePicture(Base):
 
 class Post(Base):
     __tablename__ = "posts"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -281,6 +292,7 @@ class Post(Base):
 
 class PostLike(Base):
     __tablename__ = "post_likes"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -294,6 +306,7 @@ class PostLike(Base):
 
 class PostComment(Base):
     __tablename__ = "post_comments"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
