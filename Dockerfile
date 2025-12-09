@@ -31,8 +31,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 # MASTERMIND FIX 2025 — NUCLEAR BINARY-ONLY INSTALL
-RUN pip install --upgrade pip && \
-    pip install --only-binary=:all: -r requirements.txt
+RUN pip install --upgrade pip --root-user-action=ignore && \
+    pip install --only-binary=:all: --root-user-action=ignore -r requirements.txt
 
 # Verify installation
 RUN python -c "import asyncpg; print(f'✅ asyncpg version: {asyncpg.__version__}')"

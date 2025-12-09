@@ -128,16 +128,28 @@ if [ "$INSTALL_MODE" == "all" ] || [ "$INSTALL_MODE" == "backend" ]; then
         
         # Upgrade pip
         print_status "info" "Upgrading pip..."
-        python3 -m pip install --upgrade pip setuptools wheel || print_status "error" "Failed to upgrade pip"
+        if [ "$EUID" -eq 0 ]; then
+            python3 -m pip install --upgrade --root-user-action=ignore pip setuptools wheel || print_status "error" "Failed to upgrade pip"
+        else
+            python3 -m pip install --upgrade pip setuptools wheel || print_status "error" "Failed to upgrade pip"
+        fi
         
         # Install test dependencies
         print_status "info" "Installing test dependencies..."
-        python3 -m pip install pytest pytest-flask pytest-asyncio || print_status "error" "Failed to install test tools"
+        if [ "$EUID" -eq 0 ]; then
+            python3 -m pip install --root-user-action=ignore pytest pytest-flask pytest-asyncio || print_status "error" "Failed to install test tools"
+        else
+            python3 -m pip install pytest pytest-flask pytest-asyncio || print_status "error" "Failed to install test tools"
+        fi
         
         # Install root requirements.txt
         if [ -f "requirements.txt" ]; then
             print_status "info" "Installing from requirements.txt..."
-            python3 -m pip install -r requirements.txt || print_status "error" "Failed to install requirements.txt"
+            if [ "$EUID" -eq 0 ]; then
+                python3 -m pip install --root-user-action=ignore -r requirements.txt || print_status "error" "Failed to install requirements.txt"
+            else
+                python3 -m pip install -r requirements.txt || print_status "error" "Failed to install requirements.txt"
+            fi
             print_status "success" "Installed root requirements.txt"
         else
             print_status "warning" "requirements.txt not found"
@@ -146,7 +158,11 @@ if [ "$INSTALL_MODE" == "all" ] || [ "$INSTALL_MODE" == "backend" ]; then
         # Install backend requirements.txt
         if [ -f "backend/requirements.txt" ]; then
             print_status "info" "Installing from backend/requirements.txt..."
-            python3 -m pip install -r backend/requirements.txt || print_status "error" "Failed to install backend/requirements.txt"
+            if [ "$EUID" -eq 0 ]; then
+                python3 -m pip install --root-user-action=ignore -r backend/requirements.txt || print_status "error" "Failed to install backend/requirements.txt"
+            else
+                python3 -m pip install -r backend/requirements.txt || print_status "error" "Failed to install backend/requirements.txt"
+            fi
             print_status "success" "Installed backend/requirements.txt"
         else
             print_status "warning" "backend/requirements.txt not found"

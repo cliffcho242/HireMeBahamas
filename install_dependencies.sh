@@ -141,7 +141,12 @@ fi
 # 12. Install Python packages
 print_section "Installing Python packages from requirements.txt"
 if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
+    # Use --root-user-action=ignore if running as root to suppress warning
+    if [ "$EUID" -eq 0 ]; then
+        pip install --root-user-action=ignore -r requirements.txt
+    else
+        pip install -r requirements.txt
+    fi
     print_success "Python packages installed"
 else
     print_warning "requirements.txt not found, skipping Python package installation"
