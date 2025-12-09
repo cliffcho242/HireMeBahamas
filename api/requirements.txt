@@ -7,6 +7,11 @@
 # ============================================================================
 
 # Core Framework & Server (Latest stable versions)
+# Flask is included for Railway deployment (final_backend_postgresql.py) and api/backend_app/flask_backend.py
+flask==3.1.0
+flask-cors==5.0.0
+flask-caching==2.3.0
+flask-limiter==3.8.0
 fastapi==0.115.6
 uvicorn[standard]==0.32.0
 gunicorn==23.0.0
