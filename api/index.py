@@ -14,18 +14,13 @@ import traceback
 from urllib.parse import urlparse
 from typing import Optional, List, Dict, Union, Any
 
-# Import database URL utilities
-try:
-    from .db_url_utils import ensure_sslmode
-except ImportError:
-    # Fallback if db_url_utils is not available
-    def ensure_sslmode(db_url: str) -> str:
-        """Fallback implementation of ensure_sslmode"""
-        if "?" not in db_url:
-            return f"{db_url}?sslmode=require"
-        elif "sslmode=" not in db_url:
-            return f"{db_url}&sslmode=require"
-        return db_url
+# Import database URL utilities from the same package
+# Note: db_url_utils.py is in the same directory (api/) so this should always work
+api_dir = os.path.dirname(os.path.abspath(__file__))
+if api_dir not in sys.path:
+    sys.path.insert(0, api_dir)
+
+from db_url_utils import ensure_sslmode
 
 
 def inject_typing_exports(module):

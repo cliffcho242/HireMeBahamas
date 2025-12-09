@@ -91,8 +91,8 @@ def test_real_vercel_postgres_url():
     print("\n\nTesting with Realistic Vercel Postgres URL")
     print("=" * 70)
     
-    # Realistic Vercel Postgres URL (with fake credentials)
-    vercel_url = "postgres://default:fake_password@ep-abc123.us-east-1.aws.neon.tech:5432/verceldb"
+    # Realistic Vercel Postgres URL (with placeholder credentials for testing)
+    vercel_url = "postgres://default:PLACEHOLDER_PASSWORD@ep-abc123.us-east-1.aws.neon.tech:5432/verceldb"
     
     print(f"Original URL: {vercel_url}")
     

@@ -3,9 +3,19 @@ Database connection helper for Vercel Serverless API
 Lightweight, fast, optimized for cold starts
 """
 import os
+import sys
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
-from .db_url_utils import ensure_sslmode
+
+# Import the utility function - try relative import first, then absolute
+try:
+    from .db_url_utils import ensure_sslmode
+except ImportError:
+    # Fallback to absolute import if relative import fails
+    api_dir = os.path.dirname(os.path.abspath(__file__))
+    if api_dir not in sys.path:
+        sys.path.insert(0, api_dir)
+    from db_url_utils import ensure_sslmode
 
 # Global engine (reused across invocations)
 _engine = None
