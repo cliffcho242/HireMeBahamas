@@ -1,0 +1,43 @@
+# Railway Configuration for HireMeBahamas Backend
+# This file configures the Python backend service ONLY
+# 
+# ⚠️ CRITICAL: PostgreSQL Configuration
+# ====================================
+# DO NOT deploy PostgreSQL as a container service!
+# Railway will throw: "root execution of the PostgreSQL server is not permitted"
+# 
+# ✅ CORRECT Setup:
+#    1. In Railway Dashboard → + New → Database → PostgreSQL
+#    2. Use Railway's managed PostgreSQL database service
+#    3. Railway auto-injects DATABASE_URL environment variable
+# 
+# ❌ WRONG Setup:
+#    - Adding PostgreSQL from container image
+#    - Deploying docker-compose.yml files
+#    - Installing postgresql server packages
+# 
+# For detailed instructions, see: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md
+
+[build]
+builder = "NIXPACKS"
+watchPatterns = [
+    "api/**/*.py",
+    "backend/**/*.py", 
+    "*.py",
+    "requirements.txt",
+    "nixpacks.toml"
+]
+
+[deploy]
+startCommand = "python validate_startup.py && gunicorn final_backend_postgresql:application --config gunicorn.conf.py"
+healthcheckPath = "/health"
+healthcheckTimeout = 180
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+numReplicas = 1
+
+# Prevent Railway from trying to deploy PostgreSQL
+# Only the Python backend should be deployed from this repository
+[service]
+type = "web"
+# Explicitly set service type to prevent PostgreSQL container deployment
