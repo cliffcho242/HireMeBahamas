@@ -41,10 +41,10 @@ const ProfilePictureGallery: React.FC = () => {
 
     setUploading(true);
     try {
-      const fileArray = Array.from(files);
+      const fileArray: File[] = Array.from(files);
       
       // Validate files
-      const validFiles = fileArray.filter(file => {
+      const validFiles: File[] = fileArray.filter(file => {
         if (!file.type.startsWith('image/')) {
           toast.error(`${file.name} is not an image file`);
           return false;
