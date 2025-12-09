@@ -109,7 +109,11 @@ const FacebookLikeDashboard = () => {
     { name: 'Maria Rodriguez', type: 'HR Manager', connections: 'mutual 8' }
   ];
 
-  const JobCard = ({ job }: { job: DashboardJob }) => (
+  interface JobCardProps {
+    job: DashboardJob;
+  }
+
+  const JobCard = ({ job }: JobCardProps) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
