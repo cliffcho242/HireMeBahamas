@@ -1,11 +1,12 @@
 # Railway Ignore File
 # Only deploy Python backend files
 
-# CRITICAL: Exclude docker-compose.yml to prevent confusion
-# docker-compose.yml is for LOCAL DEVELOPMENT ONLY
+# CRITICAL: Exclude docker-compose files to prevent confusion
+# docker-compose files are for LOCAL DEVELOPMENT ONLY
 # Railway provides managed PostgreSQL - DO NOT deploy PostgreSQL containers
-docker-compose.yml
 docker-compose*.yml
+docker-compose*.yaml
+.dockerignore
 
 admin_panel/
 frontend/

@@ -43,7 +43,7 @@ fi
 
 # Start PostgreSQL and Redis
 echo "📦 Starting PostgreSQL and Redis..."
-docker-compose up -d postgres redis
+docker-compose -f docker-compose.local.yml up -d postgres redis
 
 # Wait for PostgreSQL to be ready
 echo "⏳ Waiting for PostgreSQL to be ready..."

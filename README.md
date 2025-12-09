@@ -306,7 +306,7 @@ For production deployments on Railway, you need to configure PostgreSQL for pers
 
 For local development, access the built-in database management interface (Adminer):
 
-1. **Start services**: `docker-compose up -d`
+1. **Start services**: `docker-compose -f docker-compose.local.yml up -d`
 2. **Access Adminer**: http://localhost:8081
 3. **Login credentials**:
    - Server: `postgres`

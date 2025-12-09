@@ -109,17 +109,17 @@ If the database was improperly shut down (power loss, forced kill, etc.):
 
 ```bash
 # Start the services
-docker-compose up -d
+docker-compose -f docker-compose.local.yml up -d
 
 # Check PostgreSQL logs (should show normal startup)
-docker-compose logs postgres
+docker-compose -f docker-compose.local.yml logs postgres
 
 # Stop services (should see clean shutdown)
-docker-compose down
+docker-compose -f docker-compose.local.yml down
 
 # Restart and check logs (should NOT see recovery messages)
-docker-compose up -d
-docker-compose logs postgres
+docker-compose -f docker-compose.local.yml up -d
+docker-compose -f docker-compose.local.yml logs postgres
 ```
 
 **Expected behavior:**
@@ -131,7 +131,7 @@ docker-compose logs postgres
 
 ```bash
 # Start services
-docker-compose up -d
+docker-compose -f docker-compose.local.yml up -d
 
 # Get PostgreSQL container ID
 docker ps | grep postgres
@@ -140,10 +140,10 @@ docker ps | grep postgres
 docker kill <container-id>
 
 # Start again (will trigger recovery)
-docker-compose up -d
+docker-compose -f docker-compose.local.yml up -d
 
 # Check logs (recovery should complete successfully)
-docker-compose logs postgres
+docker-compose -f docker-compose.local.yml logs postgres
 ```
 
 **Expected behavior:**
@@ -162,7 +162,7 @@ docker-compose logs postgres
 ## Production Deployment
 
 These changes are automatically applied when using:
-- `docker-compose up` for local development
+- `docker-compose -f docker-compose.local.yml up` for local development
 - Docker-based deployments (Railway, Render, etc.)
 
 For Railway/Render deployments, the platform's container orchestration will respect the `stop_grace_period` settings.
@@ -204,15 +204,15 @@ If issues occur, revert by:
 
 ```bash
 git checkout HEAD~1 docker-compose.yml
-docker-compose up -d
+docker-compose -f docker-compose.local.yml up -d
 ```
 
 > ⚠️ **WARNING**: If you need to completely reset the database (only do this if absolutely necessary):
 > ```bash
-> docker-compose down -v  # This will DELETE ALL DATA including users, posts, and messages!
-> docker-compose up -d
+> docker-compose -f docker-compose.local.yml down -v  # This will DELETE ALL DATA including users, posts, and messages!
+> docker-compose -f docker-compose.local.yml up -d
 > ```
-> Only use `docker-compose down -v` if you want to start with a completely fresh database.
+> Only use `docker-compose -f docker-compose.local.yml down -v` if you want to start with a completely fresh database.
 
 ## Maintenance
 

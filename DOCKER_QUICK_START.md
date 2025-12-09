@@ -12,10 +12,12 @@ The HireMeBahamas project now uses **pre-built Docker base images** that contain
 
 No changes needed! Continue using:
 ```bash
-docker-compose up
+docker-compose -f docker-compose.local.yml up
 ```
 
-The docker-compose.yml automatically uses the optimized Dockerfiles.
+The docker-compose.local.yml automatically uses the optimized Dockerfiles.
+
+**Note**: The file was renamed from `docker-compose.yml` to `docker-compose.local.yml` to prevent accidental deployment to cloud platforms like Railway.
 
 ### Database Admin Interface
 
@@ -23,7 +25,7 @@ Access the built-in database management interface:
 
 ```bash
 # Start all services including Adminer
-docker-compose up -d
+docker-compose -f docker-compose.local.yml up -d
 
 # Access Adminer at http://localhost:8081
 # Login credentials:

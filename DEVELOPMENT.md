@@ -70,7 +70,7 @@ npm run dev
 docker run --name hirebahamas-postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=hirebahamas -p 5432:5432 -d postgres:15
 
 # Using Docker Compose (includes Adminer database interface)
-docker-compose up postgres adminer -d
+docker-compose -f docker-compose.local.yml up postgres adminer -d
 
 # Access Adminer at http://localhost:8081
 # Server: postgres
@@ -115,7 +115,7 @@ HireBahamas/
 │   ├── Dockerfile         # Production container
 │   ├── Dockerfile.dev     # Development container
 │   └── .env.example       # Environment template
-├── docker-compose.yml      # Multi-service orchestration
+├── docker-compose.local.yml # Multi-service orchestration (LOCAL DEV ONLY)
 ├── vercel.json            # Vercel deployment config
 ├── setup.sh               # Unix setup script
 ├── setup.ps1              # Windows setup script
