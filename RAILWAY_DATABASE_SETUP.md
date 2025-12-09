@@ -2,6 +2,8 @@
 
 ⚠️ **CRITICAL WARNING**: If you see the error "root execution of the PostgreSQL server is not permitted", you are trying to deploy PostgreSQL as a container. See [RAILWAY_POSTGRESQL_SETUP.md](./RAILWAY_POSTGRESQL_SETUP.md) for the correct solution.
 
+📋 **NEED EXACT VARIABLES & LOCATIONS?** See [RAILWAY_DATABASE_VARIABLES_GUIDE.md](./RAILWAY_DATABASE_VARIABLES_GUIDE.md) for a comprehensive guide on configuring PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, and DATABASE_URL with exact Railway locations.
+
 This guide provides step-by-step instructions for adding and configuring the database connection in Railway for the HireMeBahamas application.
 
 ## 📋 Why You Need PostgreSQL
@@ -351,6 +353,7 @@ After setup, verify everything works:
 - [Railway Dashboard](https://railway.app/dashboard)
 - [Railway Documentation](https://docs.railway.app)
 - [Railway PostgreSQL Guide](https://docs.railway.app/databases/postgresql)
+- [Railway Database Variables Guide](./RAILWAY_DATABASE_VARIABLES_GUIDE.md) - Comprehensive guide for PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, DATABASE_URL
 - [PostgreSQL Setup Guide](./POSTGRESQL_SETUP.md) - More detailed PostgreSQL configuration
 - [Deployment Guide](./DEPLOYMENT_GUIDE.md) - Complete deployment instructions
 
