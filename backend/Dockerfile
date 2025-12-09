@@ -10,8 +10,8 @@ FROM ghcr.io/cliffcho242/hiremebahamas-base-backend:latest
 COPY requirements.txt .
 
 # MASTERMIND FIX 2025 — NUCLEAR BINARY-ONLY INSTALL
-RUN pip install --upgrade --root-user-action=ignore pip && \
-    pip install --only-binary=:all: --root-user-action=ignore -r requirements.txt
+RUN pip install --root-user-action=ignore --upgrade pip && \
+    pip install --root-user-action=ignore --only-binary=:all: -r requirements.txt
 
 COPY . .
 
