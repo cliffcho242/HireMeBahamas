@@ -505,7 +505,7 @@ https://railway.app/dashboard
 
 If needed, extract from `DATABASE_URL`:
 - `PGHOST` - hostname from connection string
-- `PGPORT` - port from connection string  
+- `PGPORT` - port from connection string
 - `PGUSER` - username from connection string
 - `PGPASSWORD` - password from connection string
 - `PGDATABASE` - database name from connection string
