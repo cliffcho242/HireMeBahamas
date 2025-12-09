@@ -20,10 +20,10 @@ Start the database and admin interface using Docker Compose:
 
 ```bash
 # Start PostgreSQL and Adminer
-docker-compose up -d postgres adminer
+docker-compose -f docker-compose.local.yml up -d postgres adminer
 
 # Or start all services
-docker-compose up -d
+docker-compose -f docker-compose.local.yml up -d
 ```
 
 ### Step 2: Access Adminer
@@ -192,10 +192,10 @@ For Railway deployments, you don't need to deploy Adminer separately.
 docker-compose ps adminer
 
 # If not running, start it
-docker-compose up -d adminer
+docker-compose -f docker-compose.local.yml up -d adminer
 
 # Check logs
-docker-compose logs adminer
+docker-compose -f docker-compose.local.yml logs adminer
 ```
 
 ### Login Failed
@@ -240,7 +240,7 @@ docker-compose logs adminer
 **Solution**:
 ```bash
 # Check logs
-docker-compose logs adminer
+docker-compose -f docker-compose.local.yml logs adminer
 
 # Check PostgreSQL health
 docker-compose ps postgres
@@ -308,7 +308,7 @@ For production deployments on Railway:
 
 ### Start Services
 ```bash
-docker-compose up -d
+docker-compose -f docker-compose.local.yml up -d
 ```
 
 ### Access Adminer
@@ -324,16 +324,16 @@ http://localhost:8081
 
 ### Stop Services
 ```bash
-docker-compose down
+docker-compose -f docker-compose.local.yml down
 ```
 
 ### View Logs
 ```bash
 # Adminer logs
-docker-compose logs -f adminer
+docker-compose -f docker-compose.local.yml logs -f adminer
 
 # Database logs
-docker-compose logs -f postgres
+docker-compose -f docker-compose.local.yml logs -f postgres
 ```
 
 ### Restart Adminer

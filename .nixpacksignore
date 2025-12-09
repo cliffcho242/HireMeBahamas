@@ -1,6 +1,12 @@
 # Nixpacks Ignore File
 # Ignore frontend and admin directories - only build Python backend
 
+# CRITICAL: Prevent docker-compose files from being detected
+# docker-compose files are for LOCAL DEVELOPMENT ONLY
+docker-compose*.yml
+docker-compose*.yaml
+.dockerignore
+
 admin_panel/
 frontend/
 node_modules/

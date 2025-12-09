@@ -94,7 +94,7 @@ Set-Location ..
 
 # Build and start services with Docker Compose
 Write-Info "Building and starting services with Docker Compose..."
-docker-compose up -d --build
+docker-compose -f docker-compose.local.yml up -d --build
 
 if ($LASTEXITCODE -eq 0) {
     Write-Success "Services started successfully!"

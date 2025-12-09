@@ -1,17 +1,31 @@
-# High Availability Docker Compose Configuration for HireMeBahamas
-# See docs/HIGH_AVAILABILITY.md for detailed documentation
-#
-# ⚠️ IMPORTANT: This file is for LOCAL DEVELOPMENT ONLY
-# DO NOT use this docker-compose.yml on Railway or other cloud platforms!
-# - Railway: Use managed PostgreSQL service (see RAILWAY_POSTGRESQL_SETUP.md)
-# - Render: Use managed PostgreSQL service
-# - Vercel: Use Vercel Postgres
-#
-# Usage:
-#   Development:       docker-compose up
-#   Production HA:     docker-compose --profile production up
-#   With load balancer: docker-compose --profile loadbalancer up
-#
+# ============================================================================
+# HireMeBahamas - LOCAL DEVELOPMENT Docker Compose Configuration
+# ============================================================================
+# 
+# 🚨 CRITICAL WARNING - READ BEFORE USING 🚨
+# 
+# This file is EXCLUSIVELY for LOCAL DEVELOPMENT on your personal computer!
+# 
+# ❌ DO NOT USE THIS FILE ON:
+#    - Railway (use managed PostgreSQL database service)
+#    - Render (use managed PostgreSQL database service)
+#    - Vercel (use Vercel Postgres)
+#    - ANY cloud platform
+# 
+# ⚠️ RAILWAY USERS: If you see "root execution not permitted" error:
+#    You are trying to deploy this file to Railway. This is WRONG!
+#    Read: RAILWAY_SETUP_REQUIRED.md for the correct setup.
+# 
+# 📖 Documentation:
+#    - Railway setup: RAILWAY_POSTGRESQL_SETUP.md
+#    - High availability: docs/HIGH_AVAILABILITY.md
+# 
+# 💻 Usage (LOCAL DEVELOPMENT ONLY):
+#    Development:         docker-compose -f docker-compose.local.yml up
+#    Production HA test:  docker-compose -f docker-compose.local.yml --profile production up
+#    With load balancer:  docker-compose -f docker-compose.local.yml --profile loadbalancer up
+# 
+# ============================================================================
 version: '3.8'
 
 services:

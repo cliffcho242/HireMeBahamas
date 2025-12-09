@@ -50,7 +50,7 @@ This script will:
 
 #### 1. Start Database Services
 ```bash
-docker-compose up -d postgres redis
+docker-compose -f docker-compose.local.yml up -d postgres redis
 ```
 
 #### 2. Configure Environment Variables
@@ -213,12 +213,12 @@ In production mode, code changes require:
 
 ### Stop Docker Services:
 ```bash
-docker-compose down
+docker-compose -f docker-compose.local.yml down
 ```
 
 ### Stop Everything (Including Data):
 ```bash
-docker-compose down -v  # WARNING: Deletes database data!
+docker-compose -f docker-compose.local.yml down -v  # WARNING: Deletes database data!
 ```
 
 ## 🐛 Troubleshooting
@@ -229,7 +229,7 @@ docker-compose down -v  # WARNING: Deletes database data!
 docker-compose ps postgres
 
 # Check logs
-docker-compose logs postgres
+docker-compose -f docker-compose.local.yml logs postgres
 
 # Restart PostgreSQL
 docker-compose restart postgres
@@ -271,7 +271,7 @@ netstat -ano | findstr :8000  # Windows
 
 ## ⚠️ Important Notes
 
-1. **PostgreSQL Required**: Production mode requires PostgreSQL. Use `docker-compose up postgres redis` to start.
+1. **PostgreSQL Required**: Production mode requires PostgreSQL. Use `docker-compose -f docker-compose.local.yml up postgres redis` to start.
 
 2. **No SQLite**: SQLite is NOT used in production mode for data integrity and performance.
 

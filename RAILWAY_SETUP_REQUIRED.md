@@ -55,7 +55,8 @@ Railway provides **managed PostgreSQL databases**. Here's how to fix this:
 ## 🎯 Why This Happens
 
 Common causes:
-- ❌ Trying to deploy `docker-compose.yml` to Railway (it's for local dev only!)
+- ❌ Trying to deploy `docker-compose.local.yml` to Railway (it's for local dev only!)
+- ❌ Accidentally deploying docker-compose files (now named .local.yml to prevent this)
 - ❌ Creating a PostgreSQL service from a container image
 - ❌ Trying to run PostgreSQL in your application's Dockerfile
 - ❌ Following Docker/docker-compose tutorials for Railway deployment
@@ -86,7 +87,7 @@ Common causes:
 ### What NOT TO DO:
 ❌ Deploy PostgreSQL as a container/application  
 ❌ Try to run PostgreSQL in your Dockerfile  
-❌ Deploy docker-compose.yml to Railway  
+❌ Deploy docker-compose files to Railway (they're for local dev only)
 ❌ Install PostgreSQL server packages in nixpacks.toml  
 
 ## 🆘 Still Having Issues?
