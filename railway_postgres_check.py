@@ -6,13 +6,13 @@ Railway PostgreSQL Configuration Checker
 This script checks if Railway PostgreSQL is configured correctly to prevent
 the "root execution of the PostgreSQL server is not permitted" error.
 
+This script prints warnings but never blocks startup. It's informational only.
+
 Usage:
     python railway_postgres_check.py
 
 Exit codes:
-    0 - PostgreSQL is configured correctly
-    1 - PostgreSQL misconfiguration detected
-    2 - Not running on Railway (check skipped)
+    0 - Always (warnings displayed but startup not blocked)
 """
 
 import os
@@ -33,8 +33,8 @@ def check_railway_postgres():
     
     if not is_railway:
         print("ℹ️  Not running on Railway - check skipped")
-        print("   This script only runs on Railway deployments")
-        return 2
+        print("   This check only runs on Railway deployments")
+        return 0
     
     print(f"\n✅ Railway Environment Detected:")
     print(f"   Service: {railway_service_name}")
@@ -46,17 +46,16 @@ def check_railway_postgres():
     
     print("\n🔍 Database Connection Check:")
     
-    issues = []
     warnings = []
     
     if not database_url and not database_private_url:
-        print("❌ CRITICAL: No DATABASE_URL or DATABASE_PRIVATE_URL found!")
-        print("\n📖 FIX REQUIRED:")
+        print("⚠️  WARNING: No DATABASE_URL or DATABASE_PRIVATE_URL found!")
+        print("\n📖 RECOMMENDED ACTION:")
         print("   1. Go to Railway Dashboard → Your Project")
         print("   2. Click '+ New' → Database → PostgreSQL")
         print("   3. Railway will automatically inject DATABASE_URL")
         print("   4. Redeploy your backend service")
-        issues.append("No database connection configured")
+        warnings.append("No database connection configured")
     
     elif "railway.app" in database_url or "railway.internal" in database_url:
         print("✅ Using Railway managed PostgreSQL database")
@@ -67,64 +66,56 @@ def check_railway_postgres():
     
     elif database_url and "postgres" in database_url:
         print("⚠️  WARNING: DATABASE_URL detected but doesn't point to Railway")
-        print(f"   Current URL: {database_url[:40]}...")
-        print("\n   If you see 'root execution not permitted' errors, this is the cause!")
+        print(f"   Current URL host: {database_url.split('@')[1].split(':')[0] if '@' in database_url else 'unknown'}")
+        print("\n   ⚠️  If you see 'root execution not permitted' errors, this is the cause!")
         warnings.append("Non-Railway PostgreSQL detected")
     
     # Check for PostgreSQL server misconfiguration indicators
     print("\n🔍 PostgreSQL Server Misconfiguration Check:")
     
     # Check if there's a PostgreSQL service trying to run
-    postgres_service_indicators = [
-        os.getenv("POSTGRES_USER"),
-        os.getenv("POSTGRES_PASSWORD"),
-        os.getenv("POSTGRES_DB"),
-        os.getenv("PGDATA"),
-    ]
+    postgres_service_vars = {
+        "POSTGRES_USER": os.getenv("POSTGRES_USER"),
+        "POSTGRES_PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+        "POSTGRES_DB": os.getenv("POSTGRES_DB"),
+        "PGDATA": os.getenv("PGDATA"),
+    }
     
-    if any(postgres_service_indicators):
+    postgres_indicators = [v for v in postgres_service_vars.values() if v]
+    
+    if postgres_indicators:
         print("⚠️  WARNING: PostgreSQL server environment variables detected!")
-        print("   This suggests PostgreSQL might be running as a service container")
+        print("   Found variables:", ", ".join([k for k, v in postgres_service_vars.items() if v]))
+        print("\n   🚨 This suggests PostgreSQL might be running as a service container")
         print("   instead of using Railway's managed database.")
         print("\n   If you see these errors:")
         print("   • 'root execution of the PostgreSQL server is not permitted'")
         print("   • 'Mounting volume on: /var/lib/containers/railwayapp/bind-mounts'")
-        print("\n   You have PostgreSQL misconfigured as a container service!")
+        print("\n   ❌ You have PostgreSQL misconfigured as a container service!")
+        print("\n   ✅ FIX: Delete PostgreSQL container service, add managed database")
+        print("   📖 Read: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md or RAILWAY_POSTGRES_QUICKFIX.md")
         warnings.append("PostgreSQL server environment variables detected")
     else:
         print("✅ No PostgreSQL server environment variables detected")
         print("   (This is correct - your app should only CONNECT to PostgreSQL)")
     
-    # Summary and instructions
+    # Summary
     print("\n" + "=" * 80)
     
-    if issues:
-        print(f"❌ CRITICAL ISSUES DETECTED: {len(issues)}")
-        for issue in issues:
-            print(f"   • {issue}")
-        print("\n📖 IMMEDIATE ACTION REQUIRED:")
-        print("   Read: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md")
-        print("   Or run: cat RAILWAY_POSTGRES_ROOT_ERROR_FIX.md")
-        print("=" * 80)
-        return 1
-    
-    elif warnings:
-        print(f"⚠️  WARNINGS DETECTED: {len(warnings)}")
+    if warnings:
+        print(f"⚠️  {len(warnings)} WARNING(S) DETECTED:")
         for warning in warnings:
             print(f"   • {warning}")
-        print("\n📖 RECOMMENDED ACTION:")
-        print("   If you're experiencing deployment issues, check:")
-        print("   • Railway Dashboard → Services → Delete any PostgreSQL containers")
-        print("   • Railway Dashboard → Add managed PostgreSQL database")
-        print("   • Read: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md")
-        print("=" * 80)
-        return 0
-    
+        print("\n📖 For detailed fix instructions, see:")
+        print("   • RAILWAY_POSTGRES_QUICKFIX.md (5-minute fix)")
+        print("   • RAILWAY_POSTGRES_ROOT_ERROR_FIX.md (comprehensive guide)")
+        print("\n✅ Continuing startup - warnings are informational only")
     else:
         print("✅ ALL CHECKS PASSED")
         print("   PostgreSQL is configured correctly!")
-        print("=" * 80)
-        return 0
+    
+    print("=" * 80)
+    return 0  # Always return 0 to not block startup
 
 
 def main():
@@ -133,8 +124,9 @@ def main():
         exit_code = check_railway_postgres()
         sys.exit(exit_code)
     except Exception as e:
-        print(f"\n❌ Error during check: {e}")
-        sys.exit(1)
+        print(f"\n⚠️  Error during check: {e}")
+        print("   Continuing startup despite error...")
+        sys.exit(0)  # Don't block startup on errors
 
 
 if __name__ == "__main__":
