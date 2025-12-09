@@ -1,14 +1,39 @@
 # Railway Ignore File
 # Only deploy Python backend files
 
+# Frontend and admin panel (deployed separately)
 admin_panel/
 frontend/
+
+# Docker files (Railway uses Nixpacks, not Docker)
+# CRITICAL: docker-compose.yml contains PostgreSQL server definition
+# Railway provides managed PostgreSQL - do NOT deploy docker-compose.yml
+docker-compose.yml
+docker/
+Dockerfile
+backend/Dockerfile
+frontend/Dockerfile
+frontend/Dockerfile.dev
+.dockerignore
+
+# Node.js
 node_modules/
+
+# Git and IDE
 .git/
 .vscode/
+
+# Python cache
 __pycache__/
 *.pyc
+
+# Logs
 *.log
+
+# Environment files (use Railway dashboard for environment variables)
 .env.local
+.env.example
+
+# Test files
 test_*
 *_test.py

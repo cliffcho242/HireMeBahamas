@@ -1,0 +1,212 @@
+# Railway PostgreSQL Deployment Fix
+
+## Problem Summary
+
+Railway was attempting to deploy using `docker-compose.yml`, which includes a PostgreSQL **server** container. When Railway tried to run this PostgreSQL container, it failed with:
+
+```
+"root" execution of the PostgreSQL server is not permitted.
+The server must be started under an unprivileged user ID to prevent
+possible system security compromise.
+```
+
+## Root Cause
+
+1. Railway detected `docker-compose.yml` in the repository
+2. Railway attempted to use Docker Compose for deployment
+3. `docker-compose.yml` includes a PostgreSQL server service definition
+4. Railway tried to run PostgreSQL as root user, which PostgreSQL rejects for security
+
+## Solution
+
+Railway should **NOT** use `docker-compose.yml` for deployment because:
+- Railway provides **managed PostgreSQL** as a separate service
+- Applications should connect to Railway's PostgreSQL via `DATABASE_URL` environment variable
+- `docker-compose.yml` is for **local development only**
+
+### Changes Made
+
+1. **Updated `.railwayignore`** to exclude Docker files:
+   - `docker-compose.yml` - Contains PostgreSQL server (Railway provides this)
+   - `Dockerfile` - Railway uses Nixpacks instead
+   - `docker/` - Not needed for Railway deployment
+
+2. **Updated `docker-compose.yml`** header:
+   - Added clear warning: "LOCAL DEVELOPMENT ONLY"
+   - Explained Railway deployment process
+   - Clarified Railway uses managed database
+
+3. **Verified `railway.json`** configuration:
+   - Correct builder: `NIXPACKS`
+   - Health check configured
+   - Restart policy set
+
+4. **Verified `nixpacks.toml`** configuration:
+   - Only installs PostgreSQL **client** libraries
+   - Does NOT install PostgreSQL server
+   - Comment explicitly states: "Railway provides PostgreSQL as a managed service"
+
+## Railway Deployment Architecture
+
+### Correct Setup
+
+```
+┌─────────────────────────────────────────┐
+│         Railway Application             │
+│                                         │
+│  ┌─────────────────────────────────┐  │
+│  │  Backend Service (Nixpacks)      │  │
+│  │  - Uses nixpacks.toml            │  │
+│  │  - Installs Python dependencies  │  │
+│  │  - Runs via Procfile/start cmd   │  │
+│  └──────────────┬──────────────────┘  │
+│                 │                      │
+│                 │ DATABASE_URL         │
+│                 │                      │
+│  ┌──────────────▼──────────────────┐  │
+│  │  PostgreSQL Service (Managed)    │  │
+│  │  - Created in Railway dashboard  │  │
+│  │  - Railway manages the database  │  │
+│  │  - No container needed          │  │
+│  └─────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+### Incorrect Setup (What Was Happening)
+
+```
+┌─────────────────────────────────────────┐
+│         Railway Application             │
+│                                         │
+│  ┌─────────────────────────────────┐  │
+│  │  docker-compose.yml deployed     │  │
+│  │  ❌ Tries to run PostgreSQL      │  │
+│  │  ❌ Runs as root user            │  │
+│  │  ❌ PostgreSQL refuses to start  │  │
+│  └─────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+## Railway Deployment Checklist
+
+### 1. Backend Service Setup
+
+- [x] Repository connected to Railway
+- [x] `railway.json` uses `NIXPACKS` builder
+- [x] `.railwayignore` excludes `docker-compose.yml`
+- [x] `nixpacks.toml` only installs PostgreSQL client
+- [x] Start command configured in `nixpacks.toml` or `Procfile`
+
+### 2. PostgreSQL Database Setup
+
+In Railway dashboard:
+
+1. Click "New" → "Database" → "Add PostgreSQL"
+2. Railway creates managed PostgreSQL service
+3. Railway automatically sets these environment variables:
+   - `DATABASE_URL` - Full connection string
+   - `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`
+
+### 3. Connect Backend to Database
+
+In Railway dashboard:
+
+1. Go to backend service → Variables
+2. Add reference to PostgreSQL:
+   ```
+   DATABASE_URL=${{Postgres.DATABASE_URL}}
+   ```
+3. Or Railway automatically connects services in same project
+
+### 4. Deploy
+
+1. Push code to GitHub
+2. Railway auto-deploys (if enabled)
+3. Backend connects to managed PostgreSQL
+4. No PostgreSQL container is created
+
+## Environment Variables
+
+Railway automatically provides these PostgreSQL variables:
+
+```bash
+# From PostgreSQL service (auto-generated)
+DATABASE_URL=postgresql://postgres:password@host:5432/railway
+PGHOST=hostname.railway.internal
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=generated-password
+PGDATABASE=railway
+
+# Application uses DATABASE_URL to connect
+```
+
+## Local Development vs Railway
+
+### Local Development (docker-compose.yml)
+
+```bash
+# Start all services including PostgreSQL
+docker-compose up
+
+# PostgreSQL runs in container
+# Backend connects to containerized PostgreSQL
+```
+
+### Railway Production
+
+```bash
+# Only backend code is deployed
+# Railway provides managed PostgreSQL separately
+# Backend connects to Railway's PostgreSQL via DATABASE_URL
+```
+
+## Verification
+
+After deployment, verify:
+
+1. **Check Railway Logs**:
+   ```
+   ✅ Should see: "Connected to PostgreSQL"
+   ❌ Should NOT see: "root execution not permitted"
+   ```
+
+2. **Check Health Endpoint**:
+   ```bash
+   curl https://your-app.railway.app/health
+   # Should return 200 OK
+   ```
+
+3. **Check Database Connection**:
+   ```bash
+   # In Railway dashboard, check backend service logs
+   # Should see successful database connection
+   ```
+
+## Troubleshooting
+
+### If You See "root execution not permitted"
+
+1. Check `.railwayignore` includes `docker-compose.yml`
+2. Check `railway.json` uses `NIXPACKS` builder
+3. Verify no `Dockerfile` is being used
+4. Redeploy from Railway dashboard
+
+### If Backend Can't Connect to Database
+
+1. Verify PostgreSQL service is created in Railway
+2. Check `DATABASE_URL` environment variable is set
+3. Check network connectivity in Railway dashboard
+4. Verify PostgreSQL service is running
+
+## Files Modified
+
+- `.railwayignore` - Added Docker files to exclusion list
+- `docker-compose.yml` - Added warning header about local development only
+- `RAILWAY_POSTGRES_FIX.md` - This documentation file
+
+## Additional Resources
+
+- Railway Docs: https://docs.railway.app/
+- Railway PostgreSQL: https://docs.railway.app/databases/postgresql
+- Nixpacks: https://nixpacks.com/

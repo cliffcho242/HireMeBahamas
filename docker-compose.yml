@@ -1,11 +1,27 @@
-# High Availability Docker Compose Configuration for HireMeBahamas
+# ============================================================================
+# HireMeBahamas Docker Compose - LOCAL DEVELOPMENT ONLY
+# ============================================================================
+# 
+# ⚠️  IMPORTANT: This file is for LOCAL DEVELOPMENT ONLY
+#
+# DO NOT use this for Railway deployment:
+# - Railway provides managed PostgreSQL database service
+# - Railway uses Nixpacks build system (see nixpacks.toml)
+# - This file is excluded via .railwayignore
+#
+# For Railway deployment:
+# 1. Add PostgreSQL database service in Railway dashboard
+# 2. Railway will automatically inject DATABASE_URL environment variable
+# 3. Application connects to Railway's managed database
+#
 # See docs/HIGH_AVAILABILITY.md for detailed documentation
 #
-# Usage:
+# Local Usage:
 #   Development:       docker-compose up
 #   Production HA:     docker-compose --profile production up
 #   With load balancer: docker-compose --profile loadbalancer up
 #
+# ============================================================================
 version: '3.8'
 
 services:
