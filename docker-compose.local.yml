@@ -32,7 +32,10 @@ services:
   # PostgreSQL Database with High Availability settings
   postgres:
     image: postgres:16-alpine
-    user: postgres  # Run as postgres user, not root - prevents security vulnerabilities
+    user: postgres  # CRITICAL: Run as postgres user, not root
+                    # - Prevents security vulnerabilities
+                    # - Required for Railway (root execution not permitted)
+                    # - Railway doesn't support PostgreSQL init as root then switch user
     environment:
       POSTGRES_DB: hiremebahamas
       POSTGRES_USER: hiremebahamas_user

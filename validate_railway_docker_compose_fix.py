@@ -75,8 +75,8 @@ def check_railway_json():
         if docker_compose is False:
             print("✅ dockerCompose is explicitly disabled")
         else:
-            print("⚠️  dockerCompose is not explicitly disabled (should be set to false)")
-        
+            print("❌ dockerCompose is not explicitly set to false (CRITICAL: required to prevent deployment issues)")
+            return False
         return True
     except json.JSONDecodeError as e:
         print(f"❌ railway.json is not valid JSON: {e}")
