@@ -83,6 +83,13 @@ aptPkgs = [
 # Do not use ARG or ENV for: SECRET_KEY, JWT_SECRET_KEY, API keys, passwords, etc.
 # Platform services (Railway, Render, etc.) inject secrets at runtime
 
+# Explicitly install Python dependencies from requirements.txt
+[phases.install]
+cmds = [
+    "python -m pip install --upgrade pip",
+    "pip install --only-binary=:all: -r requirements.txt"
+]
+
 [start]
 # Migration runs automatically in final_backend_postgresql.py
 # PostgreSQL connection is configured via DATABASE_URL environment variable
