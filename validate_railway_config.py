@@ -50,7 +50,7 @@ def check_postgresql_packages():
         print_error("nixpacks.toml not found!")
         return False
     
-    content = nixpacks_path.read_text()
+    content = nixpacks_path.read_text(encoding='utf-8')
     
     # Check for server packages (these should NOT be present)
     forbidden_packages = [
@@ -92,7 +92,7 @@ def check_docker_compose():
         print_info("Docker-compose.yml might be deployed to Railway (this is wrong!)")
         return False
     
-    content = railwayignore_path.read_text()
+    content = railwayignore_path.read_text(encoding='utf-8')
     
     if "docker-compose" in content:
         print_success("docker-compose.yml is excluded from Railway deployment")
@@ -167,7 +167,7 @@ def check_procfile():
         print_warning("Procfile not found (Railway will use nixpacks start command)")
         return True
     
-    content = procfile_path.read_text()
+    content = procfile_path.read_text(encoding='utf-8')
     
     # Check that Procfile doesn't try to start PostgreSQL
     if "postgres" in content.lower() and "psql" not in content.lower():

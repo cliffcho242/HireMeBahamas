@@ -43,7 +43,7 @@ print_info() {
 echo "Check 1: nixpacks.toml PostgreSQL configuration"
 echo "----------------------------------------------------------------------"
 
-if grep -q '"postgresql-client"' nixpacks.toml && ! grep -q '"postgresql"[^-]' nixpacks.toml; then
+if grep -q '"postgresql-client"' nixpacks.toml && ! grep -E '"postgresql"[[:space:],]|"postgresql"$' nixpacks.toml; then
     print_success "PostgreSQL client libraries configured correctly"
 else
     print_error "PostgreSQL server packages might be in nixpacks.toml!"
