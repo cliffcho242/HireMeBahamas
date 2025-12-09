@@ -555,8 +555,8 @@ async def warm_cache():
     
     try:
         async with AsyncSessionLocal() as db:
-            # Warm up job stats
-            job_count = await db.scalar(select(func.count(Job.id)).where(Job.is_active == True))
+            # Warm up job stats - use 'status' field instead of 'is_active'
+            job_count = await db.scalar(select(func.count(Job.id)).where(Job.status == "active"))
             await redis_cache.set("jobs:count:active", job_count, ttl=600)
             
             # Warm up recent posts (first page)
