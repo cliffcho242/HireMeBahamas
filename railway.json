@@ -1,10 +1,14 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
+  "_comment_CRITICAL": "🚨 DO NOT deploy PostgreSQL as a container! Use Railway's managed database service. See RAILWAY_POSTGRES_QUICKFIX.md",
+  "_comment_ERROR": "If you see 'root execution of the PostgreSQL server is not permitted' - you deployed PostgreSQL as a container (WRONG)",
+  "_comment_FIX": "Delete PostgreSQL container service, add managed database: + New → Database → PostgreSQL",
   "build": {
     "builder": "NIXPACKS",
     "dockerfilePath": null,
     "dockerfilePathComment": "Set to null to force Nixpacks builder and prevent Dockerfile usage. Railway will use nixpacks.toml configuration instead.",
-    "dockerCompose": false
+    "dockerCompose": false,
+    "_dockerComposeComment": "docker-compose is for LOCAL development only. Railway uses managed PostgreSQL database service."
   },
   "deploy": {
     "healthcheckPath": "/health",
