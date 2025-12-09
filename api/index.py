@@ -304,8 +304,14 @@ if HAS_BACKEND and HAS_DB:
 if db_engine is None and HAS_DB and DATABASE_URL:
     try:
         logger.info("Backend database not available, creating fallback database connection...")
-        # Convert postgres:// to postgresql+asyncpg://
+        # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
+        # This handles cases where the 'p' is missing from "postgresql"
         db_url = DATABASE_URL
+        if "ostgresql" in db_url and "postgresql" not in db_url:
+            db_url = db_url.replace("ostgresql", "postgresql")
+            logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
+        
+        # Convert postgres:// to postgresql+asyncpg://
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
             logger.info("Converted postgres:// to postgresql+asyncpg://")

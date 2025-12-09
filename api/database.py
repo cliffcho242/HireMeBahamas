@@ -24,6 +24,13 @@ def get_database_url():
     if not db_url:
         raise ValueError("DATABASE_URL environment variable not set")
     
+    # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
+    # This handles cases where the 'p' is missing from "postgresql"
+    if "ostgresql" in db_url and "postgresql" not in db_url:
+        db_url = db_url.replace("ostgresql", "postgresql")
+        import logging
+        logging.getLogger(__name__).warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
+    
     # Convert postgres:// to postgresql+asyncpg://
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
