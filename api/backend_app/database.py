@@ -122,6 +122,12 @@ if not DATABASE_URL:
         DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
         logger.warning("Using default local development database URL. Set DATABASE_URL for production.")
 
+# Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
+# This handles cases where the 'p' is missing from "postgresql"
+if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("ostgresql", "postgresql")
+    logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
+
 # Convert sync PostgreSQL URLs to async driver format
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
