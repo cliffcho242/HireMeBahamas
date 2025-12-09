@@ -239,10 +239,15 @@ DATABASE_URL = (
 ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "*")
 if ALLOWED_ORIGINS_ENV == "*":
     ALLOWED_ORIGINS = ["*"]
-    logger.info("CORS: Allowing all origins (wildcard)")
+    # CRITICAL: When using wildcard origins (*), credentials MUST be False
+    # This is a CORS security requirement - browsers will block requests otherwise
+    ALLOW_CREDENTIALS = False
+    logger.info("CORS: Allowing all origins (wildcard), credentials disabled")
 else:
     ALLOWED_ORIGINS = ALLOWED_ORIGINS_ENV.split(",")
-    logger.info(f"CORS: Allowing specific origins: {ALLOWED_ORIGINS}")
+    # With specific origins, we can safely enable credentials
+    ALLOW_CREDENTIALS = True
+    logger.info(f"CORS: Allowing specific origins: {ALLOWED_ORIGINS}, credentials enabled")
 
 # Mock user data for fallback
 MOCK_USERS = {
@@ -382,7 +387,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=ALLOW_CREDENTIALS,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
