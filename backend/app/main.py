@@ -5,8 +5,26 @@
 # Responds in <5ms even on coldest start. Render cannot kill this.
 # =============================================================================
 import os
+from typing import Optional, List, Dict, Union, Any
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+
+
+def inject_typing_exports(module):
+    """Inject typing module exports into a module's namespace.
+    
+    This is required for Pydantic to properly evaluate forward references.
+    When Pydantic evaluates forward references, it looks in the module's 
+    __dict__ for type names like Optional, List, etc.
+    
+    Args:
+        module: The module object to inject typing exports into
+    """
+    module.__dict__['Optional'] = Optional
+    module.__dict__['List'] = List
+    module.__dict__['Dict'] = Dict
+    module.__dict__['Union'] = Union
+    module.__dict__['Any'] = Any
 
 # INSTANT APP — NO HEAVY IMPORTS YET
 app = FastAPI(
@@ -101,6 +119,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response as StarletteResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import socketio
+
+# CRITICAL FIX: Inject typing exports into schema modules for Pydantic forward reference resolution
+# This fixes PydanticUndefinedAnnotation errors when Pydantic evaluates forward references
+import app.schemas
+inject_typing_exports(app.schemas)
+
+# Inject typing exports into all schema submodules
+_schema_modules = ['auth', 'job', 'message', 'post', 'review']
+for _module_name in _schema_modules:
+    try:
+        _module = __import__(f'app.schemas.{_module_name}', fromlist=[''])
+        inject_typing_exports(_module)
+    except ImportError:
+        # Skip modules that might not be available (graceful degradation)
+        pass
 
 # Import APIs
 from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
