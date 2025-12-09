@@ -2,6 +2,10 @@
 Simple test to validate DATABASE_URL environment variable handling logic.
 
 This test validates the logic without requiring full module imports.
+
+SECURITY NOTE: All database URLs in this test file are placeholder values
+used only for testing environment variable fallback logic. These are not
+real credentials and no actual database connections are made.
 """
 
 import os
@@ -94,7 +98,8 @@ def test_database_url_logic():
         
         if not DATABASE_URL:
             if ENVIRONMENT != "production":
-                # Note: This is a test placeholder URL, not real credentials
+                # SECURITY NOTE: These are test placeholder values, not real credentials.
+                # This test validates logic only and does not connect to a database.
                 DATABASE_URL = "postgresql+asyncpg://test_user:test_password@localhost:5432/test_db"
                 print(f"✓ Pass: Would use default in development mode")
         

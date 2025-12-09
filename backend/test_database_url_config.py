@@ -3,6 +3,10 @@ Test database URL configuration and environment variable handling.
 
 This test ensures that the database URL is correctly retrieved from environment
 variables in the correct priority order.
+
+SECURITY NOTE: All database URLs and credentials in this test file are placeholder
+values used only for testing configuration logic. These are not real credentials
+and no actual database connections are made.
 """
 
 import os
