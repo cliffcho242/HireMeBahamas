@@ -63,6 +63,25 @@ if 'app' not in sys.modules:
         except ImportError:
             # Skip modules that might not be available (graceful degradation)
             pass
+    
+    # CRITICAL FIX: Alias schemas submodules to fix Pydantic forward reference resolution
+    # When Pydantic evaluates forward references like "Optional[str]", it looks for
+    # these types in the module's __dict__. Without this, aliased schema modules
+    # (app.schemas.*) won't have typing exports available, causing PydanticUndefinedAnnotation errors.
+    import backend_app.schemas
+    sys.modules['app.schemas'] = backend_app.schemas
+    inject_typing_exports(backend_app.schemas)
+    
+    # Dynamically alias all schema submodules to handle all "from app.schemas.X" imports
+    _schema_modules = ['auth', 'job', 'message', 'post', 'review']
+    for _module_name in _schema_modules:
+        try:
+            _module = __import__(f'backend_app.schemas.{_module_name}', fromlist=[''])
+            sys.modules[f'app.schemas.{_module_name}'] = _module
+            inject_typing_exports(_module)
+        except ImportError:
+            # Skip modules that might not be available (graceful degradation)
+            pass
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
