@@ -46,9 +46,9 @@ logger = logging.getLogger(__name__)
 # DATABASE URL CONFIGURATION
 # =============================================================================
 # Priority order:
-# 1. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
-# 2. POSTGRES_URL (Vercel Postgres primary connection)
-# 3. DATABASE_URL (Standard PostgreSQL connection)
+# 1. DATABASE_URL (primary connection URL)
+# 2. POSTGRES_URL (Vercel Postgres connection)
+# 3. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
 # 4. Local development default (only for development, not production)
 # =============================================================================
 

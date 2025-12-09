@@ -94,7 +94,8 @@ def test_database_url_logic():
         
         if not DATABASE_URL:
             if ENVIRONMENT != "production":
-                DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+                # Note: This is a test placeholder URL, not real credentials
+                DATABASE_URL = "postgresql+asyncpg://test_user:test_password@localhost:5432/test_db"
                 print(f"✓ Pass: Would use default in development mode")
         
         # Test 7: Whitespace stripping
