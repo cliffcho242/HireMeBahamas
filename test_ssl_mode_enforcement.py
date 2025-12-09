@@ -10,6 +10,14 @@ import os
 import sys
 from urllib.parse import urlparse, parse_qs
 
+# Add api directory to path for imports
+api_dir = os.path.join(os.path.dirname(__file__), 'api')
+if api_dir not in sys.path:
+    sys.path.insert(0, api_dir)
+
+# Import the actual utility function
+from db_url_utils import ensure_sslmode
+
 
 def test_ssl_mode_enforcement():
     """Test that sslmode=require is automatically added to database URLs"""
@@ -41,26 +49,14 @@ def test_ssl_mode_enforcement():
         ),
     ]
     
-    # Test the logic from api/database.py
-    def add_sslmode_if_missing(db_url):
-        """Simulates the logic from get_database_url()"""
-        # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
-        if "?" not in db_url:
-            # No query parameters - add sslmode=require
-            db_url = f"{db_url}?sslmode=require"
-        elif "sslmode=" not in db_url:
-            # Has query parameters but no sslmode - append it
-            db_url = f"{db_url}&sslmode=require"
-        # else: sslmode is already present, don't override user's explicit setting
-        return db_url
-    
     all_passed = True
     
     for i, (input_url, expected_has_sslmode, description) in enumerate(test_cases, 1):
         print(f"\nTest {i}: {description}")
         print(f"  Input:  {input_url}")
         
-        result_url = add_sslmode_if_missing(input_url)
+        # Use the actual ensure_sslmode function
+        result_url = ensure_sslmode(input_url)
         print(f"  Output: {result_url}")
         
         # Parse the result URL to check for sslmode
@@ -108,13 +104,9 @@ def test_real_vercel_postgres_url():
         db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
         print(f"After asyncpg conversion: {db_url}")
     
-    # Step 2: Add sslmode if missing
-    if "?" not in db_url:
-        db_url = f"{db_url}?sslmode=require"
-        print(f"After adding sslmode: {db_url}")
-    elif "sslmode=" not in db_url:
-        db_url = f"{db_url}&sslmode=require"
-        print(f"After adding sslmode: {db_url}")
+    # Step 2: Add sslmode if missing using the actual utility function
+    db_url = ensure_sslmode(db_url)
+    print(f"After adding sslmode: {db_url}")
     
     # Verify
     parsed = urlparse(db_url)

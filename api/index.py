@@ -14,6 +14,19 @@ import traceback
 from urllib.parse import urlparse
 from typing import Optional, List, Dict, Union, Any
 
+# Import database URL utilities
+try:
+    from .db_url_utils import ensure_sslmode
+except ImportError:
+    # Fallback if db_url_utils is not available
+    def ensure_sslmode(db_url: str) -> str:
+        """Fallback implementation of ensure_sslmode"""
+        if "?" not in db_url:
+            return f"{db_url}?sslmode=require"
+        elif "sslmode=" not in db_url:
+            return f"{db_url}&sslmode=require"
+        return db_url
+
 
 def inject_typing_exports(module):
     """Inject typing module exports into a module's namespace.
@@ -321,16 +334,10 @@ if db_engine is None and HAS_DB and DATABASE_URL:
             logger.info("Converted postgresql:// to postgresql+asyncpg://")
         
         # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
-        # Vercel Postgres requires SSL connections
-        if "?" not in db_url:
-            # No query parameters - add sslmode=require
-            db_url = f"{db_url}?sslmode=require"
+        original_url = db_url
+        db_url = ensure_sslmode(db_url)
+        if db_url != original_url:
             logger.info("Added sslmode=require to DATABASE_URL")
-        elif "sslmode=" not in db_url:
-            # Has query parameters but no sslmode - append it
-            db_url = f"{db_url}&sslmode=require"
-            logger.info("Added sslmode=require to DATABASE_URL")
-        # else: sslmode is already present, don't override user's explicit setting
         
         logger.info("Creating fallback database engine with asyncpg...")
         db_engine = create_async_engine(

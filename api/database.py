@@ -5,6 +5,7 @@ Lightweight, fast, optimized for cold starts
 import os
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
+from .db_url_utils import ensure_sslmode
 
 # Global engine (reused across invocations)
 _engine = None
@@ -38,14 +39,7 @@ def get_database_url():
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     
     # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
-    # Vercel Postgres requires SSL connections
-    if "?" not in db_url:
-        # No query parameters - add sslmode=require
-        db_url = f"{db_url}?sslmode=require"
-    elif "sslmode=" not in db_url:
-        # Has query parameters but no sslmode - append it
-        db_url = f"{db_url}&sslmode=require"
-    # else: sslmode is already present, don't override user's explicit setting
+    db_url = ensure_sslmode(db_url)
     
     return db_url
 
