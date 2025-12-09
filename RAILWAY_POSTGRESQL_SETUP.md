@@ -88,11 +88,13 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 - Data would be lost on every deployment
 - You'd lose Railway's managed database benefits (backups, scaling, monitoring)
 
-### DON'T: Use Railway PostgreSQL Images Locally in Production
+### DON'T: Use Railway PostgreSQL Images Locally
 
 The `ghcr.io/railwayapp-templates/postgres-ssl:13.23` image is Railway's internal image and should only be used:
-- In Railway's managed database service (automatically handled)
-- For local development with proper user configuration
+- In Railway's managed database service (automatically handled by Railway)
+- **NOT recommended for local development** - use standard `postgres:16-alpine` instead
+
+For local development, use the standard PostgreSQL image as shown in the docker-compose.yml configuration below.
 
 ## 🏠 Local Development Setup
 

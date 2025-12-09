@@ -18,7 +18,7 @@ services:
   # PostgreSQL Database with High Availability settings
   postgres:
     image: postgres:16-alpine
-    user: postgres  # Run as postgres user (UID 999), not root
+    user: postgres  # Run as postgres user, not root - prevents security vulnerabilities
     environment:
       POSTGRES_DB: hiremebahamas
       POSTGRES_USER: hiremebahamas_user
