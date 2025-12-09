@@ -5,6 +5,7 @@ Lightweight, fast, optimized for cold starts
 import os
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
+from .db_url_utils import ensure_sslmode
 
 # Global engine (reused across invocations)
 _engine = None
@@ -36,6 +37,9 @@ def get_database_url():
         db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
     elif db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    
+    # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
+    db_url = ensure_sslmode(db_url)
     
     return db_url
 
