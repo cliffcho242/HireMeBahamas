@@ -46,9 +46,9 @@ logger = logging.getLogger(__name__)
 # DATABASE URL CONFIGURATION
 # =============================================================================
 # Priority order:
-# 1. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
-# 2. POSTGRES_URL (Vercel Postgres primary connection)
-# 3. DATABASE_URL (Standard PostgreSQL connection)
+# 1. DATABASE_URL (primary connection URL)
+# 2. POSTGRES_URL (Vercel Postgres connection)
+# 3. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
 # 4. Local development default (only for development, not production)
 # =============================================================================
 
@@ -56,25 +56,25 @@ logger = logging.getLogger(__name__)
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 # Get database URL with proper fallback
-# Strip whitespace to prevent connection errors from misconfigured environment variables
-raw_url = (
-    os.getenv("DATABASE_PRIVATE_URL") or 
-    os.getenv("POSTGRES_URL") or
-    os.getenv("DATABASE_URL")
-)
-DATABASE_URL = raw_url.strip() if raw_url else None
+# Priority order as per configuration requirements:
+# 1. DATABASE_URL (primary connection URL)
+# 2. POSTGRES_URL (Vercel Postgres connection)
+# 3. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
+DATABASE_URL = os.getenv('DATABASE_URL') or \
+               os.getenv('POSTGRES_URL') or \
+               os.getenv('DATABASE_PRIVATE_URL')
 
 # For local development only - require explicit configuration in production
 if not DATABASE_URL:
     if ENVIRONMENT == "production":
-        raise ValueError(
-            "DATABASE_URL must be set in production. "
-            "Please set DATABASE_URL, POSTGRES_URL, or DATABASE_PRIVATE_URL environment variable."
-        )
+        raise ValueError("DATABASE_URL must be set in production")
     else:
         # Use local development default only in development mode
         DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
         logger.warning("Using default local development database URL. Set DATABASE_URL for production.")
+
+# Strip whitespace to prevent connection errors from misconfigured environment variables
+DATABASE_URL = DATABASE_URL.strip()
 
 # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
 # This handles cases where the 'p' is missing from "postgresql"
