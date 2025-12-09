@@ -16,6 +16,19 @@ PYTHON_VERSION = "3.12"
 # The phases configuration ensures packages are installed without exposing secrets
 [phases.setup]
 # Comprehensive system packages for production deployment with PostgreSQL
+# 
+# ⚠️ CRITICAL WARNING ABOUT POSTGRESQL:
+# -----------------------------------
+# We install postgresql-client and libpq-dev for DATABASE CONNECTIVITY ONLY.
+# These are CLIENT libraries to CONNECT to Railway's managed PostgreSQL database.
+# 
+# DO NOT INSTALL: postgresql, postgresql-16, postgresql-server, or any PostgreSQL server packages
+# DO NOT DEPLOY: PostgreSQL as a container on Railway
+# 
+# Railway provides managed PostgreSQL databases. See RAILWAY_SETUP_REQUIRED.md for setup instructions.
+# If you see "root execution of the PostgreSQL server is not permitted" error,
+# you have misconfigured Railway. Read RAILWAY_SETUP_REQUIRED.md immediately.
+#
 aptPkgs = [
     # Build tools (required for compiling Python packages)
     "build-essential",
@@ -24,8 +37,9 @@ aptPkgs = [
     "make",
     "pkg-config",
     
-    # PostgreSQL client and development libraries (REQUIRED for psycopg2 and PostgreSQL connectivity)
-    # NOTE: Do NOT install postgresql server package - Railway provides PostgreSQL as a managed service
+    # PostgreSQL CLIENT libraries ONLY (for connecting to Railway's managed database)
+    # ⚠️ These are NOT server packages - they're client libraries for database connectivity
+    # Railway's managed PostgreSQL service handles the actual database server
     "postgresql-client",
     "libpq-dev",
     "libpq5",

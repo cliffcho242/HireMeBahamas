@@ -6,6 +6,27 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 ---
 
+## 🔴 **CRITICAL: PostgreSQL "root execution not permitted" Error on Railway?**
+
+**Seeing this error?**
+```
+"root" execution of the PostgreSQL server is not permitted.
+The server must be started under an unprivileged user ID to prevent
+possible system security compromise.
+```
+
+**➡️ READ THIS IMMEDIATELY: [RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)**
+
+**Quick Summary:**
+- ❌ You're trying to deploy PostgreSQL as a container on Railway (WRONG!)
+- ✅ Use Railway's **managed PostgreSQL database service** instead
+- 📖 Complete fix guide: [RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)
+- 🔧 Validation tool: Run `python3 validate_railway_config.py` before deploying
+
+**Why this happens:** Railway provides managed PostgreSQL databases. You should NEVER deploy PostgreSQL as a container/application. See the guide above for the correct setup.
+
+---
+
 ## 🚨 **IMPORTANT: Users Can't Sign In? Fix Deployment Issues**
 
 **If users cannot sign in**, your deployment configuration is likely incomplete.
@@ -90,7 +111,8 @@ Choose your deployment platform and follow the step-by-step guide:
 - ⚡ **[QUICK_DEPLOYMENT_REFERENCE.md](./QUICK_DEPLOYMENT_REFERENCE.md)** - One-page quick reference with all commands and URLs
 - 📚 **[VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md)** - Detailed Vercel Postgres setup
 - 🚂 **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Railway database configuration
-- ⚠️ **[RAILWAY_POSTGRESQL_SETUP.md](./RAILWAY_POSTGRESQL_SETUP.md)** - **CRITICAL**: How to correctly set up PostgreSQL on Railway (avoid "root execution not permitted" error)
+- 🔴 **[RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)** - **CRITICAL FIX**: PostgreSQL "root execution not permitted" error
+- ⚠️ **[RAILWAY_POSTGRESQL_SETUP.md](./RAILWAY_POSTGRESQL_SETUP.md)** - **How to correctly set up PostgreSQL on Railway (use managed database service!)**
 
 ### Quick Deploy to Vercel
 
