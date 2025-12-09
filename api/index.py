@@ -320,6 +320,18 @@ if db_engine is None and HAS_DB and DATABASE_URL:
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
             logger.info("Converted postgresql:// to postgresql+asyncpg://")
         
+        # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
+        # Vercel Postgres requires SSL connections
+        if "?" not in db_url:
+            # No query parameters - add sslmode=require
+            db_url = f"{db_url}?sslmode=require"
+            logger.info("Added sslmode=require to DATABASE_URL")
+        elif "sslmode=" not in db_url:
+            # Has query parameters but no sslmode - append it
+            db_url = f"{db_url}&sslmode=require"
+            logger.info("Added sslmode=require to DATABASE_URL")
+        # else: sslmode is already present, don't override user's explicit setting
+        
         logger.info("Creating fallback database engine with asyncpg...")
         db_engine = create_async_engine(
             db_url,

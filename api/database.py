@@ -37,6 +37,16 @@ def get_database_url():
     elif db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     
+    # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
+    # Vercel Postgres requires SSL connections
+    if "?" not in db_url:
+        # No query parameters - add sslmode=require
+        db_url = f"{db_url}?sslmode=require"
+    elif "sslmode=" not in db_url:
+        # Has query parameters but no sslmode - append it
+        db_url = f"{db_url}&sslmode=require"
+    # else: sslmode is already present, don't override user's explicit setting
+    
     return db_url
 
 
