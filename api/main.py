@@ -20,6 +20,10 @@ def inject_typing_exports(module):
     when modules are aliased. When Pydantic evaluates forward references,
     it looks in the module's __dict__ for type names like Optional, List, etc.
     
+    Note: This function is intentionally defined locally in each entry point file
+    rather than imported from a shared utility to avoid circular import issues
+    and ensure it's available before any other modules are loaded.
+    
     Args:
         module: The module object to inject typing exports into
     """
