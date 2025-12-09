@@ -126,7 +126,7 @@ jobs:
       - name: Test connection directly
         run: |
           # Strip asyncpg driver from DATABASE_URL for psql
-          PSQL_URL=$(echo "$DATABASE_URL" | sed 's/\+asyncpg//')
+          PSQL_URL=$(echo "$DATABASE_URL" | sed 's/+asyncpg//')
           psql "$PSQL_URL" -c "SELECT 1"
 
       - name: Install API dependencies
