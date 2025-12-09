@@ -28,18 +28,18 @@ def print_critical_notice():
     postgres_user = os.getenv("POSTGRES_USER")
     
     # If we detect PostgreSQL container indicators, print urgent warning
-    if ("postgres" in railway_service) or (pgdata and postgres_user):
+    if ("postgres" in railway_service or "postgresql" in railway_service) or (pgdata and postgres_user):
         print("\n" + "=" * 80)
-        print("🚨 [CRITICAL] POSTGRESQL MISCONFIGURATION DETECTED")
+        print("[CRITICAL] POSTGRESQL MISCONFIGURATION DETECTED")
         print("=" * 80)
-        print("\n⚠️  [WARNING] THIS REPOSITORY SHOULD NOT BE DEPLOYED AS A POSTGRESQL SERVICE!")
-        print("\n❌ If you see this error:")
+        print("\n[WARNING] THIS REPOSITORY SHOULD NOT BE DEPLOYED AS A POSTGRESQL SERVICE!")
+        print("\nIf you see this error:")
         print('   "root" execution of the PostgreSQL server is not permitted')
-        print("\n✅ YOU NEED TO:")
+        print("\nYOU NEED TO:")
         print("   1. Delete this PostgreSQL container service from Railway")
         print("   2. Add managed database: + New → Database → PostgreSQL")
         print("   3. Redeploy your backend service")
-        print("\n📖 FIX GUIDE: RAILWAY_POSTGRES_QUICKFIX.md")
+        print("\nFIX GUIDE: RAILWAY_POSTGRES_QUICKFIX.md")
         print("=" * 80 + "\n")
 
 
@@ -66,24 +66,25 @@ def check_railway_postgres():
     
     # Critical check: Detect if we're being run AS the PostgreSQL service
     # This would indicate a severe misconfiguration
-    if "postgres" in railway_service_name.lower() or "postgresql" in railway_service_name.lower():
+    railway_service_lower = railway_service_name.lower()
+    if "postgres" in railway_service_lower or "postgresql" in railway_service_lower:
         print("\n" + "=" * 80)
-        print("🚨 CRITICAL ERROR: POSTGRESQL CONTAINER SERVICE DETECTED!")
+        print("[CRITICAL ERROR] POSTGRESQL CONTAINER SERVICE DETECTED!")
         print("=" * 80)
-        print("\n❌ This repository should NOT be deployed as a PostgreSQL service!")
-        print("❌ Railway is trying to run PostgreSQL in a container, which is NOT PERMITTED")
-        print("\n🔥 THIS IS THE CAUSE OF THE ERROR:")
+        print("\nThis repository should NOT be deployed as a PostgreSQL service!")
+        print("Railway is trying to run PostgreSQL in a container, which is NOT PERMITTED")
+        print("\nTHIS IS THE CAUSE OF THE ERROR:")
         print('   "root" execution of the PostgreSQL server is not permitted.')
         print('   The server must be started under an unprivileged user ID...')
-        print("\n✅ IMMEDIATE ACTIONS REQUIRED:")
+        print("\nIMMEDIATE ACTIONS REQUIRED:")
         print("   1. GO TO: Railway Dashboard → Your Project")
         print("   2. DELETE: This PostgreSQL container service")
         print("   3. ADD: + New → Database → PostgreSQL (managed database)")
         print("   4. REDEPLOY: Your backend service")
-        print("\n📖 DETAILED INSTRUCTIONS:")
+        print("\nDETAILED INSTRUCTIONS:")
         print("   • RAILWAY_POSTGRES_QUICKFIX.md (5-minute fix)")
         print("   • RAILWAY_POSTGRES_ROOT_ERROR_FIX.md (complete guide)")
-        print("\n⚠️  This deployment WILL FAIL with 'root execution not permitted' error")
+        print("\nThis deployment WILL FAIL with 'root execution not permitted' error")
         print("=" * 80)
         return 0
     
@@ -137,20 +138,20 @@ def check_railway_postgres():
     postgres_indicators = [v for v in postgres_service_vars.values() if v]
     
     if postgres_indicators:
-        print("🚨 [CRITICAL WARNING] PostgreSQL server environment variables detected!")
+        print("[CRITICAL WARNING] PostgreSQL server environment variables detected!")
         print("   Found variables:", ", ".join([k for k, v in postgres_service_vars.items() if v]))
-        print("\n   ❌ This is a MISCONFIGURATION - PostgreSQL is running as a container!")
+        print("\n   This is a MISCONFIGURATION - PostgreSQL is running as a container!")
         print("   instead of using Railway's managed database.")
-        print("\n   🔥 [ERROR] This WILL cause these errors:")
+        print("\n   [ERROR] This WILL cause these errors:")
         print("   • 'root execution of the PostgreSQL server is not permitted'")
         print("   • 'Mounting volume on: /var/lib/containers/railwayapp/bind-mounts'")
         print("   • 'possible system security compromise'")
-        print("\n   ✅ FIX IMMEDIATELY:")
+        print("\n   FIX IMMEDIATELY:")
         print("   1. Delete PostgreSQL container service from Railway Dashboard")
         print("   2. Add: + New → Database → PostgreSQL (managed database)")
         print("   3. Redeploy backend service")
-        print("\n   📖 QUICK FIX GUIDE: RAILWAY_POSTGRES_QUICKFIX.md")
-        print("   📖 DETAILED GUIDE: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md")
+        print("\n   QUICK FIX GUIDE: RAILWAY_POSTGRES_QUICKFIX.md")
+        print("   DETAILED GUIDE: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md")
         warnings.append("PostgreSQL server environment variables detected (misconfigured)")
     else:
         print("✅ No PostgreSQL server environment variables detected")
