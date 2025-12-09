@@ -1,5 +1,7 @@
 # 🗄️ Railway Database Setup Guide
 
+⚠️ **CRITICAL WARNING**: If you see the error "root execution of the PostgreSQL server is not permitted", you are trying to deploy PostgreSQL as a container. See [RAILWAY_POSTGRESQL_SETUP.md](./RAILWAY_POSTGRESQL_SETUP.md) for the correct solution.
+
 This guide provides step-by-step instructions for adding and configuring the database connection in Railway for the HireMeBahamas application.
 
 ## 📋 Why You Need PostgreSQL

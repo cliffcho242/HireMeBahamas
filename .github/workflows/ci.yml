@@ -83,7 +83,7 @@ jobs:
     # PostgreSQL service for database integration testing
     services:
       postgres:
-        image: ghcr.io/railwayapp-templates/postgres-ssl:13.23
+        image: postgres:16-alpine
         env:
           POSTGRES_DB: hiremebahamas_test
           POSTGRES_USER: testuser
@@ -91,6 +91,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
+          --user postgres
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
@@ -163,7 +164,7 @@ jobs:
     
     services:
       postgres:
-        image: ghcr.io/railwayapp-templates/postgres-ssl:13.23
+        image: postgres:16-alpine
         env:
           POSTGRES_DB: hiremebahamas_test
           POSTGRES_USER: testuser
@@ -171,6 +172,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
+          --user postgres
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
