@@ -8,6 +8,13 @@ docker-compose*.yml
 docker-compose*.yaml
 .dockerignore
 
+# Exclude root package.json to prevent npm/Node.js detection
+# Frontend apps (next-app, frontend) are deployed separately on Vercel
+package.json
+package-lock.json
+next-app/
+examples/
+
 admin_panel/
 frontend/
 node_modules/
