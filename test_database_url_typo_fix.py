@@ -56,8 +56,7 @@ def test_ostgresql_typo_fix():
         
         # Verify the fix
         assert "postgresql" in fixed_url, f"Expected 'postgresql' in URL, got: '{fixed_url}'"
-        assert "ostgresql" not in fixed_url or "postgresql" in fixed_url, \
-            f"URL should not have 'ostgresql' typo: '{fixed_url}'"
+        assert fixed_url.startswith("postgresql"), f"URL should start with 'postgresql': {fixed_url}"
         
         print("  ✅ Backend correctly fixes 'ostgresql' typo to 'postgresql'")
         print()
@@ -78,8 +77,7 @@ def test_ostgresql_typo_fix():
         
         assert "postgresql+asyncpg" in fixed_url2, \
             f"Expected 'postgresql+asyncpg' in URL, got: '{fixed_url2}'"
-        assert "ostgresql" not in fixed_url2 or "postgresql" in fixed_url2, \
-            f"URL should not have 'ostgresql' typo: '{fixed_url2}'"
+        assert fixed_url2.startswith("postgresql"), f"URL should start with 'postgresql': {fixed_url2}"
         
         print("  ✅ Backend correctly fixes 'ostgresql://' to 'postgresql+asyncpg://'")
         print()
@@ -102,8 +100,7 @@ def test_ostgresql_typo_fix():
         print(f"  Fixed: '{fixed_url3}'")
         
         assert "postgresql" in fixed_url3, f"Expected 'postgresql' in URL, got: '{fixed_url3}'"
-        assert "ostgresql" not in fixed_url3 or "postgresql" in fixed_url3, \
-            f"URL should not have 'ostgresql' typo: '{fixed_url3}'"
+        assert fixed_url3.startswith("postgresql"), f"URL should start with 'postgresql': {fixed_url3}"
         
         print("  ✅ API database.py correctly fixes 'ostgresql' typo")
         print()

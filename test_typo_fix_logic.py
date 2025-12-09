@@ -20,7 +20,7 @@ def test_typo_fix_logic():
     print(f"  Before: 'ostgresql+asyncpg://...'")
     print(f"  After:  '{url1}'")
     assert "postgresql+asyncpg" in url1, f"Failed: {url1}"
-    assert "ostgresql" not in url1 or "postgresql" in url1, f"Failed: {url1}"
+    assert url1.startswith("postgresql"), f"URL should start with 'postgresql': {url1}"
     print("  ✅ PASS")
     
     # Test case 2: ostgresql:// -> postgresql://
@@ -32,7 +32,7 @@ def test_typo_fix_logic():
     print(f"  Before: 'ostgresql://...'")
     print(f"  After:  '{url2}'")
     assert "postgresql://" in url2, f"Failed: {url2}"
-    assert "ostgresql" not in url2 or "postgresql" in url2, f"Failed: {url2}"
+    assert url2.startswith("postgresql"), f"URL should start with 'postgresql': {url2}"
     print("  ✅ PASS")
     
     # Test case 3: Already correct URL should not be changed
@@ -70,7 +70,7 @@ def test_typo_fix_logic():
     print(f"  After:  '{url5}'")
     assert "postgresql+asyncpg" in url5, f"Failed: {url5}"
     assert "postgresql.host" in url5, f"Failed: {url5}"
-    assert "ostgresql" not in url5 or "postgresql" in url5, f"Failed: {url5}"
+    assert url5.startswith("postgresql"), f"URL should start with 'postgresql': {url5}"
     print("  ✅ PASS (all occurrences replaced)")
     
     print("\n" + "=" * 70)
