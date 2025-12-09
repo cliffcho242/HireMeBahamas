@@ -2,7 +2,8 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "dockerfilePathComment": "DO NOT SET - Forces Railway to use Nixpacks only",
+    "dockerfilePath": null,
+    "dockerfilePathComment": "Set to null to force Nixpacks builder and prevent Dockerfile usage. Railway will use nixpacks.toml configuration instead.",
     "dockerCompose": false
   },
   "deploy": {

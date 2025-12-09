@@ -6,6 +6,9 @@ Railway Deployment Validator
 This script validates that Railway is configured correctly and helps prevent
 common deployment mistakes, especially regarding PostgreSQL setup.
 
+⚠️  NOTE: This is a basic validator. For comprehensive PostgreSQL root execution
+    error checks, use: python3 validate_railway_postgres_config.py
+
 Run this before deploying to Railway to catch configuration issues early.
 """
 
@@ -39,6 +42,21 @@ def print_warning(text):
 def print_info(text):
     """Print info message"""
     print(f"ℹ️  {text}")
+
+
+def check_postgresql_root_error_fix():
+    """Check if the PostgreSQL root error fix documentation exists"""
+    print_header("Checking PostgreSQL Root Execution Error Documentation")
+    
+    fix_doc_path = Path("RAILWAY_POSTGRES_ROOT_ERROR_FIX.md")
+    if fix_doc_path.exists():
+        print_success("PostgreSQL root error fix guide found")
+        print_info("If you see 'root execution not permitted' error, read this guide!")
+        return True
+    else:
+        print_warning("RAILWAY_POSTGRES_ROOT_ERROR_FIX.md not found")
+        print_info("This guide helps fix the common PostgreSQL root execution error")
+        return False
 
 
 def check_postgresql_packages():
@@ -183,6 +201,10 @@ def print_railway_setup_guide():
     """Print quick setup guide for Railway"""
     print_header("Railway PostgreSQL Setup Guide")
     
+    print("🚨 SEEING 'root execution of PostgreSQL server is not permitted' ERROR?\n")
+    print("➡️  READ: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md for step-by-step fix\n")
+    print("➡️  RUN: python3 validate_railway_postgres_config.py for detailed validation\n")
+    
     print("To properly set up PostgreSQL on Railway:\n")
     print("1. Go to Railway Dashboard (https://railway.app/dashboard)")
     print("2. Open your project")
@@ -194,9 +216,11 @@ def print_railway_setup_guide():
     print("DO NOT:")
     print("  ❌ Deploy PostgreSQL as a container/application")
     print("  ❌ Try to run PostgreSQL in your Dockerfile")
-    print("  ❌ Deploy docker-compose.yml to Railway\n")
+    print("  ❌ Deploy docker-compose.yml to Railway")
+    print("  ❌ Install postgresql-16, postgresql-server packages in nixpacks.toml\n")
     
     print("For detailed instructions, see:")
+    print("  📄 RAILWAY_POSTGRES_ROOT_ERROR_FIX.md (COMPREHENSIVE FIX)")
     print("  📄 RAILWAY_SETUP_REQUIRED.md")
     print("  📄 RAILWAY_POSTGRESQL_SETUP.md\n")
 
@@ -207,6 +231,7 @@ def main():
     print("This script checks for common Railway deployment mistakes\n")
     
     checks = [
+        ("PostgreSQL Root Error Fix Doc", check_postgresql_root_error_fix),
         ("PostgreSQL Packages", check_postgresql_packages),
         ("Docker Compose", check_docker_compose),
         ("Environment Variables", check_environment_variables),
