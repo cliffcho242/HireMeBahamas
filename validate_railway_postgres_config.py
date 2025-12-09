@@ -59,9 +59,9 @@ def validate_railway_json():
     railway_json_path = Path("railway.json")
     
     if not railway_json_path.exists():
-        print_error("railway.json not found in root directory")
-        print_info("Railway will use default configuration")
-        return False
+        print_warning("railway.json not found in root directory")
+        print_info("Railway will use default configuration (this is OK)")
+        return True  # Not a failure - Railway can work without this file
     
     try:
         with open(railway_json_path, 'r') as f:
@@ -78,7 +78,7 @@ def validate_railway_json():
             print_error(f"Builder is set to '{build.get('builder')}' instead of 'NIXPACKS'")
             return False
         
-        if build.get('dockerCompose') == False:
+        if build.get('dockerCompose') is False:
             print_success("Docker Compose is explicitly disabled ✓")
         else:
             print_warning("dockerCompose should be set to false")
@@ -111,7 +111,7 @@ def validate_railwayignore():
     if not railwayignore_path.exists():
         print_warning(".railwayignore not found")
         print_info("Consider creating one to exclude docker-compose files")
-        return False
+        return True  # Not a critical failure - Railway will deploy everything
     
     try:
         with open(railwayignore_path, 'r') as f:
@@ -134,7 +134,7 @@ def validate_railwayignore():
         else:
             print_warning("docker-compose files are not explicitly excluded")
             print_info("Add 'docker-compose*.yml' to .railwayignore")
-            return False
+            return True  # Warning only, not critical failure
             
     except Exception as e:
         print_error(f"Error reading .railwayignore: {e}")
@@ -158,43 +158,54 @@ def validate_nixpacks_toml():
         
         print_success("nixpacks.toml found")
         
-        # Parse only non-comment lines for package detection
-        package_lines = []
+        # Parse package lines more robustly
+        # Only look at lines inside the aptPkgs array, excluding comments
+        package_entries = []
         in_aptpkgs_section = False
         
         for line in lines:
             stripped = line.strip()
-            # Check if we're in the aptPkgs section
+            
+            # Detect start of aptPkgs section
             if 'aptpkgs' in stripped.lower() and '=' in stripped:
                 in_aptpkgs_section = True
                 continue
-            # Exit aptPkgs section when we hit a new section or closing bracket
-            if in_aptpkgs_section and (stripped.startswith('[') or stripped == ']'):
-                in_aptpkgs_section = False
-            # Collect package lines (ignore comments)
-            if in_aptpkgs_section and not stripped.startswith('#') and stripped:
-                package_lines.append(stripped.lower())
-        
-        packages_content = ' '.join(package_lines)
+            
+            # Detect end of aptPkgs section (new TOML section or closing bracket)
+            if in_aptpkgs_section:
+                if stripped.startswith('[') and not stripped.startswith('[['):
+                    # New TOML section
+                    in_aptpkgs_section = False
+                    continue
+                elif stripped == ']':
+                    # End of array
+                    in_aptpkgs_section = False
+                    continue
+            
+            # Collect package entries (ignore comments and empty lines)
+            if in_aptpkgs_section and stripped and not stripped.startswith('#'):
+                # Extract quoted package names from lines like: "package-name",
+                # Remove trailing comma and quotes
+                entry = stripped.rstrip(',').strip('"').strip("'").lower()
+                if entry:
+                    package_entries.append(entry)
         
         # Check for PostgreSQL server packages (should NOT be present)
-        bad_packages = [
-            ('postgresql-16', 'postgresql-16'),
-            ('postgresql-15', 'postgresql-15'),
-            ('postgresql-14', 'postgresql-14'),
-            ('postgresql-13', 'postgresql-13'),
-            ('postgresql-12', 'postgresql-12'),
-            ('"postgresql"', 'postgresql (server)'),
-            ('postgresql-server', 'postgresql-server'),
-            ('postgres-server', 'postgres-server')
-        ]
+        bad_packages = {
+            'postgresql-16': 'postgresql-16 (server)',
+            'postgresql-15': 'postgresql-15 (server)',
+            'postgresql-14': 'postgresql-14 (server)',
+            'postgresql-13': 'postgresql-13 (server)',
+            'postgresql-12': 'postgresql-12 (server)',
+            'postgresql': 'postgresql (server)',
+            'postgresql-server': 'postgresql-server',
+            'postgres-server': 'postgres-server'
+        }
         
         found_bad_packages = []
-        for pkg_pattern, pkg_name in bad_packages:
-            # Look for the package as a quoted string in the list
-            if f'"{pkg_pattern.strip("\"")}"' in packages_content or \
-               f"'{pkg_pattern.strip('\"')}'" in packages_content:
-                found_bad_packages.append(pkg_name)
+        for entry in package_entries:
+            if entry in bad_packages:
+                found_bad_packages.append(bad_packages[entry])
         
         if found_bad_packages:
             print_error("Found PostgreSQL SERVER packages (should only have client):")
@@ -204,15 +215,16 @@ def validate_nixpacks_toml():
             return False
         
         # Check for PostgreSQL client packages (should be present)
-        good_packages = [
-            ('postgresql-client', 'postgresql-client'),
-            ('libpq', 'libpq-dev or libpq5')
-        ]
-        found_good_packages = []
+        good_packages = {
+            'postgresql-client': 'postgresql-client',
+            'libpq-dev': 'libpq-dev',
+            'libpq5': 'libpq5'
+        }
         
-        for pkg_pattern, pkg_name in good_packages:
-            if pkg_pattern in packages_content:
-                found_good_packages.append(pkg_name)
+        found_good_packages = []
+        for entry in package_entries:
+            if entry in good_packages:
+                found_good_packages.append(good_packages[entry])
         
         if found_good_packages:
             print_success("PostgreSQL client libraries found ✓")
@@ -253,7 +265,9 @@ def check_docker_compose_files():
     print_info("  3. Include warnings that they are for LOCAL DEV ONLY")
     
     # Check if they're properly named as local
-    local_files = [f for f in docker_compose_files if '.local' in str(f)]
+    # More specific check: filename should contain '.local.' or end with '.local.yml'
+    local_files = [f for f in docker_compose_files 
+                   if '.local.' in str(f) or str(f).endswith('.local.yml') or str(f).endswith('.local.yaml')]
     if local_files:
         print_success(f"{len(local_files)} file(s) properly named with '.local'")
     

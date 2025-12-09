@@ -3,6 +3,7 @@
   "build": {
     "builder": "NIXPACKS",
     "dockerfilePath": null,
+    "dockerfilePathComment": "Set to null to force Nixpacks builder and prevent Dockerfile usage. Railway will use nixpacks.toml configuration instead.",
     "dockerCompose": false
   },
   "deploy": {
