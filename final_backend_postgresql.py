@@ -783,7 +783,20 @@ def log_request_end(response):
 # private network (RAILWAY_PRIVATE_DOMAIN) instead of the public TCP proxy
 # (RAILWAY_TCP_PROXY_DOMAIN used by DATABASE_PUBLIC_URL).
 # We prefer DATABASE_PRIVATE_URL > DATABASE_URL to minimize costs.
-DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
+
+# Check which DATABASE_URL environment variable is available
+_db_private_url = os.getenv("DATABASE_PRIVATE_URL")
+_db_public_url = os.getenv("DATABASE_URL")
+
+if _db_private_url:
+    DATABASE_URL = _db_private_url
+    print("✅ Using DATABASE_PRIVATE_URL (Railway private network - $0 egress)")
+elif _db_public_url:
+    DATABASE_URL = _db_public_url
+    print("✅ Using DATABASE_URL")
+else:
+    DATABASE_URL = None
+    print("⚠️  No DATABASE_URL or DATABASE_PRIVATE_URL found in environment")
 
 # Normalize DATABASE_URL for psycopg2 compatibility
 # If the URL uses postgresql+asyncpg:// scheme (for SQLAlchemy/asyncpg), convert it
@@ -1590,7 +1603,28 @@ def _get_connection_pool():
                         f"timeout={DB_CONNECT_TIMEOUT}s, jit=off, keepalive={keepalive_status}"
                     )
                 except Exception as e:
+                    error_msg = str(e).lower()
                     print(f"⚠️ Failed to create connection pool: {e}")
+                    
+                    # Provide specific guidance for authentication failures
+                    if "password authentication failed" in error_msg or "authentication failed" in error_msg:
+                        print("❌ DATABASE AUTHENTICATION ERROR")
+                        print(f"   User: {DB_CONFIG['user']}")
+                        print(f"   Host: {DB_CONFIG['host']}")
+                        print(f"   Database: {DB_CONFIG['database']}")
+                        print("")
+                        print("⚠️  POSSIBLE CAUSES:")
+                        print("   1. DATABASE_URL password is incorrect")
+                        print("   2. Database user does not exist")
+                        print("   3. DATABASE_URL environment variable is outdated")
+                        print("")
+                        print("⚠️  SOLUTIONS:")
+                        print("   1. Verify DATABASE_URL in your deployment environment (Railway/Vercel)")
+                        print("   2. Check if the database password was recently changed")
+                        print("   3. Ensure DATABASE_URL matches the credentials in your database dashboard")
+                        print("   4. For Railway: Use DATABASE_PRIVATE_URL for internal connections")
+                        print("")
+                    
                     # Pool creation failed, will fall back to direct connections
                     return None
     
@@ -1937,6 +1971,30 @@ def get_db_connection():
             except psycopg2.OperationalError as e:
                 last_error = e
                 error_msg = str(e).lower()
+                
+                # Provide specific guidance for authentication failures
+                if "password authentication failed" in error_msg or "authentication failed" in error_msg:
+                    if attempt == 0:  # Only print detailed message on first failure
+                        print("❌ DATABASE AUTHENTICATION ERROR during direct connection")
+                        print(f"   User: {DB_CONFIG['user']}")
+                        print(f"   Host: {DB_CONFIG['host']}:{DB_CONFIG['port']}")
+                        print(f"   Database: {DB_CONFIG['database']}")
+                        print("")
+                        print("⚠️  ACTION REQUIRED:")
+                        print("   Update your DATABASE_URL environment variable with the correct password.")
+                        print("")
+                        print("   For Railway deployments:")
+                        print("   1. Go to your Railway project dashboard")
+                        print("   2. Select your PostgreSQL service")
+                        print("   3. Copy the DATABASE_PRIVATE_URL (for internal connections)")
+                        print("   4. Set DATABASE_PRIVATE_URL in your backend service variables")
+                        print("")
+                        print("   For Vercel deployments:")
+                        print("   1. Update DATABASE_URL in your Vercel environment variables")
+                        print("   2. Ensure it points to the correct database with valid credentials")
+                        print("")
+                    # Don't retry authentication errors - they won't succeed without config change
+                    break
                 
                 # Handle SSL-related errors by trying with sslmode=prefer
                 if "ssl" in error_msg or "certificate" in error_msg:
@@ -4406,7 +4464,19 @@ def database_keepalive_worker():
                 
         except Exception as e:
             error_msg = str(e)[:100]
+            error_msg_lower = str(e).lower()
             print(f"⚠️ Initial database keepalive ping {i + 1}/{DB_KEEPALIVE_WARMUP_PING_COUNT} failed: {error_msg}")
+            
+            # Provide specific guidance for authentication failures
+            if "password authentication failed" in error_msg_lower or "authentication failed" in error_msg_lower:
+                if i == 0:  # Only print detailed message on first failure
+                    print("❌ DATABASE AUTHENTICATION ERROR during keepalive ping")
+                    print("⚠️  The database credentials appear to be incorrect.")
+                    print("⚠️  Please check your DATABASE_URL environment variable.")
+                    print(f"   Current user: {DB_CONFIG['user']}")
+                    print(f"   Current host: {DB_CONFIG['host']}")
+                    print("")
+            
             _keepalive_consecutive_failures += 1
             # Wait a bit longer before retry on failure
             if i < DB_KEEPALIVE_WARMUP_PING_COUNT - 1:
