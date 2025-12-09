@@ -11,7 +11,11 @@ _engine = None
 
 
 def get_database_url():
-    """Get and validate DATABASE_URL from environment"""
+    """Get and validate DATABASE_URL from environment
+    
+    Note: SQLAlchemy's create_async_engine() automatically handles URL decoding for
+    special characters in username/password. No manual decoding is needed.
+    """
     db_url = os.getenv("DATABASE_URL", "")
     
     # Strip whitespace from database URL to prevent connection errors

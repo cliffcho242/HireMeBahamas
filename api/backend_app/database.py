@@ -76,6 +76,10 @@ if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
 
+# NOTE: SQLAlchemy's create_async_engine() automatically handles URL decoding for
+# special characters in username/password. No manual decoding is needed here.
+# For example, passwords with '@' or '%' are automatically decoded from URL-encoded form.
+
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields
 parsed = urlparse(DATABASE_URL)
