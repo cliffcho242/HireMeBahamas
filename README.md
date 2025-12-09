@@ -10,6 +10,19 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 **If users cannot sign in**, your deployment configuration is likely incomplete.
 
+### 🔥 **Database Authentication Error?**
+
+If you see errors like:
+```
+⚠️ Failed to create connection pool: password authentication failed for user "hiremebahamas_user"
+```
+
+🚨 **[URGENT FIX: Database Authentication Error](./FIX_DATABASE_AUTH_ERROR.md)** - Fix in 5 minutes
+
+Also see:
+- 📖 **[Database Authentication Troubleshooting](./DATABASE_AUTHENTICATION_TROUBLESHOOTING.md)** - Comprehensive troubleshooting guide
+- 🧪 **[Test Database Connection](./test_database_connection.py)** - Validation script
+
 ### ⚠️ **Still Using Render PostgreSQL?**
 
 🔄 **[MIGRATE NOW: Render to Railway PostgreSQL](./RENDER_TO_RAILWAY_MIGRATION.md)** - Complete migration guide (30 minutes)
