@@ -30,8 +30,40 @@
 import os
 import logging
 import ssl
+import sys
 from typing import Optional
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote_plus
+
+# Add project root to path for importing shared validation
+_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
+try:
+    from db_config_validation import validate_database_config
+except ImportError:
+    # Fallback if db_config_validation is not available (shouldn't happen in normal deployment)
+    def validate_database_config():
+        """Fallback validation function."""
+        database_url = (
+            os.getenv("DATABASE_PRIVATE_URL") or 
+            os.getenv("POSTGRES_URL") or 
+            os.getenv("DATABASE_URL")
+        )
+        if database_url:
+            return True, "DATABASE_URL", []
+        
+        missing_vars = []
+        if not os.getenv("PGHOST"):
+            missing_vars.append("PGHOST")
+        if not os.getenv("PGUSER"):
+            missing_vars.append("PGUSER")
+        if not os.getenv("PGPASSWORD"):
+            missing_vars.append("PGPASSWORD")
+        if not os.getenv("PGDATABASE"):
+            missing_vars.append("PGDATABASE")
+        
+        return len(missing_vars) == 0, "Individual PG* variables", missing_vars
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -46,7 +78,8 @@ logger = logging.getLogger(__name__)
 # 1. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
 # 2. POSTGRES_URL (Vercel Postgres primary connection)
 # 3. DATABASE_URL (Standard PostgreSQL connection)
-# 4. Local development default (only for development, not production)
+# 4. Construct from individual PG* variables (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE)
+# 5. Local development default (only for development, not production)
 # =============================================================================
 
 # Check if we're in production mode
@@ -59,12 +92,30 @@ DATABASE_URL = (
     os.getenv("DATABASE_URL")
 )
 
-# For local development only - require explicit configuration in production
+# If DATABASE_URL is not provided, try to construct it from individual PG* variables
 if not DATABASE_URL:
-    if ENVIRONMENT == "production":
+    pghost = os.getenv("PGHOST")
+    pgport = os.getenv("PGPORT", "5432")
+    pguser = os.getenv("PGUSER")
+    pgpassword = os.getenv("PGPASSWORD")
+    pgdatabase = os.getenv("PGDATABASE")
+    
+    # Check if all required individual variables are present using shared validation
+    is_valid, source, missing_vars = validate_database_config()
+    
+    if is_valid and source == "Individual PG* variables":
+        # URL-encode password to handle special characters
+        encoded_password = quote_plus(pgpassword)
+        DATABASE_URL = f"postgresql+asyncpg://{pguser}:{encoded_password}@{pghost}:{pgport}/{pgdatabase}"
+        logger.info("Constructed DATABASE_URL from individual PG* environment variables")
+    elif ENVIRONMENT == "production":
+        # In production, we need either DATABASE_URL or all individual PG* variables
         raise ValueError(
-            "DATABASE_URL must be set in production. "
-            "Please set DATABASE_URL, POSTGRES_URL, or DATABASE_PRIVATE_URL environment variable."
+            f"DATABASE_URL must be set in production. "
+            f"Please set DATABASE_URL, POSTGRES_URL, DATABASE_PRIVATE_URL, "
+            f"or all individual variables (PGHOST, PGUSER, PGPASSWORD, PGDATABASE). "
+            f"Note: PGPORT is optional (defaults to 5432). "
+            f"Missing: {', '.join(missing_vars)}"
         )
     else:
         # Use local development default only in development mode
