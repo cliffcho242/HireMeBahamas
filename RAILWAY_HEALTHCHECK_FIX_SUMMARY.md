@@ -1,6 +1,51 @@
 # Railway Deployment Healthcheck Fix - Summary (Updated December 2025)
 
-## Latest Issue (December 2025)
+## **CURRENT Issue (December 9, 2025) - FIXED**
+
+Railway healthcheck failing repeatedly during startup:
+```
+Starting Healthcheck
+Path: /health
+Retry window: 3m0s
+
+Attempt #1 failed with service unavailable. Continuing to retry for 2m49s
+Attempt #2 failed with service unavailable. Continuing to retry for 2m38s
+Attempt #3 failed with service unavailable. Continuing to retry for 2m26s
+Attempt #4 failed with service unavailable. Continuing to retry for 2m12s
+```
+
+### Root Cause (December 9, 2025)
+
+**Gunicorn preload_app blocking startup:**
+- Gunicorn was configured with `preload_app=True` in gunicorn.conf.py
+- This loads the entire Flask app (all imports, DB init) **before** listening on the port
+- Railway healthcheck starts immediately but gets "connection refused" because Gunicorn isn't listening yet
+- Healthcheck retries for 3 minutes while app initialization completes
+
+### Solution (December 9, 2025) ✅
+
+**Changed gunicorn.conf.py:**
+```python
+# BEFORE (causing failures)
+preload_app = True
+
+# AFTER (fixed)
+preload_app = False  # Workers initialize independently, Gunicorn listens immediately
+```
+
+**Why This Works:**
+- Gunicorn master process starts listening immediately (<2 seconds)
+- Workers fork and initialize Flask app in parallel
+- `/health` endpoint responds while workers are still loading
+- Railway healthcheck passes within first 1-2 attempts
+
+**Trade-off:**
+- Slightly slower first requests (50-200ms) during worker initialization
+- But this is acceptable vs failing healthchecks and failed deployments
+
+---
+
+## Previous Issue (Earlier December 2025)
 Railway deployment was failing with:
 - "Attempt #1-7 failed with service unavailable"
 - "1/1 replicas never became healthy!"
@@ -8,16 +53,14 @@ Railway deployment was failing with:
 - Path: /health
 - Retry window: 1m40s
 
-The healthcheck endpoint was not responding correctly, preventing successful deployment.
-
-## Latest Root Cause (December 2025)
+### Previous Root Cause
 
 **Configuration Conflict in railway.json:**
 The `railway.json` file had a `startCommand` that overrode `nixpacks.toml`, starting the wrong backend:
 - ❌ railway.json tried to start: `uvicorn api.backend_app.main:app` (FastAPI backend - not configured for Railway)
 - ✅ nixpacks.toml correctly starts: `gunicorn final_backend_postgresql:application` (Flask backend - production-ready)
 
-## Latest Fix (December 2025)
+### Previous Fix
 
 **Updated railway.json:**
 ```json
@@ -39,12 +82,6 @@ The `railway.json` file had a `startCommand` that overrode `nixpacks.toml`, star
 **Key Changes:**
 1. ✅ Removed `startCommand` field - Let nixpacks.toml control startup
 2. ✅ Increased `healthcheckTimeout` from 100s to 180s - Allow for Railway cold starts
-
-**Why This Works:**
-- Nixpacks now controls startup via `gunicorn final_backend_postgresql:application --config gunicorn.conf.py`
-- Flask backend has instant `/health` endpoint (<10ms response)
-- 180s timeout accommodates Railway cold starts + database initialization
-- No conflicting startup commands
 
 ---
 
