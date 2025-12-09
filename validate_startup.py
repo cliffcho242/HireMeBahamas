@@ -18,6 +18,9 @@ import os
 import sys
 import time
 
+# Import shared validation function
+from db_config_validation import validate_database_config, get_database_host
+
 def validate_environment():
     """Validate required environment variables."""
     print("=" * 70)
@@ -35,47 +38,21 @@ def validate_environment():
         print("⚠️  PORT not set - will use default 8080")
         warnings.append("PORT not set")
     
-    # Check DATABASE_URL (multiple sources)
-    database_url = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL")
-    if database_url:
-        # Don't print the full URL (contains credentials)
-        db_host = "***"
-        if "://" in database_url:
-            try:
-                from urllib.parse import urlparse
-                parsed = urlparse(database_url)
-                db_host = parsed.hostname or "***"
-            except:
-                pass
-        print(f"✅ DATABASE_URL configured: {db_host}")
-    else:
-        # Check for individual PostgreSQL environment variables
-        pghost = os.getenv("PGHOST")
-        pgport = os.getenv("PGPORT")
-        pguser = os.getenv("PGUSER")
-        pgpassword = os.getenv("PGPASSWORD")
-        pgdatabase = os.getenv("PGDATABASE")
-        
-        missing_pg_vars = []
-        if not pghost:
-            missing_pg_vars.append("PGHOST")
-        if not pgport:
-            missing_pg_vars.append("PGPORT")
-        if not pguser:
-            missing_pg_vars.append("PGUSER")
-        if not pgpassword:
-            missing_pg_vars.append("PGPASSWORD")
-        if not pgdatabase:
-            missing_pg_vars.append("PGDATABASE")
-        
-        if missing_pg_vars:
-            print(f"❌ DATABASE_URL not set and missing individual variables: {', '.join(missing_pg_vars)}")
-            print("   Required variables: PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, DATABASE_URL")
-            print("   Configure DATABASE_URL or all individual PG* variables in Railway dashboard")
-            errors.append("DATABASE_URL not configured and missing required PG* variables")
-        else:
-            print(f"✅ Individual PostgreSQL variables configured (PGHOST={pghost})")
+    # Check DATABASE_URL (using shared validation)
+    is_valid, source, missing_vars = validate_database_config()
+    
+    if is_valid:
+        db_host = get_database_host()
+        if source == "Individual PG* variables":
+            print(f"✅ Individual PostgreSQL variables configured (PGHOST={db_host})")
             warnings.append("Using individual PG* variables instead of DATABASE_URL")
+        else:
+            print(f"✅ {source} configured: {db_host or '***'}")
+    else:
+        print(f"❌ DATABASE_URL not set and missing individual variables: {', '.join(missing_vars)}")
+        print("   Required variables: PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, DATABASE_URL")
+        print("   Configure DATABASE_URL or all individual PG* variables in Railway dashboard")
+        errors.append("DATABASE_URL not configured and missing required PG* variables")
     
     # Check SECRET_KEY
     secret_key = os.getenv("SECRET_KEY")

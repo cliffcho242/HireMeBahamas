@@ -30,8 +30,40 @@
 import os
 import logging
 import ssl
+import sys
 from typing import Optional
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote_plus
+
+# Add project root to path for importing shared validation
+_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
+try:
+    from db_config_validation import validate_database_config
+except ImportError:
+    # Fallback if db_config_validation is not available (shouldn't happen in normal deployment)
+    def validate_database_config():
+        """Fallback validation function."""
+        database_url = (
+            os.getenv("DATABASE_PRIVATE_URL") or 
+            os.getenv("POSTGRES_URL") or 
+            os.getenv("DATABASE_URL")
+        )
+        if database_url:
+            return True, "DATABASE_URL", []
+        
+        missing_vars = []
+        if not os.getenv("PGHOST"):
+            missing_vars.append("PGHOST")
+        if not os.getenv("PGUSER"):
+            missing_vars.append("PGUSER")
+        if not os.getenv("PGPASSWORD"):
+            missing_vars.append("PGPASSWORD")
+        if not os.getenv("PGDATABASE"):
+            missing_vars.append("PGDATABASE")
+        
+        return len(missing_vars) == 0, "Individual PG* variables", missing_vars
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -68,29 +100,21 @@ if not DATABASE_URL:
     pgpassword = os.getenv("PGPASSWORD")
     pgdatabase = os.getenv("PGDATABASE")
     
-    # Check if all required individual variables are present
-    if pghost and pguser and pgpassword and pgdatabase:
-        from urllib.parse import quote_plus
+    # Check if all required individual variables are present using shared validation
+    is_valid, source, missing_vars = validate_database_config()
+    
+    if is_valid and source == "Individual PG* variables":
         # URL-encode password to handle special characters
         encoded_password = quote_plus(pgpassword)
         DATABASE_URL = f"postgresql+asyncpg://{pguser}:{encoded_password}@{pghost}:{pgport}/{pgdatabase}"
         logger.info("Constructed DATABASE_URL from individual PG* environment variables")
     elif ENVIRONMENT == "production":
         # In production, we need either DATABASE_URL or all individual PG* variables
-        missing_vars = []
-        if not pghost:
-            missing_vars.append("PGHOST")
-        if not pguser:
-            missing_vars.append("PGUSER")
-        if not pgpassword:
-            missing_vars.append("PGPASSWORD")
-        if not pgdatabase:
-            missing_vars.append("PGDATABASE")
-        
         raise ValueError(
             f"DATABASE_URL must be set in production. "
             f"Please set DATABASE_URL, POSTGRES_URL, DATABASE_PRIVATE_URL, "
-            f"or all individual variables (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE). "
+            f"or all individual variables (PGHOST, PGUSER, PGPASSWORD, PGDATABASE). "
+            f"Note: PGPORT is optional (defaults to 5432). "
             f"Missing: {', '.join(missing_vars)}"
         )
     else:

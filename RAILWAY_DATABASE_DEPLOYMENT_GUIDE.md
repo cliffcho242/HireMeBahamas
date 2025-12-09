@@ -57,14 +57,19 @@ If you have a PostgreSQL service in your Railway project:
 2. Find the `DATABASE_URL` value
 3. It looks like: `postgresql://postgres:PASSWORD@HOST:PORT/railway`
 
-#### Extract Individual Variables
+#### Example: Extract Individual Variables
 
-From the DATABASE_URL above, extract:
-- **PGUSER** = `postgres` (before first `:`)
-- **PGPASSWORD** = `PASSWORD` (between `:` and `@`)
-- **PGHOST** = `HOST` (between `@` and `:`)
-- **PGPORT** = `PORT` (between `:` and `/`)
-- **PGDATABASE** = `railway` (after last `/`)
+Let's say your Railway DATABASE_URL is:
+```
+postgresql://postgres:myP@ss123@containers-us-west-100.railway.app:6543/railway
+```
+
+Extract these values:
+- **PGUSER** = `postgres` (text before first `:`)
+- **PGPASSWORD** = `myP@ss123` (between first `:` and `@`)
+- **PGHOST** = `containers-us-west-100.railway.app` (between `@` and next `:`)
+- **PGPORT** = `6543` (between `:` and `/`)
+- **PGDATABASE** = `railway` (after last `/`, before `?` if present)
 
 #### Add Variables to Backend Service
 
@@ -215,9 +220,11 @@ If `"database": "connected"` appears, your database is configured correctly! ✅
 **Cause:** Wrong PGDATABASE value
 
 **Solution:**
-1. Railway's default database is named `railway`
-2. Set `PGDATABASE=railway` (not "postgres" or other names)
-3. Verify PostgreSQL service has created the database
+1. Check your actual database name in Railway PostgreSQL service variables
+2. Railway typically creates a database named `railway` by default
+3. Look at your DATABASE_URL - the database name is the part after the last `/`
+   - Example: `postgresql://user:pass@host:5432/mydatabase` → database name is `mydatabase`
+4. Set `PGDATABASE` to match your actual database name
 
 ### Error: "Missing required module"
 
