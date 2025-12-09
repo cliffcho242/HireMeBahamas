@@ -15,13 +15,14 @@ The server must be started under an unprivileged user ID to prevent
 possible system security compromise.
 ```
 
-**➡️ READ THIS IMMEDIATELY: [RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)**
+**➡️ READ THIS IMMEDIATELY: [RAILWAY_POSTGRES_ROOT_ERROR_FIX.md](./RAILWAY_POSTGRES_ROOT_ERROR_FIX.md)**
 
 **Quick Summary:**
 - ❌ You're trying to deploy PostgreSQL as a container on Railway (WRONG!)
 - ✅ Use Railway's **managed PostgreSQL database service** instead
-- 📖 Complete fix guide: [RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)
-- 🔧 Validation tool: Run `python3 validate_railway_config.py` before deploying
+- 📖 Complete fix guide: [RAILWAY_POSTGRES_ROOT_ERROR_FIX.md](./RAILWAY_POSTGRES_ROOT_ERROR_FIX.md)
+- 🔧 Validation tool: Run `python3 validate_railway_postgres_config.py` before deploying
+- 📋 Setup reference: [RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)
 
 **Why this happens:** Railway provides managed PostgreSQL databases. You should NEVER deploy PostgreSQL as a container/application. See the guide above for the correct setup.
 
