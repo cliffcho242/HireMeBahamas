@@ -52,9 +52,15 @@ max_requests_jitter = 100
 # ============================================================================
 # PRELOAD & PERFORMANCE (Critical for Cold Start Elimination)
 # ============================================================================
-# Preload app BEFORE forking workers (eliminates 30-120s cold starts)
-# First request is instant (<400ms) instead of waiting for app load
-preload_app = True
+# Preload app setting:
+# - True: Load app once before forking (faster requests, slower startup)
+# - False: Each worker loads app independently (faster startup, slower first requests)
+#
+# CRITICAL FIX: Set to False to allow Gunicorn to start listening immediately
+# This prevents Railway health check failures during app initialization.
+# Workers will initialize independently, allowing /health to respond while
+# database connections and other resources are still initializing.
+preload_app = False
 
 # ============================================================================
 # LOGGING (Production-grade)
@@ -85,20 +91,23 @@ def on_starting(server):
     """Log startup configuration"""
     global _master_start_time
     _master_start_time = time.time()
-    print(f"🚀 Starting Gunicorn")
+    print(f"🚀 Starting Gunicorn (Railway Healthcheck Optimized)")
     print(f"   Workers: {workers} × {threads} threads = {workers * threads} capacity")
     print(f"   Timeout: {timeout}s | Keepalive: {keepalive}s")
-    print(f"   Preload: {preload_app}")
+    print(f"   Preload: {preload_app} (workers initialize independently)")
+    print(f"   This allows fast startup and immediate health check responses")
 
 
 def when_ready(server):
-    """Log when server is ready"""
+    """Log when server is ready to accept connections"""
     if _master_start_time:
         startup_time = time.time() - _master_start_time
-        print(f"✅ Server ready in {startup_time:.2f}s")
-    print(f"   Health: GET /health (instant)")
+        print(f"✅ Gunicorn ready to accept connections in {startup_time:.2f}s")
+    print(f"   Listening on {bind}")
+    print(f"   Health: GET /health (instant, no dependencies)")
     print(f"   Ready: GET /ready (with DB check)")
-    print(f"🎉 HireMeBahamas API is IMMORTAL")
+    print(f"   Workers will initialize independently")
+    print(f"🎉 HireMeBahamas API is ready for Railway healthcheck")
 
 
 def on_exit(server):
