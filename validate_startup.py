@@ -110,6 +110,41 @@ def validate_environment():
     
     if is_railway:
         print("  ✅ Detected: Railway")
+        
+        # Railway-specific PostgreSQL check
+        print("\n🔍 Railway PostgreSQL Configuration Check:")
+        db_url = os.getenv("DATABASE_URL", "")
+        
+        # Check if DATABASE_URL points to Railway's managed PostgreSQL
+        if "railway.app" in db_url or "railway.internal" in db_url:
+            print("  ✅ Using Railway managed PostgreSQL database")
+        elif db_url and "postgres" in db_url:
+            print("  ⚠️  DATABASE_URL detected but not Railway managed database")
+            print("     Ensure you're using Railway's PostgreSQL service, not a container")
+            warnings.append("Non-Railway PostgreSQL URL detected")
+        else:
+            print("  ⚠️  No Railway PostgreSQL connection detected")
+            print("     Make sure to add PostgreSQL database in Railway dashboard:")
+            print("     Dashboard → + New → Database → PostgreSQL")
+            warnings.append("No Railway managed database detected")
+        
+        # Critical check: Warn if PostgreSQL server packages detected
+        print("\n⚠️  PostgreSQL Server Check:")
+        postgres_server_warning = """
+  If you see "root execution of the PostgreSQL server is not permitted" error:
+  
+  ❌ WRONG: Deploying PostgreSQL as a container service
+  ✅ CORRECT: Use Railway's managed PostgreSQL database
+  
+  Fix:
+  1. Delete any PostgreSQL service containers in Railway dashboard
+  2. Add managed database: Dashboard → + New → Database → PostgreSQL
+  3. Railway will auto-inject DATABASE_URL
+  
+  See: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md for detailed instructions
+        """
+        print(postgres_server_warning)
+        
     elif is_render:
         print("  ✅ Detected: Render")
     else:
