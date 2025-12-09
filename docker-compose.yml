@@ -1,6 +1,12 @@
 # High Availability Docker Compose Configuration for HireMeBahamas
 # See docs/HIGH_AVAILABILITY.md for detailed documentation
 #
+# ⚠️ IMPORTANT: This file is for LOCAL DEVELOPMENT ONLY
+# DO NOT use this docker-compose.yml on Railway or other cloud platforms!
+# - Railway: Use managed PostgreSQL service (see RAILWAY_POSTGRESQL_SETUP.md)
+# - Render: Use managed PostgreSQL service
+# - Vercel: Use Vercel Postgres
+#
 # Usage:
 #   Development:       docker-compose up
 #   Production HA:     docker-compose --profile production up
@@ -11,7 +17,8 @@ version: '3.8'
 services:
   # PostgreSQL Database with High Availability settings
   postgres:
-    image: ghcr.io/railwayapp-templates/postgres-ssl:13.23
+    image: postgres:16-alpine
+    user: postgres  # Run as postgres user (UID 999), not root
     environment:
       POSTGRES_DB: hiremebahamas
       POSTGRES_USER: hiremebahamas_user
