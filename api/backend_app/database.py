@@ -31,7 +31,7 @@ import os
 import logging
 import ssl
 from typing import Optional
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker

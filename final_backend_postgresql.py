@@ -923,7 +923,7 @@ if USE_POSTGRESQL:
     APPLICATION_NAME = os.getenv("APPLICATION_NAME", "hiremebahamas-backend")
 
     # URL decode credentials to handle special characters in username/password
-    # For example, if password is "p@ss%word!", it will be encoded as "p%40ss%25word%21"
+    # For example, if password is "p@ssw%ord!", it will be encoded as "p%40ssw%25ord%21"
     # We need to decode it back to the original form for authentication
     username = unquote(parsed.username) if parsed.username else None
     password = unquote(parsed.password) if parsed.password else None
