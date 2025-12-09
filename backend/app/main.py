@@ -142,7 +142,6 @@ from .core.metrics import get_metrics_response, set_app_info
 from .core.security import prewarm_bcrypt_async
 from .core.redis_cache import redis_cache, warm_cache
 from .core.db_health import check_database_health, get_database_stats
-from .graphql.schema import create_graphql_router
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -173,6 +172,19 @@ logging.basicConfig(
     handlers=log_handlers
 )
 logger = logging.getLogger(__name__)
+
+# GraphQL support (optional - gracefully degrades if strawberry not available)
+# Import after logger is configured
+HAS_GRAPHQL = False
+_graphql_router_factory = None
+try:
+    from .graphql.schema import create_graphql_router as _graphql_router_factory
+    HAS_GRAPHQL = True
+    logger.info("✅ GraphQL support enabled")
+except ImportError:
+    logger.info(f"ℹ️  GraphQL disabled (optional dependency 'strawberry-graphql' not installed)")
+except Exception as e:
+    logger.warning(f"⚠️  GraphQL initialization failed (non-critical): {e}")
 
 # =============================================================================
 # RECONFIGURE APP WITH FULL FEATURES (lifespan, docs, etc.)
@@ -649,9 +661,16 @@ app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
 app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 
-# Include GraphQL router
-graphql_router = create_graphql_router()
-app.include_router(graphql_router, prefix="/api", tags=["graphql"])
+# Include GraphQL router (if available)
+if HAS_GRAPHQL:
+    try:
+        graphql_router = _graphql_router_factory()
+        app.include_router(graphql_router, prefix="/api", tags=["graphql"])
+        logger.info("✅ GraphQL router registered at /api/graphql")
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to register GraphQL router (non-critical): {e}")
+else:
+    logger.info("ℹ️  GraphQL API not available (optional dependency not installed)")
 
 
 # Initialize Socket.IO for real-time messaging

@@ -80,7 +80,7 @@ DATABASE_URL = DATABASE_URL.strip()
 # This handles cases where the 'p' is missing from "postgresql"
 if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("ostgresql", "postgresql")
-    logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
+    logger.info("✓ Auto-fixed DATABASE_URL typo: 'ostgresql' → 'postgresql' (update env var to fix permanently)")
 
 # Convert sync PostgreSQL URLs to async driver format
 if DATABASE_URL.startswith("postgresql://"):

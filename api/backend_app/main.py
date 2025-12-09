@@ -217,8 +217,8 @@ try:
     from .graphql.schema import create_graphql_router as _graphql_router_factory
     HAS_GRAPHQL = True
     logger.info("✅ GraphQL support enabled")
-except ImportError as e:
-    logger.warning(f"⚠️  GraphQL support disabled (strawberry-graphql not available): {e}")
+except ImportError:
+    logger.info(f"ℹ️  GraphQL disabled (optional dependency 'strawberry-graphql' not installed)")
 except Exception as e:
     logger.warning(f"⚠️  GraphQL initialization failed (non-critical): {e}")
 
@@ -716,7 +716,7 @@ if HAS_GRAPHQL:
     except Exception as e:
         logger.warning(f"⚠️  Failed to register GraphQL router (non-critical): {e}")
 else:
-    logger.info("ℹ️  GraphQL router not available (strawberry-graphql not installed)")
+    logger.info("ℹ️  GraphQL API not available (optional dependency not installed)")
 
 
 # Initialize Socket.IO for real-time messaging (if available)
