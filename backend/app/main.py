@@ -148,7 +148,7 @@ try:
     from .graphql.schema import create_graphql_router as _graphql_router_factory
     HAS_GRAPHQL = True
     logger.info("✅ GraphQL support enabled")
-except ImportError as e:
+except ImportError:
     logger.info(f"ℹ️  GraphQL disabled (optional dependency 'strawberry-graphql' not installed)")
 except Exception as e:
     logger.warning(f"⚠️  GraphQL initialization failed (non-critical): {e}")
