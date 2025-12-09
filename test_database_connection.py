@@ -93,9 +93,9 @@ def parse_and_validate_url(url):
                 print("\n✅ Detected Railway PRIVATE network connection (recommended for Railway backend)")
             elif ".railway.app" in hostname:
                 print("\n✅ Detected Railway PUBLIC connection")
-            elif hostname.startswith("dpg-") or "render.com" in hostname:
+            elif hostname.startswith("dpg-") or hostname.endswith(".render.com"):
                 print("\n⚠️  Detected Render database - if backend is on Railway, consider migrating to Railway PostgreSQL")
-            elif "neon.tech" in hostname or hostname.startswith("ep-"):
+            elif hostname.endswith(".neon.tech") or hostname.startswith("ep-"):
                 print("\n✅ Detected Vercel/Neon Postgres")
             elif hostname == "localhost" or hostname == "127.0.0.1":
                 print("\n💻 Local database connection")
