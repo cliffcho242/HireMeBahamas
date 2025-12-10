@@ -1,0 +1,304 @@
+name: Health Check Summary & Reporting
+
+on:
+  workflow_run:
+    workflows: ["Automated Health Check Pipeline"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  create-summary:
+    name: Generate Health Check Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Health Check Results
+        uses: actions/github-script@v7
+        id: get-results
+        with:
+          script: |
+            const run_id = context.payload.workflow_run.id;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Get workflow run details
+            const { data: workflowRun } = await github.rest.actions.getWorkflowRun({
+              owner,
+              repo,
+              run_id
+            });
+            
+            // Get jobs for the workflow run
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner,
+              repo,
+              run_id
+            });
+            
+            const conclusion = workflowRun.conclusion;
+            const status = workflowRun.status;
+            const createdAt = workflowRun.created_at;
+            const htmlUrl = workflowRun.html_url;
+            
+            // Parse job results
+            let results = {
+              conclusion,
+              status,
+              createdAt,
+              htmlUrl,
+              jobs: jobs.jobs.map(job => ({
+                name: job.name,
+                conclusion: job.conclusion,
+                status: job.status
+              }))
+            };
+            
+            core.setOutput('results', JSON.stringify(results));
+            core.setOutput('conclusion', conclusion);
+            return results;
+
+      - name: Create or Update Health Check Issue
+        uses: actions/github-script@v7
+        if: fromJSON(steps.get-results.outputs.results).conclusion == 'failure'
+        with:
+          script: |
+            const results = JSON.parse('${{ steps.get-results.outputs.results }}');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Check for existing open health check issues
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: ['health-check-failure', 'automated']
+            });
+            
+            const failedJobs = results.jobs.filter(j => j.conclusion === 'failure');
+            const warningJobs = results.jobs.filter(j => j.conclusion === 'success' && j.name.includes('warning'));
+            
+            let jobsList = failedJobs.map(j => `- ❌ **${j.name}**: Failed`).join('\n');
+            if (warningJobs.length > 0) {
+              jobsList += '\n' + warningJobs.map(j => `- ⚠️ **${j.name}**: Warnings`).join('\n');
+            }
+            
+            const issueBody = `## 🚨 Health Check Failed
+            
+            The automated health check pipeline has detected issues that need attention.
+            
+            **Workflow Run:** ${results.htmlUrl}
+            **Timestamp:** ${results.createdAt}
+            **Commit:** ${context.payload.workflow_run.head_sha.substring(0, 7)}
+            **Branch:** ${context.payload.workflow_run.head_branch}
+            
+            ### Failed Checks
+            ${jobsList}
+            
+            ### Recommended Actions
+            1. Review the [workflow logs](${results.htmlUrl}) for specific failures
+            2. Check environment variables and secrets configuration
+            3. Verify database connectivity
+            4. Run local pre-deployment checks: \`python scripts/pre_deployment_check.py\`
+            5. Fix identified issues and re-run the health check
+            
+            ### Troubleshooting Resources
+            - [Health Check Guide](../docs/HEALTH_CHECK_GUIDE.md)
+            - [Pre-Flight Check Workflow](../.github/workflows/preflight-check.yml)
+            - [Railway PostgreSQL Check](../railway_postgres_check.py)
+            
+            ---
+            *This issue was automatically created by the Health Check Summary workflow.*
+            *It will be automatically closed when the health check passes.*`;
+            
+            const issueTitle = `🚨 Health Check Failed - ${new Date().toISOString().split('T')[0]}`;
+            
+            if (issues.length === 0) {
+              // Create new issue
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: issueTitle,
+                body: issueBody,
+                labels: ['health-check-failure', 'automated', 'bug']
+              });
+              console.log('✅ Created new health check failure issue');
+            } else {
+              // Update existing issue
+              const existingIssue = issues[0];
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existingIssue.number,
+                body: issueBody
+              });
+              
+              // Add comment
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existingIssue.number,
+                body: `🔄 Health check still failing as of ${results.createdAt}\n\n[View latest run](${results.htmlUrl})`
+              });
+              console.log('✅ Updated existing health check failure issue');
+            }
+
+      - name: Close Resolved Issues
+        uses: actions/github-script@v7
+        if: fromJSON(steps.get-results.outputs.results).conclusion == 'success'
+        with:
+          script: |
+            const results = JSON.parse('${{ steps.get-results.outputs.results }}');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Find open health check failure issues
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: ['health-check-failure', 'automated']
+            });
+            
+            for (const issue of issues) {
+              // Close the issue
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+              
+              // Add closing comment
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: `✅ Health check is now passing!\n\n**Resolved at:** ${results.createdAt}\n**Workflow Run:** ${results.htmlUrl}\n\nAll health checks have passed successfully. This issue is being closed automatically.`
+              });
+              
+              console.log(`✅ Closed issue #${issue.number}`);
+            }
+
+      - name: Post PR Comment
+        uses: actions/github-script@v7
+        if: github.event.workflow_run.event == 'pull_request'
+        with:
+          script: |
+            const results = JSON.parse('${{ steps.get-results.outputs.results }}');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Get the PR number from the workflow run
+            const { data: pullRequests } = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: 'open',
+              head: `${owner}:${context.payload.workflow_run.head_branch}`
+            });
+            
+            if (pullRequests.length === 0) {
+              console.log('No open PR found for this branch');
+              return;
+            }
+            
+            const pr = pullRequests[0];
+            const conclusion = results.conclusion;
+            
+            let icon = '✅';
+            let status = 'PASSED';
+            let color = '🟢';
+            
+            if (conclusion === 'failure') {
+              icon = '❌';
+              status = 'FAILED';
+              color = '🔴';
+            } else if (conclusion === 'cancelled') {
+              icon = '⚠️';
+              status = 'CANCELLED';
+              color = '🟡';
+            }
+            
+            const passedJobs = results.jobs.filter(j => j.conclusion === 'success').length;
+            const totalJobs = results.jobs.length;
+            
+            const comment = `## ${icon} Health Check ${status}
+            
+            ${color} **Overall Status:** ${status}
+            
+            **Results:** ${passedJobs}/${totalJobs} checks passed
+            **Timestamp:** ${results.createdAt}
+            
+            ### Check Details
+            ${results.jobs.map(j => {
+              const jobIcon = j.conclusion === 'success' ? '✅' : 
+                             j.conclusion === 'failure' ? '❌' : '⚠️';
+              return `${jobIcon} ${j.name}`;
+            }).join('\n')}
+            
+            [View full results](${results.htmlUrl})
+            
+            ---
+            *Automated health check pipeline v1.0.0*`;
+            
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: pr.number,
+              body: comment
+            });
+            
+            console.log(`✅ Posted comment to PR #${pr.number}`);
+
+      - name: Generate Status Badge Data
+        run: |
+          CONCLUSION="${{ steps.get-results.outputs.conclusion }}"
+          
+          mkdir -p /tmp/health-check-badge
+          
+          if [ "$CONCLUSION" = "success" ]; then
+            echo "BADGE_STATUS=passing" > /tmp/health-check-badge/status.txt
+            echo "BADGE_COLOR=brightgreen" >> /tmp/health-check-badge/status.txt
+          elif [ "$CONCLUSION" = "failure" ]; then
+            echo "BADGE_STATUS=failing" > /tmp/health-check-badge/status.txt
+            echo "BADGE_COLOR=red" >> /tmp/health-check-badge/status.txt
+          else
+            echo "BADGE_STATUS=unknown" > /tmp/health-check-badge/status.txt
+            echo "BADGE_COLOR=lightgrey" >> /tmp/health-check-badge/status.txt
+          fi
+          
+          echo "BADGE_TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')" >> /tmp/health-check-badge/status.txt
+          
+          cat /tmp/health-check-badge/status.txt
+          
+          echo "✅ Badge data generated"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "# Health Check Summary Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Conclusion:** ${{ steps.get-results.outputs.conclusion }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Actions taken:" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.get-results.outputs.conclusion }}" = "success" ]; then
+            echo "- ✅ Closed health check failure issues" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- 🚨 Created/updated health check failure issue" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ github.event.workflow_run.event }}" = "pull_request" ]; then
+            echo "- 💬 Posted comment to pull request" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "- 🏷️ Generated status badge data" >> $GITHUB_STEP_SUMMARY

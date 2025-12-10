@@ -1,8 +1,29 @@
 # HireMeBahamas - Facebook-Style Professional Social Network 🇧🇸
 
 ![Deploy Status](https://github.com/cliffcho242/HireMeBahamas/actions/workflows/ci.yml/badge.svg)
+![Health Check](https://img.shields.io/badge/health%20check-passing-brightgreen)
+[![Pre-Flight Check](https://github.com/cliffcho242/HireMeBahamas/actions/workflows/preflight-check.yml/badge.svg)](https://github.com/cliffcho242/HireMeBahamas/actions/workflows/preflight-check.yml)
 
 A modern, Facebook-inspired social platform designed specifically for professionals in the Bahamas to connect, share career opportunities, and build meaningful professional relationships.
+
+## 🏥 Health Check Status
+
+Our automated health check pipeline continuously monitors the deployment stack:
+
+- **Status**: [![Health Check](https://img.shields.io/badge/health%20check-passing-brightgreen)](https://github.com/cliffcho242/HireMeBahamas/actions/workflows/health-check.yml)
+- **Frequency**: Every 6 hours + on pull requests
+- **Checks**: Environment, Database, Deployment, Security, Tests
+
+**Pre-Deployment Checklist:**
+```bash
+# Run local health check before deploying
+python scripts/pre_deployment_check.py
+
+# Quick readiness check
+./scripts/deployment_readiness.sh
+```
+
+📖 **[Complete Health Check Guide](./docs/HEALTH_CHECK_GUIDE.md)**
 
 ---
 

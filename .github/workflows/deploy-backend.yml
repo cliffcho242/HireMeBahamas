@@ -13,7 +13,13 @@ name: Deploy Backend to Railway
   workflow_dispatch:
 
 jobs:
+  # Run health check before deployment
+  health-check:
+    uses: ./.github/workflows/health-check.yml
+    secrets: inherit
+  
   deploy:
+    needs: health-check
     runs-on: ubuntu-latest
     permissions:
       contents: read

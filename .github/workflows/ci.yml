@@ -654,3 +654,78 @@ jobs:
           else
             echo "✅ Vendor bundle is within target size"
           fi
+  
+  # Summary job that aggregates results and links to health check
+  ci-summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [smoke-tests, lint-frontend, test-api, test-backend, verify-deployment-configs, build-frontend]
+    if: always()
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Generate CI Summary
+        run: |
+          echo "# 🔍 CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow:** CI - Lint, Test, and Build" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Job statuses
+          echo "## Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          SMOKE="${{ needs.smoke-tests.result }}"
+          LINT="${{ needs.lint-frontend.result }}"
+          API="${{ needs.test-api.result }}"
+          BACKEND="${{ needs.test-backend.result }}"
+          VERIFY="${{ needs.verify-deployment-configs.result }}"
+          BUILD="${{ needs.build-frontend.result }}"
+          
+          [ "$SMOKE" == "success" ] && echo "✅ Smoke Tests" >> $GITHUB_STEP_SUMMARY || echo "❌ Smoke Tests" >> $GITHUB_STEP_SUMMARY
+          [ "$LINT" == "success" ] && echo "✅ Lint Frontend" >> $GITHUB_STEP_SUMMARY || echo "❌ Lint Frontend" >> $GITHUB_STEP_SUMMARY
+          [ "$API" == "success" ] && echo "✅ Test API" >> $GITHUB_STEP_SUMMARY || echo "❌ Test API" >> $GITHUB_STEP_SUMMARY
+          [ "$BACKEND" == "success" ] && echo "✅ Test Backend" >> $GITHUB_STEP_SUMMARY || echo "❌ Test Backend" >> $GITHUB_STEP_SUMMARY
+          [ "$VERIFY" == "success" ] && echo "✅ Verify Deployment Configs" >> $GITHUB_STEP_SUMMARY || echo "❌ Verify Deployment Configs" >> $GITHUB_STEP_SUMMARY
+          [ "$BUILD" == "success" ] && echo "✅ Build Frontend" >> $GITHUB_STEP_SUMMARY || echo "❌ Build Frontend" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Count results
+          SUCCESS_COUNT=0
+          FAIL_COUNT=0
+          
+          for status in "$SMOKE" "$LINT" "$API" "$BACKEND" "$VERIFY" "$BUILD"; do
+            if [ "$status" == "success" ]; then
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+            else
+              FAIL_COUNT=$((FAIL_COUNT + 1))
+            fi
+          done
+          
+          TOTAL=$((SUCCESS_COUNT + FAIL_COUNT))
+          
+          if [ $FAIL_COUNT -eq 0 ]; then
+            echo "## ✅ All CI Checks Passed ($SUCCESS_COUNT/$TOTAL)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The code is ready for deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ CI Checks Failed ($SUCCESS_COUNT/$TOTAL passed)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please fix the failing checks before proceeding." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🏥 Additional Checks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "For comprehensive deployment readiness, also run:" >> $GITHUB_STEP_SUMMARY
+          echo "- [Automated Health Check Pipeline](../actions/workflows/health-check.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Pre-Flight Health Check](../actions/workflows/preflight-check.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Local check: \`python scripts/pre_deployment_check.py\`" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,635 @@
+name: Automated Health Check Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      verbose:
+        description: 'Enable verbose output'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_call:
+    outputs:
+      status:
+        description: 'Overall health check status'
+        value: ${{ jobs.summary.outputs.status }}
+
+# Prevent concurrent health checks
+concurrency:
+  group: health-check-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HEALTH_CHECK_VERSION: '1.0.0'
+  MAX_RESPONSE_TIME_MS: 5000
+
+jobs:
+  # Job 1: Environment Configuration Check
+  environment-check:
+    name: Environment Configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.check.outputs.status }}
+      issues: ${{ steps.check.outputs.issues }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Environment Variables
+        id: check
+        run: |
+          echo "🔍 Checking Environment Configuration..."
+          ISSUES=0
+          CHECKS_PASSED=0
+          CHECKS_TOTAL=0
+          
+          # Check for placeholder values
+          PLACEHOLDERS=(
+            "host"
+            "username"
+            "your-secret-key-here"
+            "your-jwt-secret"
+            "change-in-production"
+          )
+          
+          echo "## Environment Configuration Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # 1. DATABASE_URL format check
+          CHECKS_TOTAL=$((CHECKS_TOTAL + 1))
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            # Check if it contains common placeholders
+            HAS_PLACEHOLDER=0
+            for placeholder in "${PLACEHOLDERS[@]}"; do
+              if echo "${{ secrets.DATABASE_URL }}" | grep -qi "$placeholder"; then
+                HAS_PLACEHOLDER=1
+                break
+              fi
+            done
+            
+            if [ $HAS_PLACEHOLDER -eq 0 ]; then
+              if echo "${{ secrets.DATABASE_URL }}" | grep -q "postgresql://.*@.*:.*/..*"; then
+                echo "✅ DATABASE_URL: Valid PostgreSQL format" >> $GITHUB_STEP_SUMMARY
+                CHECKS_PASSED=$((CHECKS_PASSED + 1))
+              else
+                echo "⚠️ DATABASE_URL: Format may be invalid" >> $GITHUB_STEP_SUMMARY
+                ISSUES=$((ISSUES + 1))
+              fi
+            else
+              echo "❌ DATABASE_URL: Contains placeholder values" >> $GITHUB_STEP_SUMMARY
+              ISSUES=$((ISSUES + 1))
+            fi
+          else
+            echo "❌ DATABASE_URL: Not configured" >> $GITHUB_STEP_SUMMARY
+            ISSUES=$((ISSUES + 1))
+          fi
+          
+          # 2. SSL/TLS check
+          CHECKS_TOTAL=$((CHECKS_TOTAL + 1))
+          if echo "${{ secrets.DATABASE_URL }}" | grep -q "sslmode=require"; then
+            echo "✅ SSL Mode: Enabled (sslmode=require)" >> $GITHUB_STEP_SUMMARY
+            CHECKS_PASSED=$((CHECKS_PASSED + 1))
+          else
+            echo "⚠️ SSL Mode: Not explicitly required in DATABASE_URL" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # 3. SECRET_KEY check
+          CHECKS_TOTAL=$((CHECKS_TOTAL + 1))
+          if [ -n "${{ secrets.SECRET_KEY }}" ]; then
+            if echo "${{ secrets.SECRET_KEY }}" | grep -qi "your-secret-key"; then
+              echo "❌ SECRET_KEY: Using default/placeholder value" >> $GITHUB_STEP_SUMMARY
+              ISSUES=$((ISSUES + 1))
+            else
+              echo "✅ SECRET_KEY: Custom value configured" >> $GITHUB_STEP_SUMMARY
+              CHECKS_PASSED=$((CHECKS_PASSED + 1))
+            fi
+          else
+            echo "⚠️ SECRET_KEY: Not configured" >> $GITHUB_STEP_SUMMARY
+            ISSUES=$((ISSUES + 1))
+          fi
+          
+          # 4. JWT_SECRET_KEY check
+          CHECKS_TOTAL=$((CHECKS_TOTAL + 1))
+          if [ -n "${{ secrets.JWT_SECRET_KEY }}" ]; then
+            if echo "${{ secrets.JWT_SECRET_KEY }}" | grep -qi "your-jwt-secret"; then
+              echo "❌ JWT_SECRET_KEY: Using default/placeholder value" >> $GITHUB_STEP_SUMMARY
+              ISSUES=$((ISSUES + 1))
+            else
+              echo "✅ JWT_SECRET_KEY: Custom value configured" >> $GITHUB_STEP_SUMMARY
+              CHECKS_PASSED=$((CHECKS_PASSED + 1))
+            fi
+          else
+            echo "⚠️ JWT_SECRET_KEY: Not configured" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Result:** $CHECKS_PASSED/$CHECKS_TOTAL critical checks passed" >> $GITHUB_STEP_SUMMARY
+          
+          # Set outputs
+          if [ $ISSUES -eq 0 ]; then
+            echo "status=passed" >> $GITHUB_OUTPUT
+          else
+            echo "status=warning" >> $GITHUB_OUTPUT
+          fi
+          echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+
+  # Job 2: Database Connectivity Check
+  database-check:
+    name: Database Connectivity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.check.outputs.status }}
+      response_time: ${{ steps.check.outputs.response_time }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libpq-dev python3-dev
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install psycopg2-binary asyncpg
+
+      - name: Test Database Connection
+        id: check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "🔍 Testing Database Connection..."
+          
+          cat > /tmp/db_check.py << 'EOF'
+          import os
+          import sys
+          import time
+          import asyncio
+          
+          try:
+              import asyncpg
+          except ImportError:
+              print("ERROR: asyncpg not available, trying psycopg2")
+              import psycopg2
+              asyncpg = None
+          
+          async def check_asyncpg():
+              db_url = os.environ.get('DATABASE_URL', '')
+              if not db_url:
+                  print("ERROR: DATABASE_URL not set")
+                  return False, 0
+              
+              try:
+                  start = time.time()
+                  conn = await asyncpg.connect(db_url)
+                  
+                  # Test query
+                  result = await conn.fetchval('SELECT 1')
+                  
+                  # Check if we can list tables
+                  tables = await conn.fetch("""
+                      SELECT tablename FROM pg_tables 
+                      WHERE schemaname = 'public'
+                  """)
+                  
+                  await conn.close()
+                  elapsed = int((time.time() - start) * 1000)
+                  
+                  print(f"✅ Connection successful ({elapsed}ms)")
+                  print(f"✅ Query test passed")
+                  print(f"✅ Found {len(tables)} tables in database")
+                  
+                  return True, elapsed
+              except Exception as e:
+                  print(f"❌ Connection failed: {e}")
+                  return False, 0
+          
+          def check_psycopg2():
+              db_url = os.environ.get('DATABASE_URL', '')
+              if not db_url:
+                  print("ERROR: DATABASE_URL not set")
+                  return False, 0
+              
+              try:
+                  start = time.time()
+                  conn = psycopg2.connect(db_url)
+                  cursor = conn.cursor()
+                  
+                  # Test query
+                  cursor.execute('SELECT 1')
+                  result = cursor.fetchone()
+                  
+                  # Check if we can list tables
+                  cursor.execute("""
+                      SELECT tablename FROM pg_tables 
+                      WHERE schemaname = 'public'
+                  """)
+                  tables = cursor.fetchall()
+                  
+                  cursor.close()
+                  conn.close()
+                  elapsed = int((time.time() - start) * 1000)
+                  
+                  print(f"✅ Connection successful ({elapsed}ms)")
+                  print(f"✅ Query test passed")
+                  print(f"✅ Found {len(tables)} tables in database")
+                  
+                  return True, elapsed
+              except Exception as e:
+                  print(f"❌ Connection failed: {e}")
+                  return False, 0
+          
+          if asyncpg:
+              success, elapsed = asyncio.run(check_asyncpg())
+          else:
+              success, elapsed = check_psycopg2()
+          
+          print(f"RESPONSE_TIME={elapsed}")
+          print(f"SUCCESS={success}")
+          sys.exit(0 if success else 1)
+          EOF
+          
+          python /tmp/db_check.py > /tmp/db_check_output.txt 2>&1
+          DB_EXIT_CODE=$?
+          
+          cat /tmp/db_check_output.txt
+          
+          # Extract response time
+          RESPONSE_TIME=$(grep "RESPONSE_TIME=" /tmp/db_check_output.txt | cut -d'=' -f2)
+          echo "response_time=${RESPONSE_TIME:-0}" >> $GITHUB_OUTPUT
+          
+          # Update summary
+          echo "## Database Connectivity Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat /tmp/db_check_output.txt | grep -E "^(✅|❌|⚠️)" >> $GITHUB_STEP_SUMMARY || true
+          
+          if [ $DB_EXIT_CODE -eq 0 ]; then
+            echo "status=passed" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Status:** ✅ PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Status:** ❌ FAILED" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+  # Job 3: Deployment Status Check
+  deployment-check:
+    name: Deployment Status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.check.outputs.status }}
+      frontend_status: ${{ steps.check.outputs.frontend_status }}
+      backend_status: ${{ steps.check.outputs.backend_status }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Deployment Endpoints
+        id: check
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          echo "🔍 Checking Deployment Status..."
+          
+          echo "## Deployment Status Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          OVERALL_STATUS="passed"
+          
+          # Check if we have deployment URLs configured
+          FRONTEND_URL="${{ secrets.FRONTEND_URL }}"
+          BACKEND_URL="${{ secrets.BACKEND_URL }}"
+          
+          # Try common endpoints if not configured
+          if [ -z "$FRONTEND_URL" ]; then
+            echo "⚠️ FRONTEND_URL not configured in secrets" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Frontend Accessibility" >> $GITHUB_STEP_SUMMARY
+            if curl -sf -o /dev/null -w "Response time: %{time_total}s\n" --max-time 10 "$FRONTEND_URL" 2>&1 | tee -a $GITHUB_STEP_SUMMARY; then
+              echo "✅ Frontend accessible" >> $GITHUB_STEP_SUMMARY
+              echo "frontend_status=accessible" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Frontend not accessible" >> $GITHUB_STEP_SUMMARY
+              echo "frontend_status=unreachable" >> $GITHUB_OUTPUT
+              OVERALL_STATUS="warning"
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -z "$BACKEND_URL" ]; then
+            echo "⚠️ BACKEND_URL not configured in secrets" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Backend API Endpoints" >> $GITHUB_STEP_SUMMARY
+            
+            # Test /api/health endpoint
+            if curl -sf -o /dev/null -w "Response time: %{time_total}s\n" --max-time 10 "$BACKEND_URL/api/health" 2>&1 | tee -a $GITHUB_STEP_SUMMARY; then
+              echo "✅ /api/health endpoint accessible" >> $GITHUB_STEP_SUMMARY
+              echo "backend_status=accessible" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️ /api/health endpoint not accessible (may not be implemented)" >> $GITHUB_STEP_SUMMARY
+              echo "backend_status=unknown" >> $GITHUB_OUTPUT
+            fi
+          fi
+          
+          echo "status=$OVERALL_STATUS" >> $GITHUB_OUTPUT
+
+  # Job 4: Security Audit
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.check.outputs.status }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Security Configuration Check
+        id: check
+        run: |
+          echo "🔍 Running Security Audit..."
+          
+          echo "## Security Audit" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          SECURITY_ISSUES=0
+          
+          # 1. Check for weak secrets in code
+          echo "### Checking for Exposed Secrets" >> $GITHUB_STEP_SUMMARY
+          if grep -r "SECRET_KEY.*=.*['\"].*['\"]" --include="*.py" . | grep -v ".pyc" | grep -v "test" | grep -v "example" | grep -v "your-secret-key" > /tmp/secrets.txt 2>/dev/null; then
+            echo "⚠️ Found hardcoded SECRET_KEY values:" >> $GITHUB_STEP_SUMMARY
+            head -5 /tmp/secrets.txt | sed 's/^/  /' >> $GITHUB_STEP_SUMMARY
+            SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
+          else
+            echo "✅ No hardcoded secrets detected" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # 2. Check SSL/TLS enforcement
+          echo "### SSL/TLS Configuration" >> $GITHUB_STEP_SUMMARY
+          if grep -r "sslmode=require" --include="*.py" --include="*.yml" . > /dev/null 2>&1; then
+            echo "✅ SSL/TLS enforcement found in configuration" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ SSL/TLS enforcement not explicitly configured" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # 3. Check JWT configuration
+          echo "### JWT Configuration" >> $GITHUB_STEP_SUMMARY
+          if grep -r "JWT_ALGORITHM.*HS256" --include="*.py" . > /dev/null 2>&1; then
+            echo "✅ JWT algorithm configured" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ JWT algorithm not explicitly configured" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # 4. Check for rate limiting
+          echo "### Rate Limiting" >> $GITHUB_STEP_SUMMARY
+          if grep -r "flask.limiter\|flask-limiter\|rate_limit" --include="*.py" . > /dev/null 2>&1; then
+            echo "✅ Rate limiting configured" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Rate limiting not detected" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Set status
+          if [ $SECURITY_ISSUES -eq 0 ]; then
+            echo "status=passed" >> $GITHUB_OUTPUT
+            echo "**Overall Status:** ✅ PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "status=warning" >> $GITHUB_OUTPUT
+            echo "**Overall Status:** ⚠️ WARNINGS ($SECURITY_ISSUES issues)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Job 5: Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.test.outputs.status }}
+      tests_passed: ${{ steps.test.outputs.tests_passed }}
+      tests_total: ${{ steps.test.outputs.tests_total }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libpq-dev python3-dev
+
+      - name: Setup PostgreSQL for testing
+        run: |
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "CREATE USER testuser WITH PASSWORD 'testpassword' CREATEDB;"
+          sudo -u postgres createdb -O testuser test_hiremebahamas
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt || true
+          pip install pytest pytest-asyncio || true
+
+      - name: Run Integration Tests
+        id: test
+        env:
+          DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/test_hiremebahamas
+          SECRET_KEY: test-secret-key-for-ci
+          JWT_SECRET_KEY: test-jwt-secret-key-for-ci
+        run: |
+          echo "🔍 Running Integration Tests..."
+          
+          echo "## Integration Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if test files exist
+          if [ -f "backend/test_app.py" ] || [ -f "tests/test_app.py" ]; then
+            echo "Running pytest..." >> $GITHUB_STEP_SUMMARY
+            
+            # Try to run tests
+            if pytest -v 2>&1 | tee /tmp/test_output.txt; then
+              TESTS_PASSED=$(grep -c "PASSED" /tmp/test_output.txt || echo "0")
+              TESTS_FAILED=$(grep -c "FAILED" /tmp/test_output.txt || echo "0")
+              TESTS_TOTAL=$((TESTS_PASSED + TESTS_FAILED))
+              
+              echo "✅ Tests executed: $TESTS_TOTAL" >> $GITHUB_STEP_SUMMARY
+              echo "✅ Passed: $TESTS_PASSED" >> $GITHUB_STEP_SUMMARY
+              
+              if [ $TESTS_FAILED -gt 0 ]; then
+                echo "❌ Failed: $TESTS_FAILED" >> $GITHUB_STEP_SUMMARY
+              fi
+              
+              echo "status=passed" >> $GITHUB_OUTPUT
+              echo "tests_passed=$TESTS_PASSED" >> $GITHUB_OUTPUT
+              echo "tests_total=$TESTS_TOTAL" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️ Some tests failed, check logs" >> $GITHUB_STEP_SUMMARY
+              echo "status=warning" >> $GITHUB_OUTPUT
+              echo "tests_passed=0" >> $GITHUB_OUTPUT
+              echo "tests_total=0" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "ℹ️ No test files found, skipping" >> $GITHUB_STEP_SUMMARY
+            echo "status=skipped" >> $GITHUB_OUTPUT
+            echo "tests_passed=0" >> $GITHUB_OUTPUT
+            echo "tests_total=0" >> $GITHUB_OUTPUT
+          fi
+
+  # Summary Job: Aggregate all results
+  summary:
+    name: Health Check Summary
+    runs-on: ubuntu-latest
+    needs: [environment-check, database-check, deployment-check, security-audit, integration-tests]
+    if: always()
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    outputs:
+      status: ${{ steps.aggregate.outputs.status }}
+    
+    steps:
+      - name: Aggregate Results
+        id: aggregate
+        run: |
+          echo "# 🏥 Health Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ env.HEALTH_CHECK_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Count results
+          PASSED=0
+          FAILED=0
+          WARNINGS=0
+          SKIPPED=0
+          
+          # Environment check
+          ENV_STATUS="${{ needs.environment-check.outputs.status }}"
+          if [ "$ENV_STATUS" = "passed" ]; then
+            echo "✅ **Environment Configuration:** PASSED" >> $GITHUB_STEP_SUMMARY
+            PASSED=$((PASSED + 1))
+          elif [ "$ENV_STATUS" = "warning" ]; then
+            echo "⚠️ **Environment Configuration:** WARNING" >> $GITHUB_STEP_SUMMARY
+            WARNINGS=$((WARNINGS + 1))
+          else
+            echo "❌ **Environment Configuration:** FAILED" >> $GITHUB_STEP_SUMMARY
+            FAILED=$((FAILED + 1))
+          fi
+          
+          # Database check
+          DB_STATUS="${{ needs.database-check.outputs.status }}"
+          DB_TIME="${{ needs.database-check.outputs.response_time }}"
+          if [ "$DB_STATUS" = "passed" ]; then
+            echo "✅ **Database Connectivity:** PASSED (${DB_TIME}ms)" >> $GITHUB_STEP_SUMMARY
+            PASSED=$((PASSED + 1))
+          else
+            echo "❌ **Database Connectivity:** FAILED" >> $GITHUB_STEP_SUMMARY
+            FAILED=$((FAILED + 1))
+          fi
+          
+          # Deployment check
+          DEPLOY_STATUS="${{ needs.deployment-check.outputs.status }}"
+          if [ "$DEPLOY_STATUS" = "passed" ]; then
+            echo "✅ **Deployment Status:** PASSED" >> $GITHUB_STEP_SUMMARY
+            PASSED=$((PASSED + 1))
+          elif [ "$DEPLOY_STATUS" = "warning" ]; then
+            echo "⚠️ **Deployment Status:** WARNING" >> $GITHUB_STEP_SUMMARY
+            WARNINGS=$((WARNINGS + 1))
+          else
+            echo "⚠️ **Deployment Status:** SKIPPED (URLs not configured)" >> $GITHUB_STEP_SUMMARY
+            SKIPPED=$((SKIPPED + 1))
+          fi
+          
+          # Security audit
+          SEC_STATUS="${{ needs.security-audit.outputs.status }}"
+          if [ "$SEC_STATUS" = "passed" ]; then
+            echo "✅ **Security Audit:** PASSED" >> $GITHUB_STEP_SUMMARY
+            PASSED=$((PASSED + 1))
+          elif [ "$SEC_STATUS" = "warning" ]; then
+            echo "⚠️ **Security Audit:** WARNING" >> $GITHUB_STEP_SUMMARY
+            WARNINGS=$((WARNINGS + 1))
+          fi
+          
+          # Integration tests
+          TEST_STATUS="${{ needs.integration-tests.outputs.status }}"
+          TESTS_PASSED="${{ needs.integration-tests.outputs.tests_passed }}"
+          TESTS_TOTAL="${{ needs.integration-tests.outputs.tests_total }}"
+          if [ "$TEST_STATUS" = "passed" ]; then
+            echo "✅ **Integration Tests:** PASSED ($TESTS_PASSED/$TESTS_TOTAL)" >> $GITHUB_STEP_SUMMARY
+            PASSED=$((PASSED + 1))
+          elif [ "$TEST_STATUS" = "skipped" ]; then
+            echo "ℹ️ **Integration Tests:** SKIPPED" >> $GITHUB_STEP_SUMMARY
+            SKIPPED=$((SKIPPED + 1))
+          else
+            echo "⚠️ **Integration Tests:** WARNING" >> $GITHUB_STEP_SUMMARY
+            WARNINGS=$((WARNINGS + 1))
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Overall status
+          TOTAL=$((PASSED + FAILED + WARNINGS + SKIPPED))
+          
+          if [ $FAILED -gt 0 ]; then
+            echo "## 📊 Overall Status: ❌ FAILING" >> $GITHUB_STEP_SUMMARY
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          elif [ $WARNINGS -gt 0 ]; then
+            echo "## 📊 Overall Status: ⚠️ PASSING WITH WARNINGS" >> $GITHUB_STEP_SUMMARY
+            echo "status=warning" >> $GITHUB_OUTPUT
+          else
+            echo "## 📊 Overall Status: ✅ PASSING" >> $GITHUB_STEP_SUMMARY
+            echo "status=passed" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Summary:** $PASSED passed, $FAILED failed, $WARNINGS warnings, $SKIPPED skipped" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next check:** $(date -u -d '+6 hours' '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY

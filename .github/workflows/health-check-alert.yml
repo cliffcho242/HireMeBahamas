@@ -1,0 +1,266 @@
+name: Health Check Alert System
+
+on:
+  workflow_run:
+    workflows: ["Automated Health Check Pipeline"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  alert-on-failure:
+    name: Alert on Critical Failures
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Analyze Failure Pattern
+        id: analyze
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run_id = context.payload.workflow_run.id;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Get jobs for the workflow run
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner,
+              repo,
+              run_id
+            });
+            
+            let criticalFailures = [];
+            let warnings = [];
+            
+            for (const job of jobs.jobs) {
+              if (job.conclusion === 'failure') {
+                // Check for critical job names
+                if (job.name.includes('Database') || job.name.includes('Security')) {
+                  criticalFailures.push({
+                    name: job.name,
+                    url: job.html_url
+                  });
+                } else {
+                  warnings.push({
+                    name: job.name,
+                    url: job.html_url
+                  });
+                }
+              }
+            }
+            
+            const isCritical = criticalFailures.length > 0;
+            
+            core.setOutput('is_critical', isCritical ? 'true' : 'false');
+            core.setOutput('critical_count', criticalFailures.length);
+            core.setOutput('warning_count', warnings.length);
+            core.setOutput('critical_failures', JSON.stringify(criticalFailures));
+            core.setOutput('warnings', JSON.stringify(warnings));
+            
+            return {
+              isCritical,
+              criticalFailures,
+              warnings
+            };
+
+      - name: Create Critical Alert Issue
+        if: steps.analyze.outputs.is_critical == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const criticalFailures = JSON.parse('${{ steps.analyze.outputs.critical_failures }}');
+            const warnings = JSON.parse('${{ steps.analyze.outputs.warnings }}');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            const failuresList = criticalFailures.map(f => 
+              `- 🚨 **${f.name}**: [View Logs](${f.url})`
+            ).join('\n');
+            
+            const warningsList = warnings.length > 0 ? 
+              '\n### Additional Warnings\n' + warnings.map(w => 
+                `- ⚠️ **${w.name}**: [View Logs](${w.url})`
+              ).join('\n') : '';
+            
+            const issueBody = `## 🚨 CRITICAL: Health Check Failures Detected
+            
+            **URGENT:** Critical health check failures have been detected that require immediate attention.
+            
+            ### Critical Failures (${criticalFailures.length})
+            ${failuresList}
+            ${warningsList}
+            
+            ### Workflow Information
+            - **Run:** ${context.payload.workflow_run.html_url}
+            - **Commit:** ${context.payload.workflow_run.head_sha.substring(0, 7)}
+            - **Branch:** ${context.payload.workflow_run.head_branch}
+            - **Triggered by:** ${context.payload.workflow_run.actor.login}
+            - **Timestamp:** ${context.payload.workflow_run.created_at}
+            
+            ### Immediate Actions Required
+            
+            #### Database Failures
+            If database connectivity failed:
+            1. Check DATABASE_URL secret is configured correctly
+            2. Verify database is accessible (not sleeping/paused)
+            3. Check database user permissions
+            4. Review connection pool settings
+            5. Run: \`python railway_postgres_check.py\`
+            
+            #### Security Failures
+            If security audit failed:
+            1. Review exposed secrets or hardcoded credentials
+            2. Verify SSL/TLS is enforced
+            3. Check JWT configuration
+            4. Ensure rate limiting is configured
+            5. Review CSP headers
+            
+            ### Diagnostic Commands
+            \`\`\`bash
+            # Local health check
+            python scripts/pre_deployment_check.py
+            
+            # Check database connection
+            python railway_postgres_check.py
+            
+            # Validate environment
+            python validate_startup.py
+            \`\`\`
+            
+            ### Related Documentation
+            - [Health Check Guide](../docs/HEALTH_CHECK_GUIDE.md)
+            - [Railway PostgreSQL Setup](../RAILWAY_POSTGRES_QUICKFIX.md)
+            - [Deployment Troubleshooting](../TROUBLESHOOTING_DEPLOYMENT_NOT_FOUND.md)
+            
+            ### Maintainers
+            @cliffcho242 - Please review this critical alert
+            
+            ---
+            *This is an automated critical alert generated by the Health Check Alert System.*
+            *Priority: 🔴 HIGH - Please address within 24 hours.*`;
+            
+            const issueTitle = `🚨 CRITICAL: Health Check Failures - ${new Date().toISOString().split('T')[0]}`;
+            
+            // Check if critical alert already exists
+            const { data: existingIssues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: ['health-check-failure', 'critical', 'automated']
+            });
+            
+            if (existingIssues.length === 0) {
+              // Create new critical issue
+              const { data: issue } = await github.rest.issues.create({
+                owner,
+                repo,
+                title: issueTitle,
+                body: issueBody,
+                labels: ['health-check-failure', 'critical', 'automated', 'bug'],
+                assignees: ['cliffcho242']
+              });
+              
+              console.log(`✅ Created critical alert issue #${issue.number}`);
+            } else {
+              // Update existing critical issue
+              const issue = existingIssues[0];
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: `🔄 **Update:** Health check still failing critically\n\n**Latest run:** ${context.payload.workflow_run.html_url}\n**Timestamp:** ${context.payload.workflow_run.created_at}\n\n${criticalFailures.length} critical failure(s) detected.`
+              });
+              
+              console.log(`✅ Updated critical alert issue #${issue.number}`);
+            }
+
+      - name: Send Summary to GitHub
+        if: always()
+        run: |
+          echo "# 🚨 Health Check Alert Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          CRITICAL_COUNT="${{ steps.analyze.outputs.critical_count }}"
+          WARNING_COUNT="${{ steps.analyze.outputs.warning_count }}"
+          
+          if [ "${{ steps.analyze.outputs.is_critical }}" = "true" ]; then
+            echo "## Status: 🚨 CRITICAL ALERT ISSUED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Critical Failures:** $CRITICAL_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "**Warnings:** $WARNING_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "A critical alert issue has been created and assigned to maintainers." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Status: ⚠️ Non-Critical Failures" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Warnings:** $WARNING_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "A standard health check failure issue has been created." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  close-resolved-alerts:
+    name: Close Resolved Critical Alerts
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    timeout-minutes: 5
+    
+    steps:
+      - name: Close Critical Alert Issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Find open critical alert issues
+            const { data: criticalIssues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: ['health-check-failure', 'critical', 'automated']
+            });
+            
+            for (const issue of criticalIssues) {
+              // Close the issue
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                state: 'closed',
+                labels: ['health-check-failure', 'critical', 'automated', 'resolved']
+              });
+              
+              // Add resolution comment
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: `✅ **RESOLVED:** All health checks are now passing!\n\n**Resolved at:** ${context.payload.workflow_run.created_at}\n**Workflow Run:** ${context.payload.workflow_run.html_url}\n\nThe critical health check failures have been resolved. This issue is being closed automatically.\n\n---\n*Auto-closed by Health Check Alert System*`
+              });
+              
+              console.log(`✅ Closed and resolved critical issue #${issue.number}`);
+            }
+            
+            if (criticalIssues.length === 0) {
+              console.log('ℹ️ No critical alert issues to close');
+            } else {
+              console.log(`✅ Closed ${criticalIssues.length} critical alert issue(s)`);
+            }
+
+      - name: Send Resolution Summary
+        run: |
+          echo "# ✅ Critical Alerts Resolved" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All health checks are now passing. Any open critical alert issues have been closed." >> $GITHUB_STEP_SUMMARY
