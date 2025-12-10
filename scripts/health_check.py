@@ -129,10 +129,11 @@ class HealthChecker:
             value = os.getenv(var)
             if value:
                 # Don't expose actual values
-                if "secret" in var.lower() or "key" in var.lower():
+                if "secret" in var.lower() or "key" in var.lower() or "password" in var.lower():
                     display = "***SET***"
-                    # Check if using default/weak values
-                    if value in ["your-secret-key-here", "changeme", "secret"]:
+                    # Check if using default/weak values (case-insensitive)
+                    weak_values = ["your-secret-key-here", "changeme", "secret", "password", "default"]
+                    if value.lower() in weak_values:
                         results.append(HealthCheckResult(
                             var,
                             "warn",
@@ -152,7 +153,7 @@ class HealthChecker:
                         try:
                             parsed = urlparse(value)
                             display = f"{parsed.hostname}"
-                        except:
+                        except Exception:
                             display = "***SET***"
                     else:
                         display = value[:20] + "..." if len(value) > 20 else value
@@ -388,7 +389,7 @@ class HealthChecker:
                             {"status_code": 200, "response_time_ms": duration_ms, "data": data},
                             duration_ms
                         ))
-                    except:
+                    except Exception:
                         results.append(HealthCheckResult(
                             f"{endpoint}",
                             "warn",
