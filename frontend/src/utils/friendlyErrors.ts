@@ -171,6 +171,25 @@ export function makeErrorFriendly(error: unknown): FriendlyError {
   // Server errors (500s)
   if (error.response?.status && error.response.status >= 500) {
     const status = error.response.status;
+    const responseData = error.response.data as { detail?: string; error?: string } | undefined;
+    const detail = (responseData?.detail || responseData?.error || '').toLowerCase();
+    
+    // Check for database configuration errors
+    if (detail.includes('database') && (detail.includes('pattern') || detail.includes('invalid') || detail.includes('format'))) {
+      return {
+        title: 'Server Configuration Issue',
+        message: 'The server has a database configuration problem. This is a temporary issue.',
+        actions: [
+          'Our team has been automatically notified',
+          'The server will be back up shortly',
+          'Try again in a few minutes',
+          'Contact support if this persists'
+        ],
+        severity: 'error',
+        icon: '❌',
+        helpLink: '/help/server-config'
+      };
+    }
     
     if (status === 502) {
       return {

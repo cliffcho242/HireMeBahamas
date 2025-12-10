@@ -16,8 +16,15 @@ def get_database_url():
     
     Note: SQLAlchemy's create_async_engine() automatically handles URL decoding for
     special characters in username/password. No manual decoding is needed.
+    
+    Raises:
+        ValueError: If DATABASE_URL is not set or has invalid format
     """
     from urllib.parse import urlparse, urlunparse
+    import logging
+    import re
+    
+    logger = logging.getLogger(__name__)
     
     db_url = os.getenv("DATABASE_URL", "")
     
@@ -27,12 +34,52 @@ def get_database_url():
     if not db_url:
         raise ValueError("DATABASE_URL environment variable not set")
     
+    # Validate basic URL structure before processing
+    # PostgreSQL connection string should match pattern: postgresql://[user[:password]@]host[:port][/dbname][?param=value]
+    # This prevents the cryptic asyncpg error: "The string did not match the expected pattern"
+    if not re.match(r'^(postgres|postgresql)://', db_url):
+        raise ValueError(
+            f"Invalid DATABASE_URL format. Must start with 'postgres://' or 'postgresql://'. "
+            f"Example: postgresql://user:password@host:5432/dbname"
+        )
+    
+    # Check for common mistakes that cause "pattern" errors
+    # 1. Missing host (e.g., "postgresql://:password@/dbname")
+    # 2. Double slashes in unexpected places
+    # 3. Invalid characters in parts that should only contain alphanumeric + specific chars
+    try:
+        # Try to parse URL to validate structure
+        test_parse = urlparse(db_url)
+        
+        # Validate netloc (user:pass@host:port) is present
+        if not test_parse.netloc:
+            raise ValueError(
+                f"Invalid DATABASE_URL: missing host/port information. "
+                f"Format should be: postgresql://user:password@hostname:5432/database"
+            )
+        
+        # Check if hostname is present (netloc could be just ":port" which is invalid)
+        if test_parse.netloc.startswith(':') or '@:' in test_parse.netloc:
+            raise ValueError(
+                f"Invalid DATABASE_URL: missing hostname. "
+                f"Format should be: postgresql://user:password@hostname:5432/database"
+            )
+            
+    except ValueError:
+        # Re-raise our custom ValueError messages
+        raise
+    except Exception as e:
+        # Catch any other parsing errors and provide helpful message
+        raise ValueError(
+            f"Invalid DATABASE_URL format: {str(e)}. "
+            f"Expected format: postgresql://user:password@hostname:5432/database"
+        )
+    
     # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
     # This handles cases where the 'p' is missing from "postgresql"
     if "ostgresql" in db_url and "postgresql" not in db_url:
         db_url = db_url.replace("ostgresql", "postgresql")
-        import logging
-        logging.getLogger(__name__).warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
+        logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
     
     # Convert postgres:// to postgresql+asyncpg://
     if db_url.startswith("postgres://"):
@@ -58,9 +105,9 @@ def get_database_url():
                     parsed.query,
                     parsed.fragment
                 ))
-    except Exception:
-        # If URL parsing fails, continue with original URL
-        pass
+    except Exception as e:
+        # If URL parsing fails after validation, log it but continue
+        logger.warning(f"Could not clean database name from URL: {e}")
     
     # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
     db_url = ensure_sslmode(db_url)
@@ -69,31 +116,69 @@ def get_database_url():
 
 
 def get_engine():
-    """Get or create database engine (singleton pattern)"""
+    """Get or create database engine (singleton pattern)
+    
+    Raises:
+        ValueError: If DATABASE_URL format is invalid
+        Exception: If engine creation fails for other reasons
+    """
+    import logging
     global _engine
     
+    logger = logging.getLogger(__name__)
+    
     if _engine is None:
-        db_url = get_database_url()
-        
-        # Get configurable timeout values from environment
-        connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
-        command_timeout = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))
-        pool_size = int(os.getenv("DB_POOL_SIZE", "2"))
-        max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "3"))
-        pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "300"))
-        
-        _engine = create_async_engine(
-            db_url,
-            pool_size=pool_size,           # Small pool for serverless
-            max_overflow=max_overflow,     # Limited overflow
-            pool_recycle=pool_recycle,     # Recycle connections every 5 minutes
-            pool_pre_ping=True,            # Validate connections before use
-            connect_args={
-                "timeout": connect_timeout,        # Connection timeout
-                "command_timeout": command_timeout, # Query timeout
-            },
-            echo=False,                    # Disable SQL logging in production
-        )
+        try:
+            db_url = get_database_url()
+            
+            # Get configurable timeout values from environment
+            connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
+            command_timeout = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))
+            pool_size = int(os.getenv("DB_POOL_SIZE", "2"))
+            max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "3"))
+            pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "300"))
+            
+            _engine = create_async_engine(
+                db_url,
+                pool_size=pool_size,           # Small pool for serverless
+                max_overflow=max_overflow,     # Limited overflow
+                pool_recycle=pool_recycle,     # Recycle connections every 5 minutes
+                pool_pre_ping=True,            # Validate connections before use
+                connect_args={
+                    "timeout": connect_timeout,        # Connection timeout
+                    "command_timeout": command_timeout, # Query timeout
+                },
+                echo=False,                    # Disable SQL logging in production
+            )
+        except ValueError:
+            # Re-raise ValueError from get_database_url() with helpful message
+            raise
+        except Exception as e:
+            # Catch asyncpg errors and provide helpful context
+            error_msg = str(e).lower()
+            
+            # Check for the specific "pattern" error from asyncpg
+            if "did not match" in error_msg and "pattern" in error_msg:
+                raise ValueError(
+                    f"Invalid DATABASE_URL format detected by asyncpg driver. "
+                    f"The connection string doesn't match the expected PostgreSQL format. "
+                    f"Please check your DATABASE_URL environment variable. "
+                    f"Expected format: postgresql://username:password@hostname:5432/database?sslmode=require"
+                ) from e
+            
+            # Check for other common asyncpg errors
+            if "invalid" in error_msg and "dsn" in error_msg:
+                raise ValueError(
+                    f"Invalid PostgreSQL DSN (Data Source Name) in DATABASE_URL. "
+                    f"Please verify the format: postgresql://username:password@hostname:5432/database"
+                ) from e
+            
+            # For other errors, provide context but preserve original error
+            logger.error(f"Failed to create database engine: {e}")
+            raise Exception(
+                f"Database engine creation failed: {e}. "
+                f"Please check your DATABASE_URL configuration."
+            ) from e
     
     return _engine
 

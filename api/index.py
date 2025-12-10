@@ -307,6 +307,16 @@ if db_engine is None and HAS_DB and DATABASE_URL:
         logger.info("Backend database not available, creating fallback database connection...")
         db_url = DATABASE_URL
         
+        # Strip whitespace that might cause pattern errors
+        db_url = db_url.strip()
+        
+        # Validate URL format before processing to catch errors early
+        if not db_url.startswith(("postgres://", "postgresql://")):
+            raise ValueError(
+                f"Invalid DATABASE_URL format. Must start with 'postgres://' or 'postgresql://'. "
+                f"Example: postgresql://user:password@host:5432/dbname"
+            )
+        
         # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
         # This handles cases where the 'p' is missing from "postgresql"
         if "ostgresql" in db_url and "postgresql" not in db_url:
@@ -320,6 +330,19 @@ if db_engine is None and HAS_DB and DATABASE_URL:
         elif db_url.startswith("postgresql://") and "asyncpg" not in db_url:
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
             logger.info("Converted postgresql:// to postgresql+asyncpg://")
+        
+        # Validate netloc (host:port) is present before continuing
+        try:
+            test_parse = urlparse(db_url)
+            if not test_parse.netloc or test_parse.netloc.startswith(':'):
+                raise ValueError(
+                    f"Invalid DATABASE_URL: missing or invalid hostname. "
+                    f"Format should be: postgresql://user:password@hostname:5432/database"
+                )
+        except ValueError:
+            raise
+        except Exception as parse_error:
+            logger.warning(f"URL validation warning: {parse_error}")
         
         # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
         original_url = db_url
@@ -340,8 +363,30 @@ if db_engine is None and HAS_DB and DATABASE_URL:
             db_engine, class_=AsyncSession, expire_on_commit=False
         )
         logger.info("✅ Fallback database engine created successfully")
+    except ValueError as ve:
+        # ValueError indicates configuration issue - log helpful message
+        logger.error(f"❌ DATABASE_URL configuration error: {ve}")
+        logger.error("Please check your DATABASE_URL environment variable.")
+        logger.error("Expected format: postgresql://username:password@hostname:5432/database?sslmode=require")
+        db_engine = None
+        async_session_maker = None
     except Exception as e:
-        logger.error(f"❌ Database initialization failed: {e}\nTraceback: {traceback.format_exc()}")
+        # Check for asyncpg "pattern" error specifically
+        error_msg = str(e).lower()
+        if "did not match" in error_msg and "pattern" in error_msg:
+            logger.error(f"❌ DATABASE_URL format error: The connection string doesn't match PostgreSQL format")
+            logger.error(f"Error details: {e}")
+            logger.error("Expected format: postgresql://username:password@hostname:5432/database?sslmode=require")
+            logger.error("Common issues:")
+            logger.error("  1. Missing hostname (check for patterns like '@:5432' or missing '@')")
+            logger.error("  2. Invalid characters in username or password")
+            logger.error("  3. Extra whitespace or newlines in the URL")
+            logger.error("  4. Missing required parts (username, host, or database name)")
+        else:
+            logger.error(f"❌ Database initialization failed: {e}")
+            if is_debug_mode():
+                logger.error(f"Traceback: {traceback.format_exc()}")
+        
         db_engine = None
         async_session_maker = None
 else:
