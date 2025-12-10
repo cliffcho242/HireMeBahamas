@@ -83,11 +83,11 @@ jobs:
     # PostgreSQL service for database integration testing
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:15
         env:
-          POSTGRES_DB: hiremebahamas_test
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpassword
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword123
+          POSTGRES_DB: test_db
         ports:
           - 5432:5432
         options: >-
@@ -97,7 +97,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql+asyncpg://testuser:testpassword@localhost:5432/hiremebahamas_test
+      DATABASE_URL: postgresql+asyncpg://postgres:testpassword123@localhost:5432/test_db
       SECRET_KEY: test-secret-key-for-ci-testing-only
       JWT_SECRET_KEY: test-jwt-secret-for-ci-only
       ENVIRONMENT: test
@@ -174,11 +174,11 @@ jobs:
     
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:15
         env:
-          POSTGRES_DB: hiremebahamas_test
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpassword
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword123
+          POSTGRES_DB: test_db
         ports:
           - 5432:5432
         options: >-
@@ -188,7 +188,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/hiremebahamas_test
+      DATABASE_URL: postgresql://postgres:testpassword123@localhost:5432/test_db
       ENVIRONMENT: test
       RUNTIME_LOG_DIR: /tmp/runtime-logs
 
