@@ -32,7 +32,7 @@ import logging
 import ssl
 import sys
 from typing import Optional
-from urllib.parse import urlparse, quote_plus
+from urllib.parse import urlparse, quote_plus, urlunparse
 
 # Add project root to path for importing shared validation
 _project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -92,6 +92,10 @@ DATABASE_URL = (
     os.getenv("DATABASE_URL")
 )
 
+# Strip whitespace from DATABASE_URL to prevent connection errors
+if DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.strip()
+
 # If DATABASE_URL is not provided, try to construct it from individual PG* variables
 if not DATABASE_URL:
     pghost = os.getenv("PGHOST")
@@ -104,6 +108,8 @@ if not DATABASE_URL:
     is_valid, source, missing_vars = validate_database_config()
     
     if is_valid and source == "Individual PG* variables":
+        # Strip whitespace from database name to prevent connection errors
+        pgdatabase = pgdatabase.strip() if pgdatabase else pgdatabase
         # URL-encode password to handle special characters
         encoded_password = quote_plus(pgpassword)
         DATABASE_URL = f"postgresql+asyncpg://{pguser}:{encoded_password}@{pghost}:{pgport}/{pgdatabase}"
@@ -132,6 +138,29 @@ if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
+
+# Strip whitespace from database name in the URL path
+# This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
+try:
+    parsed_url = urlparse(DATABASE_URL)
+    if parsed_url.path:
+        # Strip leading slash and whitespace from database name
+        db_name = parsed_url.path.lstrip('/').strip()
+        if db_name and db_name != parsed_url.path.lstrip('/'):
+            # Reconstruct URL with cleaned database name only if it was changed
+            new_path = '/' + db_name
+            DATABASE_URL = urlunparse((
+                parsed_url.scheme,
+                parsed_url.netloc,
+                new_path,
+                parsed_url.params,
+                parsed_url.query,
+                parsed_url.fragment
+            ))
+            logger.info(f"✓ Auto-stripped whitespace from database name in URL")
+except Exception as e:
+    # If URL parsing fails, log warning but continue with original URL
+    logger.warning(f"Could not parse DATABASE_URL for database name sanitization: {e}")
 
 # NOTE: SQLAlchemy's create_async_engine() automatically handles URL decoding for
 # special characters in username/password. No manual decoding is needed here.
