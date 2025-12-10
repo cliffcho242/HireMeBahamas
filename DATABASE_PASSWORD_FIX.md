@@ -28,10 +28,15 @@ The backend must then **decode** `p%40ssw%3Bord%21` back to `p@ssw;ord!` before 
 
 ## Solution
 
-The fix adds URL decoding to the database connection code in `final_backend_postgresql.py`:
+The fix adds URL decoding and whitespace handling to the database connection code in `final_backend_postgresql.py`:
 
 ```python
 from urllib.parse import urlparse, unquote
+
+# Strip whitespace from DATABASE_URL (fixes common copy-paste errors)
+DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.strip()
 
 # Parse DATABASE_URL
 parsed = urlparse(DATABASE_URL)
@@ -40,6 +45,10 @@ parsed = urlparse(DATABASE_URL)
 username = unquote(parsed.username) if parsed.username else None
 password = unquote(parsed.password) if parsed.password else None
 
+# Auto-trim password if it has leading/trailing whitespace
+if password and password != password.strip():
+    password = password.strip()
+
 # Use decoded credentials for connection
 DB_CONFIG = {
     "user": username,
@@ -47,6 +56,20 @@ DB_CONFIG = {
     # ... other config
 }
 ```
+
+### What Changed
+
+1. **Whitespace Stripping**: The DATABASE_URL is now automatically stripped of leading/trailing whitespace. This prevents connection failures from accidental spaces when copying the URL.
+
+2. **Password Trimming**: If the decoded password has leading/trailing whitespace (rare but possible), it's automatically trimmed with a warning message.
+
+3. **Enhanced Error Diagnostics**: When password authentication fails, the error log now shows:
+   - Password length (not the actual password for security)
+   - Warning if password has whitespace issues
+   - Warning if password appears to be double URL-encoded
+   - Specific guidance for fixing the issue
+
+4. **Double-Encoding Detection**: The code now warns if the password appears to be double URL-encoded (contains `%2`, `%3`, or `%4` sequences after decoding).
 
 ## Special Characters That Need URL Encoding
 

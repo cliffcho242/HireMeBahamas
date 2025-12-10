@@ -785,6 +785,11 @@ def log_request_end(response):
 # We prefer DATABASE_PRIVATE_URL > DATABASE_URL to minimize costs.
 DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
 
+# Strip whitespace from DATABASE_URL to handle accidental leading/trailing spaces
+# This prevents parsing errors and authentication failures from whitespace in env vars
+if DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.strip()
+
 # Normalize DATABASE_URL for psycopg2 compatibility
 # If the URL uses postgresql+asyncpg:// scheme (for SQLAlchemy/asyncpg), convert it
 # to postgresql:// for psycopg2 (sync driver) compatibility
@@ -928,6 +933,26 @@ if USE_POSTGRESQL:
     username = unquote(parsed.username) if parsed.username else None
     password = unquote(parsed.password) if parsed.password else None
     
+    # Perform password validation checks to catch common issues early
+    if password:
+        # Warn if password has leading/trailing whitespace (common copy-paste error)
+        if password != password.strip():
+            print(f"⚠️ WARNING: Database password has leading or trailing whitespace!")
+            print(f"   This may cause authentication failures.")
+            print(f"   Password length: {len(password)}, Stripped length: {len(password.strip())}")
+            # Auto-strip the password to fix this common issue
+            password = password.strip()
+            print(f"   ✅ Password automatically trimmed")
+        
+        # Check if password looks like it's still URL-encoded (double encoding issue)
+        # Look for complete percent-encoded sequences like %20, %23, etc.
+        import re
+        if re.search(r'%[0-9A-Fa-f]{2}', password):
+            print(f"⚠️ WARNING: Password may be double URL-encoded!")
+            print(f"   Password contains URL-encoded sequences like %20, %23, etc.")
+            print(f"   This suggests the password was encoded twice, which will cause authentication failures.")
+            print(f"   Original password should not contain URL escape sequences after decoding.")
+    
     DB_CONFIG = {
         "host": parsed.hostname,
         "port": port,
@@ -1018,6 +1043,20 @@ def _log_database_connection_error(error: Exception, context: str = "connection"
         print("   1. The password in DATABASE_URL is incorrect")
         print("   2. The password contains special characters that need URL encoding")
         print("   3. The database user doesn't exist or is deactivated")
+        print("")
+        print("   Diagnostic Information:")
+        if USE_POSTGRESQL and DB_CONFIG:
+            print(f"   - Database user: {DB_CONFIG.get('user', 'unknown')}")
+            print(f"   - Database host: {DB_CONFIG.get('host', 'unknown')}")
+            print(f"   - Database name: {DB_CONFIG.get('database', 'unknown')}")
+            # Log password length (not the actual password) for debugging
+            password = DB_CONFIG.get('password', '')
+            if password:
+                print(f"   - Password length: {len(password)} characters")
+                # Note: Whitespace trimming is done during URL parsing (lines 939-945)
+                # If we see whitespace here, it means something is very wrong with the config
+            else:
+                print(f"   ⚠️ WARNING: Password is empty or None!")
         print("")
         print("   Solution:")
         print("   - Verify DATABASE_URL has the correct password")
