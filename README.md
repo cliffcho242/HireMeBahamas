@@ -28,6 +28,34 @@ possible system security compromise.
 
 ---
 
+## 🔍 **NEW: Vercel Connection Diagnostic Tool**
+
+**Quickly diagnose deployment issues with our automated diagnostic tool!**
+
+```bash
+python diagnostic/check_vercel_connection.py --url https://your-app.vercel.app
+```
+
+**What it checks:**
+- ✅ Frontend accessibility and React app detection
+- ✅ Backend API endpoints (/api/health, /api/status, /api/ready)
+- ✅ Database connection and configuration
+- ✅ Environment variables and security settings
+- ✅ CORS and routing configuration
+
+**Features:**
+- 🎨 Colored output for easy scanning
+- 🔍 Verbose mode for detailed debugging
+- 💾 Save results to file for sharing
+- 💡 Specific troubleshooting suggestions for failures
+
+**Documentation:**
+- 📖 [Diagnostic Tool README](./diagnostic/README.md) - Complete guide
+- 📋 [Quick Reference](./diagnostic/QUICK_REFERENCE.md) - Common commands
+- 🎓 [Examples](./diagnostic/EXAMPLES.sh) - Usage scenarios
+
+---
+
 ## 🚨 **IMPORTANT: Users Can't Sign In? Fix Deployment Issues**
 
 **If users cannot sign in**, your deployment configuration is likely incomplete.
