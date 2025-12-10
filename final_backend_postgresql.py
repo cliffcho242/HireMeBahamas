@@ -1729,8 +1729,9 @@ def _warmup_connection_pool():
                     
                     # Create dummy pg_stat_statements view on first connection
                     # This prevents Railway monitoring errors that occur before app initialization
-                    # Check environment variable directly since constant may not be initialized yet
-                    if not dummy_view_created and os.getenv("CREATE_DUMMY_PG_STAT_STATEMENTS", "true").lower() == "true":
+                    # The constant CREATE_DUMMY_PG_STAT_STATEMENTS is defined at module level (line 4280)
+                    # and is guaranteed to be initialized before this function is called
+                    if not dummy_view_created and CREATE_DUMMY_PG_STAT_STATEMENTS:
                         try:
                             create_dummy_pg_stat_statements_view(cursor, conn)
                             dummy_view_created = True
