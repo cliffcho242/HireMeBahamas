@@ -285,9 +285,8 @@ jobs:
           if len(routes) > 0:
             print("✅ Health check endpoints configured")
           else:
-            print("::warning::No health check endpoints found")
+            print("::warning::No health check endpoints found - this is not critical but recommended")
           PYEOF
-        continue-on-error: true
 
       - name: Annotate Test Failure
         if: failure()

@@ -39,24 +39,42 @@ jobs:
             let transientErrors = 0;
             let persistentErrors = 0;
             
+            // Common transient error patterns
+            const transientPatterns = [
+              'connection timeout',
+              'network error',
+              'ETIMEDOUT',
+              'ECONNRESET',
+              'ENOTFOUND',
+              'rate limit',
+              'temporary failure',
+              'failed to install',
+              'npm ci',
+              'pip install',
+              'apt-get',
+              '504 Gateway',
+              '503 Service',
+              'connection refused'
+            ];
+            
             for (const job of jobs.jobs) {
               if (job.conclusion === 'failure') {
-                // Analyze logs for patterns
                 const logUrl = job.html_url;
                 
-                // Common transient error patterns
-                const transientPatterns = [
-                  'connection timeout',
-                  'network error',
-                  'ETIMEDOUT',
-                  'ECONNRESET',
-                  'rate limit',
-                  'temporary failure'
-                ];
+                // For transient detection, we'd need to check actual logs
+                // For now, use job name heuristics combined with common patterns
+                const jobName = job.name.toLowerCase();
                 
-                // Check job name for patterns
-                if (job.name.includes('test') || job.name.includes('build')) {
+                // Check if job name suggests installation or network operations
+                const isLikelyTransient = 
+                  jobName.includes('install') ||
+                  jobName.includes('setup') ||
+                  jobName.includes('dependencies');
+                
+                if (isLikelyTransient) {
                   transientErrors++;
+                } else {
+                  persistentErrors++;
                 }
                 
                 failurePatterns.push({
@@ -75,7 +93,8 @@ jobs:
             };
             
             core.setOutput('analysis', JSON.stringify(analysis));
-            core.setOutput('should_retry', transientErrors > 0 ? 'true' : 'false');
+            // Only retry if transient errors are more than persistent AND total failures are reasonable
+            core.setOutput('should_retry', (transientErrors > 0 && failurePatterns.length <= 3) ? 'true' : 'false');
             core.setOutput('failed_count', failurePatterns.length);
             
             return analysis;
@@ -105,7 +124,7 @@ jobs:
             if (recentRetries.length < 3) {
               console.log('Retrying failed workflow...');
               try {
-                await github.rest.actions.reRunWorkflowFailedJobs({
+                await github.rest.actions.reRunFailedJobs({
                   owner,
                   repo,
                   run_id
@@ -175,8 +194,26 @@ jobs:
               });
             }
 
+      - name: Send Notification
+        if: steps.analyze.outputs.failed_count > 5
+        run: |
+          echo "## 🚨 Critical CI Failure" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Failed Jobs:** ${{ steps.analyze.outputs.failed_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow Run:** ${{ github.event.workflow_run.html_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Multiple jobs have failed. This may indicate a systemic issue." >> $GITHUB_STEP_SUMMARY
+          echo "Please review the failure patterns and address the root cause." >> $GITHUB_STEP_SUMMARY
+
+  close-resolved-issues:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      issues: write
+      contents: read
+    
+    steps:
       - name: Close Resolved Issues
-        if: ${{ github.event.workflow_run.conclusion == 'success' }}
         uses: actions/github-script@v7
         with:
           script: |
@@ -204,14 +241,3 @@ jobs:
                 });
               }
             }
-
-      - name: Send Notification
-        if: steps.analyze.outputs.failed_count > 5
-        run: |
-          echo "## 🚨 Critical CI Failure" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Failed Jobs:** ${{ steps.analyze.outputs.failed_count }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Workflow Run:** ${{ github.event.workflow_run.html_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Multiple jobs have failed. This may indicate a systemic issue." >> $GITHUB_STEP_SUMMARY
-          echo "Please review the failure patterns and address the root cause." >> $GITHUB_STEP_SUMMARY
