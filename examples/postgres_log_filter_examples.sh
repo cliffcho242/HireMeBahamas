@@ -2,8 +2,18 @@
 # PostgreSQL Log Filter - Usage Examples
 # =======================================
 # This script demonstrates various ways to use the PostgreSQL log filter tool.
+#
+# Requirements:
+#   - Python 3.6+ (use 'python3' or 'python' depending on your system)
+#   - jq (for JSON processing in examples)
+#
+# Note: This script uses 'python3' by default. If your system uses 'python',
+#       modify the PYTHON variable below.
 
 set -e  # Exit on error
+
+# Python executable - change to 'python' if needed
+PYTHON="${PYTHON:-python3}"
 
 echo "PostgreSQL Log Filter - Usage Examples"
 echo "======================================"
@@ -24,32 +34,32 @@ EOF
 # Example 1: Basic filtering (correct log levels)
 echo "Example 1: Basic filtering - Correct log levels"
 echo "------------------------------------------------"
-echo "Command: python filter_postgres_logs.py"
+echo "Command: $PYTHON filter_postgres_logs.py"
 echo ""
-echo "$SAMPLE_LOGS" | python filter_postgres_logs.py | head -3
+echo "$SAMPLE_LOGS" | $PYTHON filter_postgres_logs.py | head -3
 echo "..."
 echo ""
 
 # Example 2: Suppress benign messages
 echo "Example 2: Suppress benign messages - Only show real errors/warnings"
 echo "---------------------------------------------------------------------"
-echo "Command: python filter_postgres_logs.py --suppress-benign"
+echo "Command: $PYTHON filter_postgres_logs.py --suppress-benign"
 echo ""
-echo "$SAMPLE_LOGS" | python filter_postgres_logs.py --suppress-benign
+echo "$SAMPLE_LOGS" | $PYTHON filter_postgres_logs.py --suppress-benign
 echo ""
 
 # Example 3: Statistics
 echo "Example 3: Show statistics"
 echo "--------------------------"
-echo "Command: python filter_postgres_logs.py --stats"
+echo "Command: $PYTHON filter_postgres_logs.py --stats"
 echo ""
-echo "$SAMPLE_LOGS" | python filter_postgres_logs.py --stats
+echo "$SAMPLE_LOGS" | $PYTHON filter_postgres_logs.py --stats
 echo ""
 
 # Example 4: Real-world scenario - Docker Compose logs
 echo "Example 4: Filter Docker Compose PostgreSQL logs"
 echo "-------------------------------------------------"
-echo "Command: docker-compose -f docker-compose.local.yml logs postgres 2>&1 | python filter_postgres_logs.py --suppress-benign"
+echo "Command: docker-compose -f docker-compose.local.yml logs postgres 2>&1 | $PYTHON filter_postgres_logs.py --suppress-benign"
 echo ""
 echo "This would show only real PostgreSQL errors from your local Docker setup."
 echo ""
@@ -57,9 +67,9 @@ echo ""
 # Example 5: Save filtered logs to file
 echo "Example 5: Save filtered logs to file"
 echo "--------------------------------------"
-echo "Command: echo \"\$SAMPLE_LOGS\" | python filter_postgres_logs.py > filtered_logs.json"
+echo "Command: echo \"\$SAMPLE_LOGS\" | $PYTHON filter_postgres_logs.py > filtered_logs.json"
 echo ""
-echo "$SAMPLE_LOGS" | python filter_postgres_logs.py > /tmp/filtered_logs.json
+echo "$SAMPLE_LOGS" | $PYTHON filter_postgres_logs.py > /tmp/filtered_logs.json
 echo "✅ Saved to /tmp/filtered_logs.json"
 ls -lh /tmp/filtered_logs.json
 echo ""
@@ -67,26 +77,26 @@ echo ""
 # Example 6: Count real errors
 echo "Example 6: Count real errors (excluding benign messages)"
 echo "--------------------------------------------------------"
-echo "Command: echo \"\$SAMPLE_LOGS\" | python filter_postgres_logs.py --suppress-benign | wc -l"
+echo "Command: echo \"\$SAMPLE_LOGS\" | $PYTHON filter_postgres_logs.py --suppress-benign | wc -l"
 echo ""
-ERROR_COUNT=$(echo "$SAMPLE_LOGS" | python filter_postgres_logs.py --suppress-benign | wc -l)
+ERROR_COUNT=$(echo "$SAMPLE_LOGS" | $PYTHON filter_postgres_logs.py --suppress-benign | wc -l)
 echo "Found $ERROR_COUNT real error(s)/warning(s)"
 echo ""
 
 # Example 7: Extract only error messages
 echo "Example 7: Extract only actual ERROR messages"
 echo "----------------------------------------------"
-echo "Command: echo \"\$SAMPLE_LOGS\" | python filter_postgres_logs.py --suppress-benign | jq 'select(.attributes.level == \"error\")'"
+echo "Command: echo \"\$SAMPLE_LOGS\" | $PYTHON filter_postgres_logs.py --suppress-benign | jq 'select(.attributes.level == \"error\")'"
 echo ""
-echo "$SAMPLE_LOGS" | python filter_postgres_logs.py --suppress-benign | jq 'select(.attributes.level == "error")'
+echo "$SAMPLE_LOGS" | $PYTHON filter_postgres_logs.py --suppress-benign | jq 'select(.attributes.level == "error")'
 echo ""
 
 # Example 8: Check if there are any real errors
 echo "Example 8: Check if there are any real errors (exit code based)"
 echo "---------------------------------------------------------------"
-echo "Command: echo \"\$SAMPLE_LOGS\" | python filter_postgres_logs.py --suppress-benign | grep -q ERROR && echo 'Errors found!' || echo 'No errors'"
+echo "Command: echo \"\$SAMPLE_LOGS\" | $PYTHON filter_postgres_logs.py --suppress-benign | grep -q ERROR && echo 'Errors found!' || echo 'No errors'"
 echo ""
-if echo "$SAMPLE_LOGS" | python filter_postgres_logs.py --suppress-benign | grep -q "ERROR"; then
+if echo "$SAMPLE_LOGS" | $PYTHON filter_postgres_logs.py --suppress-benign | grep -q "ERROR"; then
     echo "⚠️ Real errors found in logs!"
 else
     echo "✅ No real errors in logs"
@@ -96,16 +106,16 @@ echo ""
 # Example 9: Pretty print filtered logs
 echo "Example 9: Pretty print filtered logs"
 echo "--------------------------------------"
-echo "Command: echo \"\$SAMPLE_LOGS\" | python filter_postgres_logs.py --suppress-benign | jq ."
+echo "Command: echo \"\$SAMPLE_LOGS\" | $PYTHON filter_postgres_logs.py --suppress-benign | jq ."
 echo ""
-echo "$SAMPLE_LOGS" | python filter_postgres_logs.py --suppress-benign | jq . | head -20
+echo "$SAMPLE_LOGS" | $PYTHON filter_postgres_logs.py --suppress-benign | jq . | head -20
 echo "..."
 echo ""
 
 # Example 10: Monitor logs in real-time
 echo "Example 10: Monitor logs in real-time (simulated)"
 echo "------------------------------------------------"
-echo "Command: tail -f app.log | python filter_postgres_logs.py --suppress-benign"
+echo "Command: tail -f app.log | $PYTHON filter_postgres_logs.py --suppress-benign"
 echo ""
 echo "This would monitor your application logs in real-time and show only real errors."
 echo "(Use Ctrl+C to stop when running for real)"

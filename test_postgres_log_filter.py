@@ -114,8 +114,8 @@ def run_filter(input_data: List[Dict], args: List[str] = None) -> List[Dict]:
     # Convert input to JSONL format (one JSON object per line)
     input_text = '\n'.join(json.dumps(entry) for entry in input_data)
     
-    # Run the filter
-    cmd = ['python', 'filter_postgres_logs.py'] + args
+    # Run the filter using the same Python interpreter as the current process
+    cmd = [sys.executable, 'filter_postgres_logs.py'] + args
     proc = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,
@@ -212,7 +212,7 @@ def test_statistics():
     
     input_data = [tc["input"] for tc in TEST_CASES]
     
-    cmd = ['python', 'filter_postgres_logs.py', '--stats']
+    cmd = [sys.executable, 'filter_postgres_logs.py', '--stats']
     proc = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,
@@ -246,7 +246,7 @@ def test_non_json_passthrough():
     
     non_json_line = "This is a plain text log line"
     
-    cmd = ['python', 'filter_postgres_logs.py']
+    cmd = [sys.executable, 'filter_postgres_logs.py']
     proc = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,

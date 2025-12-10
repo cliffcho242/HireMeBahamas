@@ -154,10 +154,24 @@ def process_log_entry(entry: Dict, suppress_benign: bool = False,
 
 def main():
     """Main entry point."""
+    epilog_text = """
+Examples:
+    # Filter logs from stdin
+    cat logs.json | python filter_postgres_logs.py
+    
+    # Filter logs from a file
+    python filter_postgres_logs.py < logs.json
+    
+    # Filter and suppress benign messages
+    python filter_postgres_logs.py --suppress-benign < logs.json
+    
+    # Show statistics
+    python filter_postgres_logs.py --stats < logs.json
+"""
     parser = argparse.ArgumentParser(
         description='Filter and categorize PostgreSQL logs',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__
+        epilog=epilog_text
     )
     parser.add_argument(
         '--suppress-benign',
