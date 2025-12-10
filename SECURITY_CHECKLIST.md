@@ -44,7 +44,8 @@ Use this checklist for all production deployments and security reviews of the Hi
 
 - [ ] **🔴 No database credentials in source code**
   ```bash
-  grep -r "postgresql://.*:.*@" --include="*.py" --include="*.js"
+  grep -r "postgresql://.*:.*@" --include="*.py" --include="*.js" \
+    --exclude-dir=docs --exclude='*.example' --exclude='*.md'
   # Should return no hardcoded credentials
   ```
 

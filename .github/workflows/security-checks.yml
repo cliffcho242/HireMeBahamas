@@ -254,7 +254,7 @@ jobs:
               echo "✅ CORS middleware configured"
               
               # Check for wildcard origins (security risk)
-              if grep -q 'allow_origins.*\["\\*"\]' backend/app/core/middleware.py; then
+              if grep -q 'allow_origins.*\[\"\\*\"\]' backend/app/core/middleware.py; then
                 echo "❌ WARNING: CORS uses wildcard (*) - security risk in production"
                 echo "   Use explicit origin list instead"
               else

@@ -37,7 +37,7 @@ WEAK_SECRET_PATTERNS = [
     r'JWT_SECRET_KEY\s*=\s*["\']change-in-production',
     r'JWT_SECRET_KEY\s*=\s*["\']test-',
     r'JWT_SECRET_KEY\s*=\s*["\']dev-',
-    r'SECRET_KEY\s*=\s*["\'][a-zA-Z0-9_-]{1,15}["\']',  # Too short (< 16 chars)
+    r'SECRET_KEY\s*=\s*["\'][a-zA-Z0-9_-]{1,31}["\']',  # Too short (< 32 chars)
 ]
 
 # Patterns for hardcoded credentials
@@ -151,7 +151,8 @@ def check_hardcoded_credentials(file_path: Path) -> List[Tuple[int, str]]:
                 # Skip lines with environment variable usage, examples, or docstrings
                 if ('os.getenv' in line or 'os.environ' in line or 'config(' in line or
                     'Example:' in line or '>>>' in line or 'print(' in line or 
-                    'default=' in line or "'" in line[:5]):  # Docstring return example
+                    'default=' in line or line.strip().startswith('"""') or 
+                    line.strip().startswith("'''")):
                     continue
                 
                 # Check for hardcoded credentials
@@ -272,7 +273,7 @@ def print_results(weak_secrets: List, hardcoded_creds: List, ssl_issues: List) -
             print(f"{RED}File: {file_path}{RESET}")
             for line_num, line in issues:
                 # Mask the actual credential
-                masked_line = re.sub(r'(password|key)["\s:=]+["\'][^"\']+["\']', 
+                masked_line = re.sub(r'(password|key)\s*[\":=]\s*["\'][^"\']+["\']', 
                                    r'\1="****"', line, flags=re.IGNORECASE)
                 print(f"  Line {line_num}: {masked_line[:80]}")
             print()
