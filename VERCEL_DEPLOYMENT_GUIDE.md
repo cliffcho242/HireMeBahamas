@@ -1,5 +1,27 @@
 # HireMeBahamas - Complete Vercel Deployment Guide 🚀
 
+## 🏥 Pre-Deployment Health Check
+
+**Verify your deployment readiness before starting:**
+
+```bash
+# Check all systems
+python scripts/health_check.py --verbose
+
+# Check environment variables
+python scripts/health_check.py --check environment
+
+# After deployment, verify the live application
+python scripts/health_check.py --url https://your-app.vercel.app
+```
+
+**Automated Health Monitoring:**
+- Daily automated checks via GitHub Actions
+- Status Badge: ![Health Check](https://github.com/cliffcho242/HireMeBahamas/actions/workflows/health-check.yml/badge.svg)
+- [View Latest Health Check Results](../../actions/workflows/health-check.yml)
+
+---
+
 ## Overview
 
 This guide will help you deploy the entire HireMeBahamas application (frontend + backend) to Vercel in under 15 minutes. Everything runs on Vercel's platform with zero additional infrastructure needed.

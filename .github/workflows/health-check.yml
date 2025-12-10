@@ -1,0 +1,361 @@
+name: Automated Health Check
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      check_deployment:
+        description: 'Check deployed application URL'
+        required: false
+        type: string
+      check_category:
+        description: 'Specific check category (leave empty for all)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - files
+          - environment
+          - database
+          - api
+  
+  # Scheduled runs - daily at 6 AM UTC
+  schedule:
+    - cron: '0 6 * * *'
+  
+  # Run on pushes to main
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/health-check.yml'
+      - 'scripts/health_check.py'
+      - 'api/**'
+      - 'vercel.json'
+
+# Prevent concurrent runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  health-check:
+    name: System Health Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    
+    # Allow job to continue on soft failures
+    continue-on-error: false
+    
+    # Timeout after 10 minutes
+    timeout-minutes: 10
+    
+    # PostgreSQL service for database testing
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass123
+          POSTGRES_DB: test_healthcheck_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    env:
+      # Test database for health checks
+      DATABASE_URL: postgresql+asyncpg://testuser:testpass123@localhost:5432/test_healthcheck_db
+      SECRET_KEY: test-secret-key-for-health-check
+      JWT_SECRET_KEY: test-jwt-secret-for-health-check
+      ENVIRONMENT: ci-health-check
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests asyncpg
+      
+      - name: Wait for PostgreSQL
+        run: |
+          echo "🔌 Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U testuser; then
+              echo "✅ PostgreSQL is ready"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "::error::PostgreSQL failed to become ready"
+              exit 1
+            fi
+            echo "⏳ Waiting... ($i/30)"
+            sleep 2
+          done
+      
+      - name: Run Health Checks (Text Format)
+        id: health_check_text
+        run: |
+          echo "🏥 Running comprehensive health checks..."
+          
+          # Build command with optional parameters
+          CMD="python scripts/health_check.py --verbose"
+          
+          # Add check category if specified
+          if [ -n "${{ github.event.inputs.check_category }}" ]; then
+            CMD="$CMD --check ${{ github.event.inputs.check_category }}"
+          fi
+          
+          # Add deployment URL if specified
+          if [ -n "${{ github.event.inputs.check_deployment }}" ]; then
+            CMD="$CMD --url ${{ github.event.inputs.check_deployment }}"
+          fi
+          
+          # Run health check
+          $CMD || echo "health_check_failed=true" >> $GITHUB_OUTPUT
+      
+      - name: Run Health Checks (JSON Format)
+        id: health_check_json
+        if: always()
+        run: |
+          echo "📊 Generating JSON health check report..."
+          
+          # Build command
+          CMD="python scripts/health_check.py --format json"
+          
+          if [ -n "${{ github.event.inputs.check_category }}" ]; then
+            CMD="$CMD --check ${{ github.event.inputs.check_category }}"
+          fi
+          
+          if [ -n "${{ github.event.inputs.check_deployment }}" ]; then
+            CMD="$CMD --url ${{ github.event.inputs.check_deployment }}"
+          fi
+          
+          # Run and capture output
+          $CMD > health-check-results.json || true
+          
+          # Extract summary for GitHub
+          if [ -f health-check-results.json ]; then
+            TOTAL=$(jq -r '.summary.total' health-check-results.json)
+            PASSED=$(jq -r '.summary.passed' health-check-results.json)
+            WARNED=$(jq -r '.summary.warned' health-check-results.json)
+            FAILED=$(jq -r '.summary.failed' health-check-results.json)
+            
+            echo "total=$TOTAL" >> $GITHUB_OUTPUT
+            echo "passed=$PASSED" >> $GITHUB_OUTPUT
+            echo "warned=$WARNED" >> $GITHUB_OUTPUT
+            echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Upload Health Check Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-check-report-${{ github.run_number }}
+          path: health-check-results.json
+          if-no-files-found: ignore
+          retention-days: 30
+      
+      - name: Generate Job Summary
+        if: always()
+        run: |
+          echo "# 🏥 Health Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Run Date:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ github.event.inputs.check_category }}" ]; then
+            echo "**Category Filter:** ${{ github.event.inputs.check_category }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -n "${{ github.event.inputs.check_deployment }}" ]; then
+            echo "**Deployment URL:** ${{ github.event.inputs.check_deployment }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f health-check-results.json ]; then
+            TOTAL="${{ steps.health_check_json.outputs.total }}"
+            PASSED="${{ steps.health_check_json.outputs.passed }}"
+            WARNED="${{ steps.health_check_json.outputs.warned }}"
+            FAILED="${{ steps.health_check_json.outputs.failed }}"
+            
+            echo "## Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Total Checks | $TOTAL |" >> $GITHUB_STEP_SUMMARY
+            echo "| ✅ Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
+            echo "| ⚠️ Warnings | $WARNED |" >> $GITHUB_STEP_SUMMARY
+            echo "| ❌ Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Show failed checks if any
+            FAILED_CHECKS=$(jq -r '.checks[] | select(.status == "fail") | "- **\(.name)**: \(.message)"' health-check-results.json)
+            if [ -n "$FAILED_CHECKS" ]; then
+              echo "## ❌ Failed Checks" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "$FAILED_CHECKS" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Show warnings if any
+            WARNED_CHECKS=$(jq -r '.checks[] | select(.status == "warn") | "- **\(.name)**: \(.message)"' health-check-results.json)
+            if [ -n "$WARNED_CHECKS" ]; then
+              echo "## ⚠️ Warnings" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "$WARNED_CHECKS" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Overall status
+            if [ "$FAILED" -eq 0 ] && [ "$WARNED" -eq 0 ]; then
+              echo "## ✅ Status: All Systems Operational" >> $GITHUB_STEP_SUMMARY
+            elif [ "$FAILED" -eq 0 ]; then
+              echo "## ⚠️ Status: Operational with Warnings" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "## ❌ Status: Critical Issues Detected" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "⚠️ Health check report not generated" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Automated health check workflow · [View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Check for Critical Failures
+        if: always()
+        id: check_critical
+        run: |
+          if [ -f health-check-results.json ]; then
+            FAILED=$(jq -r '.summary.failed' health-check-results.json)
+            
+            if [ "$FAILED" -gt 0 ]; then
+              echo "critical_failure=true" >> $GITHUB_OUTPUT
+              echo "::warning::Health check detected $FAILED critical failures"
+            else
+              echo "critical_failure=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+      
+      - name: Create Issue on Critical Failure
+        if: |
+          always() && 
+          steps.check_critical.outputs.critical_failure == 'true' &&
+          (github.event_name == 'schedule' || github.event_name == 'push')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Read health check results
+            let failedChecks = '';
+            let warnedChecks = '';
+            
+            if (fs.existsSync('health-check-results.json')) {
+              const results = JSON.parse(fs.readFileSync('health-check-results.json', 'utf8'));
+              
+              // Format failed checks
+              const failed = results.checks.filter(c => c.status === 'fail');
+              if (failed.length > 0) {
+                failedChecks = failed.map(c => `- **${c.name}**: ${c.message}`).join('\n');
+              }
+              
+              // Format warnings
+              const warned = results.checks.filter(c => c.status === 'warn');
+              if (warned.length > 0) {
+                warnedChecks = warned.map(c => `- **${c.name}**: ${c.message}`).join('\n');
+              }
+            }
+            
+            const title = '🚨 Automated Health Check Failed';
+            const body = `## 🚨 Health Check Failure Detected
+            
+            The automated health check has detected critical failures that require attention.
+            
+            **Trigger:** ${context.eventName}
+            **Branch:** ${context.ref}
+            **Commit:** ${context.sha.substring(0, 7)}
+            **Workflow Run:** [View Logs](${context.payload.repository.html_url}/actions/runs/${context.runId})
+            
+            ### ❌ Failed Checks
+            
+            ${failedChecks || 'See workflow logs for details'}
+            
+            ${warnedChecks ? `### ⚠️ Warnings\n\n${warnedChecks}\n` : ''}
+            
+            ### 📋 Next Steps
+            
+            1. Review the [workflow logs](${context.payload.repository.html_url}/actions/runs/${context.runId}) for detailed information
+            2. Check the health check report artifact for complete results
+            3. Fix the identified issues
+            4. Re-run the health check manually to verify fixes
+            
+            ### 🔧 Quick Actions
+            
+            - Check database connectivity: \`python scripts/health_check.py --check database\`
+            - Check environment variables: \`python scripts/health_check.py --check environment\`
+            - Check deployed application: \`python scripts/health_check.py --url <your-url>\`
+            
+            ---
+            
+            *This issue was automatically created by the Health Check workflow*
+            *Labels: \`health-check\`, \`automated\`, \`critical\`*`;
+            
+            // Check if a similar open issue exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'health-check,automated',
+              per_page: 5
+            });
+            
+            // Only create new issue if no recent open issues exist
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['health-check', 'automated', 'critical', 'bug']
+              });
+              
+              console.log('Created new health check failure issue');
+            } else {
+              // Add comment to existing issue
+              const existingIssue = issues.data[0];
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `## 🔄 Health Check Still Failing\n\n${body}`
+              });
+              
+              console.log(`Added comment to existing issue #${existingIssue.number}`);
+            }
+      
+      - name: Fail job if critical issues detected
+        if: steps.check_critical.outputs.critical_failure == 'true'
+        run: |
+          echo "::error::Health check detected critical failures. See summary above."
+          exit 1

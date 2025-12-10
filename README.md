@@ -1,6 +1,7 @@
 # HireMeBahamas - Facebook-Style Professional Social Network 🇧🇸
 
 ![Deploy Status](https://github.com/cliffcho242/HireMeBahamas/actions/workflows/ci.yml/badge.svg)
+![Health Check](https://github.com/cliffcho242/HireMeBahamas/actions/workflows/health-check.yml/badge.svg)
 
 A modern, Facebook-inspired social platform designed specifically for professionals in the Bahamas to connect, share career opportunities, and build meaningful professional relationships.
 
@@ -28,7 +29,48 @@ possible system security compromise.
 
 ---
 
-## 🔍 **NEW: Vercel Connection Diagnostic Tool**
+## 🏥 **Automated Health Check Pipeline**
+
+**Monitor your deployment health with our comprehensive automated health check system!**
+
+The health check pipeline runs automatically and can be triggered manually to verify:
+- ✅ Database connectivity and performance
+- ✅ Environment variable configuration
+- ✅ API endpoint availability
+- ✅ File structure integrity
+- ✅ Deployment platform detection
+
+### Quick Start
+
+**Run locally:**
+```bash
+# Check all systems
+python scripts/health_check.py
+
+# Check specific category
+python scripts/health_check.py --check database
+python scripts/health_check.py --check environment
+
+# Check deployed application
+python scripts/health_check.py --url https://your-app.vercel.app
+
+# Get JSON output (for CI/CD)
+python scripts/health_check.py --format json
+```
+
+**Automated Checks:**
+- 🔄 Runs daily at 6 AM UTC
+- 🚨 Auto-creates GitHub issues on critical failures
+- 📊 Provides detailed reports in GitHub Actions
+- ⚡ Manual trigger available via GitHub Actions UI
+
+**View Status:**
+- [Latest Health Check Results](../../actions/workflows/health-check.yml)
+- Badge shows current status: ![Health Check](https://github.com/cliffcho242/HireMeBahamas/actions/workflows/health-check.yml/badge.svg)
+
+---
+
+## 🔍 **Vercel Connection Diagnostic Tool**
 
 **Quickly diagnose deployment issues with our automated diagnostic tool!**
 
