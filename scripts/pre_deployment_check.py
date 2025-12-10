@@ -27,6 +27,7 @@ import os
 import sys
 import argparse
 import time
+from typing import Tuple
 from urllib.parse import urlparse
 
 # ANSI color codes
@@ -67,7 +68,7 @@ def print_info(msg: str) -> None:
     print(f"{Colors.CYAN}ℹ️  {msg}{Colors.NC}")
 
 
-def check_environment(verbose: bool = False) -> tuple[int, int, int]:
+def check_environment(verbose: bool = False) -> Tuple[int, int, int]:
     """
     Check environment configuration.
     Returns (passed, warnings, errors)
@@ -153,7 +154,7 @@ def check_environment(verbose: bool = False) -> tuple[int, int, int]:
     return (passed, warnings, errors)
 
 
-def check_database(verbose: bool = False) -> tuple[int, int, int]:
+def check_database(verbose: bool = False) -> Tuple[int, int, int]:
     """
     Check database connectivity.
     Returns (passed, warnings, errors)
@@ -249,7 +250,7 @@ def check_database(verbose: bool = False) -> tuple[int, int, int]:
     return (passed, warnings, errors)
 
 
-def check_security(verbose: bool = False) -> tuple[int, int, int]:
+def check_security(verbose: bool = False) -> Tuple[int, int, int]:
     """
     Check security configuration.
     Returns (passed, warnings, errors)
@@ -318,7 +319,7 @@ def check_security(verbose: bool = False) -> tuple[int, int, int]:
     return (passed, warnings, errors)
 
 
-def check_imports(verbose: bool = False) -> tuple[int, int, int]:
+def check_imports(verbose: bool = False) -> Tuple[int, int, int]:
     """
     Check Python imports validity.
     Returns (passed, warnings, errors)

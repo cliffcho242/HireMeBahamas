@@ -27,6 +27,7 @@ import sys
 import json
 import time
 import argparse
+import tempfile
 from datetime import datetime, timezone
 from urllib.parse import quote
 
@@ -150,7 +151,7 @@ def generate_svg_badge(status: str, checks_passed: int = 0, checks_total: int = 
 
 def read_cached_status() -> dict:
     """Read cached health check status"""
-    cache_file = '/tmp/health-check-status.json'
+    cache_file = os.path.join(tempfile.gettempdir(), 'health-check-status.json')
     
     if os.path.exists(cache_file):
         try:
@@ -169,7 +170,7 @@ def read_cached_status() -> dict:
 
 def write_cached_status(status: dict) -> None:
     """Write health check status to cache"""
-    cache_file = '/tmp/health-check-status.json'
+    cache_file = os.path.join(tempfile.gettempdir(), 'health-check-status.json')
     
     try:
         status['timestamp'] = time.time()
@@ -196,7 +197,11 @@ def get_health_status_from_github() -> dict:
     token = os.environ.get('GITHUB_TOKEN', '')
     
     # Repository info
-    repo = os.environ.get('GITHUB_REPOSITORY', 'cliffcho242/HireMeBahamas')
+    repo = os.environ.get('GITHUB_REPOSITORY', '')
+    if not repo:
+        print("Warning: GITHUB_REPOSITORY not set, badge may not work correctly", file=sys.stderr)
+        return {}
+    
     owner, repo_name = repo.split('/')
     
     # API endpoint
