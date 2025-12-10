@@ -945,9 +945,11 @@ if USE_POSTGRESQL:
             print(f"   ✅ Password automatically trimmed")
         
         # Check if password looks like it's still URL-encoded (double encoding issue)
-        if '%' in password and any(char in password for char in ['%2', '%3', '%4']):
+        # Look for complete percent-encoded sequences like %20, %23, etc.
+        import re
+        if re.search(r'%[0-9A-Fa-f]{2}', password):
             print(f"⚠️ WARNING: Password may be double URL-encoded!")
-            print(f"   Password contains URL-encoded sequences like %2x, %3x, or %4x")
+            print(f"   Password contains URL-encoded sequences like %20, %23, etc.")
             print(f"   This suggests the password was encoded twice, which will cause authentication failures.")
             print(f"   Original password should not contain URL escape sequences after decoding.")
     
@@ -1051,11 +1053,8 @@ def _log_database_connection_error(error: Exception, context: str = "connection"
             password = DB_CONFIG.get('password', '')
             if password:
                 print(f"   - Password length: {len(password)} characters")
-                # Check for common issues
-                if password.startswith(' ') or password.endswith(' '):
-                    print(f"   ⚠️ WARNING: Password has leading or trailing whitespace!")
-                if '%' in password:
-                    print(f"   ℹ️ Password contains '%' - may need URL encoding verification")
+                # Note: Whitespace trimming is done during URL parsing (lines 939-945)
+                # If we see whitespace here, it means something is very wrong with the config
             else:
                 print(f"   ⚠️ WARNING: Password is empty or None!")
         print("")
