@@ -305,50 +305,31 @@ if HAS_BACKEND and HAS_DB:
 if db_engine is None and HAS_DB and DATABASE_URL:
     try:
         logger.info("Backend database not available, creating fallback database connection...")
-        db_url = DATABASE_URL
         
-        # Strip whitespace that might cause pattern errors
-        db_url = db_url.strip()
-        
-        # Validate URL format before processing to catch errors early
-        if not db_url.startswith(("postgres://", "postgresql://")):
-            raise ValueError(
-                f"Invalid DATABASE_URL format. Must start with 'postgres://' or 'postgresql://'. "
-                f"Example: postgresql://user:password@host:5432/dbname"
-            )
-        
-        # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
-        # This handles cases where the 'p' is missing from "postgresql"
-        if "ostgresql" in db_url and "postgresql" not in db_url:
-            db_url = db_url.replace("ostgresql", "postgresql")
-            logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
-        
-        # Convert postgres:// to postgresql+asyncpg://
-        if db_url.startswith("postgres://"):
-            db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-            logger.info("Converted postgres:// to postgresql+asyncpg://")
-        elif db_url.startswith("postgresql://") and "asyncpg" not in db_url:
-            db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            logger.info("Converted postgresql:// to postgresql+asyncpg://")
-        
-        # Validate netloc (host:port) is present before continuing
+        # Use centralized database module for validation and URL processing
+        # This avoids code duplication and ensures consistent validation
         try:
-            test_parse = urlparse(db_url)
-            if not test_parse.netloc or test_parse.netloc.startswith(':'):
-                raise ValueError(
-                    f"Invalid DATABASE_URL: missing or invalid hostname. "
-                    f"Format should be: postgresql://user:password@hostname:5432/database"
-                )
-        except ValueError:
-            raise
-        except Exception as parse_error:
-            logger.warning(f"URL validation warning: {parse_error}")
-        
-        # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
-        original_url = db_url
-        db_url = ensure_sslmode(db_url)
-        if db_url != original_url:
-            logger.info("Added sslmode=require to DATABASE_URL")
+            from database import get_database_url as get_validated_db_url
+            db_url = get_validated_db_url()
+            logger.info("✅ DATABASE_URL validated successfully")
+        except ImportError:
+            # Fallback if database module import fails - use manual processing
+            logger.warning("Could not import database module, using manual URL processing")
+            db_url = DATABASE_URL.strip()
+            
+            # Fix common typos
+            if "ostgresql" in db_url and "postgresql" not in db_url:
+                db_url = db_url.replace("ostgresql", "postgresql")
+                logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
+            
+            # Convert to asyncpg format
+            if db_url.startswith("postgres://"):
+                db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif db_url.startswith("postgresql://") and "asyncpg" not in db_url:
+                db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            
+            # Add SSL mode
+            db_url = ensure_sslmode(db_url)
         
         logger.info("Creating fallback database engine with asyncpg...")
         db_engine = create_async_engine(

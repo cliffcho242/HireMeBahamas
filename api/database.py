@@ -3,12 +3,18 @@ Database connection helper for Vercel Serverless API
 Lightweight, fast, optimized for cold starts
 """
 import os
+import logging
+import re
+from urllib.parse import urlparse, urlunparse
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 from db_url_utils import ensure_sslmode
 
 # Global engine (reused across invocations)
 _engine = None
+
+# Module-level logger
+logger = logging.getLogger(__name__)
 
 
 def get_database_url():
@@ -20,12 +26,6 @@ def get_database_url():
     Raises:
         ValueError: If DATABASE_URL is not set or has invalid format
     """
-    from urllib.parse import urlparse, urlunparse
-    import logging
-    import re
-    
-    logger = logging.getLogger(__name__)
-    
     db_url = os.getenv("DATABASE_URL", "")
     
     # Strip whitespace from database URL to prevent connection errors
@@ -122,10 +122,7 @@ def get_engine():
         ValueError: If DATABASE_URL format is invalid
         Exception: If engine creation fails for other reasons
     """
-    import logging
     global _engine
-    
-    logger = logging.getLogger(__name__)
     
     if _engine is None:
         try:
