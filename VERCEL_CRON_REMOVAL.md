@@ -57,20 +57,20 @@ Use a free external service to ping your API periodically:
 If you need native Vercel cron jobs:
 1. Go to Vercel Dashboard → Settings → Plans
 2. Upgrade to Pro plan ($20/month)
-3. Uncomment the crons section in `vercel.json`:
+3. Add the crons section back to `vercel.json`:
 
 ```json
 {
   "crons": [
     {
       "path": "/api/health",
-      "schedule": "0 */5 * * *"
+      "schedule": "*/5 * * * *"
     }
   ]
 }
 ```
 
-**Note**: Use `0 */5 * * *` format (every 5 minutes starting at minute 0) instead of `*/5 * * * *` for better Vercel compatibility.
+**Note**: The `*/5 * * * *` format means "every 5 minutes". Vercel Pro supports standard cron expressions.
 
 ### Option 3: GitHub Actions (Free)
 Use GitHub Actions to ping your API:
