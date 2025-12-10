@@ -13,7 +13,7 @@ import logging
 import traceback
 from urllib.parse import urlparse
 from typing import Optional, List, Dict, Union, Any
-from .db_url_utils import ensure_sslmode
+from db_url_utils import ensure_sslmode
 
 
 def inject_typing_exports(module):
