@@ -1697,6 +1697,7 @@ def _warmup_connection_pool():
     - Reduces first-request latency by ~500-1000ms
     - Validates database connectivity on startup
     - Pre-populates connection pool for immediate availability
+    - Creates dummy pg_stat_statements view to prevent Railway monitoring errors
     
     Called asynchronously to avoid blocking app startup.
     """
@@ -1716,7 +1717,8 @@ def _warmup_connection_pool():
         warmed_conns = []
         
         warmup_start = time.time()
-        for _ in range(warmup_count):
+        dummy_view_created = False
+        for i in range(warmup_count):
             try:
                 conn = conn_pool.getconn()
                 if conn:
@@ -1724,6 +1726,17 @@ def _warmup_connection_pool():
                     cursor = conn.cursor()
                     cursor.execute("SELECT 1")
                     cursor.fetchone()
+                    
+                    # Create dummy pg_stat_statements view on first connection
+                    # This prevents Railway monitoring errors that occur before app initialization
+                    # Check environment variable directly since constant may not be initialized yet
+                    if not dummy_view_created and os.getenv("CREATE_DUMMY_PG_STAT_STATEMENTS", "true").lower() == "true":
+                        try:
+                            create_dummy_pg_stat_statements_view(cursor, conn)
+                            dummy_view_created = True
+                        except Exception as e:
+                            logger.debug("Failed to create dummy pg_stat_statements view during warmup: %s", e)
+                    
                     cursor.close()
                     warmed_conns.append(conn)
             except Exception as e:
