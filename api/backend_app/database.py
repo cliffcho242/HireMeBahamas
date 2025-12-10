@@ -32,7 +32,7 @@ import logging
 import ssl
 import sys
 from typing import Optional
-from urllib.parse import urlparse, quote_plus
+from urllib.parse import urlparse, quote_plus, urlunparse
 
 # Add project root to path for importing shared validation
 _project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -148,7 +148,6 @@ try:
         db_name = parsed_url.path.lstrip('/').strip()
         if db_name and db_name != parsed_url.path.lstrip('/'):
             # Reconstruct URL with cleaned database name only if it was changed
-            from urllib.parse import urlunparse
             new_path = '/' + db_name
             DATABASE_URL = urlunparse((
                 parsed_url.scheme,
