@@ -14,6 +14,7 @@ Usage:
 
 import argparse
 import sys
+import os
 import time
 import json
 from typing import Dict, Any, List, Tuple, Optional
@@ -49,6 +50,10 @@ class DiagnosticResult:
 
 class VercelDiagnostic:
     """Main diagnostic class for checking Vercel deployment"""
+    
+    # Configuration constants
+    SLOW_RESPONSE_THRESHOLD_MS = 5000  # Threshold for slow response warnings
+    REQUEST_TIMEOUT_SECONDS = 60  # Timeout for API requests (handles cold starts)
     
     def __init__(self, url: str, verbose: bool = False, output_file: Optional[str] = None):
         self.url = url.rstrip('/')
@@ -139,12 +144,10 @@ class VercelDiagnostic:
             self._log(f"❌ Frontend not accessible: {error_msg}", Colors.FAIL)
             return results
         
-        duration = int((time.time() - time.time()) * 1000) if response else 0
         results.append(DiagnosticResult(
             "Frontend Accessible",
             True,
-            f"Frontend accessible at: {self.url}",
-            duration
+            f"Frontend accessible at: {self.url}"
         ))
         self._log(f"✅ Frontend accessible at: {self.url}", Colors.OKGREEN)
         
@@ -364,16 +367,22 @@ class VercelDiagnostic:
             self._log(f"❌ /api/ready: Status {response.status_code}", Colors.FAIL)
         
         # Check response times
-        slow_responses = [r for r in results if r.duration_ms and r.duration_ms > 5000]
+        slow_responses = [r for r in results if r.duration_ms and r.duration_ms > self.SLOW_RESPONSE_THRESHOLD_MS]
         if slow_responses:
-            self._log(f"\n⚠️  Warning: {len(slow_responses)} endpoint(s) responded slowly (>5s)", Colors.WARNING)
+            threshold_sec = self.SLOW_RESPONSE_THRESHOLD_MS / 1000
+            self._log(f"\n⚠️  Warning: {len(slow_responses)} endpoint(s) responded slowly (>{threshold_sec}s)", Colors.WARNING)
             for r in slow_responses:
                 self._log(f"   - {r.name}: {r.duration_ms}ms", Colors.WARNING)
         
         return results
     
     def check_configuration(self) -> List[DiagnosticResult]:
-        """Verify configuration is correct"""
+        """Verify configuration is correct
+        
+        Note: These checks depend on results from earlier API health checks.
+        The health_result parameter is obtained from self.results which should
+        already be populated by check_backend_api_health().
+        """
         self._log("\n⚙️  CONFIGURATION", Colors.HEADER)
         self._log("-" * 40)
         
@@ -511,6 +520,7 @@ class VercelDiagnostic:
         if health_result and health_result.passed:
             jwt_status = health_result.details.get('jwt', 'unknown')
             
+            # Check if JWT is properly configured (not using default)
             if jwt_status == 'configured':
                 results.append(DiagnosticResult(
                     "JWT_SECRET_KEY",
@@ -518,13 +528,20 @@ class VercelDiagnostic:
                     "Set (not default)"
                 ))
                 self._log("✅ JWT_SECRET_KEY: Set (not default)", Colors.OKGREEN)
-            else:
+            elif jwt_status == 'using_default':
                 results.append(DiagnosticResult(
                     "JWT_SECRET_KEY",
                     False,
                     "Using default value - SECURITY RISK"
                 ))
                 self._log("❌ JWT_SECRET_KEY: Using default (SECURITY RISK)", Colors.FAIL)
+            else:
+                results.append(DiagnosticResult(
+                    "JWT_SECRET_KEY",
+                    False,
+                    f"Unknown JWT status: {jwt_status}"
+                ))
+                self._log(f"⚠️  JWT_SECRET_KEY: Unknown status ({jwt_status})", Colors.WARNING)
         
         if status_result and status_result.passed:
             jwt_configured = status_result.details.get('jwt_configured', False)
@@ -617,7 +634,12 @@ class VercelDiagnostic:
             self._log("   • Ensure SSL mode is set correctly (sslmode=require)")
             self._log("   • Verify database is running and accessible")
         
-        self._log(f"\n📚 Documentation: docs/BACKEND_CONNECTION_TROUBLESHOOTING.md")
+        # Check if documentation file exists before referencing it
+        doc_path = "docs/BACKEND_CONNECTION_TROUBLESHOOTING.md"
+        if os.path.exists(doc_path):
+            self._log(f"\n📚 Documentation: {doc_path}")
+        else:
+            self._log(f"\n📚 For more information, check your project documentation")
     
     def save_results(self):
         """Save results to file if output_file is specified"""
