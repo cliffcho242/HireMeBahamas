@@ -1,5 +1,24 @@
 # Backend Connection Troubleshooting Guide
 
+## 🔍 Quick Diagnostic Tool
+
+**NEW**: Use the automated diagnostic tool to quickly identify issues:
+
+```bash
+python diagnostic/check_vercel_connection.py --url https://your-app.vercel.app --verbose
+```
+
+This will test:
+- ✅ Frontend accessibility
+- ✅ Backend API endpoints
+- ✅ Database connections
+- ✅ Configuration
+- ✅ Security settings
+
+And provide specific troubleshooting suggestions. See [diagnostic/README.md](diagnostic/README.md) for details.
+
+---
+
 ## Issue: "Backend connection: Load failed"
 
 ### Quick Fix Checklist
