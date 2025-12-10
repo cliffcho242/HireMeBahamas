@@ -7,7 +7,13 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Run health check before deployment
+  health-check:
+    uses: ./.github/workflows/health-check.yml
+    secrets: inherit
+  
   deploy-vercel:
+    needs: health-check
     runs-on: ubuntu-latest
     permissions:
       contents: read
