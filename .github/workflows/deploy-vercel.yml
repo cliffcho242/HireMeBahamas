@@ -11,6 +11,9 @@ jobs:
   health-check:
     uses: ./.github/workflows/health-check.yml
     secrets: inherit
+    permissions:
+      contents: read
+      issues: write
   
   deploy-vercel:
     needs: health-check
