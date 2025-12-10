@@ -124,7 +124,7 @@ jobs:
             if (recentRetries.length < 3) {
               console.log('Retrying failed workflow...');
               try {
-                await github.rest.actions.rerunFailedJobs({
+                await github.rest.actions.reRunWorkflowFailedJobs({
                   owner,
                   repo,
                   run_id
