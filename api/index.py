@@ -305,27 +305,31 @@ if HAS_BACKEND and HAS_DB:
 if db_engine is None and HAS_DB and DATABASE_URL:
     try:
         logger.info("Backend database not available, creating fallback database connection...")
-        db_url = DATABASE_URL
         
-        # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
-        # This handles cases where the 'p' is missing from "postgresql"
-        if "ostgresql" in db_url and "postgresql" not in db_url:
-            db_url = db_url.replace("ostgresql", "postgresql")
-            logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
-        
-        # Convert postgres:// to postgresql+asyncpg://
-        if db_url.startswith("postgres://"):
-            db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-            logger.info("Converted postgres:// to postgresql+asyncpg://")
-        elif db_url.startswith("postgresql://") and "asyncpg" not in db_url:
-            db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            logger.info("Converted postgresql:// to postgresql+asyncpg://")
-        
-        # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
-        original_url = db_url
-        db_url = ensure_sslmode(db_url)
-        if db_url != original_url:
-            logger.info("Added sslmode=require to DATABASE_URL")
+        # Use centralized database module for validation and URL processing
+        # This avoids code duplication and ensures consistent validation
+        try:
+            from database import get_database_url as get_validated_db_url
+            db_url = get_validated_db_url()
+            logger.info("✅ DATABASE_URL validated successfully")
+        except ImportError:
+            # Fallback if database module import fails - use manual processing
+            logger.warning("Could not import database module, using manual URL processing")
+            db_url = DATABASE_URL.strip()
+            
+            # Fix common typos
+            if "ostgresql" in db_url and "postgresql" not in db_url:
+                db_url = db_url.replace("ostgresql", "postgresql")
+                logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
+            
+            # Convert to asyncpg format
+            if db_url.startswith("postgres://"):
+                db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif db_url.startswith("postgresql://") and "asyncpg" not in db_url:
+                db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            
+            # Add SSL mode
+            db_url = ensure_sslmode(db_url)
         
         logger.info("Creating fallback database engine with asyncpg...")
         db_engine = create_async_engine(
@@ -340,8 +344,30 @@ if db_engine is None and HAS_DB and DATABASE_URL:
             db_engine, class_=AsyncSession, expire_on_commit=False
         )
         logger.info("✅ Fallback database engine created successfully")
+    except ValueError as ve:
+        # ValueError indicates configuration issue - log helpful message
+        logger.error(f"❌ DATABASE_URL configuration error: {ve}")
+        logger.error("Please check your DATABASE_URL environment variable.")
+        logger.error("Expected format: postgresql://username:password@hostname:5432/database?sslmode=require")
+        db_engine = None
+        async_session_maker = None
     except Exception as e:
-        logger.error(f"❌ Database initialization failed: {e}\nTraceback: {traceback.format_exc()}")
+        # Check for asyncpg "pattern" error specifically
+        error_msg = str(e).lower()
+        if "did not match" in error_msg and "pattern" in error_msg:
+            logger.error(f"❌ DATABASE_URL format error: The connection string doesn't match PostgreSQL format")
+            logger.error(f"Error details: {e}")
+            logger.error("Expected format: postgresql://username:password@hostname:5432/database?sslmode=require")
+            logger.error("Common issues:")
+            logger.error("  1. Missing hostname (check for patterns like '@:5432' or missing '@')")
+            logger.error("  2. Invalid characters in username or password")
+            logger.error("  3. Extra whitespace or newlines in the URL")
+            logger.error("  4. Missing required parts (username, host, or database name)")
+        else:
+            logger.error(f"❌ Database initialization failed: {e}")
+            if is_debug_mode():
+                logger.error(f"Traceback: {traceback.format_exc()}")
+        
         db_engine = None
         async_session_maker = None
 else:
