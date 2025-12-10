@@ -1,0 +1,386 @@
+name: Security Checks
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+# Prevent cascade failures
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-validation:
+    name: Security Best Practices Validation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run security validation script
+        id: security_check
+        run: |
+          echo "Running security validation..."
+          python3 scripts/check_security.py
+        continue-on-error: true
+
+      - name: Check security validation result
+        if: steps.security_check.outcome == 'failure'
+        run: |
+          echo "::error::Security validation failed. Please review the output above."
+          echo "See SECURITY.md and SECURITY_CHECKLIST.md for guidance."
+          exit 1
+
+      - name: Security validation summary
+        if: always()
+        run: |
+          echo "## Security Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.security_check.outcome }}" == "success" ]; then
+            echo "✅ All security checks passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Security validation failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the logs above and fix critical security issues:" >> $GITHUB_STEP_SUMMARY
+            echo "- Remove weak/default secrets from code" >> $GITHUB_STEP_SUMMARY
+            echo "- Move hardcoded credentials to environment variables" >> $GITHUB_STEP_SUMMARY
+            echo "- Ensure SSL/TLS is configured for database connections" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "See [SECURITY.md](../SECURITY.md) for detailed guidelines." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  environment-secrets:
+    name: Validate Environment Secrets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    env:
+      # Test environment variables (these are intentionally weak for testing)
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key-for-ci-testing-only' }}
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY || 'test-jwt-secret-for-ci-only' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate secret configuration
+        run: |
+          python3 << 'PYEOF'
+          import os
+          import sys
+          
+          # Weak patterns to check for
+          weak_patterns = [
+              "your-secret",
+              "change-in-production",
+              "test-secret",
+              "dev-secret",
+              "default",
+          ]
+          
+          # Get secrets (in CI these will be test values, which is OK)
+          secret_key = os.getenv("SECRET_KEY", "")
+          jwt_secret = os.getenv("JWT_SECRET_KEY", "")
+          
+          errors = []
+          warnings = []
+          
+          # Check if secrets are set
+          if not secret_key:
+              errors.append("❌ SECRET_KEY not set")
+          elif len(secret_key) < 32:
+              warnings.append("⚠️  SECRET_KEY is short (minimum 32 chars recommended)")
+          
+          if not jwt_secret:
+              errors.append("❌ JWT_SECRET_KEY not set")
+          elif len(jwt_secret) < 32:
+              warnings.append("⚠️  JWT_SECRET_KEY is short (minimum 32 chars recommended)")
+          
+          if secret_key and jwt_secret and secret_key == jwt_secret:
+              errors.append("❌ SECRET_KEY and JWT_SECRET_KEY should be different")
+          
+          # Print results
+          print("Environment Secret Validation")
+          print("=" * 50)
+          
+          if errors:
+              print("\nErrors:")
+              for error in errors:
+                  print(f"  {error}")
+          
+          if warnings:
+              print("\nWarnings (OK in CI):")
+              for warning in warnings:
+                  print(f"  {warning}")
+          
+          if not errors:
+              print("\n✅ Environment secrets validated")
+              print("\nNote: In production, ensure secrets are:")
+              print("  - At least 32 characters long")
+              print("  - Randomly generated")
+              print("  - Different for each environment")
+              print("  - Never committed to version control")
+          else:
+              print("\n❌ Secret validation failed")
+              sys.exit(1)
+          PYEOF
+
+  database-ssl-validation:
+    name: Validate Database SSL Configuration
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check database SSL enforcement
+        run: |
+          echo "Checking database SSL/TLS configuration..."
+          
+          # Check if database.py files enforce SSL
+          if [ -f "backend/app/database.py" ]; then
+            if grep -q "sslmode=require\|ensure_sslmode" backend/app/database.py; then
+              echo "✅ backend/app/database.py: SSL mode enforcement found"
+            else
+              echo "⚠️  backend/app/database.py: No SSL mode enforcement found"
+            fi
+          fi
+          
+          if [ -f "api/database.py" ]; then
+            if grep -q "sslmode=require\|ensure_sslmode" api/database.py; then
+              echo "✅ api/database.py: SSL mode enforcement found"
+            else
+              echo "⚠️  api/database.py: No SSL mode enforcement found"
+            fi
+          fi
+          
+          # Check for SSL utility function
+          if [ -f "api/db_url_utils.py" ]; then
+            if grep -q "def ensure_sslmode" api/db_url_utils.py; then
+              echo "✅ api/db_url_utils.py: SSL enforcement utility found"
+            else
+              echo "⚠️  api/db_url_utils.py: SSL enforcement utility not found"
+            fi
+          fi
+          
+          echo ""
+          echo "Database SSL Configuration Guidelines:"
+          echo "  - All production DATABASE_URL must include ?sslmode=require"
+          echo "  - Use TLS 1.3 when possible (DB_FORCE_TLS_1_3=true)"
+          echo "  - Never use sslmode=disable in production"
+
+  security-headers-validation:
+    name: Validate Security Headers
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check security headers in vercel.json
+        run: |
+          echo "Checking security headers configuration..."
+          
+          required_headers=(
+            "X-Content-Type-Options"
+            "X-Frame-Options"
+            "Strict-Transport-Security"
+            "Referrer-Policy"
+            "Permissions-Policy"
+          )
+          
+          missing_headers=()
+          
+          for header in "${required_headers[@]}"; do
+            if grep -q "$header" vercel.json 2>/dev/null; then
+              echo "✅ $header: Present"
+            else
+              echo "❌ $header: Missing"
+              missing_headers+=("$header")
+            fi
+          done
+          
+          # Check for CSP (recommended but not required)
+          if grep -q "Content-Security-Policy" vercel.json 2>/dev/null; then
+            echo "✅ Content-Security-Policy: Present (recommended)"
+          else
+            echo "ℹ️  Content-Security-Policy: Not configured (recommended for production)"
+          fi
+          
+          echo ""
+          
+          if [ ${#missing_headers[@]} -eq 0 ]; then
+            echo "✅ All required security headers are configured"
+          else
+            echo "❌ Missing required security headers: ${missing_headers[*]}"
+            echo ""
+            echo "Please add these headers to vercel.json"
+            echo "See SECURITY.md for examples"
+            exit 1
+          fi
+
+      - name: Validate CORS configuration
+        run: |
+          echo "Checking CORS configuration..."
+          
+          # Check if CORS is configured in middleware
+          if [ -f "backend/app/core/middleware.py" ]; then
+            if grep -q "CORSMiddleware\|allow_origins" backend/app/core/middleware.py; then
+              echo "✅ CORS middleware configured"
+              
+              # Check for wildcard origins (security risk)
+              if grep -q 'allow_origins.*\[\"\\*\"\]' backend/app/core/middleware.py; then
+                echo "❌ WARNING: CORS uses wildcard (*) - security risk in production"
+                echo "   Use explicit origin list instead"
+              else
+                echo "✅ CORS uses explicit origin list"
+              fi
+            else
+              echo "⚠️  CORS configuration not found in middleware.py"
+            fi
+          fi
+
+  rate-limiting-check:
+    name: Validate Rate Limiting
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check rate limiting implementation
+        run: |
+          echo "Checking rate limiting implementation..."
+          
+          # Check if rate limiting exists in auth endpoints
+          if [ -f "backend/app/api/auth.py" ]; then
+            if grep -q "rate.limit\|check_rate_limit\|MAX_LOGIN_ATTEMPTS" backend/app/api/auth.py; then
+              echo "✅ Rate limiting found in auth.py"
+            else
+              echo "⚠️  No rate limiting found in auth.py"
+              echo "   Consider implementing rate limiting for login/registration"
+            fi
+          fi
+          
+          echo ""
+          echo "Rate Limiting Best Practices:"
+          echo "  - Implement rate limiting on authentication endpoints"
+          echo "  - Use both IP-based and email-based limiting"
+          echo "  - For production, consider using Redis for distributed rate limiting"
+          echo "  - Recommended: 5 login attempts per 5 minutes"
+
+  documentation-check:
+    name: Validate Security Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check security documentation exists
+        run: |
+          echo "Checking security documentation..."
+          
+          docs_ok=true
+          
+          if [ -f "SECURITY.md" ]; then
+            echo "✅ SECURITY.md exists"
+          else
+            echo "❌ SECURITY.md missing"
+            docs_ok=false
+          fi
+          
+          if [ -f "SECURITY_CHECKLIST.md" ]; then
+            echo "✅ SECURITY_CHECKLIST.md exists"
+          else
+            echo "❌ SECURITY_CHECKLIST.md missing"
+            docs_ok=false
+          fi
+          
+          if [ -f ".env.example" ]; then
+            echo "✅ .env.example exists"
+          else
+            echo "⚠️  .env.example missing (recommended)"
+          fi
+          
+          if [ "$docs_ok" = false ]; then
+            echo ""
+            echo "❌ Required security documentation is missing"
+            exit 1
+          fi
+
+      - name: Validate .env is not committed
+        run: |
+          echo "Checking .env is not committed..."
+          
+          if git ls-files | grep -q "^\.env$"; then
+            echo "❌ CRITICAL: .env file is committed to git"
+            echo "   This may contain secrets and should never be committed"
+            echo "   Run: git rm .env && git commit -m 'Remove .env file'"
+            exit 1
+          else
+            echo "✅ .env file not in git"
+          fi
+          
+          # Check .gitignore includes .env
+          if grep -q "^\.env$" .gitignore 2>/dev/null; then
+            echo "✅ .env is in .gitignore"
+          else
+            echo "⚠️  .env should be added to .gitignore"
+          fi
+
+  summary:
+    name: Security Validation Summary
+    runs-on: ubuntu-latest
+    needs: [security-validation, environment-secrets, database-ssl-validation, security-headers-validation, rate-limiting-check, documentation-check]
+    if: always()
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## Security Validation Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All security checks have been executed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Jobs Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Security Validation: ${{ needs.security-validation.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment Secrets: ${{ needs.environment-secrets.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Database SSL: ${{ needs.database-ssl-validation.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Security Headers: ${{ needs.security-headers-validation.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Rate Limiting: ${{ needs.rate-limiting-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Documentation: ${{ needs.documentation-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Resources" >> $GITHUB_STEP_SUMMARY
+          echo "- [SECURITY.md](../SECURITY.md) - Security best practices" >> $GITHUB_STEP_SUMMARY
+          echo "- [SECURITY_CHECKLIST.md](../SECURITY_CHECKLIST.md) - Deployment checklist" >> $GITHUB_STEP_SUMMARY

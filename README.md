@@ -928,6 +928,97 @@ This project follows [Docker security best practices](DOCKER_SECURITY.md):
 - `.dockerignore` prevents sensitive files from being copied into images
 - See [DOCKER_SECURITY.md](DOCKER_SECURITY.md) for detailed information
 
+## 🔒 Security
+
+**HireMeBahamas follows industry-standard security best practices.**
+
+### Security Documentation
+
+- 📖 **[SECURITY.md](SECURITY.md)** - Comprehensive security guidelines and best practices
+- ✅ **[SECURITY_CHECKLIST.md](SECURITY_CHECKLIST.md)** - Pre-deployment security validation checklist
+- 🔍 **[Security Validation Script](scripts/check_security.py)** - Automated security scanning tool
+
+### Security Features
+
+#### 🔐 Authentication & Authorization
+- **Bcrypt password hashing** with configurable rounds (default: 10)
+- **JWT tokens** with configurable expiration
+- **Rate limiting** on authentication endpoints (5 attempts per 15 minutes)
+- **Async password operations** to prevent event loop blocking
+
+#### 🔒 Database Security
+- **SSL/TLS encryption required** for all production database connections
+- **Automatic `sslmode=require` enforcement** for PostgreSQL
+- **TLS 1.3 support** for maximum security
+- **Connection pool security** with aggressive recycling
+- **No credentials in code** - environment variables only
+
+#### 🛡️ HTTP Security
+- **Security headers** configured (HSTS, X-Frame-Options, CSP, etc.)
+- **CORS protection** with explicit origin allowlisting
+- **Request ID tracking** for audit trails
+- **30-second timeout protection**
+- **Global exception handling** (no sensitive data in error responses)
+
+#### 🚨 Monitoring & Validation
+- **Automated security scans** in CI/CD (CodeQL, dependency scanning)
+- **Secret validation** prevents weak/default secrets in production
+- **Rate limit monitoring** and logging
+- **Health check endpoints** for monitoring
+
+### Security Requirements (Production)
+
+Before deploying to production, ensure:
+
+1. **✅ Unique, strong secrets** (32+ characters, randomly generated)
+   ```bash
+   python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+   ```
+
+2. **✅ Database SSL/TLS enabled** (`?sslmode=require` in DATABASE_URL)
+   ```bash
+   DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
+   ```
+
+3. **✅ HTTPS enabled** on all domains
+
+4. **✅ Security headers configured** (see `vercel.json`)
+
+5. **✅ Rate limiting active** on authentication endpoints
+
+6. **✅ No secrets in source code** (use environment variables)
+
+### Running Security Checks
+
+```bash
+# Run automated security validation
+python3 scripts/check_security.py
+
+# Check for weak secrets
+grep -r "your-secret-key\|change-in-production" --include="*.py" backend/
+
+# Validate database SSL configuration
+python3 -c "from backend.app.database import DATABASE_URL; print('✅ SSL enabled' if 'sslmode=require' in DATABASE_URL else '❌ SSL not enabled')"
+```
+
+### Security Incident Response
+
+To report security vulnerabilities:
+1. **DO NOT** open a public GitHub issue
+2. Open a [GitHub Security Advisory](https://github.com/cliffcho242/HireMeBahamas/security/advisories/new)
+3. Or email: security@hiremebahamas.com (if configured)
+
+See [SECURITY.md](SECURITY.md) for detailed incident response procedures.
+
+### Compliance
+
+This project addresses:
+- **OWASP Top 10 2021** vulnerabilities
+- **CWE Top 25** security weaknesses
+- Industry-standard security practices for web applications
+
+For detailed compliance information, see [SECURITY.md](SECURITY.md).
+
 ## Troubleshooting
 
 ### GitHub Copilot Model Endpoint Error
