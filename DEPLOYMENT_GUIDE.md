@@ -1,5 +1,25 @@
 # HireMeBahamas Deployment Guide
 
+## 🏥 Pre-Deployment Health Check
+
+**Before deploying, verify your system health:**
+
+```bash
+# Run comprehensive health check
+python scripts/health_check.py --verbose
+
+# Check specific areas
+python scripts/health_check.py --check environment
+python scripts/health_check.py --check database
+```
+
+**Automated Monitoring:**
+- Health checks run automatically daily via GitHub Actions
+- View status: [Health Check Workflow](../../actions/workflows/health-check.yml)
+- ![Health Check Status](https://github.com/cliffcho242/HireMeBahamas/actions/workflows/health-check.yml/badge.svg)
+
+---
+
 ## Phase 1: Web Deployment (DO THIS BEFORE APP STORES)
 
 ### Why Deploy Website First?

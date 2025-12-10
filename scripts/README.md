@@ -2,6 +2,43 @@
 
 This directory contains comprehensive automated installation scripts for the HireMeBahamas platform.
 
+## 🏥 Health & Diagnostics
+
+### `health_check.py` ⭐ NEW!
+**Comprehensive automated health check for all systems**
+
+Monitors database connectivity, environment configuration, file structure, and API endpoints.
+
+```bash
+# Run all checks
+python scripts/health_check.py
+
+# Check specific category
+python scripts/health_check.py --check database
+python scripts/health_check.py --check environment
+python scripts/health_check.py --check api
+
+# Check deployed application
+python scripts/health_check.py --url https://your-app.vercel.app
+
+# Get JSON output (for CI/CD)
+python scripts/health_check.py --format json
+```
+
+**Features:**
+- ✅ Database connectivity and performance testing
+- ✅ Environment variable validation
+- ✅ File structure verification
+- ✅ Remote API endpoint testing
+- ✅ JSON and text output formats
+- ✅ Automated daily runs via GitHub Actions
+- ✅ Auto-creates issues on critical failures
+
+**Documentation:** [docs/HEALTH_CHECK_GUIDE.md](../docs/HEALTH_CHECK_GUIDE.md)
+**Workflow:** [.github/workflows/health-check.yml](../.github/workflows/health-check.yml)
+
+---
+
 ## Quick Start
 
 Choose your platform and run the appropriate script:
