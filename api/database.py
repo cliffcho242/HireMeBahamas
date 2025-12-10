@@ -17,6 +17,8 @@ def get_database_url():
     Note: SQLAlchemy's create_async_engine() automatically handles URL decoding for
     special characters in username/password. No manual decoding is needed.
     """
+    from urllib.parse import urlparse, urlunparse
+    
     db_url = os.getenv("DATABASE_URL", "")
     
     # Strip whitespace from database URL to prevent connection errors
@@ -37,6 +39,28 @@ def get_database_url():
         db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
     elif db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    
+    # Strip whitespace from database name in the URL path
+    # This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
+    try:
+        parsed = urlparse(db_url)
+        if parsed.path:
+            # Strip leading slash and whitespace from database name
+            db_name = parsed.path.lstrip('/').strip()
+            if db_name:
+                # Reconstruct path with cleaned database name
+                new_path = '/' + db_name
+                db_url = urlunparse((
+                    parsed.scheme,
+                    parsed.netloc,
+                    new_path,
+                    parsed.params,
+                    parsed.query,
+                    parsed.fragment
+                ))
+    except Exception:
+        # If URL parsing fails, continue with original URL
+        pass
     
     # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
     db_url = ensure_sslmode(db_url)
