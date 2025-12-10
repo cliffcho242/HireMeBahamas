@@ -86,7 +86,7 @@ jobs:
         image: postgres:15
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: testpassword123
           POSTGRES_DB: test_db
         ports:
           - 5432:5432
@@ -97,7 +97,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+      DATABASE_URL: postgresql+asyncpg://postgres:testpassword123@localhost:5432/test_db
       SECRET_KEY: test-secret-key-for-ci-testing-only
       JWT_SECRET_KEY: test-jwt-secret-for-ci-only
       ENVIRONMENT: test
@@ -177,7 +177,7 @@ jobs:
         image: postgres:15
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: testpassword123
           POSTGRES_DB: test_db
         ports:
           - 5432:5432
@@ -188,7 +188,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+      DATABASE_URL: postgresql://postgres:testpassword123@localhost:5432/test_db
       ENVIRONMENT: test
       RUNTIME_LOG_DIR: /tmp/runtime-logs
 
