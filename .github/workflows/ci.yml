@@ -103,7 +103,6 @@ jobs:
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
-        continue-on-error: false
 
       - name: Annotate Build Failure
         if: failure()
