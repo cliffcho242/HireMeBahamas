@@ -1,0 +1,14 @@
+# HireMeBahamas Connection Diagnostic Tool Dependencies
+# ======================================================
+# 
+# Install with: pip install -r diagnostic/requirements.txt
+#
+
+# HTTP client with retry logic and connection pooling
+requests==2.31.0
+
+# SSL/TLS support
+urllib3==2.1.0
+
+# Optional: For better JSON handling
+# (requests includes json support, so this is optional)
