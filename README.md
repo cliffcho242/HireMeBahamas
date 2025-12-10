@@ -29,6 +29,31 @@ possible system security compromise.
 
 ---
 
+## 📊 **PostgreSQL Log Level Miscategorization on Railway**
+
+**Seeing PostgreSQL startup messages logged as "errors"?**
+
+Railway's managed PostgreSQL database may log normal informational messages (like "database system is ready to accept connections") with "error" level in their log aggregation system. **This is expected behavior and does NOT indicate actual errors.**
+
+**Quick Fix:**
+- 📖 **Explanation**: [RAILWAY_POSTGRES_LOG_LEVEL_FIX.md](./RAILWAY_POSTGRES_LOG_LEVEL_FIX.md)
+- 🔧 **Filter Tool**: `python filter_postgres_logs.py` (automatically corrects log levels)
+- 📋 **Quick Reference**: [POSTGRES_LOG_FILTER_QUICK_REF.md](./POSTGRES_LOG_FILTER_QUICK_REF.md)
+
+**What's happening:**
+- ✅ PostgreSQL uses "LOG" level for informational messages (not errors)
+- ⚠️ Railway's log system may categorize these as "error" level
+- ✅ The database is functioning correctly
+- 🔧 Use the filter tool to correct log levels or suppress benign messages
+
+**Common benign messages (safe to ignore):**
+- "database system is ready to accept connections"
+- "checkpoint starting/complete"
+- "autovacuum launcher started"
+- Query duration and statement logs
+
+---
+
 ## 🏥 **Automated Health Check Pipeline**
 
 **Monitor your deployment health with our comprehensive automated health check system!**
