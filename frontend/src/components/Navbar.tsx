@@ -9,7 +9,8 @@ import {
   BriefcaseIcon,
   PlusIcon,
   Cog6ToothIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { HomeIcon as HomeIconSolid } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
@@ -164,6 +165,16 @@ const Navbar: React.FC = () => {
                           <span>Post Job</span>
                         </Link>
                       )}
+                      {(user?.is_admin || user?.user_type === 'admin') && (
+                        <Link
+                          to="/admin/analytics/users"
+                          className="flex items-center space-x-3 px-4 py-3 text-sm text-blue-600 hover:bg-blue-50"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                        >
+                          <ChartBarIcon className="w-5 h-5" />
+                          <span>User Analytics</span>
+                        </Link>
+                      )}
                       <div className="border-t border-gray-200 my-1"></div>
                       <button
                         onClick={handleLogout}
@@ -257,6 +268,16 @@ const Navbar: React.FC = () => {
                   <UserIcon className="w-5 h-5" />
                   <span>Profile</span>
                 </Link>
+                {(user?.is_admin || user?.user_type === 'admin') && (
+                  <Link
+                    to="/admin/analytics/users"
+                    className="flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <ChartBarIcon className="w-5 h-5" />
+                    <span>User Analytics</span>
+                  </Link>
+                )}
                 <button
                   onClick={() => {
                     handleLogout();

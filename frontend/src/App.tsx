@@ -29,6 +29,7 @@ const PostJob = lazy(() => import('./pages/PostJob'));
 const HireMe = lazy(() => import('./pages/HireMe'));
 const Friends = lazy(() => import('./pages/Users'));
 const UserProfile = lazy(() => import('./pages/UserProfile'));
+const UserAnalytics = lazy(() => import('./pages/UserAnalytics'));
 const Download = lazy(() => import('./pages/Download'));
 const DownloadTest = lazy(() => import('./pages/DownloadTest'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -232,6 +233,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <PostJob />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/analytics/users"
+            element={
+              <ProtectedRoute>
+                <UserAnalytics />
               </ProtectedRoute>
             }
           />
