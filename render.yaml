@@ -1,8 +1,10 @@
 # =============================================================================
-# DEPRECATED: HireMeBahamas Backend - Render Deployment Configuration
+# ⚠️  DEPRECATED: HireMeBahamas Backend - Render Deployment Configuration
 # =============================================================================
 # 
-# ⚠️  THIS FILE IS DEPRECATED - MIGRATION TO VERCEL + RAILWAY COMPLETE
+# ⛔ THIS FILE IS DEPRECATED AND SHOULD NOT BE USED ⛔
+# 
+# ⚠️  MIGRATION TO VERCEL + RAILWAY COMPLETE
 # 
 # See RENDER_TO_VERCEL_MIGRATION.md for the new architecture:
 # - Frontend: Vercel (Edge + Static)
@@ -10,10 +12,19 @@
 # - Database: Railway PostgreSQL
 # - Cost: $0-7/month (vs $25-50/month on Render)
 #
+# ⛔ DO NOT DEPLOY TO RENDER ⛔
 # This file is kept for historical reference only.
-# DO NOT deploy to Render - all services should be deleted.
+# All Render services should be deleted.
+# 
+# If you are seeing errors about DATABASE_URL containing placeholder hostname 'host',
+# it means you are using example values instead of real database credentials.
+# 
+# ✅ NEXT STEPS:
+# 1. See RENDER_TO_VERCEL_MIGRATION.md for complete migration guide
+# 2. For Railway setup: See RAILWAY_DATABASE_SETUP.md
+# 3. For Vercel Postgres: See VERCEL_POSTGRES_SETUP.md
 #
-# OLD CONFIGURATION (for reference):
+# OLD CONFIGURATION (for reference only - DO NOT USE):
 # - Standard plan ($25/mo) with 1GB RAM
 # - Single worker + 180s timeout
 # - Health check at /health with 300s grace period
@@ -99,10 +110,12 @@ services:
       - key: DB_POOL_RECYCLE
         value: "120"
       # DATABASE_URL must be set manually in Render dashboard
+      # ⚠️  DO NOT USE 'host' AS HOSTNAME - Use your actual database hostname!
+      # ⚠️  Get the real connection string from your database provider
       # NUCLEAR FORMAT (URL-encoded spaces and equals):
-      # postgresql://user:pass@host:5432/db?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
+      # postgresql://user:pass@YOUR-DB-HOSTNAME.example.com:5432/db?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
       # Alternative (non-encoded):
-      # postgresql://user:pass@host:5432/db?sslmode=require&options=-c jit=off&connect_timeout=45
+      # postgresql://user:pass@YOUR-DB-HOSTNAME.example.com:5432/db?sslmode=require&options=-c jit=off&connect_timeout=45
     
     # ==========================================================================
     # HEALTH CHECK - Nuclear Settings (2025 Render Edition)
