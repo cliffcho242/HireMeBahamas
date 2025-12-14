@@ -1,11 +1,16 @@
 # ============================================================================
-# RENDER DEPLOYMENT CONFIG — HireMeBahamas Backend (2025 IMMORTAL EDITION)
+# ⛔ DEPRECATED: RENDER DEPLOYMENT CONFIG — HireMeBahamas Backend
 # ============================================================================
-# ⚠️  DEPRECATED: This configuration is for legacy Render deployments only.
+# ⚠️  THIS CONFIGURATION IS DEPRECATED AND SHOULD NOT BE USED
+# ⚠️  
 # ⚠️  CURRENT DEPLOYMENT: Vercel (frontend + serverless backend) + Railway PostgreSQL
 # ⚠️  
 # ⚠️  If you're setting up HireMeBahamas, use Vercel deployment instead.
 # ⚠️  See: DEPLOYMENT_CONNECTION_GUIDE.md or START_HERE_DEPLOYMENT.md
+# ⚠️  
+# ⚠️  If you are seeing errors about DATABASE_URL containing placeholder hostname 'host',
+# ⚠️  it means you are using example values instead of real database credentials.
+# ⚠️  Please migrate to Railway/Vercel as documented in the deployment guides.
 # ⚠️  
 # ⚠️  This file is kept for reference and backward compatibility only.
 # ============================================================================
@@ -77,7 +82,8 @@ services:
       
       # Database Configuration
       # Set DATABASE_URL manually in Render dashboard:
-      # postgresql://user:pass@host:5432/db?sslmode=require&connect_timeout=30
+      # ⚠️  DO NOT USE 'host' AS HOSTNAME - Use your actual database hostname!
+      # postgresql://user:pass@YOUR-DB-HOSTNAME.example.com:5432/db?sslmode=require&connect_timeout=30
       - key: DB_POOL_SIZE
         value: "5"
       - key: DB_POOL_MAX_OVERFLOW
