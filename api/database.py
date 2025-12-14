@@ -55,14 +55,14 @@ def get_database_url():
         if not test_parse.netloc:
             raise ValueError(
                 f"Invalid DATABASE_URL: missing host/port information. "
-                f"Format should be: postgresql://user:password@hostname:5432/database"
+                f"Please check your environment variables. See SECURITY.md for proper format."
             )
         
         # Check if hostname is present (netloc could be just ":port" which is invalid)
         if test_parse.netloc.startswith(':') or '@:' in test_parse.netloc:
             raise ValueError(
                 f"Invalid DATABASE_URL: missing hostname. "
-                f"Format should be: postgresql://user:password@hostname:5432/database"
+                f"Please check your environment variables. See SECURITY.md for proper format."
             )
             
     except ValueError:
@@ -72,7 +72,7 @@ def get_database_url():
         # Catch any other parsing errors and provide helpful message
         raise ValueError(
             f"Invalid DATABASE_URL format: {str(e)}. "
-            f"Expected format: postgresql://user:password@hostname:5432/database"
+            f"Please check your environment variables. See SECURITY.md for proper format."
         )
     
     # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
@@ -160,14 +160,14 @@ def get_engine():
                     f"Invalid DATABASE_URL format detected by asyncpg driver. "
                     f"The connection string doesn't match the expected PostgreSQL format. "
                     f"Please check your DATABASE_URL environment variable. "
-                    f"Expected format: postgresql://username:password@hostname:5432/database?sslmode=require"
+                    f"See SECURITY.md for proper format."
                 ) from e
             
             # Check for other common asyncpg errors
             if "invalid" in error_msg and "dsn" in error_msg:
                 raise ValueError(
                     f"Invalid PostgreSQL DSN (Data Source Name) in DATABASE_URL. "
-                    f"Please verify the format: postgresql://username:password@hostname:5432/database"
+                    f"Please check your environment variables. See SECURITY.md for proper format."
                 ) from e
             
             # For other errors, provide context but preserve original error

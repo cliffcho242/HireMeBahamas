@@ -347,8 +347,8 @@ if db_engine is None and HAS_DB and DATABASE_URL:
     except ValueError as ve:
         # ValueError indicates configuration issue - log helpful message
         logger.error(f"❌ DATABASE_URL configuration error: {ve}")
-        logger.error("Please check your DATABASE_URL environment variable.")
-        logger.error("Expected format: postgresql://username:password@hostname:5432/database?sslmode=require")
+        logger.error("Invalid DATABASE_URL format. Please check your environment variables.")
+        logger.error("DATABASE_URL validation failed. See SECURITY.md for proper format.")
         db_engine = None
         async_session_maker = None
     except Exception as e:
@@ -357,12 +357,13 @@ if db_engine is None and HAS_DB and DATABASE_URL:
         if "did not match" in error_msg and "pattern" in error_msg:
             logger.error(f"❌ DATABASE_URL format error: The connection string doesn't match PostgreSQL format")
             logger.error(f"Error details: {e}")
-            logger.error("Expected format: postgresql://username:password@hostname:5432/database?sslmode=require")
+            logger.error("Invalid DATABASE_URL format. Please check your environment variables.")
+            logger.error("DATABASE_URL validation failed. See SECURITY.md for proper format.")
             logger.error("Common issues:")
-            logger.error("  1. Missing hostname (check for patterns like '@:5432' or missing '@')")
-            logger.error("  2. Invalid characters in username or password")
+            logger.error("  1. Missing hostname")
+            logger.error("  2. Invalid characters in connection string")
             logger.error("  3. Extra whitespace or newlines in the URL")
-            logger.error("  4. Missing required parts (username, host, or database name)")
+            logger.error("  4. Missing required connection string components")
         else:
             logger.error(f"❌ Database initialization failed: {e}")
             if is_debug_mode():
