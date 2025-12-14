@@ -18,6 +18,8 @@ export interface User {
   profileImage?: string;
   profile_picture?: string;
   is_active: boolean;
+  is_admin?: boolean;
+  last_login?: string;
   created_at: string;
   updated_at: string;
   is_following?: boolean; // Whether current user follows this user

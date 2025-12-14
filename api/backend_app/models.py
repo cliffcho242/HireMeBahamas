@@ -45,6 +45,7 @@ class User(Base):
     # OAuth fields
     oauth_provider = Column(String(50))  # 'google', 'apple', or None for regular accounts
     oauth_provider_id = Column(String(255))  # ID from OAuth provider
+    last_login = Column(DateTime(timezone=True), nullable=True, index=True)  # Track last successful login
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -317,4 +318,21 @@ class PostComment(Base):
 
     # Relationships
     post = relationship("Post", back_populates="comments")
+    user = relationship("User")
+
+
+class LoginAttempt(Base):
+    """Track login attempts for security monitoring and analytics"""
+    __tablename__ = "login_attempts"
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Nullable for failed attempts with unknown user
+    email_attempted = Column(String(255), nullable=False, index=True)  # Track attempted email
+    ip_address = Column(String(45), nullable=True)  # IPv4 or IPv6
+    success = Column(Boolean, nullable=False, default=False)
+    failure_reason = Column(String(255), nullable=True)  # Error message for failed attempts
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    # Relationships
     user = relationship("User")

@@ -189,7 +189,7 @@ except ImportError:
     # Logger not available yet, will log later
 
 # Import APIs
-from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
+from .api import analytics, auth, debug, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
 from .database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
 from .core.metrics import get_metrics_response, set_app_info
 from .core.security import prewarm_bcrypt_async
@@ -696,7 +696,9 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
 
 
 # Include routers with /api prefix to match frontend expectations
+app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+app.include_router(debug.router, prefix="/api/debug", tags=["debug"])
 app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
 app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
