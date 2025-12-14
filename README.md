@@ -562,13 +562,25 @@ sudo apt-get install -y nodejs
 ```
 
 2. **Clone and Setup**
-```bash
-cd HireMeBahamas
-pip install -r requirements.txt
-cd frontend && npm install
-```
 
-2. **Verify Installation**
+   **Option A: Using pip (traditional method)**
+   ```bash
+   cd HireMeBahamas
+   pip install -r requirements.txt
+   cd frontend && npm install
+   ```
+
+   **Option B: Using Poetry (recommended for dependency management)**
+   ```bash
+   cd HireMeBahamas
+   pip install poetry
+   poetry install
+   cd frontend && npm install
+   ```
+   
+   📖 **See [POETRY_SETUP.md](POETRY_SETUP.md)** for complete Poetry usage instructions.
+
+3. **Verify Installation**
    
    To ensure all authentication dependencies are installed correctly:
    ```bash
@@ -583,7 +595,7 @@ cd frontend && npm install
    - ✓ All dependencies are installed and working!
    - ✓ Users can sign in and sign out successfully.
 
-3. **Database Setup**
+4. **Database Setup**
 
    **For Development (with sample data):**
    ```bash

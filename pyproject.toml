@@ -1,24 +1,57 @@
 # Python project configuration for HireMeBahamas Backend
-# Dependencies are managed in requirements.txt
+# Dependencies managed with Poetry
 
-[build-system]
-requires = ["setuptools>=61.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "hiremebahamas-backend"
 version = "2.0.0"
-requires-python = ">=3.12"
 description = "HireMeBahamas Vercel Serverless Backend - Immortal Edition"
+authors = ["HireMeBahamas Team"]
+readme = "README.md"
+packages = [{include = "api"}, {include = "backend"}]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["api*", "backend*"]
-exclude = ["frontend*", "admin[-_]panel*", "scripts*", "*.tests", "*.tests.*", "tests.*", "tests", "docker*"]
+[tool.poetry.dependencies]
+python = "^3.11"
+gunicorn = "^21.2.0"
+flask = "^3.1.0"
+flask-cors = "^5.0.0"
+flask-caching = "^2.3.0"
+flask-limiter = "^3.8.0"
+fastapi = "^0.115.6"
+uvicorn = {extras = ["standard"], version = "^0.32.0"}
+mangum = "^0.19.0"
+pydantic = "^2.10.3"
+pydantic-settings = "^2.7.0"
+anyio = "^4.7.0"
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.44"}
+asyncpg = "^0.30.0"
+psycopg2-binary = "^2.9.11"
+python-jose = {extras = ["cryptography"], version = "^3.5.0"}
+cryptography = "^43.0.3"
+ecdsa = "^0.19.0"
+rsa = "^4.9"
+pyjwt = "^2.9.0"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+bcrypt = "^4.1.2"
+httpx = "^0.28.1"
+python-dotenv = "^1.2.1"
+python-decouple = "^3.8"
+email-validator = "^2.3.0"
+python-multipart = "^0.0.20"
+aiofiles = "^25.1.0"
+pillow = "^12.0.0"
+cloudinary = "^1.44.1"
+redis = "^7.1.0"
+hiredis = "^3.1.0"
+authlib = "^1.6.5"
+python-socketio = "^5.15.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 88
-target-version = ['py312']
+target-version = ['py311']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
