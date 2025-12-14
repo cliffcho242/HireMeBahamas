@@ -9,7 +9,7 @@
 # Core Framework & Server
 fastapi==0.115.0
 uvicorn[standard]==0.31.0
-gunicorn==22.0.0
+gunicorn==23.0.0
 
 # Database - NUCLEAR OPTION: psycopg[binary] instead of asyncpg
 sqlalchemy[asyncio]==2.0.35
