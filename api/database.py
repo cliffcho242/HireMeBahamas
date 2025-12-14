@@ -78,9 +78,12 @@ def get_database_url():
         
         hostname = test_parse.hostname
         if hostname and hostname.lower() in PLACEHOLDER_HOSTS:
-            raise ValueError(
-                f"DATABASE_URL contains placeholder hostname '{hostname}'. "
+            # Log warning but don't raise - allow the app to start so health checks can report the issue
+            # This prevents crashes on Render and other platforms while still alerting about the problem
+            logger.warning(
+                f"⚠️  DATABASE_URL contains placeholder hostname '{hostname}'. "
                 f"Please replace it with your actual database hostname. "
+                f"Database connections will likely fail. "
                 f"For Railway: copy DATABASE_PRIVATE_URL or DATABASE_URL from your project variables. "
                 f"For Vercel Postgres: get the connection string from Storage → Postgres in your dashboard. "
                 f"For other providers: check your database dashboard for connection details."
