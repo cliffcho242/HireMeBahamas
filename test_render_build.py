@@ -41,7 +41,7 @@ def main():
         ("grep -q 'gunicorn==23.0.0' requirements.txt", "Verify gunicorn in requirements.txt"),
         ("grep -q 'bash build.sh' render.yaml", "Verify render.yaml uses build.sh"),
         ("test -f .render-buildpacks.json", "Verify .render-buildpacks.json exists"),
-        ("which gunicorn", "Check if gunicorn is installed"),
+        ("command -v gunicorn", "Check if gunicorn is installed"),
         ("gunicorn --version", "Verify gunicorn version"),
         ("gunicorn --check-config final_backend_postgresql:application --config gunicorn.conf.py", 
          "Validate application configuration"),

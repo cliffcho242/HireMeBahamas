@@ -25,7 +25,7 @@ pip install --only-binary=:all: -r requirements.txt
 
 # Verify gunicorn is installed
 echo "✅ Verifying gunicorn installation..."
-if ! command -v gunicorn >/dev/null 2>&1; then
+if ! command -v gunicorn > /dev/null 2>&1; then
     echo "❌ ERROR: gunicorn not found after installation!"
     exit 1
 fi
