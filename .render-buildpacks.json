@@ -1,0 +1,8 @@
+{
+  "buildpacks": [
+    {
+      "name": "python",
+      "buildCommand": "bash build.sh"
+    }
+  ]
+}
