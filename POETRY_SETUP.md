@@ -103,13 +103,26 @@ See `pyproject.toml` for the complete dependency list.
 
 ### Railway Deployment
 
-Railway automatically detects `pyproject.toml` and `poetry.lock`. If you need to use pip instead, you can still use the existing `requirements.txt` file.
+Railway automatically detects `pyproject.toml` and `poetry.lock`. The build command should be:
+```bash
+# For production (recommended - installs only main dependencies)
+poetry install --only=main
+
+# Or with legacy flag for older Poetry versions
+poetry install --no-dev
+```
+
+If you need to use pip instead, you can still use the existing `requirements.txt` file.
 
 ### Render Deployment
 
 Render recommends Poetry for Python projects. The build command should be:
 ```bash
-poetry install
+# For production (recommended - installs only main dependencies)
+poetry install --only=main
+
+# Or with legacy flag for older Poetry versions
+poetry install --no-dev
 ```
 
 And the start command:
