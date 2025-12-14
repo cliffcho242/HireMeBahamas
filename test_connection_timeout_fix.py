@@ -34,8 +34,10 @@ def test_api_database_timeout():
         try:
             with open('api/database.py', 'r') as f:
                 content = f.read()
-                # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
-                pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
+                # Match both patterns:
+                # 1. Variable assignment: timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "45"))
+                # 2. Direct usage: os.getenv("DB_CONNECT_TIMEOUT", "45")
+                pattern = r'(int\s*\(\s*)?os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
                 assert re.search(pattern, content), \
                     "api/database.py should default to 45 seconds"
         except FileNotFoundError:
@@ -58,8 +60,10 @@ def test_backend_database_timeout():
     try:
         with open('backend/app/database.py', 'r') as f:
             content = f.read()
-            # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
-            pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
+            # Match both patterns:
+            # 1. Variable assignment: TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "45"))
+            # 2. Direct usage: os.getenv("DB_CONNECT_TIMEOUT", "45")
+            pattern = r'(int\s*\(\s*)?os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
             assert re.search(pattern, content), \
                 "backend/app/database.py should default to 45 seconds"
     except FileNotFoundError:
@@ -75,8 +79,10 @@ def test_backend_app_database_timeout():
     try:
         with open('api/backend_app/database.py', 'r') as f:
             content = f.read()
-            # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
-            pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
+            # Match both patterns:
+            # 1. Variable assignment: TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "45"))
+            # 2. Direct usage: os.getenv("DB_CONNECT_TIMEOUT", "45")
+            pattern = r'(int\s*\(\s*)?os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
             assert re.search(pattern, content), \
                 "api/backend_app/database.py should default to 45 seconds"
     except FileNotFoundError:
@@ -112,8 +118,10 @@ def test_no_10_second_defaults():
         'api/backend_app/database.py'
     ]
     
-    # Pattern to match: os.getenv("DB_CONNECT_TIMEOUT", "10")
-    old_timeout_pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']10["\']\s*\)'
+    # Pattern to match both:
+    # 1. Variable assignment: timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
+    # 2. Direct usage: os.getenv("DB_CONNECT_TIMEOUT", "10")
+    old_timeout_pattern = r'(int\s*\(\s*)?os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']10["\']\s*\)'
     
     for filepath in database_files:
         try:
