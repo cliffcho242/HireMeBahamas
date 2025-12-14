@@ -15,12 +15,15 @@ def run_command(cmd, description):
     print(f"Command: {cmd}")
     print(f"{'=' * 60}")
     
+    # Use the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
     result = subprocess.run(
         cmd,
         shell=True,
         capture_output=True,
         text=True,
-        cwd="/home/runner/work/HireMeBahamas/HireMeBahamas"
+        cwd=script_dir
     )
     
     print(result.stdout)
@@ -40,7 +43,7 @@ def main():
         ("test -f .render-buildpacks.json", "Verify .render-buildpacks.json exists"),
         ("which gunicorn", "Check if gunicorn is installed"),
         ("gunicorn --version", "Verify gunicorn version"),
-        ("gunicorn --check-config final_backend_postgresql:application --config gunicorn.conf.py 2>&1 | head -5", 
+        ("gunicorn --check-config final_backend_postgresql:application --config gunicorn.conf.py", 
          "Validate application configuration"),
     ]
     

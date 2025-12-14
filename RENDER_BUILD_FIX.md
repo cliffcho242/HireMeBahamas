@@ -176,13 +176,20 @@ export PATH="/opt/render/project/src/.venv/bin:$PATH" && gunicorn final_backend_
 ✅ **Committed**: Changes pushed to repository
 ⏳ **Pending**: Deploy to Render to verify in production
 
-## Notes
+## Legacy Deployment Note
 
-**Important**: According to the project documentation, Render deployment is **deprecated** in favor of:
+This fix is provided for **backward compatibility** and **legacy Render deployments**.
+
+**Recommended Architecture** (for new deployments):
 - Frontend: Vercel
-- Backend: Railway
+- Backend: Railway  
 - Database: Railway PostgreSQL
 
 See `RENDER_TO_VERCEL_MIGRATION.md` for the recommended deployment architecture.
 
-However, if you need to use Render, this fix will resolve the build issues.
+**Use this Render fix if:**
+- You have an existing Render deployment
+- You need to maintain Render for specific reasons
+- You're troubleshooting Render build issues
+
+The fix provided here is fully supported and will resolve Render build issues.

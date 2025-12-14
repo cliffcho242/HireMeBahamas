@@ -154,13 +154,18 @@ curl https://your-app.onrender.com/health
 - Migration guide: `RENDER_TO_VERCEL_MIGRATION.md`
 - Render Python docs: https://render.com/docs/deploy-python
 
-## ⚠️ Important Note
+## 📌 Deployment Architecture Note
 
-Render deployment is **deprecated** for this project. The recommended stack is:
+**This guide is for Render deployments.** For new projects, the recommended architecture is:
 - **Frontend**: Vercel
 - **Backend**: Railway
 - **Database**: Railway PostgreSQL
 
-See `RENDER_TO_VERCEL_MIGRATION.md` for migration instructions.
+See `RENDER_TO_VERCEL_MIGRATION.md` for the recommended setup.
 
-Use Render only if you have a specific reason to do so.
+**Use this guide if:**
+- You have an existing Render deployment
+- You're maintaining a legacy Render service
+- You specifically need to deploy to Render
+
+This fix is fully supported and will work correctly on Render.
