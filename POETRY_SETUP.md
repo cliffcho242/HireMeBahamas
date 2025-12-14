@@ -92,23 +92,42 @@ poetry show package-name
 
 The project includes:
 - **Python**: ^3.11 (compatible with 3.11+)
-- **Gunicorn**: ^21.2.0 (WSGI HTTP Server for production)
+- **Gunicorn**: ^23.0.0 (HTTP Server for production deployments)
 - All existing dependencies from requirements.txt
 
 See `pyproject.toml` for the complete dependency list.
+
+> **Important**: Gunicorn is a critical dependency for production deployments on Render and Railway. When using Poetry, ensure `poetry install` is run during the build phase to properly install gunicorn from `pyproject.toml`.
 
 ## Deployment
 
 ### Railway Deployment
 
-Railway automatically detects `pyproject.toml` and `poetry.lock`. If you need to use pip instead, you can still use the existing `requirements.txt` file.
+Railway automatically detects `pyproject.toml` and `poetry.lock`. The build command should be:
+```bash
+# For production (Poetry 1.2.0+)
+poetry install --only=main
+
+# For older Poetry versions (< 1.2.0), use:
+poetry install --no-dev
+```
+
+**Note**: The `--no-dev` flag is deprecated in Poetry 1.2.0+. Use `--only=main` for modern Poetry installations.
+
+If you need to use pip instead, you can still use the existing `requirements.txt` file.
 
 ### Render Deployment
 
 Render recommends Poetry for Python projects. The build command should be:
 ```bash
-poetry install
+# For production (Poetry 1.2.0+)
+poetry install --only=main
+
+# For older Poetry versions (< 1.2.0), use:
+poetry install --no-dev
 ```
+
+**Note**: The `--no-dev` flag is deprecated in Poetry 1.2.0+. Use `--only=main` for modern Poetry installations.
 
 And the start command:
 ```bash
