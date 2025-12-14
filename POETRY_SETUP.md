@@ -92,7 +92,7 @@ poetry show package-name
 
 The project includes:
 - **Python**: ^3.11 (compatible with 3.11+)
-- **Gunicorn**: ^23.0.0 (WSGI HTTP Server for production)
+- **Gunicorn**: ^23.0.0 (HTTP Server for production deployments)
 - All existing dependencies from requirements.txt
 
 See `pyproject.toml` for the complete dependency list.
