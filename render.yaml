@@ -60,7 +60,8 @@ services:
     # ============================================================================
     # MASTERMIND FIX 2025 — RENDER BUILD COMMAND (COPY-PASTE EXACTLY)
     # ============================================================================
-    buildCommand: pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r requirements.txt
+    # Use build script to avoid Poetry auto-detection issues with pyproject.toml
+    buildCommand: bash build.sh
     
     # ==========================================================================
     # START COMMAND - Nuclear Configuration
