@@ -19,10 +19,12 @@
 ### Files Required
 
 Make sure these files exist in your repository:
-- ✅ `build.sh` (executable)
+- ✅ `build.sh` (executable permissions already set)
 - ✅ `requirements.txt` (contains gunicorn==23.0.0)
 - ✅ `gunicorn.conf.py`
 - ✅ `final_backend_postgresql.py`
+
+**Note**: `build.sh` is committed with executable permissions. No need to run `chmod +x`.
 
 ### Verify Files
 

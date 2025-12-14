@@ -25,10 +25,10 @@ We've implemented a dedicated `build.sh` script that explicitly uses pip to inst
 
 ### Files Modified/Created
 
-1. **build.sh** - New build script that explicitly uses pip
+1. **build.sh** - New build script that explicitly uses pip (executable permissions set)
 2. **render.yaml** - Updated to use `bash build.sh` as build command
 3. **api/render.yaml** - Updated for consistency
-4. **.render-buildpacks.json** - Fallback configuration to force pip usage
+4. **.render-buildpacks.json** - Forces Render to use Python buildpack instead of Poetry
 
 ## Deployment Instructions
 
@@ -72,6 +72,22 @@ If you're configuring through the Render dashboard:
    - `SECRET_KEY` (generate a secure random key)
 
 ## How the Fix Works
+
+### .render-buildpacks.json
+
+This file tells Render to use the standard Python buildpack (pip) instead of auto-detecting Poetry:
+
+```json
+{
+  "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-python"
+    }
+  ]
+}
+```
+
+This ensures Render uses pip for dependency management, even with pyproject.toml present.
 
 ### build.sh Script
 
@@ -138,9 +154,10 @@ However, this is **not recommended** as the file contains useful build configura
 ### Issue: Build still fails with "gunicorn: command not found"
 
 **Solution**: Verify that:
-1. `build.sh` has execute permissions: `chmod +x build.sh`
+1. `build.sh` is committed with execute permissions (already set in repository)
 2. `requirements.txt` contains `gunicorn==23.0.0`
 3. Build command in Render dashboard is exactly: `bash build.sh`
+4. If still failing, check Render build logs for Poetry-related messages
 
 ### Issue: "bash: build.sh: No such file or directory"
 
