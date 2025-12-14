@@ -19,7 +19,7 @@ from app.core.security import (
 )
 from app.core.upload import upload_image
 from app.database import get_db
-from app.models import User
+from app.models import User, LoginAttempt
 from app.schemas.auth import (
     OAuthLogin,
     PasswordChange,
@@ -83,7 +83,7 @@ def check_rate_limit(identifier: str) -> bool:
 
 
 def record_login_attempt(identifier: str, success: bool):
-    """Record a login attempt
+    """Record a login attempt in memory for rate limiting
     
     Args:
         identifier: IP address or email
@@ -102,6 +102,40 @@ def record_login_attempt(identifier: str, success: bool):
                 login_attempts[identifier] = (attempts + 1, lockout_until)
             else:
                 login_attempts[identifier] = (1, None)
+
+
+async def record_login_attempt_db(
+    db: AsyncSession,
+    email: str,
+    user_id: Optional[int],
+    ip_address: Optional[str],
+    success: bool,
+    failure_reason: Optional[str] = None
+):
+    """Record a login attempt in the database for analytics
+    
+    Args:
+        db: Database session
+        email: Email attempted
+        user_id: User ID if user exists
+        ip_address: Client IP address
+        success: Whether login was successful
+        failure_reason: Reason for failure if unsuccessful
+    """
+    try:
+        attempt = LoginAttempt(
+            user_id=user_id,
+            email_attempted=email,
+            ip_address=ip_address,
+            success=success,
+            failure_reason=failure_reason
+        )
+        db.add(attempt)
+        await db.commit()
+    except Exception as e:
+        # Don't fail the request if logging fails
+        logger.error(f"Failed to record login attempt in database: {e}")
+        await db.rollback()
 
 
 # Helper function to get current user
@@ -286,6 +320,10 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
         )
         record_login_attempt(client_ip, False)
         record_login_attempt(user_data.email, False)
+        # Record in database for analytics
+        await record_login_attempt_db(
+            db, user_data.email, None, client_ip, False, "User not found"
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -311,6 +349,10 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
         )
         record_login_attempt(client_ip, False)
         record_login_attempt(user_data.email, False)
+        # Record in database for analytics
+        await record_login_attempt_db(
+            db, user_data.email, user.id, client_ip, False, "OAuth user attempting password login"
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="This account uses social login. Please sign in with Google or Apple.",
@@ -333,6 +375,10 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
         # Treat timeout as failed authentication for security
         record_login_attempt(client_ip, False)
         record_login_attempt(user_data.email, False)
+        # Record in database for analytics
+        await record_login_attempt_db(
+            db, user_data.email, user.id, client_ip, False, "Password verification timeout"
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication service timeout. Please try again.",
@@ -351,6 +397,10 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
         )
         record_login_attempt(client_ip, False)
         record_login_attempt(user_data.email, False)
+        # Record in database for analytics
+        await record_login_attempt_db(
+            db, user_data.email, user.id, client_ip, False, "Invalid password"
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -363,6 +413,10 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
         )
         record_login_attempt(client_ip, False)
         record_login_attempt(user_data.email, False)
+        # Record in database for analytics
+        await record_login_attempt_db(
+            db, user_data.email, user.id, client_ip, False, "Account is deactivated"
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated"
         )
@@ -379,6 +433,15 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     # Reset rate limit counters on successful login
     record_login_attempt(client_ip, True)
     record_login_attempt(user_data.email, True)
+    
+    # Update last_login timestamp
+    user.last_login = datetime.utcnow()
+    await db.commit()
+    
+    # Record successful login in database for analytics
+    await record_login_attempt_db(
+        db, user_data.email, user.id, client_ip, True, None
+    )
     
     # Calculate total login time
     total_login_ms = int((time.time() - login_start_time) * 1000)
@@ -670,6 +733,11 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
             await db.refresh(user)
             logger.info(f"New user created via Google OAuth: {email} (user_id={user.id})")
         
+        # Update last_login timestamp
+        user.last_login = datetime.utcnow()
+        await db.commit()
+        await db.refresh(user)
+        
         # Create access token
         access_token = create_access_token(data={"sub": str(user.id)})
         
@@ -766,6 +834,11 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
             await db.commit()
             await db.refresh(user)
             logger.info(f"New user created via Apple OAuth: {email} (user_id={user.id})")
+        
+        # Update last_login timestamp
+        user.last_login = datetime.utcnow()
+        await db.commit()
+        await db.refresh(user)
         
         # Create access token
         access_token = create_access_token(data={"sub": str(user.id)})
