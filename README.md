@@ -95,6 +95,55 @@ python scripts/health_check.py --format json
 
 ---
 
+## 🔍 **Comprehensive Deployment Status Checker**
+
+**NEW! Diagnose all deployment issues with one comprehensive command!**
+
+This tool checks everything preventing your app from being fully online:
+
+```bash
+# Check local environment
+python scripts/check_deployment_status.py
+
+# Check deployed application  
+python scripts/check_deployment_status.py --url https://your-app.vercel.app
+
+# Show detailed fix instructions
+python scripts/check_deployment_status.py --url https://your-app.vercel.app --fix
+
+# Get JSON output (for CI/CD)
+python scripts/check_deployment_status.py --url https://your-app.vercel.app --json
+
+# Using npm script
+npm run check:deployment
+```
+
+**What it checks:**
+- 🌐 **Platform Detection:** Vercel, Railway, or other platforms
+- 📱 **Frontend Health:** Accessibility, React app loading, static assets
+- 🔧 **Backend API:** /api/health, /api/status, /api/ready endpoints
+- 💾 **Database:** Connection, DATABASE_URL validation, pattern matching
+- 🔐 **Environment:** Required variables (DATABASE_URL, SECRET_KEY, JWT_SECRET_KEY)
+- ⚙️ **Configuration:** vercel.json, railway.json validation
+
+**Features:**
+- 📊 Beautiful dashboard-style output with emoji indicators
+- 🚨 Critical issues section with root cause analysis
+- 📝 Prioritized action items with step-by-step fixes
+- 🎨 Color-coded status (green/yellow/red)
+- 💡 Specific fixes for "string did not match expected pattern" error
+- 🔍 Verbose mode for debugging
+- 📦 JSON output for automation
+
+**Common Issues Diagnosed:**
+- ❌ DATABASE_URL missing database name → Shows exact fix
+- ❌ Backend returning 500 errors → Identifies configuration issues
+- ❌ "The string did not match the expected pattern" → Explains DATABASE_URL format
+- ⚠️ Missing SSL mode in DATABASE_URL
+- ⚠️ Weak or default secret keys
+
+---
+
 ## 🔍 **Vercel Connection Diagnostic Tool**
 
 **Quickly diagnose deployment issues with our automated diagnostic tool!**
