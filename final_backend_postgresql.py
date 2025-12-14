@@ -986,42 +986,47 @@ if USE_POSTGRESQL:
     
     hostname_lower = DB_CONFIG["host"].lower() if DB_CONFIG["host"] else ""
     if hostname_lower in PLACEHOLDER_HOSTS:
-        print("❌" * 50)
-        print(f"❌ DATABASE_URL CONFIGURATION ERROR")
-        print(f"❌")
-        print(f"❌ Hostname '{DB_CONFIG['host']}' appears to be a placeholder value!")
-        print(f"❌")
-        print(f"❌ Common placeholder hostnames that need to be replaced:")
-        print(f"❌   - 'host' → Your actual database hostname")
-        print(f"❌   - 'hostname' → Your actual database hostname")
-        print(f"❌   - 'your-host' → Your actual database hostname")
-        print(f"❌")
-        print(f"❌ Where to find your real DATABASE_URL:")
-        print(f"❌")
-        print(f"❌ For Railway:")
-        print(f"❌   1. Go to your Railway project dashboard")
-        print(f"❌   2. Click on your PostgreSQL service")
-        print(f"❌   3. Go to 'Variables' tab")
-        print(f"❌   4. Copy DATABASE_PRIVATE_URL or DATABASE_URL")
-        print(f"❌   5. Set it in your .env file or environment variables")
-        print(f"❌")
-        print(f"❌ For Vercel Postgres:")
-        print(f"❌   1. Go to Vercel Dashboard → Storage → Postgres")
-        print(f"❌   2. Click on your database")
-        print(f"❌   3. Copy the connection string")
-        print(f"❌   4. Set DATABASE_URL in your .env file")
-        print(f"❌")
-        print(f"❌ For other providers:")
-        print(f"❌   - Check your database provider's dashboard for connection details")
-        print(f"❌   - Replace placeholder values with actual connection information")
-        print(f"❌")
-        print(f"❌ Current DATABASE_URL: {DATABASE_URL[:50]}...")
-        print("❌" * 50)
-        raise ValueError(
+        # Set warning instead of crashing - allows app to start and report via health endpoint
+        DATABASE_CONFIG_WARNING = (
             f"DATABASE_URL contains placeholder hostname '{DB_CONFIG['host']}'. "
-            f"Please replace it with your actual database hostname. "
-            f"See error message above for instructions on finding your real DATABASE_URL."
+            f"Please replace it with your actual database hostname."
         )
+        print("⚠️" * 50)
+        print(f"⚠️  WARNING: DATABASE_URL CONFIGURATION ERROR")
+        print(f"⚠️")
+        print(f"⚠️  Hostname '{DB_CONFIG['host']}' appears to be a placeholder value!")
+        print(f"⚠️")
+        print(f"⚠️  Common placeholder hostnames that need to be replaced:")
+        print(f"⚠️    - 'host' → Your actual database hostname")
+        print(f"⚠️    - 'hostname' → Your actual database hostname")
+        print(f"⚠️    - 'your-host' → Your actual database hostname")
+        print(f"⚠️")
+        print(f"⚠️  Where to find your real DATABASE_URL:")
+        print(f"⚠️")
+        print(f"⚠️  For Railway:")
+        print(f"⚠️    1. Go to your Railway project dashboard")
+        print(f"⚠️    2. Click on your PostgreSQL service")
+        print(f"⚠️    3. Go to 'Variables' tab")
+        print(f"⚠️    4. Copy DATABASE_PRIVATE_URL or DATABASE_URL")
+        print(f"⚠️    5. Set it in your .env file or environment variables")
+        print(f"⚠️")
+        print(f"⚠️  For Vercel Postgres:")
+        print(f"⚠️    1. Go to Vercel Dashboard → Storage → Postgres")
+        print(f"⚠️    2. Click on your database")
+        print(f"⚠️    3. Copy the connection string")
+        print(f"⚠️    4. Set DATABASE_URL in your .env file")
+        print(f"⚠️")
+        print(f"⚠️  For other providers:")
+        print(f"⚠️    - Check your database provider's dashboard for connection details")
+        print(f"⚠️    - Replace placeholder values with actual connection information")
+        print(f"⚠️")
+        print(f"⚠️  Current DATABASE_URL: {DATABASE_URL[:50]}...")
+        print(f"⚠️")
+        print(f"⚠️  The application will start but database connections will fail.")
+        print(f"⚠️  Check the /health or /api/health endpoint for status.")
+        print("⚠️" * 50)
+        # Don't raise an exception - allow the app to start so health check can report the issue
+        # This prevents crashes on Render and other platforms while still warning about the issue
 
     print(
         f"✅ Database config parsed: {DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']} "
