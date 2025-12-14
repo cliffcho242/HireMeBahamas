@@ -9,6 +9,7 @@ This test verifies that:
 
 import os
 import sys
+import re
 
 
 def test_api_database_timeout():
@@ -29,10 +30,12 @@ def test_api_database_timeout():
         # by checking the expected behavior in the code
         print("✓ Test 1: Testing api/database.py default timeout...")
         
-        # Check that the code uses 45 as default
+        # Check that the code uses 45 as default using regex pattern
         with open('api/database.py', 'r') as f:
             content = f.read()
-            assert 'DB_CONNECT_TIMEOUT", "45"' in content, \
+            # Match: DB_CONNECT_TIMEOUT" with any quotes, then "45" with any quotes
+            pattern = r'DB_CONNECT_TIMEOUT["\']?\s*,\s*["\']45["\']'
+            assert re.search(pattern, content), \
                 "api/database.py should default to 45 seconds"
         
         print("  ✓ api/database.py correctly defaults to 45 seconds")
@@ -51,7 +54,9 @@ def test_backend_database_timeout():
     
     with open('backend/app/database.py', 'r') as f:
         content = f.read()
-        assert 'DB_CONNECT_TIMEOUT", "45"' in content, \
+        # Match: DB_CONNECT_TIMEOUT" with any quotes, then "45" with any quotes
+        pattern = r'DB_CONNECT_TIMEOUT["\']?\s*,\s*["\']45["\']'
+        assert re.search(pattern, content), \
             "backend/app/database.py should default to 45 seconds"
     
     print("  ✓ backend/app/database.py correctly defaults to 45 seconds")
@@ -63,7 +68,9 @@ def test_backend_app_database_timeout():
     
     with open('api/backend_app/database.py', 'r') as f:
         content = f.read()
-        assert 'DB_CONNECT_TIMEOUT", "45"' in content, \
+        # Match: DB_CONNECT_TIMEOUT" with any quotes, then "45" with any quotes
+        pattern = r'DB_CONNECT_TIMEOUT["\']?\s*,\s*["\']45["\']'
+        assert re.search(pattern, content), \
             "api/backend_app/database.py should default to 45 seconds"
     
     print("  ✓ api/backend_app/database.py correctly defaults to 45 seconds")
@@ -93,11 +100,14 @@ def test_no_10_second_defaults():
         'api/backend_app/database.py'
     ]
     
+    # Pattern to match: DB_CONNECT_TIMEOUT with default value of "10"
+    old_timeout_pattern = r'DB_CONNECT_TIMEOUT["\']?\s*,\s*["\']10["\']'
+    
     for filepath in database_files:
         with open(filepath, 'r') as f:
             content = f.read()
-            # Check for the old pattern: DB_CONNECT_TIMEOUT", "10"
-            if 'DB_CONNECT_TIMEOUT", "10"' in content:
+            # Check for the old pattern using regex for flexibility
+            if re.search(old_timeout_pattern, content):
                 raise AssertionError(
                     f"{filepath} still uses 10s default timeout. "
                     f"It should be changed to 45s for Railway compatibility."
