@@ -194,7 +194,7 @@ jobs:
           echo "🔌 Testing database connection..."
           # Wait for PostgreSQL to be ready
           for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U testuser; then
+            if pg_isready -h localhost -p 5432 -U postgres; then
               echo "✅ PostgreSQL is ready"
               break
             fi
@@ -251,10 +251,7 @@ jobs:
           echo "🔍 Validating imports..."
           
           # Test imports with better error handling
-          python << 'PYEOF' || {
-            echo "::error::❌ Import validation failed. Check for missing dependencies or syntax errors."
-            exit 1
-          }
+          python << 'PYEOF'
           import sys
           try:
               from index import app, HAS_BACKEND
@@ -268,6 +265,11 @@ jobs:
               print(f'❌ Unexpected error: {e}')
               sys.exit(1)
           PYEOF
+          
+          if [ $? -ne 0 ]; then
+            echo "::error::❌ Import validation failed. Check for missing dependencies or syntax errors."
+            exit 1
+          fi
 
       - name: Test API health endpoint
         working-directory: ./api
@@ -354,7 +356,7 @@ jobs:
           echo "🔌 Testing database connection..."
           # Wait for PostgreSQL to be ready
           for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U testuser; then
+            if pg_isready -h localhost -p 5432 -U postgres; then
               echo "✅ PostgreSQL is ready"
               break
             fi
