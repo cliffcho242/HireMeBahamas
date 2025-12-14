@@ -92,10 +92,12 @@ poetry show package-name
 
 The project includes:
 - **Python**: ^3.11 (compatible with 3.11+)
-- **Gunicorn**: ^21.2.0 (WSGI HTTP Server for production)
+- **Gunicorn**: ^23.0.0 (WSGI HTTP Server for production)
 - All existing dependencies from requirements.txt
 
 See `pyproject.toml` for the complete dependency list.
+
+> **Important**: Gunicorn is a critical dependency for production deployments on Render and Railway. When using Poetry, ensure `poetry install` is run during the build phase to properly install gunicorn from `pyproject.toml`.
 
 ## Deployment
 
