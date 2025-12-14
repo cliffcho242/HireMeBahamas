@@ -5,6 +5,7 @@
 # Responds in <5ms even on coldest start. Render cannot kill this.
 # =============================================================================
 import os
+import importlib
 from typing import Optional, List, Dict, Union, Any
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -122,14 +123,14 @@ import socketio
 
 # CRITICAL FIX: Inject typing exports into schema modules for Pydantic forward reference resolution
 # This fixes PydanticUndefinedAnnotation errors when Pydantic evaluates forward references
-import app.schemas
-inject_typing_exports(app.schemas)
+from . import schemas
+inject_typing_exports(schemas)
 
 # Inject typing exports into all schema submodules
 _schema_modules = ['auth', 'job', 'message', 'post', 'review']
 for _module_name in _schema_modules:
     try:
-        _module = __import__(f'app.schemas.{_module_name}', fromlist=[''])
+        _module = importlib.import_module(f'.schemas.{_module_name}', package='app')
         inject_typing_exports(_module)
     except ImportError:
         # Skip modules that might not be available (graceful degradation)
