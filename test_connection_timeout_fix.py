@@ -33,8 +33,8 @@ def test_api_database_timeout():
         # Check that the code uses 45 as default using regex pattern
         with open('api/database.py', 'r') as f:
             content = f.read()
-            # Match: DB_CONNECT_TIMEOUT" with any quotes, then "45" with any quotes
-            pattern = r'DB_CONNECT_TIMEOUT["\']?\s*,\s*["\']45["\']'
+            # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
+            pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
             assert re.search(pattern, content), \
                 "api/database.py should default to 45 seconds"
         
@@ -54,8 +54,8 @@ def test_backend_database_timeout():
     
     with open('backend/app/database.py', 'r') as f:
         content = f.read()
-        # Match: DB_CONNECT_TIMEOUT" with any quotes, then "45" with any quotes
-        pattern = r'DB_CONNECT_TIMEOUT["\']?\s*,\s*["\']45["\']'
+        # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
+        pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
         assert re.search(pattern, content), \
             "backend/app/database.py should default to 45 seconds"
     
@@ -68,8 +68,8 @@ def test_backend_app_database_timeout():
     
     with open('api/backend_app/database.py', 'r') as f:
         content = f.read()
-        # Match: DB_CONNECT_TIMEOUT" with any quotes, then "45" with any quotes
-        pattern = r'DB_CONNECT_TIMEOUT["\']?\s*,\s*["\']45["\']'
+        # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
+        pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
         assert re.search(pattern, content), \
             "api/backend_app/database.py should default to 45 seconds"
     
@@ -100,8 +100,8 @@ def test_no_10_second_defaults():
         'api/backend_app/database.py'
     ]
     
-    # Pattern to match: DB_CONNECT_TIMEOUT with default value of "10"
-    old_timeout_pattern = r'DB_CONNECT_TIMEOUT["\']?\s*,\s*["\']10["\']'
+    # Pattern to match: os.getenv("DB_CONNECT_TIMEOUT", "10")
+    old_timeout_pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']10["\']\s*\)'
     
     for filepath in database_files:
         with open(filepath, 'r') as f:
