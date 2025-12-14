@@ -13,20 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import User, LoginAttempt
-from app.api.auth import get_current_user
+from app.api.admin_utils import require_admin
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    """Dependency to require admin authentication"""
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    return current_user
 
 
 @router.get("/user-login-status/{email}")

@@ -54,6 +54,7 @@ const UserAnalytics: React.FC = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [loadingInactive, setLoadingInactive] = useState(false);
   const [stats, setStats] = useState<UserLoginStats | null>(null);
   const [inactiveUsers, setInactiveUsers] = useState<InactiveUser[]>([]);
   const [inactiveDays, setInactiveDays] = useState(30);
@@ -86,7 +87,7 @@ const UserAnalytics: React.FC = () => {
   };
 
   const fetchInactiveUsers = async () => {
-    setLoading(true);
+    setLoadingInactive(true);
     try {
       const response = await axios.get(
         `${API_URL}/api/analytics/inactive-users?days=${inactiveDays}&limit=100`,
@@ -98,7 +99,7 @@ const UserAnalytics: React.FC = () => {
       console.error('Failed to fetch inactive users:', error);
       toast.error('Failed to load inactive users');
     } finally {
-      setLoading(false);
+      setLoadingInactive(false);
     }
   };
 
@@ -320,10 +321,10 @@ const UserAnalytics: React.FC = () => {
               </div>
               <button
                 onClick={fetchInactiveUsers}
-                disabled={loading}
+                disabled={loadingInactive}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {loading ? 'Loading...' : 'Load Inactive Users'}
+                {loadingInactive ? 'Loading...' : 'Load Inactive Users'}
               </button>
             </div>
           </div>
