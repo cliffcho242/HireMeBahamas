@@ -31,12 +31,15 @@ def test_api_database_timeout():
         print("✓ Test 1: Testing api/database.py default timeout...")
         
         # Check that the code uses 45 as default using regex pattern
-        with open('api/database.py', 'r') as f:
-            content = f.read()
-            # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
-            pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
-            assert re.search(pattern, content), \
-                "api/database.py should default to 45 seconds"
+        try:
+            with open('api/database.py', 'r') as f:
+                content = f.read()
+                # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
+                pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
+                assert re.search(pattern, content), \
+                    "api/database.py should default to 45 seconds"
+        except FileNotFoundError:
+            raise AssertionError("api/database.py not found")
         
         print("  ✓ api/database.py correctly defaults to 45 seconds")
         
@@ -52,12 +55,15 @@ def test_backend_database_timeout():
     """Test that backend/app/database.py uses 45s default timeout."""
     print("✓ Test 2: Testing backend/app/database.py default timeout...")
     
-    with open('backend/app/database.py', 'r') as f:
-        content = f.read()
-        # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
-        pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
-        assert re.search(pattern, content), \
-            "backend/app/database.py should default to 45 seconds"
+    try:
+        with open('backend/app/database.py', 'r') as f:
+            content = f.read()
+            # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
+            pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
+            assert re.search(pattern, content), \
+                "backend/app/database.py should default to 45 seconds"
+    except FileNotFoundError:
+        raise AssertionError("backend/app/database.py not found")
     
     print("  ✓ backend/app/database.py correctly defaults to 45 seconds")
 
@@ -66,12 +72,15 @@ def test_backend_app_database_timeout():
     """Test that api/backend_app/database.py uses 45s default timeout."""
     print("✓ Test 3: Testing api/backend_app/database.py default timeout...")
     
-    with open('api/backend_app/database.py', 'r') as f:
-        content = f.read()
-        # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
-        pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
-        assert re.search(pattern, content), \
-            "api/backend_app/database.py should default to 45 seconds"
+    try:
+        with open('api/backend_app/database.py', 'r') as f:
+            content = f.read()
+            # Match: os.getenv("DB_CONNECT_TIMEOUT", "45")
+            pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']45["\']\s*\)'
+            assert re.search(pattern, content), \
+                "api/backend_app/database.py should default to 45 seconds"
+    except FileNotFoundError:
+        raise AssertionError("api/backend_app/database.py not found")
     
     print("  ✓ api/backend_app/database.py correctly defaults to 45 seconds")
 
@@ -80,12 +89,15 @@ def test_env_example_documentation():
     """Test that .env.example documents the 45s timeout."""
     print("✓ Test 4: Testing .env.example documentation...")
     
-    with open('.env.example', 'r') as f:
-        content = f.read()
-        assert 'DB_CONNECT_TIMEOUT=45' in content, \
-            ".env.example should document DB_CONNECT_TIMEOUT=45"
-        assert '45s' in content and 'Railway' in content, \
-            ".env.example should mention Railway's need for 45s timeout"
+    try:
+        with open('.env.example', 'r') as f:
+            content = f.read()
+            assert 'DB_CONNECT_TIMEOUT=45' in content, \
+                ".env.example should document DB_CONNECT_TIMEOUT=45"
+            assert '45s' in content and 'Railway' in content, \
+                ".env.example should mention Railway's need for 45s timeout"
+    except FileNotFoundError:
+        raise AssertionError(".env.example not found")
     
     print("  ✓ .env.example correctly documents 45 second timeout")
 
@@ -104,14 +116,17 @@ def test_no_10_second_defaults():
     old_timeout_pattern = r'os\.getenv\s*\(\s*["\']DB_CONNECT_TIMEOUT["\']\s*,\s*["\']10["\']\s*\)'
     
     for filepath in database_files:
-        with open(filepath, 'r') as f:
-            content = f.read()
-            # Check for the old pattern using regex for flexibility
-            if re.search(old_timeout_pattern, content):
-                raise AssertionError(
-                    f"{filepath} still uses 10s default timeout. "
-                    f"It should be changed to 45s for Railway compatibility."
-                )
+        try:
+            with open(filepath, 'r') as f:
+                content = f.read()
+                # Check for the old pattern using regex for flexibility
+                if re.search(old_timeout_pattern, content):
+                    raise AssertionError(
+                        f"{filepath} still uses 10s default timeout. "
+                        f"It should be changed to 45s for Railway compatibility."
+                    )
+        except FileNotFoundError:
+            raise AssertionError(f"{filepath} not found")
     
     print("  ✓ No database files use the old 10 second default")
 
