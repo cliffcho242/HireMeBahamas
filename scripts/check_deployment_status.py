@@ -306,6 +306,10 @@ class DeploymentStatusChecker:
             ))
             self._log("   • /api/status: ✅", Colors.OKGREEN)
         else:
+            self.checks.append(StatusCheck(
+                "backend", "/api/status", "error",
+                f"Status {response.status_code}"
+            ))
             self._log(f"   • /api/status: ❌ Status {response.status_code}", Colors.FAIL)
             backend_issues += 1
         
@@ -328,6 +332,11 @@ class DeploymentStatusChecker:
             ))
             self._log("   • /api/ready: ✅", Colors.OKGREEN)
         else:
+            self.checks.append(StatusCheck(
+                "backend", "/api/ready", "error",
+                f"Status {response.status_code}",
+                fix_suggestion="Database may not be accessible. Check DATABASE_URL configuration."
+            ))
             self._log(f"   • /api/ready: ❌ Status {response.status_code}", Colors.FAIL)
             backend_issues += 1
     
@@ -412,8 +421,12 @@ class DeploymentStatusChecker:
                             f"Database status: {db_status}"
                         ))
                         self._log(f"   • Connection: ❌ {db_status}", Colors.FAIL)
-                except:
+                except json.JSONDecodeError:
+                    # Invalid JSON response, skip connection check
                     pass
+                except Exception as e:
+                    # Unexpected error, log it
+                    self._verbose_log(f"Error parsing /api/ready response: {str(e)}")
             else:
                 self.checks.append(StatusCheck(
                     "database", "Connection", "error",
@@ -658,7 +671,8 @@ class DeploymentStatusChecker:
                         self._log(f"   {line}", Colors.OKCYAN)
         
         # Add user impact section
-        self._log(f"\n3. User Impact", Colors.BOLD)
+        next_num = len(issues) + 1
+        self._log(f"\n{next_num}. User Impact", Colors.BOLD)
         self._log(f"   Users see: \"Backend connection: The string did not match the expected pattern\"", Colors.WARNING)
         self._log(f"   This is displayed by frontend connection test on app load.", Colors.WARNING)
     
