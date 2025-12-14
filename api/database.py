@@ -64,6 +64,27 @@ def get_database_url():
                 f"Invalid DATABASE_URL: missing hostname. "
                 f"Please check your environment variables. See SECURITY.md for proper format."
             )
+        
+        # Validate hostname is not a placeholder value
+        # Common placeholder values that should not be used in production
+        PLACEHOLDER_HOSTS = [
+            "host",           # Most common placeholder in examples
+            "hostname",       # Alternative placeholder
+            "your-host",      # Another common placeholder
+            "your-hostname",  # Another variant
+            "example.com",    # Example domain
+            "your-db-host",   # Descriptive placeholder
+        ]
+        
+        hostname = test_parse.hostname
+        if hostname and hostname.lower() in PLACEHOLDER_HOSTS:
+            raise ValueError(
+                f"DATABASE_URL contains placeholder hostname '{hostname}'. "
+                f"Please replace it with your actual database hostname. "
+                f"For Railway: copy DATABASE_PRIVATE_URL or DATABASE_URL from your project variables. "
+                f"For Vercel Postgres: get the connection string from Storage → Postgres in your dashboard. "
+                f"For other providers: check your database dashboard for connection details."
+            )
             
     except ValueError:
         # Re-raise our custom ValueError messages
