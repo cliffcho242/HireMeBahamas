@@ -78,8 +78,10 @@ def get_database_url():
         
         hostname = test_parse.hostname
         if hostname and hostname.lower() in PLACEHOLDER_HOSTS:
-            # Log warning but don't raise - allow the app to start so health checks can report the issue
-            # This prevents crashes on Render and other platforms while still alerting about the problem
+            # CHANGED: Previously raised ValueError which prevented app startup on Render/other platforms
+            # Now logs warning instead - allows app to start so health checks can report the issue
+            # This matches behavior in final_backend_postgresql.py (lines 1028-1029)
+            # Database connections will fail but app remains accessible for diagnosis
             logger.warning(
                 f"⚠️  DATABASE_URL contains placeholder hostname '{hostname}'. "
                 f"Please replace it with your actual database hostname. "
