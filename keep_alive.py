@@ -45,7 +45,7 @@ if not BASE_URL.startswith(("http://", "https://")):
     print(f"   Current value: {BASE_URL}")
     raise SystemExit(1)
 
-HEALTH_URL = f"{BASE_URL}/health"
+HEALTH_URL = f"{BASE_URL}/api/health"
 
 # Ping interval: 45 seconds keeps service warm without overloading
 PING_INTERVAL_SECONDS = 45
