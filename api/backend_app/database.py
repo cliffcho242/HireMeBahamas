@@ -605,11 +605,14 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     global _db_initialized, _db_init_error
     
     # Check if engine is available
-    if engine is None or get_engine() is None:
-        _db_init_error = "Database engine not available (DATABASE_URL not configured)"
+    # Note: get_engine() is called to trigger lazy initialization if needed
+    actual_engine = get_engine()
+    if actual_engine is None:
+        _db_init_error = "Database engine not available (DATABASE_URL not configured). Check DATABASE_URL configuration and network connectivity."
         logger.warning(
             "Database initialization skipped: DATABASE_URL not configured. "
-            "Application will start but database operations will fail."
+            "Application will start but database operations will fail. "
+            "Check DATABASE_URL configuration and network connectivity."
         )
         return False
     
@@ -671,8 +674,10 @@ async def test_db_connection() -> tuple[bool, Optional[str]]:
         Tuple of (success: bool, error_message: Optional[str])
     """
     # Check if engine is available
-    if engine is None or get_engine() is None:
-        error_msg = "Database engine not available (DATABASE_URL not configured)"
+    # Note: get_engine() is called to trigger lazy initialization if needed
+    actual_engine = get_engine()
+    if actual_engine is None:
+        error_msg = "Database engine not available (DATABASE_URL not configured). Check DATABASE_URL configuration and network connectivity."
         logger.warning(f"Database connection test skipped: {error_msg}")
         return False, error_msg
     
@@ -716,7 +721,9 @@ async def get_pool_status() -> dict:
         Dictionary with pool metrics for health checks and debugging
     """
     # Check if engine is available
-    if engine is None or get_engine() is None:
+    # Note: get_engine() is called to trigger lazy initialization if needed
+    actual_engine = get_engine()
+    if actual_engine is None:
         return {
             "pool_size": 0,
             "checked_in": 0,
@@ -727,7 +734,7 @@ async def get_pool_status() -> dict:
             "pool_recycle_seconds": POOL_RECYCLE,
             "connect_timeout_seconds": CONNECT_TIMEOUT,
             "status": "unavailable",
-            "error": "Database engine not configured"
+            "error": "Database engine not configured. Check DATABASE_URL configuration and network connectivity."
         }
     
     pool = engine.pool

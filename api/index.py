@@ -623,7 +623,13 @@ async def health():
     
     # Check if database is actually configured
     # DATABASE_URL being set doesn't mean it's valid - check if engine creation succeeded
-    db_configured = bool(DATABASE_URL) and DATABASE_URL != "postgresql+asyncpg://placeholder:placeholder@invalid.local:5432/placeholder"
+    # Import placeholder constant to avoid hardcoding
+    try:
+        from database import DB_PLACEHOLDER_URL
+        db_configured = bool(DATABASE_URL) and DATABASE_URL != DB_PLACEHOLDER_URL
+    except ImportError:
+        # Fallback if database module doesn't have the constant
+        db_configured = bool(DATABASE_URL) and DATABASE_URL != "postgresql+asyncpg://placeholder:placeholder@invalid.local:5432/placeholder"
     
     response = {
         "status": "ok",
@@ -661,7 +667,13 @@ async def status():
     db_engine, _ = get_db_engine()
     
     # Check if database is actually configured (not placeholder)
-    db_configured = bool(DATABASE_URL) and DATABASE_URL != "postgresql+asyncpg://placeholder:placeholder@invalid.local:5432/placeholder"
+    # Import placeholder constant to avoid hardcoding
+    try:
+        from database import DB_PLACEHOLDER_URL
+        db_configured = bool(DATABASE_URL) and DATABASE_URL != DB_PLACEHOLDER_URL
+    except ImportError:
+        # Fallback if database module doesn't have the constant
+        db_configured = bool(DATABASE_URL) and DATABASE_URL != "postgresql+asyncpg://placeholder:placeholder@invalid.local:5432/placeholder"
     
     # Use sanitized error in production, full error only in debug mode
     backend_error_to_show = None
