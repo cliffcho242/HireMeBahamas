@@ -279,7 +279,8 @@ export default defineConfig({
               return 'utils';
             }
             // Socket.io and real-time
-            if (id.includes('socket.io')) {
+            // Use more specific check to avoid false positives
+            if (id.includes('/node_modules/socket.io')) {
               return 'realtime';
             }
             // Large libraries get their own chunks
