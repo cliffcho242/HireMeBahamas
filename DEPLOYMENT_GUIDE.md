@@ -156,7 +156,14 @@ curl https://your-project.vercel.app/api/health
 
 #### 6️⃣ Environment Variables (Vercel Dashboard)
 
-**IMPORTANT:** This project uses **Vite** (React), not Next.js. Use `VITE_` prefix for environment variables.
+**🚨 CRITICAL:** This project uses **Vite (React)**, NOT Next.js!
+
+| ❌ WRONG (Next.js) | ✅ CORRECT (Vite) |
+|-------------------|-------------------|
+| `NEXT_PUBLIC_BACKEND_URL` | `VITE_API_URL` |
+| `NEXT_PUBLIC_API_URL` | `VITE_API_URL` |
+
+**📖 Complete Guide:** [VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md](./VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md) - Detailed step-by-step instructions
 
 Go to: **Vercel Dashboard** → **Your Project** → **Settings** → **Environment Variables**
 
@@ -188,7 +195,7 @@ VITE_SOCKET_URL=https://your-backend.onrender.com
 5. Click **Save**
 6. Redeploy for changes to take effect
 
-**⚠️ Common Mistake:** Do NOT use `NEXT_PUBLIC_BACKEND_URL` - that's for Next.js only. This project uses `VITE_API_URL` for Vite/React.
+**⚠️ Common Mistake:** Do NOT use `NEXT_PUBLIC_BACKEND_URL` or `NEXT_PUBLIC_API_URL` - those are for Next.js only! This project requires `VITE_API_URL` for Vite/React.
 
 **✅ Verification:**
 ```bash
@@ -198,6 +205,8 @@ curl https://your-frontend.vercel.app
 # Check browser console to see detected API URL:
 # Should log: "API Base URL: https://your-backend.up.railway.app"
 ```
+
+**📖 For detailed troubleshooting and examples, see:** [VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md](./VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md)
 
 ---
 
