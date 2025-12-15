@@ -104,8 +104,14 @@ While Railway is a good platform, **Render is the correct choice** for this appl
 
 ### Migration Note
 
-If you're currently on Railway, you can migrate to Render using our migration guide:
-- 📖 [RENDER_TO_RAILWAY_MIGRATION.md](./RENDER_TO_RAILWAY_MIGRATION.md) (use in reverse)
+If you're currently on Railway, follow these steps to migrate to Render:
+
+1. **Export your database** from Railway PostgreSQL
+2. **Create a new Neon PostgreSQL** database (see Step 3 in Quick Start)
+3. **Import your data** into Neon
+4. **Deploy backend to Render** (see Step 2 in Quick Start)
+5. **Update frontend** environment variables to point to Render
+6. **Test thoroughly** before decommissioning Railway
 
 **Railway documentation in this repository is kept for reference only and should not be used for new deployments.**
 

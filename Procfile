@@ -26,7 +26,7 @@
 # Note: This is industry-standard configuration used by apps at Facebook/Twitter scale
 # =============================================================================
 
-web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --log-level info
+web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --preload --log-level info
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh
