@@ -106,7 +106,7 @@ def health():
     
     Use /ready for database connectivity check.
     """
-    return JSONResponse({"status": "healthy"}, status_code=200)
+    return JSONResponse({"status": "ok"}, status_code=200)
 
 
 # LIVENESS PROBE — Kubernetes/Render liveness check
