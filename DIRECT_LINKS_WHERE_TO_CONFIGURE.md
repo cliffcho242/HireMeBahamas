@@ -180,7 +180,16 @@ PORT = 10000
 
 ### ✅ FRONTEND (Vercel) — FINAL CONFIG
 
-**IMPORTANT:** This project uses **Vite** (React), not Next.js. Environment variables must use `VITE_` prefix, not `NEXT_PUBLIC_`.
+**🚨 CRITICAL:** This project uses **Vite (React)**, NOT Next.js!
+
+| ❌ WRONG (Next.js) | ✅ CORRECT (Vite) |
+|-------------------|-------------------|
+| `NEXT_PUBLIC_BACKEND_URL` | `VITE_API_URL` |
+| `NEXT_PUBLIC_API_URL` | `VITE_API_URL` |
+
+**📖 Complete Step-by-Step Guide:** [VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md](./VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md)
+
+**IMPORTANT:** Environment variables must use `VITE_` prefix, not `NEXT_PUBLIC_`.
 
 ### If Using Separate Backend (Railway or Render)
 

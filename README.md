@@ -7,6 +7,33 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 ---
 
+## 🚨 **IMPORTANT: Vercel Frontend Environment Variables**
+
+**Are you trying to configure environment variables for Vercel frontend deployment?**
+
+⚠️ **This project uses Vite (React), NOT Next.js!**
+
+- ❌ **WRONG:** `NEXT_PUBLIC_BACKEND_URL` (Next.js only - won't work!)
+- ✅ **CORRECT:** `VITE_API_URL` (for Vite/React projects)
+
+**➡️ READ THIS: [VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md](./VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md)**
+
+**Quick Reference:**
+```bash
+# For Railway backend:
+VITE_API_URL=https://your-backend.up.railway.app
+
+# For Render backend:
+VITE_API_URL=https://your-backend.onrender.com
+
+# For Vercel serverless (same-origin):
+# Leave VITE_API_URL unset (auto-detects)
+```
+
+📖 **[Complete Environment Variable Guide](./VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md)** - Step-by-step instructions with examples
+
+---
+
 ## 🔴 **CRITICAL: PostgreSQL "root execution not permitted" Error on Railway?**
 
 **Seeing this error?**
