@@ -177,14 +177,14 @@ _masked_url = _mask_database_url(DATABASE_URL)
 logger.info(f"Database URL: {_masked_url}")
 
 # =============================================================================
-# POOL CONFIGURATION - OPTIMIZED FOR SERVERLESS (Dec 2025)
+# POOL CONFIGURATION - OPTIMIZED FOR PRODUCTION (Dec 2025)
 # =============================================================================
 # CRITICAL: pool_recycle=300 prevents connection issues by recycling connections
 # before they become stale. This is serverless-friendly and prevents SSL EOF errors.
-# MAX_OVERFLOW=3 allows burst capacity without exhausting memory
+# MAX_OVERFLOW=10 allows burst capacity for production load
 # =============================================================================
-POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "2"))  # Minimum connections (2 = safe for 512MB)
-MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "3"))  # Burst capacity
+POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))  # Minimum connections (5 = production-ready)
+MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "10"))  # Burst capacity
 POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for connection
 POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (serverless-friendly)
 
