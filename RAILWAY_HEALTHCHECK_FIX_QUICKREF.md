@@ -44,7 +44,7 @@ preload_app = False  # ✅ Immediate startup
 
 ✅ Gunicorn ready to accept connections in 1.23s
    Listening on 0.0.0.0:8080
-   Health: GET /health (instant, no dependencies)
+   Health: GET /health (instant)
    Ready: GET /ready (with DB check)
    Workers will initialize independently
 🎉 HireMeBahamas API is ready for Railway healthcheck
