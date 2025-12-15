@@ -416,6 +416,10 @@ def get_engine():
                         
                         # FORCE TCP + SSL: Guarantee TCP connection with SSL encryption
                         # This ensures SSL is required even if DATABASE_URL or env vars are misconfigured
+                        # NOTE: Both "ssl" and "sslmode" can coexist safely:
+                        # - "sslmode": "require" ensures connection fails if SSL is unavailable
+                        # - "ssl": context provides the actual TLS 1.3 configuration
+                        # This dual-layer approach provides defense-in-depth security
                         "sslmode": "require",
                     }
                 )
