@@ -70,8 +70,8 @@ max_requests_jitter = 100
 # Command line: poetry run gunicorn final_backend_postgresql:application --config gunicorn.conf.py
 # Do NOT add: --preload (this would override the safe setting below)
 #
-# SAFE COMMAND:   gunicorn app:application --config gunicorn.conf.py
-# UNSAFE COMMAND: gunicorn app:application --config gunicorn.conf.py --preload
+# SAFE COMMAND:   gunicorn final_backend_postgresql:application --config gunicorn.conf.py
+# UNSAFE COMMAND: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
 preload_app = False
 
 # ============================================================================
