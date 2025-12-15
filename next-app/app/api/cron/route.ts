@@ -14,9 +14,21 @@ export const dynamic = "force-dynamic";
  * 2. Refreshes cache for frequently accessed data
  * 3. Logs health metrics
  * 
- * Schedule: every 5 minutes (configured in vercel.json)
+ * Schedule: daily at 10:00 AM UTC (configured in vercel.json)
+ * Authorization: Requires CRON_SECRET in Authorization header
  */
-export async function GET() {
+export async function GET(request: Request) {
+  // Authorization check - Vercel adds CRON_SECRET to Authorization header
+  const authHeader = request.headers.get("Authorization");
+  const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
+  
+  if (authHeader !== expectedAuth) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   const startTime = Date.now();
   const results: Record<string, unknown> = {};
 

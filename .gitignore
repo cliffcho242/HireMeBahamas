@@ -84,3 +84,4 @@ drizzle/
 dist/
 vercel.json.backup
 test_venv/
+test_cron_auth.js
