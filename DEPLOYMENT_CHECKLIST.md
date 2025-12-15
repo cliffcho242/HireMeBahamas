@@ -8,16 +8,22 @@ Follow these steps in order for a successful deployment.
 
 - [ ] Go to [neon.tech](https://neon.tech)
 - [ ] Create new project
-- [ ] Select region: **US East (Ohio)**
+- [ ] Select region: **US West 2 (Oregon)** for lowest latency to Render
+  - Alternative: **US East (Ohio)** if your users are primarily on East Coast
+  - Cross-region latency: ~70-100ms (still acceptable with pooling)
 - [ ] Copy the **POOLED** connection string
-  - Look for: `ep-xxxx-pooler.us-east-1.aws.neon.tech`
-  - **NOT**: `ep-xxxx.us-east-1.aws.neon.tech` (direct endpoint)
+  - Look for: `ep-xxxx-pooler.REGION.aws.neon.tech` (with `-pooler` suffix)
+  - **NOT**: `ep-xxxx.REGION.aws.neon.tech` (direct endpoint)
 - [ ] Add `?sslmode=require` to the end if not present
 - [ ] Change prefix from `postgresql://` to `postgresql+asyncpg://`
 - [ ] Save this connection string for Step 2
 
 **Example format:**
 ```
+# US West (Oregon) - Lowest latency to Render
+postgresql+asyncpg://user:pass@ep-xxxx-pooler.us-west-2.aws.neon.tech:5432/db?sslmode=require
+
+# US East (Ohio) - Good for East Coast users
 postgresql+asyncpg://user:pass@ep-xxxx-pooler.us-east-1.aws.neon.tech:5432/db?sslmode=require
 ```
 
@@ -54,7 +60,7 @@ FRONTEND_URL=https://your-app.vercel.app
 
 # Database (from Step 1)
 DATABASE_URL=<your-neon-pooled-connection-string>
-DB_POOL_SIZE=10
+DB_POOL_SIZE=5
 DB_MAX_OVERFLOW=5
 DB_POOL_RECYCLE=300
 DB_CONNECT_TIMEOUT=10

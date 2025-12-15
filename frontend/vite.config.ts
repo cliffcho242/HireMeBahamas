@@ -232,10 +232,9 @@ export default defineConfig({
     // Optimize for Facebook/Instagram in-app browsers
     terserOptions: {
       compress: {
-        drop_console: true,
+        drop_console: true, // Remove all console statements
         drop_debugger: true,
         passes: 2, // Extra compression pass for smaller bundles
-        pure_funcs: ['console.log', 'console.info', 'console.debug'], // Remove console calls
       },
       mangle: {
         safari10: true, // Fix Safari 10+ compatibility

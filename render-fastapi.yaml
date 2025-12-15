@@ -7,12 +7,12 @@
 
 services:
   # ===========================================================================
-  # MAIN FASTAPI SERVICE - ALWAYS ON (US-EAST)
+  # MAIN FASTAPI SERVICE - ALWAYS ON (US-WEST)
   # ===========================================================================
   - type: web
     name: hiremebahamas-fastapi
     runtime: python
-    region: oregon  # US-West (Render doesn't have US-East, Oregon is closest with low latency)
+    region: oregon  # US-West (Oregon provides excellent latency to both coasts)
     
     # ===========================================================================
     # PLAN: STANDARD ($25/mo) - ALWAYS ON, ZERO COLD STARTS
@@ -83,18 +83,23 @@ services:
       # DATABASE CONNECTION - NEON POSTGRESQL (POOLED)
       # ===========================================================================
       # Set DATABASE_URL in Render dashboard:
-      # Format: postgresql+asyncpg://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/db?sslmode=require
+      # Format: postgresql+asyncpg://user:pass@ep-xxxx-pooler.REGION.aws.neon.tech:5432/db?sslmode=require
       # 
       # CRITICAL: Use Neon's pooled connection endpoint for best performance:
-      # - Pooled endpoint: ep-xxxx-pooler.us-east-1.aws.neon.tech
-      # - Direct endpoint: ep-xxxx.us-east-1.aws.neon.tech
+      # - Pooled endpoint: ep-xxxx-pooler.REGION.aws.neon.tech (e.g., us-west-2, us-east-1)
+      # - Direct endpoint: ep-xxxx.REGION.aws.neon.tech
+      # 
+      # REGION CONSIDERATIONS:
+      # - Neon US-West-2 (Oregon): Lowest latency to Render Oregon (~1-5ms)
+      # - Neon US-East-1 (Virginia): Cross-region (~70-100ms), still fast with pooling
+      # - Choose based on your primary user base location
       # 
       # For 50-150ms response times, use POOLED endpoint!
       # ===========================================================================
       
       # Connection Pool Configuration (optimized for Neon)
       - key: DB_POOL_SIZE
-        value: "10"
+        value: "5"
       
       - key: DB_MAX_OVERFLOW
         value: "5"

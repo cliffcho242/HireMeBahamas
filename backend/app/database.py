@@ -169,11 +169,12 @@ logger.info(f"Database URL: {_masked_url}")
 # 
 # NEON-SPECIFIC OPTIMIZATIONS:
 # - Use pooled connection endpoint (ep-xxxx-pooler.neon.tech) for best performance
-# - Higher pool size (10) for Render Always-On service with 1GB RAM
+# - Moderate pool size (5) for Render Always-On service with 1GB RAM
+#   Each connection uses ~2-5MB RAM, so 5 base + 5 overflow = 10 max = ~50MB
 # - Aggressive recycling (300s) to prevent stale connections
 # - MAX_OVERFLOW=5 for traffic spikes from Facebook/Instagram
 # =============================================================================
-POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))  # Higher for Always-On service (1GB RAM)
+POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))  # Conservative for 1GB RAM service
 MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "5"))  # Burst capacity for traffic spikes
 POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for connection
 POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (Neon-friendly)

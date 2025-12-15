@@ -97,7 +97,10 @@ if (typeof window !== 'undefined' && import.meta.env.DEV) {
 // Create axios instance with retry logic
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 seconds default timeout (reduced for Render Always-On)
+  // 30 seconds timeout (reduced from 60s for Render Always-On)
+  // Render Always-On has no cold starts, so 30s is sufficient
+  // Complex operations (file uploads) should override this per-request
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
