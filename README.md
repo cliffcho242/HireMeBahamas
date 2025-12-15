@@ -36,6 +36,7 @@ Neon PostgreSQL (managed, scalable)
 ### 📖 Documentation
 - **[✅ CORRECT_STACK.md](./CORRECT_STACK.md)** - **START HERE**: Official stack definition and rationale
 - **[FINAL_SPEED_ARCHITECTURE.md](./FINAL_SPEED_ARCHITECTURE.md)** - Complete setup guide and deployment instructions
+- **[RENDER_DEPLOYMENT_CHECKLIST.md](./RENDER_DEPLOYMENT_CHECKLIST.md)** - Production deployment verification checklist
 
 ⚠️ **Note**: Railway backend documentation in this repository is deprecated. Use **Render** for all new deployments.
 
@@ -68,6 +69,39 @@ Neon PostgreSQL (managed, scalable)
 - 📖 [RENDER_TO_RAILWAY_MIGRATION.md](./RENDER_TO_RAILWAY_MIGRATION.md) - Migrate to Railway ($5-7/month)
 - 🔧 [Database Backup Script](./scripts/backup_database.py) - Automated backup tool
 - ✅ [Test Your Migration](./scripts/test_deployment.py) - Verify everything works
+
+---
+
+## ✅ **Deploying to Render? Run the Checklist!**
+
+**Before going live with your Render deployment, verify all production requirements:**
+
+### 🚀 **Quick Verification (5 minutes)**
+
+```bash
+# Run the automated verification script
+python verify_health_endpoint.py
+```
+
+### 📋 **Production Checklist**
+
+All critical items verified:
+- ✅ Health endpoint exists at `/health`
+- ✅ Health path matches Render setting in `render.yaml`
+- ✅ Returns 200 status code (not 404)
+- ✅ App listens on `process.env.PORT` 
+- ✅ Backend URL works in browser
+- ✅ Vercel env vars point to Render
+
+**➡️ [RENDER_DEPLOYMENT_CHECKLIST.md](./RENDER_DEPLOYMENT_CHECKLIST.md)** - Complete deployment verification guide
+
+### 🔥 **OPTIONAL BUT STRONGLY RECOMMENDED**
+
+**Disable Cold Starts on Render:**
+- Free tier sleeps → causes 30-60s delays and 502 errors
+- Solution: Upgrade to **Render Standard Plan** ($25/month)
+- Benefits: Always-on, zero cold starts, instant responses
+- Alternative: Migrate to Vercel Serverless (see migration guide above)
 
 ---
 
