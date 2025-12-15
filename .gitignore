@@ -91,3 +91,7 @@ dist/
 vercel.json.backup
 test_venv/
 test_cron_function.js
+
+# Health endpoint verification tests
+test_health_endpoint_format.py
+test_health_endpoint_simulation.py
