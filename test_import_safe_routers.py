@@ -28,7 +28,7 @@ def test_api_package_import_safe():
     
     # Verify __all__ is defined
     assert hasattr(api_pkg, '__all__'), "api package should have __all__ attribute"
-    print(f"  ✓ __all__ defined: {api_pkg.__all__}")
+    print(f"  ✓ __all__ defined with {len(api_pkg.__all__)} routers")
     
     # Verify that router modules are NOT loaded yet
     loaded_routers = [m for m in sys.modules if m.startswith('backend_app.api.') and m != 'backend_app.api']
@@ -87,7 +87,7 @@ def test_backend_app_api_import_safe():
         
         # Verify __all__ is defined
         assert hasattr(api_pkg, '__all__'), "api package should have __all__ attribute"
-        print(f"  ✓ __all__ defined: {api_pkg.__all__}")
+        print(f"  ✓ __all__ defined with {len(api_pkg.__all__)} routers")
         
         # Verify that router modules are NOT loaded yet
         loaded_routers = [m for m in sys.modules if m.startswith('app.api.') and m != 'app.api']
