@@ -8,7 +8,7 @@ import re
 from urllib.parse import urlparse, urlunparse
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
-from .db_url_utils import ensure_sslmode
+from .db_url_utils import ensure_sslmode, validate_database_url_structure
 
 # Global engine (reused across invocations)
 _engine = None
@@ -155,6 +155,22 @@ def get_database_url():
     
     # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
     db_url = ensure_sslmode(db_url)
+    
+    # Validate DATABASE_URL structure meets cloud deployment requirements
+    is_valid, error_msg = validate_database_url_structure(db_url)
+    if not is_valid:
+        logger.warning(
+            f"DATABASE_URL validation failed: {error_msg}. "
+            f"Database connections will fail. "
+            f"Required format: postgresql://user:pass@hostname:port/dbname?sslmode=require"
+        )
+        # In production, this is a critical error but we still return the URL
+        # to allow health checks and diagnostics to run
+        if ENV == "production":
+            logger.error(
+                "⚠️  PRODUCTION DATABASE MISCONFIGURED - connections will fail! "
+                "See error above for required format."
+            )
     
     return db_url
 
