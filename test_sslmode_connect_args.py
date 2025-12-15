@@ -6,7 +6,6 @@ This ensures TCP + SSL is forced even if DATABASE_URL or env vars are misconfigu
 
 import sys
 import os
-import importlib
 
 
 def test_backend_app_database():
@@ -34,7 +33,7 @@ def test_backend_app_database():
         
         # Safely check pool configuration
         try:
-            pool_size = engine.pool.size() if callable(getattr(engine.pool, 'size', None)) else engine.pool.size
+            pool_size = engine.pool.size
             print(f"   Pool size: {pool_size}")
         except (AttributeError, TypeError):
             print("   Pool size: (unable to retrieve)")
@@ -91,7 +90,7 @@ def test_backend_database():
         
         # Safely check pool configuration
         try:
-            pool_size = engine.pool.size() if callable(getattr(engine.pool, 'size', None)) else engine.pool.size
+            pool_size = engine.pool.size
             print(f"   Pool size: {pool_size}")
         except (AttributeError, TypeError):
             print("   Pool size: (unable to retrieve)")
@@ -169,7 +168,7 @@ def verify_code_changes():
     
     all_verified = True
     
-    # Get repository root (parent of the test file's directory)
+    # Get directory containing this test file (repository root)
     repo_root = os.path.dirname(os.path.abspath(__file__))
     
     for filepath in files_to_check:
