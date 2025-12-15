@@ -160,7 +160,7 @@ def get_engine():
             command_timeout = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))
             # REQUIRED: pool_size=5 and max_overflow=10 for production load handling
             pool_size = int(os.getenv("DB_POOL_SIZE", "5"))
-            max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "10"))
+            max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))
             pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "300"))
             
             _engine = create_async_engine(

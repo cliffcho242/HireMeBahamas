@@ -74,7 +74,7 @@ def test_api_database_timeouts():
         "pool_size should default to 5"
     
     # Check max_overflow default is 10
-    assert 'max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "10"))' in content, \
+    assert 'max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))' in content, \
         "max_overflow should default to 10"
     
     # Check application_name is "render-app"
