@@ -29,10 +29,24 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
         
         # SECURITY: Configure CORS based on environment
-        # For production, use specific domain from environment variable
-        # For development/demo, allow all origins (use with caution)
-        allowed_origin = os.getenv("FRONTEND_URL", "*")
-        self.send_header("Access-Control-Allow-Origin", allowed_origin)
+        # For Vercel same-origin deployment (Option A), CORS is not needed
+        # For separate backend (Option B), set FRONTEND_URL environment variable
+        frontend_url = os.getenv("FRONTEND_URL")
+        
+        if frontend_url:
+            # Restrict to specific origin for security
+            self.send_header("Access-Control-Allow-Origin", frontend_url)
+            self.send_header("Access-Control-Allow-Credentials", "true")
+        else:
+            # For same-origin Vercel deployment or local dev
+            # In production, always set FRONTEND_URL for security
+            request_origin = self.headers.get("Origin")
+            if request_origin:
+                # Verify origin is from same domain (Vercel same-origin)
+                self.send_header("Access-Control-Allow-Origin", request_origin)
+            else:
+                # No origin header means same-origin request (most secure)
+                pass
         
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")

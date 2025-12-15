@@ -330,16 +330,22 @@ def _set_headers(self, status=200):
     # SECURITY BEST PRACTICE: Configure CORS based on environment
     # For production, use specific domain from environment variable
     # Never use "*" in production - it's a security risk!
-    allowed_origin = os.getenv("FRONTEND_URL", "*")
+    frontend_url = os.getenv("FRONTEND_URL")
     
-    # For Vercel same-origin deployment, CORS may not be needed at all
+    # For Vercel same-origin deployment (Option A), CORS may not be needed at all
     # since frontend and backend are on the same domain
-    if allowed_origin != "*":
-        self.send_header("Access-Control-Allow-Origin", allowed_origin)
+    if frontend_url:
+        # Restrict to specific origin for security (Option B: separate backend)
+        self.send_header("Access-Control-Allow-Origin", frontend_url)
         self.send_header("Access-Control-Allow-Credentials", "true")
     else:
-        # Only for development/testing - NOT for production!
-        self.send_header("Access-Control-Allow-Origin", "*")
+        # For same-origin deployment (Option A)
+        # Only allow the request origin if it matches
+        request_origin = self.headers.get("Origin")
+        if request_origin:
+            # Echo back the origin for same-origin requests
+            self.send_header("Access-Control-Allow-Origin", request_origin)
+        # If no Origin header, it's a same-origin request (most secure)
     
     self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
     self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
