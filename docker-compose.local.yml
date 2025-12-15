@@ -160,7 +160,7 @@ services:
       - ./uploads:/app/uploads
     stop_signal: SIGTERM
     stop_grace_period: 30s
-    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --timeout 120 --reload --access-logfile - --error-logfile -
+    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 4 --timeout 60 --reload --access-logfile - --error-logfile -
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       interval: 30s
@@ -228,7 +228,7 @@ services:
       - backend_uploads:/app/uploads
     stop_signal: SIGTERM
     stop_grace_period: 30s
-    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 8 --timeout 120 --access-logfile - --error-logfile -
+    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 4 --timeout 60 --access-logfile - --error-logfile -
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       interval: 30s
@@ -268,7 +268,7 @@ services:
       - backend_uploads:/app/uploads
     stop_signal: SIGTERM
     stop_grace_period: 30s
-    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 8 --timeout 120 --access-logfile - --error-logfile -
+    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 4 --timeout 60 --access-logfile - --error-logfile -
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       interval: 30s
@@ -308,7 +308,7 @@ services:
       - backend_uploads:/app/uploads
     stop_signal: SIGTERM
     stop_grace_period: 30s
-    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 8 --timeout 120 --access-logfile - --error-logfile -
+    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 4 --timeout 60 --access-logfile - --error-logfile -
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       interval: 30s

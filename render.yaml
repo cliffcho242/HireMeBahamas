@@ -108,16 +108,20 @@ services:
       - key: DB_ECHO
         value: "false"
       # ==========================================================================
-      # FASTAPI PERFORMANCE SETTINGS
+      # GUNICORN PERFORMANCE SETTINGS (Lightning Fast Configuration)
       # ==========================================================================
-      - key: WORKERS
-        value: "1"
-      - key: WORKER_CLASS
-        value: "uvicorn.workers.UvicornWorker"
+      # Optimized for Render Standard plan (always-on, 1GB RAM)
+      # Workers: 2 for parallel request handling
+      # Threads: 4 per worker = 8 total concurrent requests
+      # Timeout: 60s for fast responses without cold start delays
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: WEB_THREADS
+        value: "4"
+      - key: GUNICORN_TIMEOUT
+        value: "60"
       - key: KEEPALIVE
         value: "5"
-      - key: TIMEOUT
-        value: "30"
       # Trust Render's load balancer for proxy headers
       - key: FORWARDED_ALLOW_IPS
         value: "*"
