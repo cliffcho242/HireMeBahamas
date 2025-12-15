@@ -24,7 +24,7 @@ logging.basicConfig(
 
 BACKEND_URL = "https://hiremebahamas.onrender.com"
 PING_INTERVAL = 600  # 10 minutes (Render sleeps after 15 min inactivity)
-HEALTH_ENDPOINT = f"{BACKEND_URL}/health"
+HEALTH_ENDPOINT = f"{BACKEND_URL}/api/health"
 
 
 def ping_backend():
