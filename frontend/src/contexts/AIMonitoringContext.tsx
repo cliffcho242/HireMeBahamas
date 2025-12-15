@@ -47,6 +47,10 @@ export const AIMonitoringProvider: React.FC<AIMonitoringProviderProps> = ({
   checkInterval = 30000, // 30 seconds
   maxRecoveryAttempts = 3
 }) => {
+  // 🔍 TEMP DEBUG: Check if API URL is properly configured
+  if (import.meta.env.DEV) {
+    console.log("API URL:", import.meta.env.VITE_API_URL);
+  }
   const [health, setHealth] = useState<SystemHealth>({
     frontend: true,
     backend: false,
