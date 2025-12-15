@@ -77,7 +77,7 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
     # Check for quotes (single or double)
     # Quotes should not be in the DATABASE_URL as they can cause parsing errors
     # and are often a sign of incorrect copy-paste from configuration files
-    if '"' in db_url or "'" in db_url:
+    if any(quote in db_url for quote in ['"', "'"]):
         return False, (
             "DATABASE_URL contains quote characters (single or double quotes). "
             "Remove all quotes from the connection string. "
