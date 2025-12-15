@@ -11,13 +11,13 @@
 # 3. Gunicorn with --preload for instant first request
 #
 # Configuration (via environment variables):
-#   WEB_CONCURRENCY=1       Single worker for 512MB-1GB RAM
-#   WEB_THREADS=4           Threads per worker
-#   GUNICORN_TIMEOUT=180    Worker timeout (survives cold starts)
+#   WEB_CONCURRENCY=2       Two workers for optimal performance
+#   WEB_THREADS=4           Threads per worker (8 total concurrent requests)
+#   GUNICORN_TIMEOUT=60     Worker timeout (optimized for always-on)
 #   PRELOAD_APP=true        Enable app preloading
 #
 # For Render:
-#   - Standard plan ($25/mo, 1GB RAM): WEB_CONCURRENCY=1, WEB_THREADS=4
+#   - Standard plan ($25/mo, 1GB RAM): WEB_CONCURRENCY=2, WEB_THREADS=4
 #   - Starter plan ($7/mo, 512MB RAM): WEB_CONCURRENCY=1, WEB_THREADS=2
 #
 # =============================================================================
@@ -28,9 +28,9 @@ echo "=============================================="
 echo "🚀 HireMeBahamas Backend Startup"
 echo "=============================================="
 echo "Environment: ${ENVIRONMENT:-development}"
-echo "Workers: ${WEB_CONCURRENCY:-1}"
+echo "Workers: ${WEB_CONCURRENCY:-2}"
 echo "Threads: ${WEB_THREADS:-4}"
-echo "Timeout: ${GUNICORN_TIMEOUT:-180}s"
+echo "Timeout: ${GUNICORN_TIMEOUT:-60}s"
 echo "Preload: ${PRELOAD_APP:-true}"
 echo "=============================================="
 
@@ -71,7 +71,7 @@ echo "🚀 Starting Gunicorn server..."
 echo "   Config: gunicorn.conf.py"
 echo "   App: final_backend_postgresql:application"
 echo "   Bind: 0.0.0.0:${PORT:-8080}"
-echo "   Timeout: ${GUNICORN_TIMEOUT:-180}s"
+echo "   Timeout: ${GUNICORN_TIMEOUT:-60}s"
 echo ""
 
 exec gunicorn final_backend_postgresql:application \

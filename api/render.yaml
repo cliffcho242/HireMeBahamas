@@ -73,13 +73,13 @@ services:
       - key: PYTHON_VERSION
         value: "3.12"
       
-      # Gunicorn Configuration (Optimized for Free Tier)
+      # Gunicorn Configuration (Lightning Fast Configuration)
       - key: WEB_CONCURRENCY
-        value: "1"
+        value: "2"
       - key: WEB_THREADS
         value: "4"
       - key: GUNICORN_TIMEOUT
-        value: "120"
+        value: "60"
       - key: PRELOAD_APP
         value: "true"
       
