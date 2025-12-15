@@ -8,7 +8,7 @@ import re
 from urllib.parse import urlparse, urlunparse
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
-from db_url_utils import ensure_sslmode
+from .db_url_utils import ensure_sslmode
 
 # Global engine (reused across invocations)
 _engine = None
