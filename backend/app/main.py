@@ -880,10 +880,11 @@ if __name__ == "__main__":
     import uvicorn
 
     # Production mode - no reload, multiple workers for better performance
+    port = int(os.getenv('PORT', 8000))
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=False,
         workers=2,  # Use 2 workers for production mode
         log_level="info"
