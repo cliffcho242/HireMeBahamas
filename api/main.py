@@ -100,6 +100,17 @@ except ImportError as e:
         """
         return {"ok": True}
     
+    @app.get("/health/ping", include_in_schema=False)
+    async def health_ping():
+        """Ultra-fast health ping endpoint
+        
+        ❌ No DB access
+        ❌ No external calls
+        ❌ No disk access
+        Target latency: < 30ms
+        """
+        return {"status": "ok"}
+    
     @app.get("/")
     async def root():
         """Root endpoint"""

@@ -624,8 +624,13 @@ def health_ping():
     ✅ PRODUCTION-GRADE: Database-free, instant response.
     Returns immediately without database check.
     Use this for load balancer health checks and quick availability tests.
+    
+    ❌ No DB access
+    ❌ No external calls
+    ❌ No disk access
+    Target latency: < 30ms
     """
-    return {"status": "ok", "message": "pong"}
+    return {"status": "ok"}
 
 
 # Cache warming endpoint for cron jobs
