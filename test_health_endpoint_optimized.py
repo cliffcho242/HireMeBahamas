@@ -34,10 +34,10 @@ def test_backend_app_health():
     print(f"   HEAD /health status: {response.status_code}")
     assert response.status_code == 200, f"Expected 200 for HEAD, got {response.status_code}"
     
-    # Verify endpoint is not in OpenAPI schema
-    openapi_schema = app.openapi()
-    assert openapi_schema is None or "/health" not in str(openapi_schema.get("paths", {})), \
-        "Health endpoint should not be in OpenAPI schema (include_in_schema=False)"
+    # Verify OpenAPI docs are disabled (docs_url=None means no schema generation overhead)
+    assert app.openapi_url is None, "OpenAPI URL should be disabled for zero cold starts"
+    assert app.docs_url is None, "Docs URL should be disabled for zero cold starts"
+    assert app.redoc_url is None, "ReDoc URL should be disabled for zero cold starts"
     
     print("   ✅ All checks passed for backend/app/main.py")
 
@@ -65,10 +65,10 @@ def test_api_index_health():
     print(f"   HEAD /health status: {response.status_code}")
     assert response.status_code == 200, f"Expected 200 for HEAD, got {response.status_code}"
     
-    # Verify endpoint is not in OpenAPI schema
-    openapi_schema = app.openapi()
-    assert openapi_schema is None or "/health" not in str(openapi_schema.get("paths", {})), \
-        "Health endpoint should not be in OpenAPI schema (include_in_schema=False)"
+    # Verify OpenAPI docs are disabled (docs_url=None means no schema generation overhead)
+    assert app.openapi_url is None, "OpenAPI URL should be disabled for zero cold starts"
+    assert app.docs_url is None, "Docs URL should be disabled for zero cold starts"
+    assert app.redoc_url is None, "ReDoc URL should be disabled for zero cold starts"
     
     print("   ✅ All checks passed for api/index.py")
 
