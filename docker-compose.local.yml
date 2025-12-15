@@ -152,7 +152,7 @@ services:
       ENVIRONMENT: production  # Use production mode to test production code paths
       PORT: 8080
       WEB_CONCURRENCY: 2
-      WEB_THREADS: 8
+      WEB_THREADS: 4
     depends_on:
       postgres:
         condition: service_healthy
