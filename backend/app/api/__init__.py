@@ -1,14 +1,9 @@
-from . import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
+# Only import the core routers needed by main.py
+# Other routers can be imported directly when needed
+from . import auth, users, jobs
 
 __all__ = [
     'auth',
-    'hireme', 
+    'users',
     'jobs',
-    'messages',
-    'notifications',
-    'posts',
-    'profile_pictures',
-    'reviews',
-    'upload',
-    'users'
 ]
