@@ -297,9 +297,12 @@ if HAS_BACKEND and HAS_DB:
         db_engine = backend_engine
         async_session_maker = backend_session_maker
         logger.info("✅ Using backend's database engine (avoiding duplicate connections)")
-    except (ImportError, AttributeError, ModuleNotFoundError) as e:
+    except Exception as e:
+        print(f"DB import failed: {e}")
         logger.warning(f"⚠️  Could not import backend database modules: {e}")
         # Fallback will be created below if needed
+        db_engine = None
+        async_session_maker = None
 
 # Fallback: Create minimal database engine only if backend isn't available
 if db_engine is None and HAS_DB and DATABASE_URL:
