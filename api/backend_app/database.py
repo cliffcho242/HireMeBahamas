@@ -364,7 +364,7 @@ try:
         f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
     )
 except Exception as e:
-    print("DB init failed:", e)
+    print(f"DB init failed: {e}")
     logger.error(f"Database engine initialization failed: {e}")
     engine = None
 
