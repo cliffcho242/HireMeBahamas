@@ -158,10 +158,11 @@ except Exception as e:
 
 try:
     from .core.redis_cache import redis_cache, warm_cache
-    print("✅ Redis cache imported successfully")
+    print("✅ Redis cache (legacy) imported successfully")
 except Exception as e:
-    print(f"Redis cache import failed: {e}")
+    print(f"Redis cache (legacy) not available: {e}")
     redis_cache = warm_cache = None
+    # Note: Using new cache system from app.core.cache instead
 
 try:
     from .core.db_health import check_database_health, get_database_stats
@@ -367,6 +368,13 @@ async def log_requests(request: Request, call_next):
         response = await call_next(request)
         duration_ms = int((time.time() - start_time) * 1000)
         
+        # Track performance metrics
+        try:
+            from .core.monitoring import track_request_time
+            track_request_time(request.url.path, duration_ms, response.status_code)
+        except Exception:
+            pass  # Monitoring is non-critical
+        
         # Determine log level and capture error details for failed requests
         if response.status_code < 400:
             # Success - log at INFO level
@@ -513,6 +521,27 @@ async def lazy_import_heavy_stuff():
             logger.info("Redis cache not available")
     except Exception as e:
         logger.warning(f"Redis connection failed (non-critical): {e}")
+    
+    # ==========================================================================
+    # STEP 3: Warm up cache and database connections (optional, non-blocking)
+    # ==========================================================================
+    try:
+        from .core.cache import warmup_cache
+        await warmup_cache()
+        logger.info("Cache warmup completed")
+    except Exception as e:
+        logger.debug(f"Cache warmup skipped: {e}")
+    
+    # ==========================================================================
+    # STEP 4: Run performance optimizations (background task)
+    # ==========================================================================
+    # Run performance optimizations in background to avoid blocking startup
+    try:
+        from .core.performance import run_all_performance_optimizations
+        asyncio.create_task(run_all_performance_optimizations())
+        logger.info("Performance optimizations scheduled")
+    except Exception as e:
+        logger.debug(f"Performance optimizations skipped: {e}")
     
     # ==========================================================================
     # STRICT LAZY INITIALIZATION: NO DATABASE OPERATIONS AT STARTUP
@@ -685,9 +714,47 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
         health_response["database"]["pool"] = {"error": str(e)}
     
     # Add cache stats
-    health_response["cache"] = await redis_cache.health_check()
+    try:
+        if redis_cache is not None:
+            health_response["cache"] = await redis_cache.health_check()
+        else:
+            # Use new cache system
+            from .core.cache import _redis_available, _redis_client
+            if _redis_available and _redis_client:
+                health_response["cache"] = {"status": "healthy", "backend": "redis"}
+            else:
+                health_response["cache"] = {"status": "healthy", "backend": "in-memory"}
+    except Exception as e:
+        health_response["cache"] = {"status": "degraded", "error": str(e)}
     
     return health_response
+
+
+# Performance metrics endpoint
+@app.get("/metrics", tags=["monitoring"])
+async def get_metrics():
+    """Get performance metrics for monitoring
+    
+    Returns metrics including:
+    - Average API response times
+    - Cache hit rates
+    - Database query statistics
+    - Error rates
+    - Per-endpoint performance
+    
+    Target metrics:
+    - API response: 50-150ms
+    - Cache hit rate: >80%
+    - Page load: <1s
+    """
+    try:
+        from .core.monitoring import get_performance_metrics
+        return get_performance_metrics()
+    except ImportError:
+        return {
+            "error": "Performance monitoring not available",
+            "message": "Install monitoring dependencies to enable this endpoint"
+        }
 
 
 # Include routers with /api prefix to match frontend expectations (with safety checks)
