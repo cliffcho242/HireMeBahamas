@@ -51,11 +51,9 @@ services:
     buildCommand: bash build.sh
     
     # ==========================================================================
-    # START COMMAND - Gunicorn with Uvicorn workers
+    # START COMMAND - Uvicorn
     # ==========================================================================
-    # For FastAPI, use uvicorn.workers.UvicornWorker
-    # For Flask, use: gunicorn app:app --config gunicorn.conf.py
-    startCommand: gunicorn backend.app.main:app --config gunicorn.conf.py --worker-class uvicorn.workers.UvicornWorker
+    startCommand: uvicorn backend_app.main:app --host 0.0.0.0 --port $PORT
     
     # ==========================================================================
     # ENVIRONMENT VARIABLES

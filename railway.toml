@@ -29,7 +29,7 @@ watchPatterns = [
 ]
 
 [deploy]
-startCommand = "python validate_startup.py && gunicorn final_backend_postgresql:application --config gunicorn.conf.py"
+startCommand = "uvicorn api.backend_app.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 180
 restartPolicyType = "ON_FAILURE"

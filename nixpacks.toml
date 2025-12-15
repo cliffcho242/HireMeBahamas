@@ -105,10 +105,6 @@ cmds = [
 ]
 
 [start]
-# Migration runs automatically in final_backend_postgresql.py
-# PostgreSQL connection is configured via DATABASE_URL environment variable
-# Use gunicorn config file which properly reads PORT from environment with fallback to 8080
-# Run startup validation first to catch configuration issues early
-# Run Railway PostgreSQL check to prevent "root execution not permitted" errors
-# Note: railway_postgres_check.py always returns 0 (displays warnings but never blocks startup)
-cmd = "python railway_postgres_check.py && python validate_startup.py && gunicorn final_backend_postgresql:application --config gunicorn.conf.py"
+# Use uvicorn to start the FastAPI application
+# Railway/Render will inject PORT environment variable
+cmd = "uvicorn api.backend_app.main:app --host 0.0.0.0 --port $PORT"

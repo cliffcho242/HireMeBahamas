@@ -64,14 +64,9 @@ services:
     buildCommand: bash build.sh
     
     # ==========================================================================
-    # START COMMAND - Nuclear Configuration
+    # START COMMAND - Uvicorn
     # ==========================================================================
-    # - workers=1: Prevents OOM on 1GB RAM
-    # - timeout=180: Survives Railway DB cold starts (up to 2 min)
-    # - keep-alive=5: Matches Render load balancer
-    # - preload: Eliminates cold start app loading delay
-    # ==========================================================================
-    startCommand: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
+    startCommand: uvicorn api.backend_app.main:app --host 0.0.0.0 --port $PORT
     
     envVars:
       - key: FLASK_ENV

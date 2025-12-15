@@ -23,7 +23,7 @@
 # 
 # =============================================================================
 
-web: uvicorn api.backend_app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 5 --limit-concurrency 100
+web: uvicorn api.backend_app.main:app --host 0.0.0.0 --port $PORT
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh
