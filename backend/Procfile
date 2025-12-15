@@ -1,1 +1,32 @@
-web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+# =============================================================================
+# HireMeBahamas Procfile - FINAL SPEED ARCHITECTURE
+# =============================================================================
+# 
+# This Procfile is for Railway/Heroku deployments
+# For Render, see render.yaml in the root directory
+#
+# FINAL SPEED ARCHITECTURE:
+# - FastAPI for maximum performance with async support
+# - Uvicorn with uvloop for optimized event loop
+# - Single worker optimized for Standard plan (1GB RAM)
+# - Neon PostgreSQL with connection pooling
+#
+# Configuration:
+# - workers=1: Optimized for 512MB-1GB RAM environments
+# - FastAPI: Built-in async support, prevents blocking
+# - Uvicorn: ASGI server with excellent performance
+#
+# Environment variables (set in platform dashboard):
+#   PORT=8000                 Default port
+#   DATABASE_URL=postgresql://...  Neon PostgreSQL connection string
+#   SECRET_KEY=...            Generated secret key
+#   JWT_SECRET_KEY=...        Generated JWT secret
+#   ENVIRONMENT=production    Production mode
+# 
+# =============================================================================
+
+# Main web process - FastAPI with Uvicorn (FINAL SPEED ARCHITECTURE)
+# Note: When using this Procfile, ensure the working directory is 'backend/'
+# Railway/Heroku should have root directory set to 'backend/' in settings
+# If root is the project root, use: cd backend && uvicorn app.main:app...
+web: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --log-level info
