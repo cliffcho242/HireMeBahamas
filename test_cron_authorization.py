@@ -37,6 +37,12 @@ def test_python_cron_handler():
             print("  ✗ Handler does not return 401 status")
             return False
             
+        if 'secrets.compare_digest' in content:
+            print("  ✓ Handler uses constant-time comparison (timing attack safe)")
+        else:
+            print("  ✗ Handler does not use constant-time comparison")
+            return False
+            
         print("  ✓ Python cron handler authorization: PASS")
         return True
         
@@ -73,6 +79,12 @@ def test_typescript_cron_handler():
             print("  ✗ Handler does not return 401 status")
             return False
             
+        if 'timingSafeEqual' in content:
+            print("  ✓ Handler uses constant-time comparison (timing attack safe)")
+        else:
+            print("  ✗ Handler does not use constant-time comparison")
+            return False
+            
         print("  ✓ TypeScript cron handler authorization: PASS")
         return True
         
@@ -107,6 +119,12 @@ def test_typescript_health_handler():
             print("  ✓ Handler returns 401 Unauthorized on auth failure")
         else:
             print("  ✗ Handler does not return 401 status")
+            return False
+            
+        if 'timingSafeEqual' in content:
+            print("  ✓ Handler uses constant-time comparison (timing attack safe)")
+        else:
+            print("  ✗ Handler does not use constant-time comparison")
             return False
             
         print("  ✓ TypeScript health handler authorization: PASS")

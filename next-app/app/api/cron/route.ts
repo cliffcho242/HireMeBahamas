@@ -20,9 +20,36 @@ export async function GET(request: Request) {
   // Check for CRON_SECRET authorization
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {
-    const authHeader = request.headers.get("Authorization");
+    const authHeader = request.headers.get("Authorization") || "";
     const expectedAuth = `Bearer ${cronSecret}`;
-    if (authHeader !== expectedAuth) {
+    
+    // Use constant-time comparison to prevent timing attacks
+    try {
+      const authBuffer = Buffer.from(authHeader);
+      const expectedBuffer = Buffer.from(expectedAuth);
+      
+      // Ensure both buffers are the same length to use timingSafeEqual
+      if (authBuffer.length !== expectedBuffer.length) {
+        return NextResponse.json(
+          {
+            error: "Unauthorized",
+            message: "Invalid or missing Authorization header",
+          },
+          { status: 401 }
+        );
+      }
+      
+      const crypto = require("crypto");
+      if (!crypto.timingSafeEqual(authBuffer, expectedBuffer)) {
+        return NextResponse.json(
+          {
+            error: "Unauthorized",
+            message: "Invalid or missing Authorization header",
+          },
+          { status: 401 }
+        );
+      }
+    } catch (error) {
       return NextResponse.json(
         {
           error: "Unauthorized",
