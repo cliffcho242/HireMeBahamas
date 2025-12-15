@@ -104,7 +104,14 @@ Users → Vercel Edge CDN → Render FastAPI → Neon PostgreSQL
    # Generate JWT_SECRET_KEY
    python3 -c "import secrets; print('JWT_SECRET_KEY=' + secrets.token_urlsafe(32))"
    ```
-   Copy and paste these values into Render environment variables.
+   
+   ⚠️ **IMPORTANT**: Save these values securely! You'll need them for Render.
+   
+   **Why not use Render's generateValue?**
+   - Render regenerates secrets on every restart
+   - This invalidates all existing JWT tokens
+   - Users would be logged out on every deployment
+   - Use manually generated secrets for consistency
 
 7. **Health Check Settings**:
    - Click "Advanced" → "Health Check"

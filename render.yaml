@@ -57,15 +57,25 @@ services:
     # FastAPI provides maximum performance with async support
     # Uvicorn with uvloop for optimized event loop
     # Single worker optimized for Standard plan (1GB RAM)
-    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+    # Working directory is set to backend/ for consistent path resolution
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --log-level info
     
     envVars:
       - key: ENVIRONMENT
         value: production
-      - key: SECRET_KEY
-        generateValue: true
-      - key: JWT_SECRET_KEY
-        generateValue: true
+      # ==========================================================================
+      # SECRET KEYS - IMPORTANT: Set these manually in Render Dashboard
+      # ==========================================================================
+      # DO NOT use generateValue: true for SECRET_KEY and JWT_SECRET_KEY
+      # This causes authentication failures when the service restarts
+      # 
+      # Generate secrets locally and set in Render Dashboard:
+      #   python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+      #
+      # Set these in Render Dashboard → Environment → Add Environment Variable
+      # ==========================================================================
+      # SECRET_KEY - Set manually in Render Dashboard
+      # JWT_SECRET_KEY - Set manually in Render Dashboard
       - key: FRONTEND_URL
         value: https://hiremebahamas.vercel.app
       - key: PYTHONUNBUFFERED

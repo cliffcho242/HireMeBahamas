@@ -26,4 +26,7 @@
 # =============================================================================
 
 # Main web process - FastAPI with Uvicorn (FINAL SPEED ARCHITECTURE)
-web: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+# Note: When using this Procfile, ensure the working directory is 'backend/'
+# Railway/Heroku should have root directory set to 'backend/' in settings
+# If root is the project root, use: cd backend && uvicorn app.main:app...
+web: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --log-level info
