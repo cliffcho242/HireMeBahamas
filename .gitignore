@@ -28,6 +28,12 @@ vercel_env_config.txt
 *.sqlite3
 hiremebahamas.db
 
+# Database backups (from migration)
+backups/
+*.sql
+*_backup_*.sql
+hiremebahamas_*_backup_*.sql
+
 # Logs
 *.log
 logs/
