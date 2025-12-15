@@ -253,7 +253,7 @@ if __name__ == "__main__":
 
         # Test backend
         try:
-            response = requests.get("http://localhost:8005/health")
+            response = requests.get("http://localhost:8005/health", timeout=5)
             if response.status_code == 200:
                 print("✅ Backend health check passed")
             else:
@@ -263,7 +263,7 @@ if __name__ == "__main__":
 
         # Test frontend
         try:
-            response = requests.get("http://localhost:3000")
+            response = requests.get("http://localhost:3000", timeout=5)
             if response.status_code == 200:
                 print("✅ Frontend connectivity test passed")
             else:

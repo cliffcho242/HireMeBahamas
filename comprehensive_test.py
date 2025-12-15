@@ -14,7 +14,7 @@ def comprehensive_test():
 
     # Test 1: Available users endpoint
     print("1. Testing available users endpoint...")
-    response = requests.get(f"{BASE_URL}/api/hireme/available")
+    response = requests.get(f"{BASE_URL}/api/hireme/available", timeout=10)
     if response.status_code == 200:
         data = response.json()
         print(f"   ✅ Available users: {len(data['users'])}")
@@ -29,7 +29,7 @@ def comprehensive_test():
     print("\n2. Testing search functionality...")
     searches = ["carpenter", "chef", "plumber"]
     for search in searches:
-        response = requests.get(f"{BASE_URL}/api/hireme/available?search={search}")
+        response = requests.get(f"{BASE_URL}/api/hireme/available?search={search}", timeout=10)
         if response.status_code == 200:
             count = len(response.json()["users"])
             print(f"   ✅ Search '{search}': {count} results")
@@ -49,7 +49,7 @@ def comprehensive_test():
 
         # Login
         login = requests.post(
-            f"{BASE_URL}/api/auth/login", json={"email": email, "password": password}
+            f"{BASE_URL}/api/auth/login", json={"email": email, "password": password}, timeout=10
         )
         if login.status_code != 200:
             print(f"      ❌ Login failed for {email}")
@@ -59,12 +59,12 @@ def comprehensive_test():
         headers = {"Authorization": f"Bearer {token}"}
 
         # Get initial state
-        profile = requests.get(f"{BASE_URL}/api/auth/profile", headers=headers)
+        profile = requests.get(f"{BASE_URL}/api/auth/profile", headers=headers, timeout=10)
         initial = profile.json()["is_available_for_hire"]
         print(f"      Initial state: {'On' if initial else 'Off'}")
 
         # Toggle to opposite
-        toggle = requests.post(f"{BASE_URL}/api/hireme/toggle", headers=headers)
+        toggle = requests.post(f"{BASE_URL}/api/hireme/toggle", headers=headers, timeout=10)
         if toggle.status_code == 200:
             new_state = toggle.json()["is_available"]
             print(f"      After toggle: {'On' if new_state else 'Off'}")
@@ -73,7 +73,7 @@ def comprehensive_test():
 
     # Test 4: Final state check
     print("\n4. Final state verification...")
-    final_response = requests.get(f"{BASE_URL}/api/hireme/available")
+    final_response = requests.get(f"{BASE_URL}/api/hireme/available", timeout=10)
     if final_response.status_code == 200:
         final_count = len(final_response.json()["users"])
         print(f"   ✅ Final available users: {final_count}")

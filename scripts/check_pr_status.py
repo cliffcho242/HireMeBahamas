@@ -49,7 +49,7 @@ class PRStatusChecker:
         params = {"state": "open", "per_page": 100}
         
         try:
-            response = requests.get(url, headers=self.headers, params=params)
+            response = requests.get(url, headers=self.headers, params=params, timeout=10)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -61,7 +61,7 @@ class PRStatusChecker:
         url = f"{self.base_url}/repos/{self.owner}/{self.repo}/pulls/{pr_number}"
         
         try:
-            response = requests.get(url, headers=self.headers)
+            response = requests.get(url, headers=self.headers, timeout=10)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:

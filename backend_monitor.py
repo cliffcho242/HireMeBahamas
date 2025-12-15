@@ -106,9 +106,9 @@ class BackendMonitor:
                 print(f"Testing {method} {endpoint}...")
 
                 if method == "GET":
-                    response = requests.get(url)
+                    response = requests.get(url, timeout=10)
                 elif method == "POST":
-                    response = requests.post(url, json=data)
+                    response = requests.post(url, json=data, timeout=10)
 
                 print(f"  Status: {response.status_code}")
                 print(
