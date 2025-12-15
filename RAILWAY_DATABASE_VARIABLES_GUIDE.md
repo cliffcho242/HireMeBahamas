@@ -8,24 +8,21 @@ This guide provides **exact variables and locations** for configuring PostgreSQL
 
 ## ✅ Required Variables
 
-Ensure that the following variables are configured in your Railway backend service:
+Ensure that the following variable is configured in your Railway backend service:
 
-### Core Database Variables
+### Core Database Variable
 
 | Variable Name | Description | Required |
 |--------------|-------------|----------|
-| `PGHOST` | PostgreSQL server hostname | ✅ Yes |
-| `PGPORT` | PostgreSQL server port | ✅ Yes |
-| `PGUSER` | PostgreSQL username | ✅ Yes |
-| `PGPASSWORD` | PostgreSQL password | ✅ Yes |
-| `PGDATABASE` | PostgreSQL database name | ✅ Yes |
-| `DATABASE_URL` | Complete PostgreSQL connection string | ✅ Yes |
+| `DATABASE_URL` | Complete PostgreSQL connection string (Neon format) | ✅ Yes |
+
+**Note:** Individual PostgreSQL variables (PGHOST, PGUSER, PGPASSWORD, PGDATABASE) are NO LONGER SUPPORTED.
+Only DATABASE_URL is now accepted.
 
 ### Additional Required Variables
 
 | Variable Name | Description | Required |
 |--------------|-------------|----------|
-| `DATABASE_PRIVATE_URL` | Railway private network connection (recommended) | ⭐ Recommended |
 | `SECRET_KEY` | Flask session secret key | ✅ Yes |
 | `JWT_SECRET_KEY` | JWT token signing key | ✅ Yes |
 | `ENVIRONMENT` | Set to "production" | ✅ Yes |
@@ -57,132 +54,49 @@ https://railway.app/project/[PROJECT_ID]/service/[SERVICE_ID]
 
 ## 🔧 How to Configure Each Variable
 
-### Option 1: Automatic Configuration (Recommended)
+### Configuration Steps (Simplified)
 
-When you add a PostgreSQL database to your Railway project, Railway **automatically creates** these variables in your backend service:
+When you use a PostgreSQL database (Neon, Railway, or other provider), you only need to configure **DATABASE_URL**:
 
-#### Auto-Created Variables:
+#### Step 1: Get Your DATABASE_URL
 
-1. **DATABASE_URL** (Public connection - has egress fees)
-   ```
-   postgresql://postgres:PASSWORD@containers-us-west-XX.railway.app:PORT/railway
-   ```
+Choose your database provider and get the connection string:
 
-2. **DATABASE_PRIVATE_URL** (Private network - no egress fees) ⭐ **Use this!**
-   ```
-   postgresql://postgres:PASSWORD@postgres.railway.internal:5432/railway
-   ```
-
-#### How Railway Auto-Shares Variables:
-
-Railway automatically shares database variables when both services are in the same project:
-- PostgreSQL service creates `DATABASE_URL` and `DATABASE_PRIVATE_URL`
-- Backend service receives references to these variables
-- No manual configuration needed for basic setup
-
-**To verify auto-created variables:**
-1. Go to: Railway Dashboard → Project → Backend Service → Variables
-2. Look for `DATABASE_URL` or `DATABASE_PRIVATE_URL`
-3. If they exist, ✅ automatic configuration is working!
-
----
-
-### Option 2: Manual Configuration (Individual Variables)
-
-If you need to configure individual PostgreSQL variables (PGHOST, PGPORT, etc.), follow these steps:
-
-#### Step 1: Get Database Connection Details
-
-**Location:** Railway Dashboard → Project → PostgreSQL Service → Variables Tab
-
-**Extract these values from DATABASE_URL:**
-
-If your `DATABASE_URL` is:
+**For Neon (Recommended):**
 ```
-postgresql://postgres:mypassword123@containers-us-west-100.railway.app:5432/railway
+Format: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require
+Get from: https://console.neon.tech/ → Your Project → Connection Details
 ```
 
-Then extract:
-- `PGUSER` = `postgres`
-- `PGPASSWORD` = `mypassword123`
-- `PGHOST` = `containers-us-west-100.railway.app`
-- `PGPORT` = `5432`
-- `PGDATABASE` = `railway`
+**For Railway:**
+```
+Format: postgresql://postgres:PASSWORD@containers-us-west-XX.railway.app:5432/railway?sslmode=require
+Get from: Railway Dashboard → PostgreSQL Service → Connect → Copy Connection String
+```
 
-#### Step 2: Add Variables to Backend Service
+**For Other Providers:**
+```
+Format: postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require
+```
+
+#### Step 2: Add DATABASE_URL to Backend Service
 
 **Location:** Railway Dashboard → Project → Backend Service → Variables Tab
 
-Click **"+ New Variable"** and add each one:
+Click **"+ New Variable"** and add:
 
-##### 1. PGHOST
-```bash
-Variable Name: PGHOST
-Value: containers-us-west-100.railway.app
-# OR for private network:
-Value: postgres.railway.internal
-```
-
-##### 2. PGPORT
-```bash
-Variable Name: PGPORT
-Value: 5432
-# OR for private network (always):
-Value: 5432
-```
-
-##### 3. PGUSER
-```bash
-Variable Name: PGUSER
-Value: postgres
-```
-
-##### 4. PGPASSWORD
-```bash
-Variable Name: PGPASSWORD
-Value: [Your PostgreSQL password]
-```
-
-##### 5. PGDATABASE
-```bash
-Variable Name: PGDATABASE
-Value: railway
-```
-
-##### 6. DATABASE_URL
 ```bash
 Variable Name: DATABASE_URL
-Value: postgresql://postgres:PASSWORD@HOST:PORT/railway
+Value: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require
 ```
 
-##### 7. DATABASE_PRIVATE_URL (Recommended - saves costs)
-```bash
-Variable Name: DATABASE_PRIVATE_URL
-Value: postgresql://postgres:PASSWORD@postgres.railway.internal:5432/railway
-```
+**Important:**
+- ✅ Copy the ENTIRE connection string from your database provider
+- ✅ Ensure it includes `?sslmode=require` at the end
+- ✅ Do NOT wrap in quotes
+- ✅ Do NOT manually type - use the copy button from your provider's dashboard
 
----
-
-### Option 3: Reference Existing PostgreSQL Variables
-
-Instead of copying values manually, you can create **references** to the PostgreSQL service variables:
-
-**Location:** Railway Dashboard → Project → Backend Service → Variables Tab
-
-1. Click **"+ New Variable"**
-2. Click **"Add Reference"** (instead of manual entry)
-3. Select **PostgreSQL** service from the dropdown
-4. Select the variable you want to reference:
-   - `DATABASE_PRIVATE_URL` ⭐ (Recommended)
-   - `DATABASE_URL`
-   - `PGHOST`
-   - `PGPORT`
-   - `PGUSER`
-   - `PGPASSWORD`
-   - `PGDATABASE`
-5. Click **"Add"**
-
-This creates a live reference that automatically updates if the PostgreSQL service changes.
+That's it! No other database variables are needed.
 
 ---
 
@@ -236,19 +150,8 @@ Value: 8000
 
 Use this checklist to ensure all variables are properly configured:
 
-### Database Variables (Choose One Method):
-
-**Method A: Use Connection Strings (Recommended)**
-- [ ] `DATABASE_PRIVATE_URL` (from PostgreSQL service) ⭐
-- [ ] `DATABASE_URL` (fallback)
-
-**Method B: Use Individual Components**
-- [ ] `PGHOST` (hostname)
-- [ ] `PGPORT` (port number)
-- [ ] `PGUSER` (username)
-- [ ] `PGPASSWORD` (password)
-- [ ] `PGDATABASE` (database name)
-- [ ] `DATABASE_URL` (complete connection string)
+### Database Variable (Required):
+- [ ] `DATABASE_URL` (Neon PostgreSQL connection string with ?sslmode=require)
 
 ### Security Variables (Always Required):
 - [ ] `SECRET_KEY` (generated secure key)
@@ -263,17 +166,18 @@ Use this checklist to ensure all variables are properly configured:
 
 ## 🎯 Recommended Configuration for Railway
 
-For optimal performance and cost savings on Railway, use this configuration:
+For optimal setup on Railway, use this configuration:
 
 ### Exact Variables to Set:
 
 **Location:** Railway Dashboard → Project → Backend Service → Variables Tab
 
-1. **DATABASE_PRIVATE_URL** (Auto-created by Railway, verify it exists)
+1. **DATABASE_URL** (Add manually - use Neon PostgreSQL)
+   ```bash
+   Variable Name: DATABASE_URL
+   Value: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require
    ```
-   ✅ Should be automatically present
-   Format: postgresql://postgres:xxx@postgres.railway.internal:5432/railway
-   ```
+   Get from: Your Neon dashboard or database provider
 
 2. **SECRET_KEY** (Add manually)
    ```bash
@@ -299,7 +203,7 @@ For optimal performance and cost savings on Railway, use this configuration:
    Value: https://hiremebahamas.vercel.app
    ```
 
-That's it! The application automatically reads `DATABASE_PRIVATE_URL` and prefers it over `DATABASE_URL`.
+That's it! Only DATABASE_URL is needed for database connectivity.
 
 ---
 
@@ -396,37 +300,28 @@ If you see `"database": "connected"`, all variables are configured correctly! �
 
 ---
 
-## 💰 Cost Optimization: Private Network vs Public
+## 💰 Database Provider Recommendation
 
-### DATABASE_PRIVATE_URL (Recommended) ⭐
+### Use Neon PostgreSQL (Recommended) ⭐
 
-**Location:** Uses Railway's internal private network
-
-**Benefits:**
-- ✅ **No egress fees** - Traffic between services is free
-- ✅ **Faster** - Internal network has lower latency
-- ✅ **More secure** - Not exposed to public internet
-
-**Format:**
-```
-postgresql://postgres:PASSWORD@postgres.railway.internal:5432/railway
-```
-
-### DATABASE_URL (Fallback)
-
-**Location:** Uses Railway's public TCP proxy
-
-**Drawbacks:**
-- ❌ **Incurs egress fees** - Charged per GB of data transfer
-- ❌ **Slower** - Goes through public proxy
-- ❌ **Less secure** - Uses public endpoint
+**Why Neon:**
+- ✅ **Serverless** - Auto-scales with your usage
+- ✅ **Free tier** - Generous free tier for development
+- ✅ **SSL Required** - Secure by default
+- ✅ **Optimized** - Built for serverless workloads
 
 **Format:**
 ```
-postgresql://postgres:PASSWORD@containers-us-west-XX.railway.app:PORT/railway
+postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require
 ```
 
-**Recommendation:** Always prefer `DATABASE_PRIVATE_URL` for Railway deployments to minimize costs and maximize performance.
+**Get Started:**
+1. Sign up at https://console.neon.tech/
+2. Create a new project
+3. Copy the connection string
+4. Add as DATABASE_URL in Railway
+
+**Recommendation:** Use Neon PostgreSQL for the best serverless database experience with HireMeBahamas.
 
 ---
 
@@ -453,22 +348,17 @@ postgresql://postgres:PASSWORD@containers-us-west-XX.railway.app:PORT/railway
 ├─────────────────────────────────────────────────────────────┤
 │ REQUIRED VARIABLES:                                         │
 │                                                             │
-│ ✅ DATABASE_PRIVATE_URL (auto-created, verify exists)      │
-│ ✅ DATABASE_URL (fallback, auto-created)                   │
+│ ✅ DATABASE_URL (Neon format with ?sslmode=require)        │
 │ ✅ SECRET_KEY (generate: python3 -c "import secrets...")   │
 │ ✅ JWT_SECRET_KEY (generate: python3 -c "import secrets...")│
 │ ✅ ENVIRONMENT = production                                │
 │                                                             │
-│ OPTIONAL INDIVIDUAL VARIABLES:                             │
-│ • PGHOST (from DATABASE_URL)                               │
-│ • PGPORT (from DATABASE_URL)                               │
-│ • PGUSER (from DATABASE_URL)                               │
-│ • PGPASSWORD (from DATABASE_URL)                           │
-│ • PGDATABASE (from DATABASE_URL)                           │
-│                                                             │
 │ OPTIONAL CONFIGURATION:                                     │
 │ • FRONTEND_URL = https://hiremebahamas.vercel.app          │
 │ • PORT = 8000 (Railway auto-sets this)                     │
+│                                                             │
+│ NOTE: PGHOST, PGUSER, PGPASSWORD, PGDATABASE are           │
+│       NO LONGER SUPPORTED. Use DATABASE_URL only.           │
 ├─────────────────────────────────────────────────────────────┤
 │ Test: curl https://your-app.up.railway.app/health          │
 │ Expected: {"database": "connected"}                         │
@@ -481,8 +371,8 @@ postgresql://postgres:PASSWORD@containers-us-west-XX.railway.app:PORT/railway
 
 ### Exact Variables Needed:
 
-1. **Database Connection** (auto-created by Railway):
-   - `DATABASE_PRIVATE_URL` ⭐ or `DATABASE_URL`
+1. **Database Connection** (add manually):
+   - `DATABASE_URL` (Neon format: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require)
 
 2. **Security Keys** (add manually):
    - `SECRET_KEY`
@@ -501,17 +391,17 @@ https://railway.app/dashboard
 → Add variables here
 ```
 
-### Individual PostgreSQL Variables (Optional):
+### Important Changes:
 
-If needed, extract from `DATABASE_URL`:
-- `PGHOST` - hostname from connection string
-- `PGPORT` - port from connection string
-- `PGUSER` - username from connection string
-- `PGPASSWORD` - password from connection string
-- `PGDATABASE` - database name from connection string
+⚠️  **Individual PostgreSQL variables are NO LONGER SUPPORTED:**
+- ❌ PGHOST - NOT SUPPORTED
+- ❌ PGPORT - NOT SUPPORTED
+- ❌ PGUSER - NOT SUPPORTED
+- ❌ PGPASSWORD - NOT SUPPORTED
+- ❌ PGDATABASE - NOT SUPPORTED
 
-**Note:** For most use cases, `DATABASE_PRIVATE_URL` alone is sufficient. The application will parse it automatically to extract PGHOST, PGPORT, PGUSER, PGPASSWORD, and PGDATABASE internally.
+✅ **Only DATABASE_URL is supported** - Use Neon PostgreSQL format with ?sslmode=require
 
 ---
 
-**🎉 You're all set!** Once these variables are configured in Railway, your HireMeBahamas backend will automatically connect to PostgreSQL with optimal performance and minimal cost.
+**🎉 You're all set!** Once DATABASE_URL is configured in Railway with your Neon PostgreSQL connection string, your HireMeBahamas backend will automatically connect.

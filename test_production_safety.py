@@ -180,28 +180,29 @@ except Exception as e:
     test_code_backend = """
 import os
 import sys
+import logging
+
+# Capture logging output
+logging.basicConfig(level=logging.WARNING)
 
 # Set production environment WITHOUT DATABASE_URL
 os.environ['ENV'] = 'production'
 os.environ['ENVIRONMENT'] = 'production'
-# Ensure all database-related env vars are not set
-for var in ['DATABASE_URL', 'DATABASE_PRIVATE_URL', 'POSTGRES_URL', 
-            'PGHOST', 'PGUSER', 'PGPASSWORD', 'PGDATABASE']:
-    if var in os.environ:
-        del os.environ[var]
+# Ensure DATABASE_URL is not set (PG* variables no longer supported)
+if 'DATABASE_URL' in os.environ:
+    del os.environ['DATABASE_URL']
 
 try:
-    # This should raise RuntimeError in production without DATABASE_URL
+    # This should log a warning and use placeholder in production without DATABASE_URL
     sys.path.insert(0, 'api/backend_app')
     import database
-    print("FAIL: Should have raised RuntimeError")
-    sys.exit(1)
-except RuntimeError as e:
-    if "DATABASE_URL is required in production" in str(e):
-        print("PASS: Correctly raised RuntimeError for missing DATABASE_URL")
+    
+    # Check that placeholder URL is used
+    if database.DATABASE_URL == database.DB_PLACEHOLDER_URL:
+        print("PASS: Correctly used placeholder URL for missing DATABASE_URL in production")
         sys.exit(0)
     else:
-        print(f"FAIL: Wrong error message: {e}")
+        print(f"FAIL: Expected placeholder URL, got: {database.DATABASE_URL}")
         sys.exit(1)
 except Exception as e:
     print(f"FAIL: Unexpected error: {e}")
