@@ -18,11 +18,25 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   // Verify authorization from Vercel Cron
+  const cronSecret = process.env.CRON_SECRET;
+  
+  if (!cronSecret) {
+    console.error("CRON_SECRET not configured");
+    return NextResponse.json(
+      { error: "Server configuration error" },
+      { status: 500 }
+    );
+  }
+
   const authHeader = request.headers.get("Authorization");
-  const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
+  const expectedAuth = `Bearer ${cronSecret}`;
 
   if (authHeader !== expectedAuth) {
-    console.error("Unauthorized cron attempt");
+    console.error("Unauthorized cron attempt", {
+      timestamp: new Date().toISOString(),
+      ip: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip"),
+      userAgent: request.headers.get("user-agent"),
+    });
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 401 }
