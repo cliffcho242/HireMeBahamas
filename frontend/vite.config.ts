@@ -293,8 +293,9 @@ export default defineConfig({
             return 'vendor-common';
           }
         },
-        // Optimize for parallel loading
-        experimentalMinChunkSize: 20000, // 20KB minimum
+        // Note: experimentalMinChunkSize is experimental and may cause issues
+        // Test thoroughly before using in production
+        // experimentalMinChunkSize: 20000, // 20KB minimum
       },
     },
   },

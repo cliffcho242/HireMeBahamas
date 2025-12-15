@@ -18,11 +18,14 @@ interface LazyImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'
   rootMargin?: string;
   onLoad?: () => void;
   onError?: () => void;
-  fallbackSrc?: string;
+  fallbackSrc?: string; // Default: use a data URL for inline placeholder
   className?: string;
   width?: number | string;
   height?: number | string;
 }
+
+// Default inline SVG placeholder to avoid broken image requests
+const DEFAULT_FALLBACK = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23f0f0f0" width="100" height="100"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="14"%3EImage%3C/text%3E%3C/svg%3E';
 
 export function LazyImage({
   src,
@@ -32,7 +35,7 @@ export function LazyImage({
   rootMargin = '50px',
   onLoad,
   onError,
-  fallbackSrc = '/images/placeholder.png',
+  fallbackSrc = DEFAULT_FALLBACK,
   className = '',
   width,
   height,
@@ -212,12 +215,15 @@ export function AvatarImage({ src, alt, size = 'md', className = '' }: AvatarIma
     xl: 'w-24 h-24',
   };
 
+  // Default avatar SVG placeholder
+  const avatarFallback = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Ccircle fill="%23ddd" cx="50" cy="50" r="50"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="40"%3E👤%3C/text%3E%3C/svg%3E';
+
   return (
     <LazyImage
       src={src}
       alt={alt}
       className={`rounded-full object-cover ${sizeClasses[size]} ${className}`}
-      fallbackSrc="/images/default-avatar.png"
+      fallbackSrc={avatarFallback}
     />
   );
 }

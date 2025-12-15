@@ -248,15 +248,37 @@ export function initPerformanceMonitoring(
  */
 async function sendPerformanceMetric(metric: PerformanceMetric) {
   try {
+    const data = JSON.stringify({
+      ...metric,
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+    });
+    
     // Use sendBeacon for reliable delivery even during page unload
     if ('sendBeacon' in navigator) {
-      const data = JSON.stringify({
-        ...metric,
-        url: window.location.href,
-        userAgent: navigator.userAgent,
-      });
+      const success = navigator.sendBeacon('/api/analytics/performance', data);
       
-      navigator.sendBeacon('/api/analytics/performance', data);
+      // Fallback to fetch if sendBeacon fails
+      if (!success) {
+        fetch('/api/analytics/performance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: data,
+          keepalive: true,
+        }).catch(() => {
+          // Silently fail - analytics shouldn't break the app
+        });
+      }
+    } else {
+      // Fallback for browsers without sendBeacon
+      fetch('/api/analytics/performance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: data,
+        keepalive: true,
+      }).catch(() => {
+        // Silently fail - analytics shouldn't break the app
+      });
     }
   } catch (e) {
     // Ignore errors to not affect user experience

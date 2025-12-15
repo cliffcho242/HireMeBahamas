@@ -9,6 +9,7 @@ Implements:
 """
 import logging
 import time
+import asyncio
 from typing import List, Dict, Any, Optional, Callable, TypeVar
 from functools import wraps
 from collections import defaultdict
@@ -21,13 +22,14 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
-# Track query performance
+# Track query performance (thread-safe with asyncio.Lock)
 query_stats = defaultdict(lambda: {"count": 0, "total_time": 0, "avg_time": 0})
+_stats_lock = asyncio.Lock()
 
 
 def track_query_performance(query_name: str):
     """
-    Decorator to track query performance.
+    Decorator to track query performance (thread-safe).
     
     Usage:
         @track_query_performance("get_user_posts")
@@ -45,11 +47,12 @@ def track_query_performance(query_name: str):
             finally:
                 elapsed = (time.time() - start_time) * 1000  # Convert to ms
                 
-                # Update stats
-                stats = query_stats[query_name]
-                stats["count"] += 1
-                stats["total_time"] += elapsed
-                stats["avg_time"] = stats["total_time"] / stats["count"]
+                # Update stats with lock for thread safety
+                async with _stats_lock:
+                    stats = query_stats[query_name]
+                    stats["count"] += 1
+                    stats["total_time"] += elapsed
+                    stats["avg_time"] = stats["total_time"] / stats["count"]
                 
                 # Log slow queries
                 if elapsed > 100:  # Queries taking more than 100ms
