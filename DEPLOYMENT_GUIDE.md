@@ -152,6 +152,55 @@ curl https://your-project.vercel.app/api/health
 
 ---
 
+### ✅ FRONTEND (Vercel) — FINAL CONFIG
+
+#### 6️⃣ Environment Variables (Vercel Dashboard)
+
+**IMPORTANT:** This project uses **Vite** (React), not Next.js. Use `VITE_` prefix for environment variables.
+
+Go to: **Vercel Dashboard** → **Your Project** → **Settings** → **Environment Variables**
+
+**Direct Link:** `https://vercel.com/[your-team]/[project-name]/settings/environment-variables`
+
+##### For Railway Backend:
+```bash
+VITE_API_URL=https://your-backend.up.railway.app
+VITE_SOCKET_URL=https://your-backend.up.railway.app
+```
+
+##### For Render Backend:
+```bash
+VITE_API_URL=https://your-backend.onrender.com
+VITE_SOCKET_URL=https://your-backend.onrender.com
+```
+
+##### For Vercel Serverless Backend (Same-Origin):
+```bash
+# Do NOT set VITE_API_URL - frontend auto-detects Vercel deployment
+# The frontend will automatically use window.location.origin
+```
+
+**How to Add:**
+1. Click **"Add New"** button
+2. Enter **Name** (e.g., `VITE_API_URL`)
+3. Enter **Value** (paste your backend URL)
+4. Select **All** environments (Production, Preview, Development)
+5. Click **Save**
+6. Redeploy for changes to take effect
+
+**⚠️ Common Mistake:** Do NOT use `NEXT_PUBLIC_BACKEND_URL` - that's for Next.js only. This project uses `VITE_API_URL` for Vite/React.
+
+**✅ Verification:**
+```bash
+# After deployment, test the connection:
+curl https://your-frontend.vercel.app
+
+# Check browser console to see detected API URL:
+# Should log: "API Base URL: https://your-backend.up.railway.app"
+```
+
+---
+
 ## Option 2: All-in-One (DigitalOcean)
 
 ### Cost: $6/month for basic droplet

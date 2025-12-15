@@ -1001,10 +1001,29 @@ GCS_MAKE_PUBLIC=False  # Set to True for public files, False for signed URLs
 📖 **[Google Cloud Storage Setup Guide](./docs/GOOGLE_CLOUD_STORAGE.md)** - Learn how to configure GCS for file uploads.
 
 ### Frontend (.env)
-```
+
+⚠️ **IMPORTANT:** This project uses **Vite (React)**, NOT Next.js.
+
+✅ **CORRECT:** Use `VITE_API_URL` for environment variables  
+❌ **WRONG:** Do NOT use `NEXT_PUBLIC_BACKEND_URL` (Next.js only)
+
+```bash
+# Local development:
 VITE_API_URL=http://localhost:8000
 VITE_SOCKET_URL=http://localhost:8000
+
+# Production with Railway backend:
+VITE_API_URL=https://your-app.up.railway.app
+
+# Production with Render backend:
+VITE_API_URL=https://your-app.onrender.com
+
+# Production with Vercel serverless backend:
+# Leave VITE_API_URL unset - frontend auto-detects same-origin
 ```
+
+📖 **[Frontend Environment Variables Guide](./frontend/.env.example)** - Complete configuration options  
+📖 **[Vercel Frontend Deployment](./VERCEL_FRONTEND_BACKEND_SETUP.md)** - Detailed deployment instructions
 
 ### Docker Security
 

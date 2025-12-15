@@ -4,6 +4,15 @@
 
 This guide explains how to configure the HireMeBahamas frontend to connect to the Vercel serverless backend API.
 
+## ⚠️ IMPORTANT: Vite vs Next.js Environment Variables
+
+**This project uses Vite (React), NOT Next.js.**
+
+✅ **CORRECT:** Use `VITE_API_URL` for environment variables  
+❌ **WRONG:** Do NOT use `NEXT_PUBLIC_BACKEND_URL` or `NEXT_PUBLIC_API_URL`
+
+Environment variables in Vite must be prefixed with `VITE_` to be exposed to the client-side code. Next.js uses `NEXT_PUBLIC_` prefix, which will not work in this project.
+
 ## Quick Start
 
 ### For Vercel Serverless Backend (Recommended)
@@ -20,6 +29,59 @@ This guide explains how to configure the HireMeBahamas frontend to connect to th
 1. Set `VITE_API_URL` in Vercel Dashboard
 2. Example: `VITE_API_URL=https://your-app.up.railway.app`
 3. Ensure backend CORS allows your Vercel domain
+
+---
+
+## ✅ FRONTEND (Vercel) — FINAL CONFIG
+
+### 6️⃣ Environment Variables (Vercel Dashboard)
+
+**Go to:** Vercel Dashboard → Your Project → Settings → Environment Variables  
+**Direct Link:** `https://vercel.com/[your-team]/[project-name]/settings/environment-variables`
+
+#### Option A: Railway Backend
+```bash
+VITE_API_URL=https://your-backend.up.railway.app
+VITE_SOCKET_URL=https://your-backend.up.railway.app
+```
+
+#### Option B: Render Backend
+```bash
+VITE_API_URL=https://your-backend.onrender.com
+VITE_SOCKET_URL=https://your-backend.onrender.com
+```
+
+#### Option C: Vercel Serverless (Same-Origin)
+```bash
+# Do NOT set VITE_API_URL
+# Frontend automatically detects Vercel and uses window.location.origin
+```
+
+**Steps to Add:**
+1. Click **"Add New"** button
+2. Enter **Name**: `VITE_API_URL`
+3. Enter **Value**: Your backend URL (e.g., `https://your-app.up.railway.app`)
+4. Select **All** environments (Production, Preview, Development)
+5. Click **Save**
+6. Go to **Deployments** → **Redeploy** latest to apply changes
+
+**✅ Verification:**
+```bash
+# After deployment, check browser console at your Vercel URL
+# Should show: "API Base URL: https://your-backend.up.railway.app"
+
+# Test API connection:
+curl https://your-frontend.vercel.app
+# Should load without errors
+```
+
+**⚠️ Common Mistakes:**
+- ❌ Using `NEXT_PUBLIC_BACKEND_URL` (Next.js only, won't work)
+- ❌ Using `BACKEND_URL` without `VITE_` prefix (won't be exposed to frontend)
+- ❌ Forgetting to redeploy after adding environment variables
+- ❌ Using `http://` instead of `https://` for backend URL
+
+---
 
 ## Detailed Configuration
 
