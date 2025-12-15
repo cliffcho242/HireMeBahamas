@@ -16,6 +16,10 @@ This guide will help you deploy HireMeBahamas to production in **10-15 minutes**
 
 **👉 [WHERE_TO_PUT_DATABASE_URL.md](./WHERE_TO_PUT_DATABASE_URL.md)** - Step-by-step instructions showing exactly where to paste your database URL.
 
+### How Do I Verify My Render DATABASE_URL?
+
+**👉 [RENDER_DATABASE_URL_VERIFICATION.md](./RENDER_DATABASE_URL_VERIFICATION.md)** - Critical verification guide to ensure your Render DATABASE_URL is correctly configured.
+
 ---
 
 ## 🎯 What You'll Accomplish

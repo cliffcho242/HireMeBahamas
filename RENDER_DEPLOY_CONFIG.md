@@ -1,5 +1,8 @@
 # RENDER DEPLOYMENT CONFIG - TIMEOUT FIX
 
+> ⚠️ **CRITICAL**: Verify your DATABASE_URL is correctly formatted!  
+> See **[RENDER_DATABASE_URL_VERIFICATION.md](./RENDER_DATABASE_URL_VERIFICATION.md)** for validation.
+
 ## DATABASE_URL (Environment Variable)
 
 ```env
