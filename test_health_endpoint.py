@@ -4,14 +4,18 @@ Test health endpoint to verify it returns {"status": "ok"}
 """
 import sys
 import json
+import os
+from pathlib import Path
 
 
 def test_fastapi_health_endpoint():
     """Test FastAPI health endpoint in api/backend_app/main.py"""
     print("\n🧪 Testing FastAPI health endpoint...")
     
-    # Import the FastAPI app
-    sys.path.insert(0, '/home/runner/work/HireMeBahamas/HireMeBahamas/api')
+    # Import the FastAPI app using relative path from script location
+    script_dir = Path(__file__).parent
+    api_dir = script_dir / 'api'
+    sys.path.insert(0, str(api_dir))
     from backend_app.main import app
     from fastapi.testclient import TestClient
     
@@ -33,7 +37,9 @@ def test_flask_health_endpoint():
     
     # We need to mock the database connection for the Flask app
     # Since this is a complex app, we'll just check the code directly
-    with open('/home/runner/work/HireMeBahamas/HireMeBahamas/final_backend_postgresql.py', 'r') as f:
+    script_dir = Path(__file__).parent
+    backend_file = script_dir / 'final_backend_postgresql.py'
+    with open(backend_file, 'r') as f:
         content = f.read()
         
     # Check that the health endpoint returns {"status": "ok"}
