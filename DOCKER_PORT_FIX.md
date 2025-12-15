@@ -13,7 +13,7 @@ The original Dockerfiles used shell form for CMD and bare syntax for HEALTHCHECK
 ```dockerfile
 # ❌ OLD - BROKEN
 HEALTHCHECK CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
-CMD gunicorn app:app --bind 0.0.0.0:${PORT:-8080} --workers 4 ...
+CMD gunicorn final_backend_postgresql:application --bind 0.0.0.0:${PORT:-8080} --workers 4 ...
 ```
 
 Docker's shell form doesn't guarantee proper expansion of complex bash parameter expansion syntax like `${PORT:-8080}` in all contexts, causing the literal string `$PORT` to be passed instead of the actual port number.
@@ -25,7 +25,7 @@ Changed to exec form with explicit shell invocation:
 ```dockerfile
 # ✅ NEW - FIXED
 HEALTHCHECK CMD sh -c 'curl -f http://localhost:${PORT:-8080}/health || exit 1'
-CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-8080} --workers 4 ..."]
+CMD ["sh", "-c", "gunicorn final_backend_postgresql:application --bind 0.0.0.0:${PORT:-8080} --workers 4 ..."]
 ```
 
 ### Why This Works
