@@ -384,10 +384,33 @@ def get_engine():
 # This allows existing code like `from backend_app.database import engine` to work
 # but the actual engine is created lazily on first access
 class LazyEngine:
-    """Wrapper to provide lazy engine initialization while maintaining compatibility."""
-    def __getattr__(self, name):
-        # Delegate all attribute access to the lazily-initialized engine
-        return getattr(get_engine(), name)
+    """Wrapper to provide lazy engine initialization while maintaining compatibility.
+    
+    This class defers all attribute access to the actual engine, which is created
+    only when first accessed. This prevents connection issues in serverless environments
+    where database connections at module import time can cause failures.
+    """
+    
+    def __getattr__(self, name: str):
+        """Delegate attribute access to the lazily-initialized engine.
+        
+        Args:
+            name: The attribute name to access
+            
+        Returns:
+            The attribute value from the actual engine
+            
+        Raises:
+            AttributeError: If the engine or attribute doesn't exist
+        """
+        try:
+            actual_engine = get_engine()
+            return getattr(actual_engine, name)
+        except AttributeError as e:
+            raise AttributeError(
+                f"LazyEngine: Failed to access attribute '{name}' on database engine. "
+                f"Original error: {e}"
+            ) from e
 
 engine = LazyEngine()
 
@@ -400,8 +423,12 @@ logger.info(
 # =============================================================================
 # SESSION FACTORY - Optimized for async operations
 # =============================================================================
-# Note: sessionmaker works with LazyEngine because it doesn't actually use the engine
-# until sessions are created (at runtime, not import time)
+# Note: sessionmaker works safely with LazyEngine because:
+# 1. sessionmaker() itself doesn't create any database connections
+# 2. It only stores a reference to the engine (our LazyEngine wrapper)
+# 3. Actual connections are created when sessions are instantiated (at runtime)
+# 4. When a session needs the engine, LazyEngine.__getattr__ triggers lazy initialization
+# This means the engine is still created lazily on first actual database operation
 AsyncSessionLocal = sessionmaker(
     engine, 
     class_=AsyncSession, 
