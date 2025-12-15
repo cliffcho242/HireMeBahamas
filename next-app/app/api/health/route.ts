@@ -25,16 +25,17 @@ export async function GET(request: Request) {
     
     // Use constant-time comparison to prevent timing attacks
     try {
-      // timingSafeEqual requires equal-length buffers, so we need to check lengths first
-      // To avoid leaking timing information through length comparison, we always
-      // perform the full comparison even when lengths differ
+      // timingSafeEqual requires equal-length buffers and will throw if lengths differ
+      // We check lengths first to avoid the exception, which allows us to return
+      // a consistent error response. The length check itself may leak the expected
+      // length, but this is acceptable since the format "Bearer {secret}" is known.
       const authBuffer = Buffer.from(authHeader);
       const expectedBuffer = Buffer.from(expectedAuth);
       
-      // Check if lengths match - this is safe as it's a single comparison
+      // Check if lengths match before calling timingSafeEqual
       const lengthsMatch = authBuffer.length === expectedBuffer.length;
       
-      // Only call timingSafeEqual if lengths match to avoid throwing error
+      // Perform timing-safe comparison only if lengths match
       const valuesMatch = lengthsMatch && timingSafeEqual(authBuffer, expectedBuffer);
       
       if (!valuesMatch) {
