@@ -4,8 +4,8 @@ import { kv } from "@vercel/kv";
 import { verifyAuth } from "@/lib/auth";
 import { z } from "zod";
 
-// Serverless runtime for jobs
-export const runtime = "nodejs";
+// Edge runtime for ultra-fast job listings
+export const runtime = "edge";
 export const revalidate = 60; // Revalidate every 60 seconds
 
 // Job query schema

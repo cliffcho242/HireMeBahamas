@@ -123,11 +123,19 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  // Add cache headers for API responses
+  // Add cache headers for API responses - optimized for Facebook traffic
   if (pathname.startsWith("/api/jobs") && request.method === "GET") {
     response.headers.set(
       "Cache-Control",
-      "public, s-maxage=60, stale-while-revalidate=120"
+      "public, s-maxage=60, stale-while-revalidate=300"
+    );
+  }
+  
+  // Add cache headers for health endpoint
+  if (pathname.startsWith("/api/health") && request.method === "GET") {
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=30, stale-while-revalidate=60"
     );
   }
 
