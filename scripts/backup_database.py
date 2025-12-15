@@ -13,6 +13,19 @@ from pathlib import Path
 import getpass
 
 
+# Constants
+# Environment variable names for different platforms
+ENV_VAR_MAPPING = {
+    "render": "RENDER_DATABASE_URL",
+    "railway": "RAILWAY_DATABASE_URL",
+    "vercel": "VERCEL_DATABASE_URL",
+    "custom": "DATABASE_URL"
+}
+
+# Database query timeout in seconds
+DB_QUERY_TIMEOUT = 10
+
+
 def get_database_url(source: str) -> str:
     """
     Get database URL from user or environment.
@@ -23,7 +36,7 @@ def get_database_url(source: str) -> str:
     Returns:
         Database connection URL
     """
-    env_var_name = f"{source.upper()}_DATABASE_URL"
+    env_var_name = ENV_VAR_MAPPING.get(source, "DATABASE_URL")
     
     # Check environment variable first
     db_url = os.environ.get(env_var_name) or os.environ.get("DATABASE_URL")
@@ -180,7 +193,7 @@ def verify_backup(db_url: str, output_file: Path) -> bool:
             capture_output=True,
             text=True,
             check=False,
-            timeout=10
+            timeout=DB_QUERY_TIMEOUT
         )
         
         if result.returncode == 0:

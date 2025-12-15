@@ -215,10 +215,31 @@ Examples:
     
     args = parser.parse_args()
     
+    # Validate and normalize URL
+    url = args.url.strip()
+    
     # Ensure URL starts with http:// or https://
-    url = args.url
     if not url.startswith(("http://", "https://")):
+        # Default to https for security
         url = f"https://{url}"
+    
+    # Basic URL validation - check for valid domain pattern
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(url)
+        if not parsed.netloc:
+            print(f"❌ Error: Invalid URL format: {url}")
+            print("   URL must be in format: https://your-app.vercel.app")
+            sys.exit(1)
+        
+        # Warn if using localhost or non-standard ports (potential mistakes)
+        if parsed.netloc.startswith("localhost") or "127.0.0.1" in parsed.netloc:
+            print(f"⚠️  Warning: Testing localhost deployment: {url}")
+            print("   Make sure the local server is running!")
+            
+    except Exception as e:
+        print(f"❌ Error: Invalid URL: {e}")
+        sys.exit(1)
     
     # Run tests
     tester = DeploymentTester(url, timeout=args.timeout)
