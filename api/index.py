@@ -423,8 +423,9 @@ app = FastAPI(
     title="HireMeBahamas API",
     version="2.0.0",
     description="Job platform API for the Bahamas - Vercel Serverless",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 # ============================================================================
@@ -608,51 +609,18 @@ async def get_user_from_db(user_id: int):
 # ============================================================================
 # Note: Vercel's rewrite rule routes /api/* to /api/index.py
 # So FastAPI only sees the path AFTER /api/, meaning /api/health becomes /health
-@app.get("/health")
-@app.head("/health")
+@app.get("/health", include_in_schema=False)
+@app.head("/health", include_in_schema=False)
 async def health():
     """Instant health check - responds in <5ms
     
     This endpoint always returns {"status": "ok"} to fulfill the requirement
     that apps must boot without the database. Database connectivity is NOT
     checked by this endpoint.
+    
+    ✅ CRITICAL: Does NOT touch the database to ensure instant response.
     """
-    logger.info("Health check called")
-    # Initialize engine lazily on first use
-    db_engine, _ = get_db_engine()
-    
-    # Check if database is actually configured
-    # DATABASE_URL being set doesn't mean it's valid - check if engine creation succeeded
-    # Import placeholder constant to avoid hardcoding
-    try:
-        from database import DB_PLACEHOLDER_URL
-        db_configured = bool(DATABASE_URL) and DATABASE_URL != DB_PLACEHOLDER_URL
-    except ImportError:
-        # Fallback if database module doesn't have the constant
-        db_configured = bool(DATABASE_URL) and DATABASE_URL != "postgresql+asyncpg://placeholder:placeholder@invalid.local:5432/placeholder"
-    
-    response = {
-        "status": "ok",
-        "platform": "vercel-serverless",
-        "region": os.getenv("VERCEL_REGION", "unknown"),
-        "timestamp": int(time.time()),
-        "version": "2.0.0",
-        "backend": "available" if HAS_BACKEND else "fallback",
-        "database": "configured" if db_configured else "unavailable",
-        "jwt": "configured" if JWT_SECRET != "dev-secret-key-change-in-production" else "using_default",
-        "database_url_set": bool(DATABASE_URL) and db_configured,
-    }
-    
-    # Include backend error details if running in fallback mode
-    # Use sanitized error in production, full error only in debug mode
-    if not HAS_BACKEND and BACKEND_ERROR_SAFE:
-        if is_debug_mode():
-            response["backend_error"] = BACKEND_ERROR
-        else:
-            response["backend_error"] = BACKEND_ERROR_SAFE
-        response["note"] = "Backend running in fallback mode - some endpoints may have limited functionality"
-    
-    return response
+    return {"ok": True}
 
 @app.get("/status")
 async def status():

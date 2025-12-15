@@ -76,7 +76,10 @@ except ImportError as e:
     app = FastAPI(
         title="HireMeBahamas API",
         version="1.0.0",
-        description="Job platform API for the Bahamas (Fallback Mode)"
+        description="Job platform API for the Bahamas (Fallback Mode)",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
     )
     
     # CORS Configuration
@@ -88,16 +91,14 @@ except ImportError as e:
         allow_headers=["*"],
     )
     
-    @app.get("/api/health")
-    @app.get("/health")
+    @app.get("/api/health", include_in_schema=False)
+    @app.get("/health", include_in_schema=False)
     async def health():
-        """Health check endpoint"""
-        return JSONResponse({
-            "status": "ok",
-            "mode": "fallback",
-            "platform": "vercel-serverless",
-            "error": str(e)
-        })
+        """Health check endpoint
+        
+        ✅ CRITICAL: Does NOT touch the database to ensure instant response.
+        """
+        return {"ok": True}
     
     @app.get("/")
     async def root():

@@ -140,8 +140,8 @@ app = FastAPI(
 )
 
 # IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
-@app.get("/health", tags=["health"])
-@app.head("/health", tags=["health"])
+@app.get("/health", include_in_schema=False)
+@app.head("/health", include_in_schema=False)
 def health():
     """Instant health check - no database dependency.
     
@@ -149,8 +149,10 @@ def health():
     the coldest start. It does NOT check database connectivity.
     
     Use /ready for database connectivity check.
+    
+    ✅ CRITICAL: Does NOT touch the database to ensure instant response.
     """
-    return JSONResponse({"status": "ok"}, status_code=200)
+    return {"ok": True}
 
 
 # LIVENESS PROBE — Kubernetes/Render liveness check
