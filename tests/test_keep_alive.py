@@ -21,18 +21,18 @@ class TestKeepAliveConfiguration(unittest.TestCase):
             self.fail(f"keep_alive.py has syntax errors: {e}")
 
     def test_url_with_fallback(self):
-        """Test that URL uses env var with fallback to hardcoded default."""
+        """Test that URL requires BACKEND_URL environment variable."""
         with open("keep_alive.py", "r") as f:
             content = f.read()
 
-        # Verify default URL is defined
-        self.assertIn('DEFAULT_URL = "https://hiremebahamas.onrender.com"', content)
+        # Verify it uses os.environ["BACKEND_URL"] pattern (strict)
+        self.assertIn('os.environ["BACKEND_URL"]', content)
 
         # Verify URL validation for proper scheme
         self.assertIn('startswith(("http://", "https://"))', content)
 
-        # Verify HEALTH_URL is constructed from base URL + /health
-        self.assertIn('HEALTH_URL = _base_url + "/health"', content)
+        # Verify HEALTH_URL is constructed from BASE_URL + /health using f-string
+        self.assertIn('f"{BASE_URL}/health"', content)
 
     def test_uses_health_endpoint(self):
         """Test that the script uses the /health endpoint."""

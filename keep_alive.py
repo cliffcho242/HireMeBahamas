@@ -25,18 +25,27 @@ import time
 import random
 import requests
 
-# Get backend URL from environment variable
-_base_url = os.getenv("BACKEND_URL", "").strip()
-
-# Fallback to localhost if no URL provided
-if not _base_url or not _base_url.startswith(("http://", "https://")):
-    print("⚠️ WARNING: BACKEND_URL not set. This script is deprecated.")
-    print("   Use GitHub Actions workflows instead:")
+# Get backend URL from environment variable (required)
+# This ensures BACKEND_URL is explicitly set for production deployments
+try:
+    BASE_URL = os.environ["BACKEND_URL"]
+except KeyError:
+    print("⚠️ ERROR: BACKEND_URL environment variable not set.")
+    print("   This script is deprecated. Use GitHub Actions workflows instead:")
     print("   - .github/workflows/keep-database-awake.yml")
     print("   - .github/workflows/scheduled-ping.yml")
-    _base_url = "http://localhost:8000"
+    print()
+    print("   For local testing, set BACKEND_URL:")
+    print("   export BACKEND_URL=http://localhost:8000")
+    raise SystemExit(1)
 
-HEALTH_URL = _base_url + "/health"
+# Validate URL format
+if not BASE_URL.startswith(("http://", "https://")):
+    print(f"⚠️ ERROR: BACKEND_URL must start with http:// or https://")
+    print(f"   Current value: {BASE_URL}")
+    raise SystemExit(1)
+
+HEALTH_URL = f"{BASE_URL}/health"
 
 # Ping interval: 45 seconds keeps service warm without overloading
 PING_INTERVAL_SECONDS = 45
