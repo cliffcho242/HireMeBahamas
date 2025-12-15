@@ -301,7 +301,7 @@ if engine is not None:
         autoflush=False,  # Manual flush for better performance control
     )
 else:
-    # Fallback: Create a placeholder that will fail gracefully
+    # Fallback: Set to None - database functions will check and raise appropriate errors
     AsyncSessionLocal = None
     logger.warning("Database session factory not created - engine initialization failed")
 
