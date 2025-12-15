@@ -14,7 +14,7 @@ def test_backend_state():
 
     # Test available users
     print("1. Checking available users...")
-    available_response = requests.get(f"{BASE_URL}/api/hireme/available")
+    available_response = requests.get(f"{BASE_URL}/api/hireme/available", timeout=10)
     if available_response.status_code == 200:
         users = available_response.json()["users"]
         print(f"   Available users: {len(users)}")
@@ -30,6 +30,7 @@ def test_backend_state():
     login_response = requests.post(
         f"{BASE_URL}/api/auth/login",
         json={"email": "admin@hirebahamas.com", "password": "AdminPass123!"},
+        timeout=10,
     )
 
     if login_response.status_code == 200:
@@ -37,20 +38,20 @@ def test_backend_state():
         headers = {"Authorization": f"Bearer {token}"}
 
         # Get initial state
-        profile_response = requests.get(f"{BASE_URL}/api/auth/profile", headers=headers)
+        profile_response = requests.get(f"{BASE_URL}/api/auth/profile", headers=headers, timeout=10)
         initial_state = profile_response.json()["is_available_for_hire"]
         print(f"   Initial state: {'On' if initial_state else 'Off'}")
 
         # Toggle
         toggle_response = requests.post(
-            f"{BASE_URL}/api/hireme/toggle", headers=headers
+            f"{BASE_URL}/api/hireme/toggle", headers=headers, timeout=10
         )
         if toggle_response.status_code == 200:
             new_state = toggle_response.json()["is_available"]
             print(f"   After toggle: {'On' if new_state else 'Off'}")
 
             # Check available users again
-            available_response2 = requests.get(f"{BASE_URL}/api/hireme/available")
+            available_response2 = requests.get(f"{BASE_URL}/api/hireme/available", timeout=10)
             users_after = available_response2.json()["users"]
             print(f"   Available users after toggle: {len(users_after)}")
 

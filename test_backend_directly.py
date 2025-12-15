@@ -15,7 +15,7 @@ def test_backend_login():
         print(f"Testing login at: {url}")
         print(f"Data: {json.dumps(data, indent=2)}")
 
-        response = requests.post(url, json=data)
+        response = requests.post(url, json=data, timeout=10)
 
         print(f"Status Code: {response.status_code}")
         print(f"Response Headers: {dict(response.headers)}")
@@ -42,7 +42,7 @@ def test_health_check():
 
     try:
         print(f"Testing health check at: {url}")
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)
 
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
