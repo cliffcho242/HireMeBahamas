@@ -124,13 +124,49 @@ for _module_name in _schema_modules:
         # Skip modules that might not be available (graceful degradation)
         pass
 
-# Import APIs
-from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
-from .database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
-from .core.metrics import get_metrics_response, set_app_info
-from .core.security import prewarm_bcrypt_async
-from .core.redis_cache import redis_cache, warm_cache
-from .core.db_health import check_database_health, get_database_stats
+# Import APIs (with nuclear safety net)
+try:
+    from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
+    print("✅ API routers imported successfully")
+except Exception as e:
+    print(f"API router import failed: {e}")
+    auth = hireme = jobs = messages = notifications = None
+    posts = profile_pictures = reviews = upload = users = None
+
+try:
+    from .database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
+    print("✅ Database functions imported successfully")
+except Exception as e:
+    print(f"DB import failed: {e}")
+    init_db = close_db = get_db = get_pool_status = engine = test_db_connection = get_db_status = None
+
+try:
+    from .core.metrics import get_metrics_response, set_app_info
+    print("✅ Metrics module imported successfully")
+except Exception as e:
+    print(f"Metrics import failed: {e}")
+    get_metrics_response = set_app_info = None
+
+try:
+    from .core.security import prewarm_bcrypt_async
+    print("✅ Security module imported successfully")
+except Exception as e:
+    print(f"Security import failed: {e}")
+    prewarm_bcrypt_async = None
+
+try:
+    from .core.redis_cache import redis_cache, warm_cache
+    print("✅ Redis cache imported successfully")
+except Exception as e:
+    print(f"Redis cache import failed: {e}")
+    redis_cache = warm_cache = None
+
+try:
+    from .core.db_health import check_database_health, get_database_stats
+    print("✅ DB health module imported successfully")
+except Exception as e:
+    print(f"DB health import failed: {e}")
+    check_database_health = get_database_stats = None
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -432,12 +468,15 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     # We test connectivity but don't fail if DB is still cold-starting
     try:
-        db_ok, db_error = await test_db_connection()
-        if db_ok:
-            logger.info("Database connection verified on startup")
+        if test_db_connection is not None:
+            db_ok, db_error = await test_db_connection()
+            if db_ok:
+                logger.info("Database connection verified on startup")
+            else:
+                # Log but don't fail - DB will be initialized on first request
+                logger.warning(f"Database not ready on startup (will retry on first request): {db_error}")
         else:
-            # Log but don't fail - DB will be initialized on first request
-            logger.warning(f"Database not ready on startup (will retry on first request): {db_error}")
+            logger.warning("Database test function not available")
     except Exception as e:
         logger.warning(f"Database connection test failed (will retry on first request): {e}")
     
@@ -445,8 +484,11 @@ async def lazy_import_heavy_stuff():
     # STEP 2: Pre-warm bcrypt (non-blocking)
     # ==========================================================================
     try:
-        await prewarm_bcrypt_async()
-        logger.info("Bcrypt pre-warmed successfully")
+        if prewarm_bcrypt_async is not None:
+            await prewarm_bcrypt_async()
+            logger.info("Bcrypt pre-warmed successfully")
+        else:
+            logger.warning("Bcrypt pre-warm function not available")
     except Exception as e:
         logger.warning(f"Failed to pre-warm bcrypt (non-critical): {e}")
     
@@ -454,11 +496,14 @@ async def lazy_import_heavy_stuff():
     # STEP 3: Initialize Redis cache (non-blocking)
     # ==========================================================================
     try:
-        redis_available = await redis_cache.connect()
-        if redis_available:
-            logger.info("Redis cache connected successfully")
+        if redis_cache is not None:
+            redis_available = await redis_cache.connect()
+            if redis_available:
+                logger.info("Redis cache connected successfully")
+            else:
+                logger.info("Using in-memory cache fallback")
         else:
-            logger.info("Using in-memory cache fallback")
+            logger.info("Redis cache not available")
     except Exception as e:
         logger.warning(f"Redis connection failed (non-critical): {e}")
     
@@ -470,11 +515,14 @@ async def lazy_import_heavy_stuff():
     # - DB_INIT_MAX_RETRIES (default: 3)
     # - DB_INIT_RETRY_DELAY (default: 2.0 seconds)
     try:
-        success = await init_db()  # Uses env var defaults for retry config
-        if success:
-            logger.info("Database tables initialized successfully")
+        if init_db is not None:
+            success = await init_db()  # Uses env var defaults for retry config
+            if success:
+                logger.info("Database tables initialized successfully")
+            else:
+                logger.warning("Database initialization deferred to first request")
         else:
-            logger.warning("Database initialization deferred to first request")
+            logger.warning("Database init function not available")
     except Exception as e:
         # Log but don't crash - DB will be initialized on first request
         logger.warning(f"Database initialization failed, will retry on first request: {e}")
@@ -482,7 +530,8 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     # STEP 5: Schedule cache warm-up in background
     # ==========================================================================
-    asyncio.create_task(warm_cache())
+    if warm_cache is not None:
+        asyncio.create_task(warm_cache())
     
     logger.info("LAZY IMPORT COMPLETE — FULL APP LIVE (DB warms on /ready)")
     logger.info("Health:   GET /health (instant, no DB)")
@@ -496,12 +545,14 @@ async def full_shutdown():
     """Graceful shutdown"""
     logger.info("Shutting down HireMeBahamas API...")
     try:
-        await redis_cache.disconnect()
-        logger.info("Redis cache disconnected")
+        if redis_cache is not None:
+            await redis_cache.disconnect()
+            logger.info("Redis cache disconnected")
     except Exception as e:
         logger.warning(f"Error disconnecting Redis cache: {e}")
     try:
-        await close_db()
+        if close_db is not None:
+            await close_db()
         logger.info("Database connections closed")
     except Exception as e:
         logger.error(f"Error closing database connections: {e}")
@@ -639,17 +690,27 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
     return health_response
 
 
-# Include routers with /api prefix to match frontend expectations
-app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
-app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
-app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
-app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
-app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
-app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
-app.include_router(profile_pictures.router, prefix="/api/profile-pictures", tags=["profile-pictures"])
-app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
-app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
-app.include_router(users.router, prefix="/api/users", tags=["users"])
+# Include routers with /api prefix to match frontend expectations (with safety checks)
+if auth is not None:
+    app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+if hireme is not None:
+    app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
+if jobs is not None:
+    app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
+if messages is not None:
+    app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
+if notifications is not None:
+    app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+if posts is not None:
+    app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+if profile_pictures is not None:
+    app.include_router(profile_pictures.router, prefix="/api/profile-pictures", tags=["profile-pictures"])
+if reviews is not None:
+    app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
+if upload is not None:
+    app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
+if users is not None:
+    app.include_router(users.router, prefix="/api/users", tags=["users"])
 
 # Include GraphQL router (if available)
 if HAS_GRAPHQL:

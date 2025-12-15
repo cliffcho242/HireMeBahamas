@@ -62,7 +62,16 @@ app.openapi_url = "/openapi.json"
 @app.head("/ready", tags=["health"])
 async def ready():
     """Readiness check with lazy database initialization"""
-    from app.database import test_db_connection, get_db_status
+    try:
+        from app.database import test_db_connection, get_db_status
+    except Exception as e:
+        logger.error(f"DB import failed: {e}")
+        return JSONResponse({
+            "status": "not_ready",
+            "database": "import_failed",
+            "error": str(e),
+            "hint": "Database module could not be imported. Check configuration.",
+        }, status_code=503)
     
     db_ok, db_error = await test_db_connection()
     db_status = get_db_status()
@@ -84,17 +93,56 @@ async def ready():
 
 
 # =============================================================================
-# IMPORT API ROUTERS
+# IMPORT API ROUTERS (WITH NUCLEAR SAFETY NET)
 # =============================================================================
-from app.api import (
-    auth, hireme, jobs, messages, notifications, 
-    posts, profile_pictures, reviews, upload, users
-)
-from app.database import init_db, close_db, get_db, test_db_connection, get_db_status
-from app.core.security import prewarm_bcrypt_async
-from app.core.redis_cache import redis_cache, warm_cache
-from app.core.db_health import check_database_health, get_database_stats
-from app.database import get_pool_status
+# Wrap risky imports in try-except to prevent cold-start death
+try:
+    from app.api import (
+        auth, hireme, jobs, messages, notifications, 
+        posts, profile_pictures, reviews, upload, users
+    )
+    logger.info("✅ API routers imported successfully")
+except Exception as e:
+    logger.error(f"❌ API router import failed: {e}")
+    # Create fallback routers to prevent app crash
+    auth = hireme = jobs = messages = notifications = None
+    posts = profile_pictures = reviews = upload = users = None
+
+try:
+    from app.database import init_db, close_db, get_db, test_db_connection, get_db_status
+    logger.info("✅ Database functions imported successfully")
+except Exception as e:
+    logger.error(f"❌ Database import failed: {e}")
+    # Create fallback functions to prevent app crash
+    init_db = close_db = get_db = test_db_connection = get_db_status = None
+
+try:
+    from app.core.security import prewarm_bcrypt_async
+    logger.info("✅ Security module imported successfully")
+except Exception as e:
+    logger.warning(f"⚠️  Security import failed: {e}")
+    prewarm_bcrypt_async = None
+
+try:
+    from app.core.redis_cache import redis_cache, warm_cache
+    logger.info("✅ Redis cache imported successfully")
+except Exception as e:
+    logger.warning(f"⚠️  Redis cache import failed: {e}")
+    redis_cache = warm_cache = None
+
+try:
+    from app.core.db_health import check_database_health, get_database_stats
+    logger.info("✅ DB health module imported successfully")
+except Exception as e:
+    logger.warning(f"⚠️  DB health import failed: {e}")
+    check_database_health = get_database_stats = None
+
+try:
+    from app.database import get_pool_status
+    logger.info("✅ Database pool status function imported successfully")
+except Exception as e:
+    logger.warning(f"⚠️  Pool status import failed: {e}")
+    get_pool_status = None
 
 try:
     from app.graphql.schema import create_graphql_router
@@ -113,44 +161,57 @@ async def startup():
     
     # Test database (non-blocking)
     try:
-        db_ok, db_error = await test_db_connection()
-        if db_ok:
-            logger.info("✓ Database connection verified")
+        if test_db_connection is not None:
+            db_ok, db_error = await test_db_connection()
+            if db_ok:
+                logger.info("✓ Database connection verified")
+            else:
+                logger.warning(f"⚠ Database not ready (will retry): {db_error}")
         else:
-            logger.warning(f"⚠ Database not ready (will retry): {db_error}")
+            logger.warning("⚠ Database test function not available")
     except Exception as e:
         logger.warning(f"⚠ Database test failed: {e}")
     
     # Pre-warm bcrypt
     try:
-        await prewarm_bcrypt_async()
-        logger.info("✓ Bcrypt pre-warmed")
+        if prewarm_bcrypt_async is not None:
+            await prewarm_bcrypt_async()
+            logger.info("✓ Bcrypt pre-warmed")
+        else:
+            logger.warning("⚠ Bcrypt pre-warm function not available")
     except Exception as e:
         logger.warning(f"⚠ Bcrypt pre-warm failed: {e}")
     
     # Initialize Redis cache
     try:
-        redis_available = await redis_cache.connect()
-        if redis_available:
-            logger.info("✓ Redis cache connected")
+        if redis_cache is not None:
+            redis_available = await redis_cache.connect()
+            if redis_available:
+                logger.info("✓ Redis cache connected")
+            else:
+                logger.info("ℹ Using in-memory cache fallback")
         else:
-            logger.info("ℹ Using in-memory cache fallback")
+            logger.info("ℹ Redis cache not available")
     except Exception as e:
         logger.warning(f"⚠ Redis connection failed: {e}")
     
     # Initialize database tables (with retry)
     try:
-        success = await init_db()
-        if success:
-            logger.info("✓ Database initialized")
+        if init_db is not None:
+            success = await init_db()
+            if success:
+                logger.info("✓ Database initialized")
+            else:
+                logger.warning("⚠ Database initialization deferred")
         else:
-            logger.warning("⚠ Database initialization deferred")
+            logger.warning("⚠ Database init function not available")
     except Exception as e:
         logger.warning(f"⚠ Database init failed: {e}")
     
     # Warm cache in background
-    import asyncio
-    asyncio.create_task(warm_cache())
+    if warm_cache is not None:
+        import asyncio
+        asyncio.create_task(warm_cache())
     
     logger.info("✅ API READY | Docs: /docs | Health: /health | Ready: /ready")
 
@@ -160,13 +221,15 @@ async def shutdown():
     """Graceful shutdown"""
     logger.info("🛑 Shutting down...")
     try:
-        await redis_cache.disconnect()
-        logger.info("✓ Redis disconnected")
+        if redis_cache is not None:
+            await redis_cache.disconnect()
+            logger.info("✓ Redis disconnected")
     except Exception as e:
         logger.warning(f"⚠ Redis disconnect error: {e}")
     try:
-        await close_db()
-        logger.info("✓ Database closed")
+        if close_db is not None:
+            await close_db()
+            logger.info("✓ Database closed")
     except Exception as e:
         logger.error(f"❌ Database close error: {e}")
 
@@ -178,8 +241,14 @@ async def shutdown():
 @app.get("/ready/db", tags=["health"])
 async def db_readiness_check(db = None):
     """Full database connectivity check"""
-    from app.database import get_db
-    from fastapi import Depends
+    try:
+        from app.database import get_db
+    except Exception as e:
+        logger.error(f"DB import failed: {e}")
+        return JSONResponse(
+            content={"status": "not_ready", "error": "Database module import failed"},
+            status_code=503
+        )
     
     if db is None:
         # Manual dependency resolution for Vercel
@@ -188,15 +257,21 @@ async def db_readiness_check(db = None):
             break
     
     try:
-        db_health = await check_database_health(db)
-        if db_health["status"] == "healthy":
-            return JSONResponse(
-                content={"status": "ready", "database": "connected"},
-                status_code=200
-            )
+        if check_database_health is not None:
+            db_health = await check_database_health(db)
+            if db_health["status"] == "healthy":
+                return JSONResponse(
+                    content={"status": "ready", "database": "connected"},
+                    status_code=200
+                )
+            else:
+                return JSONResponse(
+                    content={"status": "not_ready", "database": db_health},
+                    status_code=503
+                )
         else:
             return JSONResponse(
-                content={"status": "not_ready", "database": db_health},
+                content={"status": "not_ready", "error": "Database health check not available"},
                 status_code=503
             )
     except Exception as e:
@@ -221,7 +296,19 @@ async def api_health():
 @app.get("/health/detailed")
 async def detailed_health():
     """Detailed health with database stats"""
-    from app.database import get_db
+    try:
+        from app.database import get_db
+    except Exception as e:
+        logger.error(f"DB import failed: {e}")
+        return JSONResponse({
+            "status": "degraded",
+            "error": "Database module import failed",
+            "api": {
+                "status": "healthy",
+                "message": "HireMeBahamas API is running",
+                "version": "1.0.0"
+            }
+        }, status_code=503)
     
     async for db in get_db():
         try:
@@ -231,8 +318,12 @@ async def detailed_health():
                 "version": "1.0.0"
             }
             
-            db_health = await check_database_health(db)
-            overall_status = "healthy" if db_health["status"] == "healthy" else "degraded"
+            if check_database_health is not None:
+                db_health = await check_database_health(db)
+                overall_status = "healthy" if db_health["status"] == "healthy" else "degraded"
+            else:
+                db_health = {"status": "unavailable", "message": "Health check not available"}
+                overall_status = "degraded"
             
             health_response = {
                 "status": overall_status,
@@ -240,17 +331,22 @@ async def detailed_health():
                 "database": db_health
             }
             
-            db_stats = await get_database_stats(db)
-            if db_stats:
-                health_response["database"]["statistics"] = db_stats
+            if get_database_stats is not None:
+                db_stats = await get_database_stats(db)
+                if db_stats:
+                    health_response["database"]["statistics"] = db_stats
             
             try:
-                pool_status = await get_pool_status()
-                health_response["database"]["pool"] = pool_status
+                if get_pool_status is not None:
+                    pool_status = await get_pool_status()
+                    health_response["database"]["pool"] = pool_status
             except Exception as e:
                 health_response["database"]["pool"] = {"error": str(e)}
             
-            health_response["cache"] = await redis_cache.health_check()
+            if redis_cache is not None:
+                health_response["cache"] = await redis_cache.health_check()
+            else:
+                health_response["cache"] = {"status": "unavailable"}
             
             return health_response
         finally:
@@ -260,14 +356,20 @@ async def detailed_health():
 @app.post("/warm-cache")
 async def warm_cache_endpoint():
     """Warm cache (for cron jobs)"""
-    result = await warm_cache()
-    return result
+    if warm_cache is not None:
+        result = await warm_cache()
+        return result
+    else:
+        return {"status": "unavailable", "message": "Cache warming not available"}
 
 
 @app.get("/health/cache")
 async def cache_health():
     """Cache health and statistics"""
-    return await redis_cache.health_check()
+    if redis_cache is not None:
+        return await redis_cache.health_check()
+    else:
+        return {"status": "unavailable", "message": "Redis cache not available"}
 
 
 # =============================================================================
@@ -285,19 +387,29 @@ async def root():
 
 
 # =============================================================================
-# INCLUDE API ROUTERS
+# INCLUDE API ROUTERS (WITH SAFETY CHECKS)
 # =============================================================================
 
-app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
-app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
-app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
-app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
-app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
-app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
-app.include_router(profile_pictures.router, prefix="/api/profile-pictures", tags=["profile-pictures"])
-app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
-app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
-app.include_router(users.router, prefix="/api/users", tags=["users"])
+if auth is not None:
+    app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+if hireme is not None:
+    app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
+if jobs is not None:
+    app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
+if messages is not None:
+    app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
+if notifications is not None:
+    app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+if posts is not None:
+    app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+if profile_pictures is not None:
+    app.include_router(profile_pictures.router, prefix="/api/profile-pictures", tags=["profile-pictures"])
+if reviews is not None:
+    app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
+if upload is not None:
+    app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
+if users is not None:
+    app.include_router(users.router, prefix="/api/users", tags=["users"])
 
 # Include GraphQL if available
 if graphql_available:
