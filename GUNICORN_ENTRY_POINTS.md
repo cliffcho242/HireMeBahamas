@@ -4,9 +4,39 @@
 
 This document provides the correct entry points for starting HireMeBahamas backend with Gunicorn (Flask) or Uvicorn (FastAPI).
 
-## ⚠️ Important: Never Use `app:app` for Gunicorn
+## ⚠️ Critical Warnings
 
-The pattern `gunicorn app:app` is **incorrect** for this project. Use one of the documented entry points below.
+### Recommended Entry Points
+
+For this project, use these **recommended** entry points:
+- **FastAPI:** `app.main:app` or `api.backend_app.main:app`
+- **Flask:** `final_backend_postgresql:application`
+
+**Note:** While `app:app` technically exists as a wrapper, it's **not recommended** because:
+- It's ambiguous (could be Flask or FastAPI)
+- Less clear than the direct entry points
+- May cause confusion in debugging
+
+### Single-Line Commands for Deployment Dashboards
+
+**IMPORTANT:** When configuring deployment platforms (Render, Railway, Heroku, etc.) through their web dashboard:
+- **ALWAYS use single-line commands** (no backslashes or line breaks)
+- Multi-line commands with `\` are ONLY for shell scripts
+- Copy-pasting multi-line commands into dashboard fields will cause parsing errors
+
+**Example of ERROR:**
+```
+# ❌ WRONG - Multi-line with backslashes will fail in deployment dashboards
+gunicorn app.main:app \
+  --bind 0.0.0.0:$PORT \
+  --workers 2
+```
+
+**Correct approach:**
+```
+# ✅ CORRECT - Single line for deployment dashboards
+gunicorn app.main:app --bind 0.0.0.0:$PORT --workers 2
+```
 
 ## Flask Backend (Gunicorn)
 
@@ -14,6 +44,12 @@ The Flask backend is defined in `final_backend_postgresql.py` and provides a tra
 
 ### Recommended Entry Point
 
+**For Deployment Dashboards (Render, Railway, Heroku) - SINGLE LINE:**
+```bash
+gunicorn final_backend_postgresql:application --config gunicorn.conf.py --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --graceful-timeout 30 --log-level info
+```
+
+**For Shell Scripts - Multi-line (with backslashes):**
 ```bash
 gunicorn final_backend_postgresql:application \
   --config gunicorn.conf.py \
@@ -84,6 +120,12 @@ cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
 For production deployments, use Gunicorn for worker management with Uvicorn workers:
 
+**For Deployment Dashboards (Render, Railway, Heroku) - SINGLE LINE:**
+```bash
+gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --preload --log-level info
+```
+
+**For Shell Scripts - Multi-line (with backslashes):**
 ```bash
 gunicorn app.main:app \
   --workers ${WEB_CONCURRENCY:-2} \
@@ -286,11 +328,58 @@ To verify the correct entry point is being used:
    {"ok": true}
    ```
 
+## Troubleshooting
+
+### Error: "gunicorn: error: unrecognized arguments"
+
+**Symptoms:**
+```
+==> Running 'gunicorn app:app \   --bind 0.0.0.0:$PORT \   --workers 2 \   ...'
+usage: gunicorn [OPTIONS] [APP_MODULE]
+gunicorn: error: unrecognized arguments:        
+```
+
+**Cause:** Multi-line command with backslashes was copied into a deployment dashboard field, causing the backslashes and extra whitespace to be treated as literal arguments.
+
+**Solution:**
+1. Go to your deployment platform dashboard (Render, Railway, etc.)
+2. Find the "Start Command" or "Run Command" field
+3. Replace it with a **single-line command** (no backslashes or line breaks)
+4. Use one of the recommended commands from this document
+
+**Example Fix for Render:**
+- ❌ **Wrong:** Multi-line command copied from documentation
+- ✅ **Correct:** `cd backend && gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info`
+
+**Example Fix for Railway:**
+- Use railway.toml or nixpacks.toml instead of manual commands
+- Or set single-line command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+### Error: "ModuleNotFoundError: No module named 'app'"
+
+**Cause:** Working directory mismatch or incorrect module path.
+
+**Solution:**
+- If using `app.main:app`, ensure you're in the repository root or backend directory
+- If using `api.backend_app.main:app`, ensure you're in the repository root
+- Check the `cd backend &&` prefix if running from root directory
+
+### Error: "sh: gunicorn: not found"
+
+**Cause:** Gunicorn not installed or not in PATH.
+
+**Solution:**
+- Ensure `gunicorn>=23.0.0` is in requirements.txt
+- Run `pip install gunicorn` or `pip install -r requirements.txt`
+- Check build logs to confirm gunicorn installation
+
 ## Summary
 
 ✅ **Flask Backend:** Use `final_backend_postgresql:application`
 ✅ **FastAPI Backend:** Use `app.main:app` or `api.backend_app.main:app`
+✅ **Deployment Dashboards:** Always use single-line commands (no backslashes)
 ❌ **Never use:** `app:app` for Gunicorn (ambiguous, not standard)
+❌ **Never use:** Multi-line commands with `\` in web dashboards
 
 For more information, see:
 - `gunicorn.conf.py` - Gunicorn configuration
