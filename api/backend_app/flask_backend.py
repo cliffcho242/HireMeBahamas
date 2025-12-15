@@ -46,8 +46,14 @@ except Exception as e:
 
 @app.route("/health")
 def health():
-    logger.info("Health check endpoint called")
-    return jsonify({"status": "healthy", "message": "HireMeBahamas API is running"})
+    """Fast health check endpoint - no database dependency.
+    
+    🚫 NO database queries
+    🚫 NO external service calls
+    🚫 NO authentication checks
+    🚫 NO logging (for maximum speed)
+    """
+    return jsonify({"status": "ok"}), 200
 
 
 @app.route("/health/ping")

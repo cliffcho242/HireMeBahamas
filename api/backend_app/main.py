@@ -151,8 +151,11 @@ def health():
     Use /ready for database connectivity check.
     
     ✅ CRITICAL: Does NOT touch the database to ensure instant response.
+    🚫 NO database queries
+    🚫 NO external service calls
+    🚫 NO authentication checks
     """
-    return {"status": "ok"}
+    return JSONResponse({"status": "ok"}, status_code=200)
 
 
 # LIVENESS PROBE — Kubernetes/Render liveness check
