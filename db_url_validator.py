@@ -56,13 +56,15 @@ def validate_database_url(url: str | None) -> bool:
         return False
     
     # Check hostname is not localhost (may cause socket usage)
-    hostname = parsed.hostname.lower()
-    if hostname in ('localhost', '127.0.0.1', '::1'):
-        logging.warning(
-            f"DATABASE_URL uses '{parsed.hostname}' which may cause socket usage. "
-            "Use a remote database hostname instead."
-        )
-        return False
+    # Note: hostname was already validated as present above
+    if parsed.hostname:
+        hostname = parsed.hostname.lower()
+        if hostname in ('localhost', '127.0.0.1', '::1'):
+            logging.warning(
+                f"DATABASE_URL uses '{parsed.hostname}' which may cause socket usage. "
+                "Use a remote database hostname instead."
+            )
+            return False
     
     # Check for SSL mode
     query_params = parsed.query.lower()

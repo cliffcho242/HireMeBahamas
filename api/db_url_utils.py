@@ -5,12 +5,13 @@ This module provides shared utilities for processing database connection URLs,
 including automatic SSL mode enforcement for Vercel Postgres (Neon).
 """
 import logging
+from typing import Tuple
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
 
-def validate_database_url_structure(db_url: str) -> tuple[bool, str]:
+def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
     """Validate that DATABASE_URL meets strict requirements for cloud deployment.
     
     Requirements:

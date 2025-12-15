@@ -92,9 +92,15 @@ class Settings:
         if database_url.startswith("postgresql://"):
             database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
         
-        # Validate DATABASE_URL structure for production deployments
-        if cls.ENVIRONMENT == "production":
+        # Validate DATABASE_URL structure for all deployments
+        # In production, raises exceptions. In development, logs warnings only.
+        try:
             cls._validate_database_url_structure(database_url)
+        except ValueError as e:
+            if cls.ENVIRONMENT == "production":
+                raise
+            else:
+                logger.warning(f"Development mode: DATABASE_URL validation failed: {e}")
         
         return database_url
     
