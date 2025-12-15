@@ -526,10 +526,10 @@ async def lazy_import_heavy_stuff():
     # This is handled by the lazy engine wrapper and get_db() dependency.
     
     logger.info("LAZY IMPORT COMPLETE — FULL APP LIVE (DB connects on first request)")
-    logger.info("Health:   GET /health (instant, no DB)")
-    logger.info("Liveness: GET /live (instant, no DB)")
-    logger.info("Ready:    GET /ready (instant, no DB)")
-    logger.info("Ready:    GET /ready/db (creates first DB connection)")
+    logger.info("Health:   GET /health (instant)")
+    logger.info("Liveness: GET /live (instant)")
+    logger.info("Ready:    GET /ready (instant)")
+    logger.info("Ready:    GET /ready/db (with DB check)")
     logger.info("")
     logger.info("✅ STRICT LAZY PATTERN ACTIVE:")
     logger.info("   - NO database connections at startup")
