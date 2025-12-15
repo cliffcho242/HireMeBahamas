@@ -87,19 +87,26 @@ def test_lazy_initialization():
         # Look for patterns like: db_engine = create_async_engine(
         # but NOT inside get_db_engine function
         lines = content.split('\n')
-        in_get_db_engine = False
+        in_function = False
+        function_indent = 0
         for i, line in enumerate(lines):
-            if 'def get_db_engine():' in line:
-                in_get_db_engine = True
-            elif line.startswith('def ') and in_get_db_engine:
-                in_get_db_engine = False
+            # Track when we enter a function
+            if line.strip().startswith('def '):
+                in_function = True
+                function_indent = len(line) - len(line.lstrip())
+            # Track when we exit a function (by checking indentation)
+            elif in_function and line.strip() and not line.strip().startswith('#'):
+                current_indent = len(line) - len(line.lstrip())
+                if current_indent <= function_indent:
+                    in_function = False
             
-            # Check for engine creation outside get_db_engine
-            if 'create_async_engine(' in line and not in_get_db_engine and not line.strip().startswith('#'):
-                # Found engine creation outside function!
-                if '_db_engine = create_async_engine' not in line:  # Allow inside get_db_engine
+            # Check for engine creation outside any function
+            if 'create_async_engine(' in line and not line.strip().startswith('#'):
+                if not in_function:
+                    # Found engine creation at module level (outside any function)!
                     print(f"   ❌ Found engine creation at module level (line {i+1}): {line.strip()}")
                     raise AssertionError(f"Engine created at module level in api/index.py line {i+1}")
+                # If inside a function, it's OK (that's the lazy pattern)
         
         print("   ✅ api/index.py does not create engine at module level (GOOD)")
         

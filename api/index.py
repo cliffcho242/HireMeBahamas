@@ -404,8 +404,11 @@ else:
 
 # For backward compatibility: provide module-level access to engine getter
 # This allows existing code to still work, but engine is created lazily on first access
-db_engine = None  # Will be set on first request via get_db_engine()
-async_session_maker = None  # Will be set on first request via get_db_engine()
+# NOTE: These variables remain None and are NOT reassigned. They exist only for
+# backward compatibility with code that checks `if db_engine:`. Always use get_db_engine()
+# to get the actual engine instance.
+db_engine = None  # Placeholder for backward compatibility - use get_db_engine() instead
+async_session_maker = None  # Placeholder for backward compatibility - use get_db_engine() instead
 
 # Check if database module is available
 if not HAS_DB:
@@ -564,13 +567,13 @@ async def log_requests(request, call_next):
 async def get_user_from_db(user_id: int):
     """Fetch user from database with graceful fallback"""
     # Initialize engine lazily on first use
-    db_engine, async_session_maker = get_db_engine()
+    active_db_engine, active_session_maker = get_db_engine()
     
-    if not async_session_maker:
+    if not active_session_maker:
         return None
     
     try:
-        async with async_session_maker() as session:
+        async with active_session_maker() as session:
             result = await session.execute(
                 text("""
                     SELECT id, email, first_name, last_name, role, user_type, 
