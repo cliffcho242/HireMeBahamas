@@ -1,10 +1,8 @@
 """
 HireMeBahamas Backend Application Entry Point
 
-This module provides a clean entry point for uvicorn to start the FastAPI application.
-It imports the actual application from api.backend_app.main.
+This package provides a clean entry point for uvicorn to start the FastAPI application.
+The actual application is imported in main.py, which is the entry point for uvicorn.
+
+Usage: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 """
-
-from api.backend_app.main import app
-
-__all__ = ['app']
