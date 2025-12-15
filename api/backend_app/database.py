@@ -370,8 +370,12 @@ def get_engine():
     Thread-safe: Uses a lock to ensure only one engine is created even
     when accessed from multiple threads simultaneously.
     
+    CRITICAL BEHAVIOR: Returns None if engine creation fails, allowing the
+    application to start even with invalid DATABASE_URL configuration.
+    This fulfills the "apps must boot without the database" requirement.
+    
     Returns:
-        AsyncEngine: Database engine instance
+        AsyncEngine | None: Database engine instance or None if creation fails
     """
     global _engine
     
@@ -380,55 +384,73 @@ def get_engine():
         with _engine_lock:
             # Check again inside the lock in case another thread created it
             if _engine is None:
-                _engine = create_async_engine(
-                    DATABASE_URL,
-                    # Pool configuration (CRITICAL for serverless + SSL EOF fix)
-                    pool_size=POOL_SIZE,
-                    max_overflow=MAX_OVERFLOW,
-                    pool_pre_ping=True,  # Validate connections before use (detects stale connections)
-                    pool_recycle=POOL_RECYCLE,  # Recycle connections (default: 300s for serverless)
-                    pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
-                    
-                    # Echo SQL for debugging (disabled in production)
-                    echo=os.getenv("DB_ECHO", "false").lower() == "true",
-                    
-                    # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
-                    connect_args={
-                        # Connection timeout (45s for Railway cold starts)
-                        "timeout": CONNECT_TIMEOUT,
+                # Check if DATABASE_URL is the placeholder (invalid config)
+                if DATABASE_URL == DB_PLACEHOLDER_URL:
+                    logger.warning(
+                        "Database engine not created: DATABASE_URL is placeholder. "
+                        "Application will start but database operations will fail."
+                    )
+                    return None
+                
+                try:
+                    _engine = create_async_engine(
+                        DATABASE_URL,
+                        # Pool configuration (CRITICAL for serverless + SSL EOF fix)
+                        pool_size=POOL_SIZE,
+                        max_overflow=MAX_OVERFLOW,
+                        pool_pre_ping=True,  # Validate connections before use (detects stale connections)
+                        pool_recycle=POOL_RECYCLE,  # Recycle connections (default: 300s for serverless)
+                        pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
                         
-                        # Query timeout (30s per query)
-                        "command_timeout": COMMAND_TIMEOUT,
+                        # Echo SQL for debugging (disabled in production)
+                        echo=os.getenv("DB_ECHO", "false").lower() == "true",
                         
-                        # PostgreSQL server settings
-                        "server_settings": {
-                            # CRITICAL: Disable JIT to prevent 60s+ first-query delays
-                            "jit": "off",
-                            # Statement timeout in milliseconds
-                            "statement_timeout": str(STATEMENT_TIMEOUT_MS),
-                            # Application name for pg_stat_activity
-                            "application_name": "hiremebahamas",
-                        },
-                        
-                        # SSL configuration - THE MASTERMIND FIX
-                        # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
-                        # Uses TLS 1.3 only + no cert verification for Railway compatibility
-                        # The SSL context is provided via the "ssl" key in connect_args
-                        "ssl": _get_ssl_context(),
-                        
-                        # FORCE TCP + SSL: Guarantee TCP connection with SSL encryption
-                        # This ensures SSL is required even if DATABASE_URL or env vars are misconfigured
-                        # NOTE: Both "ssl" and "sslmode" parameters in connect_args coexist safely:
-                        # - "sslmode": "require" ensures connection fails if SSL is unavailable
-                        # - "ssl": _get_ssl_context() provides the actual TLS 1.3 SSL configuration
-                        # This dual-layer approach provides defense-in-depth security
-                        "sslmode": "require",
-                    }
-                )
-                logger.info(
-                    f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
-                    f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
-                )
+                        # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
+                        connect_args={
+                            # Connection timeout (45s for Railway cold starts)
+                            "timeout": CONNECT_TIMEOUT,
+                            
+                            # Query timeout (30s per query)
+                            "command_timeout": COMMAND_TIMEOUT,
+                            
+                            # PostgreSQL server settings
+                            "server_settings": {
+                                # CRITICAL: Disable JIT to prevent 60s+ first-query delays
+                                "jit": "off",
+                                # Statement timeout in milliseconds
+                                "statement_timeout": str(STATEMENT_TIMEOUT_MS),
+                                # Application name for pg_stat_activity
+                                "application_name": "hiremebahamas",
+                            },
+                            
+                            # SSL configuration - THE MASTERMIND FIX
+                            # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
+                            # Uses TLS 1.3 only + no cert verification for Railway compatibility
+                            # The SSL context is provided via the "ssl" key in connect_args
+                            "ssl": _get_ssl_context(),
+                            
+                            # FORCE TCP + SSL: Guarantee TCP connection with SSL encryption
+                            # This ensures SSL is required even if DATABASE_URL or env vars are misconfigured
+                            # NOTE: Both "ssl" and "sslmode" parameters in connect_args coexist safely:
+                            # - "sslmode": "require" ensures connection fails if SSL is unavailable
+                            # - "ssl": _get_ssl_context() provides the actual TLS 1.3 SSL configuration
+                            # This dual-layer approach provides defense-in-depth security
+                            "sslmode": "require",
+                        }
+                    )
+                    logger.info(
+                        f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
+                        f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
+                    )
+                except Exception as e:
+                    # Log warning instead of raising exception - allows app to start
+                    logger.warning(
+                        f"Failed to create database engine: {type(e).__name__}: {e}. "
+                        f"Application will start but database operations will fail. "
+                        f"Check your DATABASE_URL configuration."
+                    )
+                    _engine = None
+                    return None
     
     return _engine
 
@@ -441,6 +463,11 @@ class LazyEngine:
     This class defers all attribute access to the actual engine, which is created
     only when first accessed. This prevents connection issues in serverless environments
     where database connections at module import time can cause failures.
+    
+    CRITICAL BEHAVIOR: When engine creation fails, this class logs warnings and 
+    returns None for most attributes. This allows the application to start even 
+    when DATABASE_URL is invalid or missing, fulfilling the "apps must boot without 
+    the database" requirement.
     """
     
     def __getattr__(self, name: str):
@@ -450,30 +477,35 @@ class LazyEngine:
             name: The attribute name to access
             
         Returns:
-            The attribute value from the actual engine
+            The attribute value from the actual engine, or None if engine creation fails
             
-        Raises:
-            RuntimeError: If engine creation fails
-            AttributeError: If the attribute doesn't exist on the engine
+        Note:
+            This method handles engine creation failures gracefully by logging
+            warnings instead of raising exceptions. This allows health endpoints
+            to work even when the database is not configured.
         """
         try:
             actual_engine = get_engine()
         except Exception as e:
-            # Engine creation failed - this is a configuration or connection error
-            raise RuntimeError(
+            # Engine creation failed - log warning instead of raising exception
+            # This allows the app to start for health checks and diagnostics
+            logger.warning(
                 f"LazyEngine: Failed to create database engine during access to '{name}'. "
                 f"Check your DATABASE_URL and network connectivity. "
                 f"Original error: {type(e).__name__}: {e}"
-            ) from e
+            )
+            # Return None to allow caller to handle missing database gracefully
+            return None
         
         try:
             return getattr(actual_engine, name)
         except AttributeError as e:
             # Attribute doesn't exist on the engine
-            raise AttributeError(
+            logger.warning(
                 f"LazyEngine: Database engine has no attribute '{name}'. "
                 f"Original error: {e}"
-            ) from e
+            )
+            return None
 
 engine = LazyEngine()
 
@@ -559,6 +591,10 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     This function is called during startup to ensure database tables exist.
     Uses retry logic to handle Railway cold starts and transient failures.
     
+    CRITICAL BEHAVIOR: Returns False if database is not configured, allowing
+    the application to start without a database connection. This fulfills
+    the "apps must boot without the database" requirement.
+    
     Args:
         max_retries: Maximum number of retry attempts (default from env: 3)
         retry_delay: Delay between retries in seconds (default from env: 2.0)
@@ -567,6 +603,18 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
         bool: True if initialization succeeded, False otherwise
     """
     global _db_initialized, _db_init_error
+    
+    # Check if engine is available
+    # Note: get_engine() is called to trigger lazy initialization if needed
+    actual_engine = get_engine()
+    if actual_engine is None:
+        _db_init_error = "Database engine not available (DATABASE_URL not configured). Check DATABASE_URL configuration and network connectivity."
+        logger.warning(
+            "Database initialization skipped: DATABASE_URL not configured. "
+            "Application will start but database operations will fail. "
+            "Check DATABASE_URL configuration and network connectivity."
+        )
+        return False
     
     # Use defaults from environment if not specified
     if max_retries is None:
@@ -594,7 +642,7 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
                 import asyncio
                 await asyncio.sleep(retry_delay * (attempt + 1))  # Exponential backoff
     
-    logger.error(f"Database initialization failed after {max_retries} attempts")
+    logger.warning(f"Database initialization failed after {max_retries} attempts. Application will start anyway.")
     return False
 
 
@@ -619,9 +667,20 @@ async def test_db_connection() -> tuple[bool, Optional[str]]:
     
     Used by /ready endpoint to verify database is accessible.
     
+    CRITICAL BEHAVIOR: Returns (False, error_message) if database is not
+    configured, allowing health checks to work without crashing the app.
+    
     Returns:
         Tuple of (success: bool, error_message: Optional[str])
     """
+    # Check if engine is available
+    # Note: get_engine() is called to trigger lazy initialization if needed
+    actual_engine = get_engine()
+    if actual_engine is None:
+        error_msg = "Database engine not available (DATABASE_URL not configured). Check DATABASE_URL configuration and network connectivity."
+        logger.warning(f"Database connection test skipped: {error_msg}")
+        return False, error_msg
+    
     try:
         from sqlalchemy import text
         async with engine.connect() as conn:
@@ -632,7 +691,7 @@ async def test_db_connection() -> tuple[bool, Optional[str]]:
         # Truncate long error messages for logging
         if len(error_msg) > 200:
             error_msg = error_msg[:200] + "..."
-        logger.error(f"Database connection test failed: {error_msg}")
+        logger.warning(f"Database connection test failed: {error_msg}")
         return False, error_msg
 
 
@@ -655,9 +714,29 @@ def get_db_status() -> dict:
 async def get_pool_status() -> dict:
     """Get connection pool status for monitoring.
     
+    CRITICAL BEHAVIOR: Returns empty metrics if database is not configured,
+    allowing health checks to work without crashing the app.
+    
     Returns:
         Dictionary with pool metrics for health checks and debugging
     """
+    # Check if engine is available
+    # Note: get_engine() is called to trigger lazy initialization if needed
+    actual_engine = get_engine()
+    if actual_engine is None:
+        return {
+            "pool_size": 0,
+            "checked_in": 0,
+            "checked_out": 0,
+            "overflow": 0,
+            "invalid": 0,
+            "max_overflow": MAX_OVERFLOW,
+            "pool_recycle_seconds": POOL_RECYCLE,
+            "connect_timeout_seconds": CONNECT_TIMEOUT,
+            "status": "unavailable",
+            "error": "Database engine not configured. Check DATABASE_URL configuration and network connectivity."
+        }
+    
     pool = engine.pool
     return {
         "pool_size": pool.size() if hasattr(pool, 'size') else POOL_SIZE,
@@ -668,6 +747,7 @@ async def get_pool_status() -> dict:
         "max_overflow": MAX_OVERFLOW,
         "pool_recycle_seconds": POOL_RECYCLE,
         "connect_timeout_seconds": CONNECT_TIMEOUT,
+        "status": "available"
     }
 
 
