@@ -685,8 +685,9 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
 
 
 # Include routers with /api prefix to match frontend expectations
+# Note: auth.router already has prefix="/api/auth" and tags defined in the router itself
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
-app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+app.include_router(auth.router)  # Router prefix and tags defined in auth.py
 app.include_router(debug.router, prefix="/api/debug", tags=["debug"])
 app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
