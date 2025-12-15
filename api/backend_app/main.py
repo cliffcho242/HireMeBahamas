@@ -82,6 +82,50 @@ if 'app' not in sys.modules:
         except ImportError:
             # Skip modules that might not be available (graceful degradation)
             pass
+    
+    # CRITICAL FIX: Alias api submodule and its children to support absolute imports
+    # This enables "from app.api import X" and "from app.api.auth import Y" patterns
+    import backend_app.api
+    sys.modules['app.api'] = backend_app.api
+    inject_typing_exports(backend_app.api)
+    
+    # Dynamically alias all api submodules to handle all "from app.api.X" imports
+    _api_modules = ['analytics', 'auth', 'debug', 'hireme', 'jobs', 'messages', 
+                    'notifications', 'posts', 'profile_pictures', 'reviews', 'upload', 'users']
+    for _module_name in _api_modules:
+        try:
+            _module = __import__(f'backend_app.api.{_module_name}', fromlist=[''])
+            sys.modules[f'app.api.{_module_name}'] = _module
+            inject_typing_exports(_module)
+        except ImportError:
+            # Skip modules that might not be available (graceful degradation)
+            pass
+    
+    # CRITICAL FIX: Alias database module to support "from app.database import X"
+    try:
+        import backend_app.database
+        sys.modules['app.database'] = backend_app.database
+        inject_typing_exports(backend_app.database)
+    except ImportError:
+        # Database module might not be available in all environments
+        pass
+    
+    # CRITICAL FIX: Alias graphql submodule to support "from app.graphql.X import Y"
+    try:
+        import backend_app.graphql
+        sys.modules['app.graphql'] = backend_app.graphql
+        inject_typing_exports(backend_app.graphql)
+        
+        # Also alias graphql.schema specifically since it's imported
+        try:
+            import backend_app.graphql.schema
+            sys.modules['app.graphql.schema'] = backend_app.graphql.schema
+            inject_typing_exports(backend_app.graphql.schema)
+        except ImportError:
+            pass
+    except ImportError:
+        # GraphQL module is optional and might not be available
+        pass
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
