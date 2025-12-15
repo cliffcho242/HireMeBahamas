@@ -223,17 +223,31 @@ app.redoc_url = "/redoc"
 app.openapi_url = "/openapi.json"
 
 # Configure CORS - Allow development and production origins
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",  # Vite default
-        "http://127.0.0.1:5173",
+# Import environment utilities for consistent production checks
+try:
+    from .core.environment import get_cors_origins
+    _allowed_origins = get_cors_origins()  # Excludes localhost in production
+except ImportError:
+    # Fallback to manual configuration if import fails
+    import os
+    _is_prod = os.getenv("ENVIRONMENT", "").lower() == "production" or os.getenv("VERCEL_ENV", "").lower() == "production"
+    _allowed_origins = [
         "https://hiremebahamas.com",
         "https://www.hiremebahamas.com",
-        "https://*.vercel.app",  # Vercel preview deployments
-    ],
+        "https://*.vercel.app",
+    ]
+    # ❌ ABSOLUTE BAN: Never allow localhost in production
+    if not _is_prod:
+        _allowed_origins.extend([
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",  # Vite default
+            "http://127.0.0.1:5173",
+        ])
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
@@ -707,16 +721,10 @@ else:
 
 
 # Initialize Socket.IO for real-time messaging
+# Reuse CORS origins from middleware configuration (excludes localhost in production)
 sio = socketio.AsyncServer(
     async_mode='asgi',
-    cors_allowed_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-    ]
+    cors_allowed_origins=_allowed_origins  # Uses same origins as CORS middleware
 )
 
 # Create Socket.IO ASGI app

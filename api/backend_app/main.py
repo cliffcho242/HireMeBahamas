@@ -744,6 +744,7 @@ else:
 # Initialize Socket.IO for real-time messaging (if available)
 if HAS_SOCKETIO:
     # Reuse CORS origins from middleware configuration (excludes localhost in production)
+    # ❌ ABSOLUTE BAN: Never allow localhost in production (handled by _allowed_origins)
     sio = socketio.AsyncServer(
         async_mode='asgi',
         cors_allowed_origins=_allowed_origins

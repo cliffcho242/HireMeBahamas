@@ -109,7 +109,7 @@ class Settings:
         """Validate DATABASE_URL meets cloud deployment requirements.
         
         Requirements:
-        1. Must contain a hostname (not localhost, 127.0.0.1, or empty)
+        1. Must contain a hostname (not localhost/127.0.0.1 or empty - banned in production)
         2. Must contain a port number
         3. Must use TCP connection (no Unix sockets)
         4. Must have SSL mode configured
@@ -134,16 +134,25 @@ class Settings:
                     "Format: postgresql://user:pass@hostname:port/dbname?sslmode=require"
                 )
             
-            # Check 2: Hostname must NOT be localhost or 127.0.0.1 (Unix socket usage)
+            # Check 2: ABSOLUTE BAN on localhost in production
             hostname = parsed.hostname.lower()
-            if hostname in ('localhost', '127.0.0.1', '::1'):
+            if cls.ENVIRONMENT == "production" and hostname in ('localhost', '127.0.0.1', '::1'):
                 raise ValueError(
-                    f"DATABASE_URL uses '{parsed.hostname}' which may cause socket usage. "
-                    "Use a remote database hostname instead. "
-                    "Example: ep-xxxx.us-east-1.aws.neon.tech"
+                    f"❌ ABSOLUTE BAN: DATABASE_URL uses 'localhost' in production. "
+                    f"Found: '{parsed.hostname}'. "
+                    "Production MUST use remote database hostname. "
+                    "Example: ep-xxxx.us-east-1.aws.neon.tech or containers-us-west-123.railway.app"
                 )
             
-            # Check 3: Must have an explicit port number
+            # Check 3: ABSOLUTE BAN on Unix sockets (/var/run/postgresql) in production
+            if '/var/run/' in db_url or 'unix:/' in db_url:
+                raise ValueError(
+                    f"❌ ABSOLUTE BAN: DATABASE_URL contains Unix socket path. "
+                    "Production MUST use TCP connections with explicit hostname and port. "
+                    "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
+                )
+            
+            # Check 4: Must have an explicit port number
             if not parsed.port:
                 raise ValueError(
                     "DATABASE_URL missing port number. "
@@ -151,7 +160,7 @@ class Settings:
                     "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
                 )
             
-            # Check 4: Must have sslmode parameter for SSL/TLS
+            # Check 5: Must have sslmode parameter for SSL/TLS
             query_params = parsed.query.lower()
             if 'sslmode=' not in query_params:
                 raise ValueError(

@@ -5,12 +5,43 @@ import axios from 'axios';
 import { User } from '../types/user';
 import { Job } from '../types/job';
 
+// ❌ ABSOLUTE BAN: Never use localhost in production
+// Get backend URL from environment or use same-origin (for Vercel deployments)
+const getBackendUrl = (): string => {
+  // Check for explicit backend URL from environment
+  const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL;
+  
+  if (envUrl) {
+    return envUrl;
+  }
+  
+  // For production Vercel deployments: use same-origin (backend is serverless function at /api)
+  // For development: must set VITE_API_URL explicitly
+  const isProduction = import.meta.env.PROD;
+  
+  if (isProduction) {
+    // Production: use same-origin (Vercel serverless)
+    return window.location.origin;
+  } else {
+    // Development: Default to localhost ONLY if not in production
+    // This should be overridden by VITE_API_URL in .env.local
+    console.warn('⚠️  VITE_API_URL not set, using localhost default for development');
+    return 'http://127.0.0.1:8008';
+  }
+};
+
 // AI Error Prevention: Multiple backend endpoints for redundancy
-const BACKEND_ENDPOINTS = [
-  'http://127.0.0.1:8008',
-  'http://localhost:8008',
-  'http://127.0.0.1:8005', // Fallback
-];
+const BACKEND_ENDPOINTS = (() => {
+  const primary = getBackendUrl();
+  const endpoints = [primary];
+  
+  // Only add localhost fallbacks in development
+  if (!import.meta.env.PROD && !primary.includes('localhost')) {
+    endpoints.push('http://127.0.0.1:8008', 'http://localhost:8008');
+  }
+  
+  return endpoints;
+})();
 
 // Intelligent endpoint selection
 const selectBestEndpoint = async () => {
@@ -34,7 +65,7 @@ const selectBestEndpoint = async () => {
 };
 
 // Get optimal API base URL
-let API_BASE_URL = 'http://127.0.0.1:8008';
+let API_BASE_URL = getBackendUrl();
 
 // AI-Enhanced axios instance with error recovery
 const api = axios.create({
