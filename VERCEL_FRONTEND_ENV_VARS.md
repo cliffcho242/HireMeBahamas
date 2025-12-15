@@ -257,8 +257,8 @@ VITE_API_URL=https://your-frontend.vercel.app
 **Symptom:** Variable appears in build logs but not available in app
 
 **Solution:**
-1. Ensure using `VITE_` prefix (not `REACT_APP_` or `NEXT_PUBLIC_`)
-2. Check accessing via `import.meta.env.VITE_API_URL`
+1. Ensure using `VITE_` prefix (not `NEXT_PUBLIC_` for Next.js)
+2. Check accessing via `import.meta.env.VITE_API_URL` (not `process.env`)
 3. Rebuild and redeploy
 
 ---
