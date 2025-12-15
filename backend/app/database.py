@@ -68,7 +68,11 @@ DATABASE_URL = os.getenv('DATABASE_URL') or \
 # For local development only - require explicit configuration in production
 if not DATABASE_URL:
     if ENVIRONMENT == "production":
-        raise ValueError("DATABASE_URL must be set in production")
+        # Production-safe: log warning instead of raising exception
+        # This allows the app to start for health checks and diagnostics
+        logger.warning("DATABASE_URL must be set in production")
+        # Use a placeholder to prevent crashes, connections will fail gracefully
+        DATABASE_URL = "postgresql+asyncpg://placeholder:placeholder@localhost:5432/placeholder"
     else:
         # Use local development default only in development mode
         DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"

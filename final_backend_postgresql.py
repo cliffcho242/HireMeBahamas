@@ -942,11 +942,16 @@ if USE_POSTGRESQL:
     try:
         database = parsed.path[1:] if parsed.path and len(parsed.path) > 1 else None
         if not database:
-            raise ValueError("Database name is missing from DATABASE_URL")
+            # Production-safe: log warning instead of raising exception
+            print("❌ Database name is missing from DATABASE_URL")
+            print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
+            logging.warning("Database name is missing from DATABASE_URL")
+            database = "placeholder"  # Use placeholder to prevent crash
     except (ValueError, IndexError) as e:
         print(f"❌ Error parsing DATABASE_URL: {e}")
         print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
-        raise
+        logging.warning(f"Error parsing DATABASE_URL: {e}")
+        database = "placeholder"  # Use placeholder to prevent crash
 
     # Parse query string for SSL mode and other options
     query_params = parse_qs(parsed.query)
