@@ -28,10 +28,17 @@ app = FastAPI(
 )
 
 # IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS
+# ⚠️  CRITICAL: THIS ENDPOINT MUST NEVER TOUCH DATABASE, APIS, OR DISK
 @app.get("/health", tags=["health"])
 @app.head("/health", tags=["health"])
 def health():
-    """Instant health check - no database dependency"""
+    """Instant health check - 100% database-free (PRODUCTION-GRADE REQUIREMENT).
+    
+    ⚠️  CRITICAL: This endpoint MUST NEVER access:
+    - Database (no SELECT queries, no connection checks)
+    - External APIs (no HTTP requests)
+    - Disk I/O (no file reads/writes)
+    """
     return JSONResponse({"status": "healthy"}, status_code=200)
 
 @app.get("/live", tags=["health"])
@@ -206,15 +213,23 @@ async def db_readiness_check(db = None):
         )
 
 
+# ⚠️  CRITICAL: THIS ENDPOINT MUST NEVER TOUCH DATABASE, APIS, OR DISK
 @app.get("/health/ping")
 async def health_ping():
-    """Ultra-fast health ping"""
+    """Ultra-fast health ping - 100% database-free (PRODUCTION-GRADE REQUIREMENT).
+    
+    ⚠️  CRITICAL: This endpoint MUST NEVER access database, APIs, or disk I/O.
+    """
     return {"status": "ok", "message": "pong"}
 
 
+# ⚠️  CRITICAL: THIS ENDPOINT MUST NEVER TOUCH DATABASE, APIS, OR DISK
 @app.get("/api/health")
 async def api_health():
-    """Simple API health check"""
+    """Simple API health check - 100% database-free (PRODUCTION-GRADE).
+    
+    ⚠️  CRITICAL: This endpoint MUST NEVER access database, APIs, or disk I/O.
+    """
     return {"status": "ok"}
 
 

@@ -96,15 +96,23 @@ app = FastAPI(
 )
 
 # IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
+# ⚠️  CRITICAL: THIS ENDPOINT MUST NEVER TOUCH DATABASE, APIS, OR DISK
+# Render/Railway health checks require instant response for service availability
 @app.get("/health", tags=["health"])
 @app.head("/health", tags=["health"])
 def health():
-    """Instant health check - no database dependency.
+    """Instant health check - 100% database-free (PRODUCTION-GRADE REQUIREMENT).
+    
+    ⚠️  CRITICAL: This endpoint MUST NEVER access:
+    - Database (no SELECT queries, no connection checks)
+    - External APIs (no HTTP requests)
+    - Disk I/O (no file reads/writes)
     
     This endpoint is designed to respond immediately (<5ms) even during
-    the coldest start. It does NOT check database connectivity.
+    the coldest start. Render/Railway use this for liveness checks.
     
     Use /ready for database connectivity check.
+    Use /health/detailed for comprehensive health with DB stats.
     """
     return JSONResponse({"status": "ok"}, status_code=200)
 
@@ -597,9 +605,15 @@ async def db_readiness_check(db: AsyncSession = Depends(get_db)):
 
 
 # Quick health check endpoint (no database dependency - faster for cold starts)
+# ⚠️  CRITICAL: THIS ENDPOINT MUST NEVER TOUCH DATABASE, APIS, OR DISK
 @app.get("/health/ping")
 async def health_ping():
-    """Ultra-fast health ping endpoint
+    """Ultra-fast health ping endpoint - 100% database-free (PRODUCTION-GRADE).
+    
+    ⚠️  CRITICAL: This endpoint MUST NEVER access:
+    - Database (no SELECT queries, no connection checks)
+    - External APIs (no HTTP requests)
+    - Disk I/O (no file reads/writes)
     
     Returns immediately without database check.
     Use this for load balancer health checks and quick availability tests.
@@ -637,10 +651,12 @@ async def cache_health():
 
 
 # API health check endpoint (simple status check)
+# ⚠️  CRITICAL: THIS ENDPOINT MUST NEVER TOUCH DATABASE, APIS, OR DISK
 @app.get("/api/health")
 async def api_health():
-    """Simple API health check endpoint
+    """Simple API health check endpoint - 100% database-free (PRODUCTION-GRADE).
     
+    ⚠️  CRITICAL: This endpoint MUST NEVER access database, APIs, or disk I/O.
     Returns a simple status response for basic health verification.
     """
     return {"status": "ok"}
