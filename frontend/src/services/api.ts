@@ -64,25 +64,23 @@ if (import.meta.env.DEV) {
 // Derive API base URL - using smart backend router
 const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
 
-let API_BASE_URL = 'http://127.0.0.1:8000'; // Default for local development
+// Determine API base URL
+let API_BASE_URL: string;
 
-// If running in browser and no explicit env override
-if (!ENV_API && typeof window !== 'undefined') {
-  const hostname = window.location.hostname;
-  const isProduction = hostname === 'hiremebahamas.com' || 
-                       hostname === 'www.hiremebahamas.com';
-  const isVercel = hostname.includes('.vercel.app');
-  
-  // For production/Vercel deployments, use same-origin (Vercel serverless)
-  if (isProduction || isVercel) {
-    API_BASE_URL = window.location.origin;
-    
-    console.log('🌐 Production/Vercel deployment detected');
-    console.log('🔗 Using Vercel serverless API at:', API_BASE_URL);
-  }
-} else if (ENV_API) {
-  // Use explicit environment variable if provided
+if (ENV_API) {
+  // Use explicit environment variable if provided (e.g., Railway, Render, or local dev)
   API_BASE_URL = ENV_API;
+} else if (typeof window !== 'undefined') {
+  // If running in browser and no explicit env override, use same-origin (for Vercel serverless)
+  API_BASE_URL = window.location.origin;
+  
+  // Only log for non-localhost origins
+  if (!window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+    console.log('🌐 Using same-origin API (Vercel serverless):', API_BASE_URL);
+  }
+} else {
+  // Fallback for SSR or build-time (should not be reached in normal operation)
+  API_BASE_URL = 'http://localhost:8000';
 }
 
 // Log API configuration on startup (development only)

@@ -15,22 +15,18 @@ import { io, Socket } from 'socket.io-client';
 // Configuration - Use same logic as api.ts for consistency
 const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
 
-let SOCKET_URL = 'http://127.0.0.1:9999'; // Default for local development
+// Determine socket URL
+let SOCKET_URL: string;
 
-// If running in browser and no explicit env override
-if (!ENV_API && typeof window !== 'undefined') {
-  const hostname = window.location.hostname;
-  const isProduction = hostname === 'hiremebahamas.com' || 
-                       hostname === 'www.hiremebahamas.com';
-  const isVercel = hostname.includes('.vercel.app');
-  
-  // For Vercel deployments (production or preview), use same-origin
-  if (isProduction || isVercel) {
-    SOCKET_URL = window.location.origin;
-  }
-} else if (ENV_API) {
+if (ENV_API) {
   // Use explicit environment variable if provided
   SOCKET_URL = ENV_API;
+} else if (typeof window !== 'undefined') {
+  // If running in browser and no explicit env override, use same-origin (for Vercel serverless)
+  SOCKET_URL = window.location.origin;
+} else {
+  // Fallback for SSR or build-time (should not be reached in normal operation)
+  SOCKET_URL = 'http://localhost:8000';
 }
 const RECONNECT_DELAY_BASE = 1000;
 const MAX_RECONNECT_DELAY = 30000;

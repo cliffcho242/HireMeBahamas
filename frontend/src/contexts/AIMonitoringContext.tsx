@@ -43,7 +43,7 @@ interface AIMonitoringProviderProps {
 
 export const AIMonitoringProvider: React.FC<AIMonitoringProviderProps> = ({
   children,
-  backendUrl = 'http://127.0.0.1:8008',
+  backendUrl = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : ''),
   checkInterval = 30000, // 30 seconds
   maxRecoveryAttempts = 3
 }) => {

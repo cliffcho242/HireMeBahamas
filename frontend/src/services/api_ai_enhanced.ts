@@ -15,19 +15,14 @@ const getBackendUrl = (): string => {
     return envUrl;
   }
   
-  // For production Vercel deployments: use same-origin (backend is serverless function at /api)
-  // For development: must set VITE_API_URL explicitly
-  const isProduction = import.meta.env.PROD;
-  
-  if (isProduction) {
-    // Production: use same-origin (Vercel serverless)
+  // If no explicit env var is set, use same-origin (for Vercel serverless)
+  // This works for both production and development when running on Vercel
+  if (typeof window !== 'undefined') {
     return window.location.origin;
-  } else {
-    // Development: Default to localhost ONLY if not in production
-    // This should be overridden by VITE_API_URL in .env.local
-    console.warn('⚠️  VITE_API_URL not set, using localhost default for development');
-    return 'http://127.0.0.1:8008';
   }
+  
+  // Fallback for SSR or build-time (should not be reached in normal operation)
+  return 'http://localhost:8000';
 };
 
 // AI Error Prevention: Multiple backend endpoints for redundancy
@@ -35,10 +30,8 @@ const BACKEND_ENDPOINTS = (() => {
   const primary = getBackendUrl();
   const endpoints = [primary];
   
-  // Only add localhost fallbacks in development
-  if (!import.meta.env.PROD && !primary.includes('localhost')) {
-    endpoints.push('http://127.0.0.1:8008', 'http://localhost:8008');
-  }
+  // Note: No localhost fallbacks - use VITE_API_URL env var for local development
+  // This prevents production deployments from trying to connect to localhost
   
   return endpoints;
 })();
