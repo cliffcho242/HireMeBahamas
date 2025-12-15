@@ -110,11 +110,24 @@ Add these in Render Dashboard → Environment:
 - [ ] `FORWARDED_ALLOW_IPS=*`
 
 ### 5. Configure Health Check
-In Render Dashboard → Advanced → Health Check:
-- [ ] Health Check Path: `/health`
+In Render Dashboard → Settings → Health Check:
+
+⚠️ **CRITICAL**: Path must match exactly (case-sensitive)
+
+Choose ONE of these options:
+- [ ] **Option 1 (Recommended)**: Health Check Path: `/health`
+- [ ] **Option 2 (With API prefix)**: Health Check Path: `/api/health`
+
+Additional settings:
 - [ ] Grace Period: `60` seconds
 - [ ] Health Check Timeout: `10` seconds
 - [ ] Health Check Interval: `30` seconds
+
+**Available endpoints:**
+- `/health` - Instant health check (no database dependency)
+- `/api/health` - Alternative with `/api` prefix
+- `/ready` - Readiness check (includes database connectivity)
+- `/live` - Liveness probe
 
 ### 6. Deploy
 - [ ] Clicked "Create Web Service"
@@ -124,8 +137,11 @@ In Render Dashboard → Advanced → Health Check:
 ### 7. Verify Backend
 Test the deployed backend:
 - [ ] Health check: `curl https://hiremebahamas-backend.onrender.com/health`
-- [ ] Should return: `{"status": "ok"}`
+  - Should return: `{"ok": true}`
+- [ ] Alternative health check: `curl https://hiremebahamas-backend.onrender.com/api/health`
+  - Should return: `{"status": "ok"}`
 - [ ] Check Render logs for errors
+- [ ] Verify Render dashboard shows service as "Live"
 
 ---
 

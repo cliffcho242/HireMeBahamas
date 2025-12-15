@@ -138,11 +138,20 @@ services:
     # No cold starts, no warm-up needed
     #
     # AVAILABLE ENDPOINTS:
-    #   /health  - Instant health check (recommended for Render)
-    #   /ready   - Readiness check with DB connectivity
+    #   /health      - Instant health check (recommended, no prefix)
+    #   /api/health  - Instant health check (alternative with /api prefix)
+    #   /ready       - Readiness check with DB connectivity
+    #   /live        - Liveness probe
     #
-    # RENDER DASHBOARD SETTINGS:
-    #   Health Check Path: /health
+    # ⚠️  CRITICAL: RENDER DASHBOARD CONFIGURATION
+    # ==========================================================================
+    # Go to: Render Dashboard → Your Backend → Settings → Health Check
+    # 
+    # Set ONE of these paths (case-sensitive, must match exactly):
+    #   Option 1 (Recommended): Health Check Path: /health
+    #   Option 2 (With prefix):  Health Check Path: /api/health
+    #
+    # Additional Settings:
     #   Grace Period: 60 seconds (minimal - Always On service)
     #   Health Check Timeout: 10 seconds
     #   Health Check Interval: 30 seconds
