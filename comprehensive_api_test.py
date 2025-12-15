@@ -60,7 +60,7 @@ def test_login():
     print_header("2. LOGIN TEST")
     try:
         r = requests.post(
-            f"{BACKEND_URL}/api/auth/login",
+            f"{BASE_URL}/api/auth/login",
             json={"email": TEST_EMAIL, "password": TEST_PASSWORD},
             headers={"Content-Type": "application/json"},
             timeout=30,
@@ -89,7 +89,7 @@ def test_user_profile(token):
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
-        r = requests.get(f"{BACKEND_URL}/api/auth/profile", headers=headers, timeout=30)
+        r = requests.get(f"{BASE_URL}/api/auth/profile", headers=headers, timeout=30)
         print(f"Status: {r.status_code}")
         if r.status_code == 200:
             data = r.json()
@@ -111,7 +111,7 @@ def test_hireme_available():
     """Test HireMe available users endpoint"""
     print_header("4. HIREME AVAILABLE USERS TEST")
     try:
-        r = requests.get(f"{BACKEND_URL}/api/hireme/available", timeout=30)
+        r = requests.get(f"{BASE_URL}/api/hireme/available", timeout=30)
         print(f"Status: {r.status_code}")
         if r.status_code == 200:
             data = r.json()
@@ -144,7 +144,7 @@ def test_hireme_toggle(token):
 
         # Toggle to True
         r = requests.post(
-            f"{BACKEND_URL}/api/hireme/toggle", headers=headers, timeout=30
+            f"{BASE_URL}/api/hireme/toggle", headers=headers, timeout=30
         )
         print(f"Status: {r.status_code}")
         if r.status_code == 200:
@@ -164,7 +164,7 @@ def test_posts_endpoint():
     """Test posts endpoint"""
     print_header("6. POSTS ENDPOINT TEST")
     try:
-        r = requests.get(f"{BACKEND_URL}/api/posts", timeout=30)
+        r = requests.get(f"{BASE_URL}/api/posts", timeout=30)
         print(f"Status: {r.status_code}")
         if r.status_code == 200:
             data = r.json()
@@ -191,7 +191,7 @@ def test_cors():
     print_header("7. CORS CONFIGURATION TEST")
     try:
         r = requests.options(
-            f"{BACKEND_URL}/api/auth/login",
+            f"{BASE_URL}/api/auth/login",
             headers={
                 "Origin": "https://frontend-e49anpfmo-cliffs-projects-a84c76c9.vercel.app"
             },
@@ -221,7 +221,7 @@ def test_cors():
 def main():
     print("\n" + "=" * 80)
     print("  COMPREHENSIVE API TEST")
-    print("  Backend: " + BACKEND_URL)
+    print("  Backend: " + BASE_URL)
     print("  Test User: " + TEST_EMAIL)
     print("=" * 80)
 

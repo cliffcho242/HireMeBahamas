@@ -68,7 +68,12 @@ class TestBackendURLPattern(unittest.TestCase):
 
     def test_env_example_documents_backend_url(self):
         """Test that .env.example documents BACKEND_URL."""
-        env_example_path = ".env.example"
+        import pathlib
+        
+        # Get path relative to project root (parent of tests directory)
+        test_dir = pathlib.Path(__file__).parent
+        project_root = test_dir.parent
+        env_example_path = project_root / ".env.example"
         
         with open(env_example_path, "r") as f:
             content = f.read()
@@ -80,7 +85,13 @@ class TestBackendURLPattern(unittest.TestCase):
 
     def test_keep_alive_uses_strict_pattern(self):
         """Test that keep_alive.py uses the strict BACKEND_URL pattern."""
-        with open("keep_alive.py", "r") as f:
+        import pathlib
+        
+        test_dir = pathlib.Path(__file__).parent
+        project_root = test_dir.parent
+        file_path = project_root / "keep_alive.py"
+        
+        with open(file_path, "r") as f:
             content = f.read()
         
         # Verify it uses os.environ["BACKEND_URL"] pattern
@@ -90,7 +101,13 @@ class TestBackendURLPattern(unittest.TestCase):
 
     def test_example_health_check_uses_strict_pattern(self):
         """Test that example health check uses the strict BACKEND_URL pattern."""
-        with open("example_backend_health_check.py", "r") as f:
+        import pathlib
+        
+        test_dir = pathlib.Path(__file__).parent
+        project_root = test_dir.parent
+        file_path = project_root / "example_backend_health_check.py"
+        
+        with open(file_path, "r") as f:
             content = f.read()
         
         # Verify it uses os.environ["BACKEND_URL"] pattern
@@ -102,7 +119,13 @@ class TestBackendURLPattern(unittest.TestCase):
 
     def test_comprehensive_api_test_has_base_url(self):
         """Test that comprehensive_api_test.py defines BASE_URL."""
-        with open("comprehensive_api_test.py", "r") as f:
+        import pathlib
+        
+        test_dir = pathlib.Path(__file__).parent
+        project_root = test_dir.parent
+        file_path = project_root / "comprehensive_api_test.py"
+        
+        with open(file_path, "r") as f:
             content = f.read()
         
         # Verify it defines BASE_URL
@@ -112,7 +135,13 @@ class TestBackendURLPattern(unittest.TestCase):
 
     def test_test_hireme_has_base_url(self):
         """Test that test_hireme.py defines BASE_URL."""
-        with open("test_hireme.py", "r") as f:
+        import pathlib
+        
+        test_dir = pathlib.Path(__file__).parent
+        project_root = test_dir.parent
+        file_path = project_root / "test_hireme.py"
+        
+        with open(file_path, "r") as f:
             content = f.read()
         
         # Verify it defines BASE_URL
@@ -122,7 +151,13 @@ class TestBackendURLPattern(unittest.TestCase):
 
     def test_init_admin_has_base_url(self):
         """Test that init_admin_render.py defines BASE_URL."""
-        with open("init_admin_render.py", "r") as f:
+        import pathlib
+        
+        test_dir = pathlib.Path(__file__).parent
+        project_root = test_dir.parent
+        file_path = project_root / "init_admin_render.py"
+        
+        with open(file_path, "r") as f:
             content = f.read()
         
         # Verify it defines BASE_URL
