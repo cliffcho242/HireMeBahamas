@@ -4,7 +4,11 @@ Configuration management for HireMeBahamas API.
 This module centralizes all environment variable reads and configuration logic.
 """
 import os
+import logging
 from typing import Optional
+from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
 
 
 class Settings:
@@ -88,7 +92,80 @@ class Settings:
         if database_url.startswith("postgresql://"):
             database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
         
+        # Validate DATABASE_URL structure for all deployments
+        # In production, raises exceptions. In development, logs warnings only.
+        try:
+            cls._validate_database_url_structure(database_url)
+        except ValueError as e:
+            if cls.ENVIRONMENT == "production":
+                raise
+            else:
+                logger.warning(f"Development mode: DATABASE_URL validation failed: {e}")
+        
         return database_url
+    
+    @classmethod
+    def _validate_database_url_structure(cls, db_url: str) -> None:
+        """Validate DATABASE_URL meets cloud deployment requirements.
+        
+        Requirements:
+        1. Must contain a hostname (not localhost, 127.0.0.1, or empty)
+        2. Must contain a port number
+        3. Must use TCP connection (no Unix sockets)
+        4. Must have SSL mode configured
+        
+        Args:
+            db_url: Database connection URL to validate
+            
+        Raises:
+            ValueError: If validation fails in production
+        """
+        if not db_url:
+            raise ValueError("DATABASE_URL is empty")
+        
+        try:
+            # Parse the URL
+            parsed = urlparse(db_url)
+            
+            # Check 1: Must have a hostname
+            if not parsed.hostname:
+                raise ValueError(
+                    "DATABASE_URL missing hostname. "
+                    "Format: postgresql://user:pass@hostname:port/dbname?sslmode=require"
+                )
+            
+            # Check 2: Hostname must NOT be localhost or 127.0.0.1 (Unix socket usage)
+            hostname = parsed.hostname.lower()
+            if hostname in ('localhost', '127.0.0.1', '::1'):
+                raise ValueError(
+                    f"DATABASE_URL uses '{parsed.hostname}' which may cause socket usage. "
+                    "Use a remote database hostname instead. "
+                    "Example: ep-xxxx.us-east-1.aws.neon.tech"
+                )
+            
+            # Check 3: Must have an explicit port number
+            if not parsed.port:
+                raise ValueError(
+                    "DATABASE_URL missing port number. "
+                    "Add explicit port (e.g., :5432) after hostname. "
+                    "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
+                )
+            
+            # Check 4: Must have sslmode parameter for SSL/TLS
+            query_params = parsed.query.lower()
+            if 'sslmode=' not in query_params:
+                raise ValueError(
+                    "DATABASE_URL missing sslmode parameter. "
+                    "Add ?sslmode=require to enforce SSL. "
+                    "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
+                )
+            
+            logger.info("✓ DATABASE_URL validation passed: hostname, port, TCP, and SSL configured")
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            raise ValueError(f"Failed to parse DATABASE_URL: {str(e)}")
 
 
 # Global settings instance
