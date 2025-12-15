@@ -33,7 +33,7 @@ import ssl
 import sys
 import threading
 from typing import Optional
-from urllib.parse import urlparse, quote_plus, urlunparse
+from urllib.parse import urlparse, urlunparse
 
 # Add project root to path for importing shared validation
 _project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
