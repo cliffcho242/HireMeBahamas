@@ -242,6 +242,9 @@ def _get_ssl_context() -> ssl.SSLContext:
 # =============================================================================
 
 # Vercel-specific safety net: Wrap DB init to prevent cold-start crashes
+# Catching all exceptions is intentional - we want to gracefully handle ANY error
+# during engine creation (connection errors, config errors, driver errors, etc.)
+# to keep the application running and accessible for diagnostics
 try:
     engine = create_async_engine(
         DATABASE_URL,
@@ -285,8 +288,11 @@ try:
         f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
     )
 except Exception as e:
-    print(f"DB init failed: {e}")
-    logger.error(f"Database engine initialization failed: {e}")
+    # Sanitize error message for stdout to avoid exposing sensitive connection details
+    error_type = type(e).__name__
+    print(f"DB init failed: {error_type}")
+    # Log full error details securely (not exposed in Vercel stdout)
+    logger.error(f"Database engine initialization failed: {type(e).__name__}: {e}")
     engine = None
 
 # =============================================================================
