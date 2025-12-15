@@ -267,12 +267,127 @@ MOCK_USERS = {
 }
 
 # ============================================================================
-# DATABASE CONNECTION
+# DATABASE CONNECTION - LAZY INITIALIZATION
 # ============================================================================
-# Reuse backend's database engine if available to avoid creating duplicate connections
-# This prevents resource exhaustion in serverless environments
-db_engine = None
-async_session_maker = None
+# ✅ GOOD PATTERN: Lazy connection initialization
+# - Defers connection until first request (not at module import)
+# - Reuses backend engine if available to avoid duplicate connections
+# - This prevents resource exhaustion in serverless environments
+# ============================================================================
+
+# Global variables for lazy initialization
+_db_engine = None
+_async_session_maker = None
+_engine_lock = None  # Will be initialized on first use to avoid import-time overhead
+
+def get_db_engine():
+    """Get or create database engine (lazy initialization for serverless).
+    
+    ✅ GOOD PATTERN: Defers connection until first request.
+    This prevents connection issues in Vercel serverless where connections
+    at module import time can cause failures.
+    
+    Thread-safe: Uses a lock to ensure only one engine is created even
+    when accessed from multiple threads simultaneously.
+    
+    Returns:
+        Tuple[AsyncEngine | None, sessionmaker | None]: Database engine and session maker,
+        or (None, None) if database is not available or initialization failed.
+    """
+    global _db_engine, _async_session_maker, _engine_lock
+    
+    # Initialize lock on first use (not at import time)
+    if _engine_lock is None:
+        import threading
+        _engine_lock = threading.Lock()
+    
+    # Double-checked locking pattern for thread safety
+    if _db_engine is None:
+        with _engine_lock:
+            # Check again inside the lock in case another thread created it
+            if _db_engine is None:
+                # Use backend's database engine if available
+                if HAS_BACKEND and HAS_DB:
+                    try:
+                        # Import backend database engine (already lazily initialized)
+                        from backend_app.database import engine as backend_engine
+                        from backend_app.database import AsyncSessionLocal as backend_session_maker
+                        
+                        _db_engine = backend_engine
+                        _async_session_maker = backend_session_maker
+                        logger.info("✅ Using backend's database engine (avoiding duplicate connections)")
+                        return _db_engine, _async_session_maker
+                    except Exception as e:
+                        logger.warning(f"⚠️  Could not import backend database modules: {e}")
+                        # Fall through to fallback creation
+                
+                # Fallback: Create minimal database engine only if backend isn't available
+                if HAS_DB and DATABASE_URL:
+                    try:
+                        logger.info("Backend database not available, creating fallback database connection...")
+                        
+                        # Use centralized database module for validation and URL processing
+                        try:
+                            from database import get_database_url as get_validated_db_url
+                            db_url = get_validated_db_url()
+                            logger.info("✅ DATABASE_URL validated successfully")
+                        except ImportError:
+                            # Fallback if database module import fails - use manual processing
+                            logger.warning("Could not import database module, using manual URL processing")
+                            db_url = DATABASE_URL.strip()
+                            
+                            # Fix common typos
+                            if "ostgresql" in db_url and "postgresql" not in db_url:
+                                db_url = db_url.replace("ostgresql", "postgresql")
+                                logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
+                            
+                            # Convert to asyncpg format
+                            if db_url.startswith("postgres://"):
+                                db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+                            elif db_url.startswith("postgresql://") and "asyncpg" not in db_url:
+                                db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+                            
+                            # Add SSL mode
+                            db_url = ensure_sslmode(db_url)
+                        
+                        logger.info("Creating fallback database engine with asyncpg...")
+                        _db_engine = create_async_engine(
+                            db_url,
+                            pool_pre_ping=True,            # Validate connections before use
+                            pool_recycle=300,              # Recycle connections every 5 minutes (serverless-friendly)
+                            pool_size=1,
+                            max_overflow=0,
+                            connect_args={"timeout": 5, "command_timeout": 5}
+                        )
+                        
+                        _async_session_maker = sessionmaker(
+                            _db_engine, class_=AsyncSession, expire_on_commit=False
+                        )
+                        logger.info("✅ Fallback database engine created successfully")
+                    except ValueError as ve:
+                        # ValueError indicates configuration issue - log helpful message
+                        logger.error(f"❌ DATABASE_URL configuration error: {ve}")
+                        logger.error("Invalid DATABASE_URL format. Please check your environment variables.")
+                        logger.error("DATABASE_URL validation failed. See SECURITY.md for proper format.")
+                    except Exception as e:
+                        # Check for asyncpg "pattern" error specifically
+                        error_msg = str(e).lower()
+                        if "did not match" in error_msg and "pattern" in error_msg:
+                            logger.error(f"❌ DATABASE_URL format error: The connection string doesn't match PostgreSQL format")
+                            logger.error(f"Error details: {e}")
+                            logger.error("Invalid DATABASE_URL format. Please check your environment variables.")
+                            logger.error("DATABASE_URL validation failed. See SECURITY.md for proper format.")
+                            logger.error("Common issues:")
+                            logger.error("  1. Missing hostname")
+                            logger.error("  2. Invalid characters in connection string")
+                            logger.error("  3. Extra whitespace or newlines in the URL")
+                            logger.error("  4. Missing required connection string components")
+                        else:
+                            logger.error(f"❌ Database initialization failed: {e}")
+                            if is_debug_mode():
+                                logger.error(f"Traceback: {traceback.format_exc()}")
+    
+    return _db_engine, _async_session_maker
 
 # Log database configuration status (without exposing credentials)
 if DATABASE_URL:
@@ -287,100 +402,19 @@ if DATABASE_URL:
 else:
     logger.warning("⚠️  DATABASE_URL not configured - API will have limited functionality")
 
-# Use backend's database engine if available, otherwise create fallback engine
-if HAS_BACKEND and HAS_DB:
-    try:
-        # Import backend database engine (already initialized during backend module import)
-        from backend_app.database import engine as backend_engine
-        from backend_app.database import AsyncSessionLocal as backend_session_maker
-        
-        db_engine = backend_engine
-        async_session_maker = backend_session_maker
-        logger.info("✅ Using backend's database engine (avoiding duplicate connections)")
-    except Exception as e:
-        print(f"DB import failed: {e}")
-        logger.warning(f"⚠️  Could not import backend database modules: {e}")
-        # Fallback will be created below if needed
-        db_engine = None
-        async_session_maker = None
+# For backward compatibility: provide module-level access to engine getter
+# This allows existing code to still work, but engine is created lazily on first access
+# NOTE: These variables remain None and are NOT reassigned. They exist only for
+# backward compatibility with code that checks `if db_engine:`. Always use get_db_engine()
+# to get the actual engine instance.
+db_engine = None  # Placeholder for backward compatibility - use get_db_engine() instead
+async_session_maker = None  # Placeholder for backward compatibility - use get_db_engine() instead
 
-# Fallback: Create minimal database engine only if backend isn't available
-if db_engine is None and HAS_DB and DATABASE_URL:
-    try:
-        logger.info("Backend database not available, creating fallback database connection...")
-        
-        # Use centralized database module for validation and URL processing
-        # This avoids code duplication and ensures consistent validation
-        try:
-            from database import get_database_url as get_validated_db_url
-            db_url = get_validated_db_url()
-            logger.info("✅ DATABASE_URL validated successfully")
-        except ImportError:
-            # Fallback if database module import fails - use manual processing
-            logger.warning("Could not import database module, using manual URL processing")
-            db_url = DATABASE_URL.strip()
-            
-            # Fix common typos
-            if "ostgresql" in db_url and "postgresql" not in db_url:
-                db_url = db_url.replace("ostgresql", "postgresql")
-                logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
-            
-            # Convert to asyncpg format
-            if db_url.startswith("postgres://"):
-                db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-            elif db_url.startswith("postgresql://") and "asyncpg" not in db_url:
-                db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            
-            # Add SSL mode
-            db_url = ensure_sslmode(db_url)
-        
-        logger.info("Creating fallback database engine with asyncpg...")
-        db_engine = create_async_engine(
-            db_url,
-            pool_pre_ping=True,            # Validate connections before use
-            pool_recycle=300,              # Recycle connections every 5 minutes (serverless-friendly)
-            pool_size=1,
-            max_overflow=0,
-            connect_args={"timeout": 5, "command_timeout": 5}
-        )
-        
-        async_session_maker = sessionmaker(
-            db_engine, class_=AsyncSession, expire_on_commit=False
-        )
-        logger.info("✅ Fallback database engine created successfully")
-    except ValueError as ve:
-        # ValueError indicates configuration issue - log helpful message
-        logger.error(f"❌ DATABASE_URL configuration error: {ve}")
-        logger.error("Invalid DATABASE_URL format. Please check your environment variables.")
-        logger.error("DATABASE_URL validation failed. See SECURITY.md for proper format.")
-        db_engine = None
-        async_session_maker = None
-    except Exception as e:
-        # Check for asyncpg "pattern" error specifically
-        error_msg = str(e).lower()
-        if "did not match" in error_msg and "pattern" in error_msg:
-            logger.error(f"❌ DATABASE_URL format error: The connection string doesn't match PostgreSQL format")
-            logger.error(f"Error details: {e}")
-            logger.error("Invalid DATABASE_URL format. Please check your environment variables.")
-            logger.error("DATABASE_URL validation failed. See SECURITY.md for proper format.")
-            logger.error("Common issues:")
-            logger.error("  1. Missing hostname")
-            logger.error("  2. Invalid characters in connection string")
-            logger.error("  3. Extra whitespace or newlines in the URL")
-            logger.error("  4. Missing required connection string components")
-        else:
-            logger.error(f"❌ Database initialization failed: {e}")
-            if is_debug_mode():
-                logger.error(f"Traceback: {traceback.format_exc()}")
-        
-        db_engine = None
-        async_session_maker = None
-else:
-    if db_engine is None:
-        if not HAS_DB:
-            logger.warning("⚠️  Database drivers not available (sqlalchemy, asyncpg)")
-        if not DATABASE_URL:
-            logger.warning("⚠️  DATABASE_URL not set in environment")
+# Check if database module is available
+if not HAS_DB:
+    logger.warning("⚠️  Database drivers not available (sqlalchemy, asyncpg)")
+if not DATABASE_URL:
+    logger.warning("⚠️  DATABASE_URL not set in environment")
 
 # ============================================================================
 # CREATE FASTAPI APP
@@ -532,11 +566,14 @@ async def log_requests(request, call_next):
 # ============================================================================
 async def get_user_from_db(user_id: int):
     """Fetch user from database with graceful fallback"""
-    if not async_session_maker:
+    # Initialize engine lazily on first use
+    active_db_engine, active_session_maker = get_db_engine()
+    
+    if not active_session_maker:
         return None
     
     try:
-        async with async_session_maker() as session:
+        async with active_session_maker() as session:
             result = await session.execute(
                 text("""
                     SELECT id, email, first_name, last_name, role, user_type, 
@@ -576,6 +613,9 @@ async def get_user_from_db(user_id: int):
 async def health():
     """Instant health check - responds in <5ms"""
     logger.info("Health check called")
+    # Initialize engine lazily on first use
+    db_engine, _ = get_db_engine()
+    
     response = {
         "status": "ok",
         "platform": "vercel-serverless",
@@ -608,6 +648,9 @@ async def status():
     Security Note: In production mode, only sanitized error messages are returned.
     Set DEBUG=true for detailed error information (development only).
     """
+    # Initialize engine lazily on first use
+    db_engine, _ = get_db_engine()
+    
     # Use sanitized error in production, full error only in debug mode
     backend_error_to_show = None
     if not HAS_BACKEND:
@@ -646,6 +689,9 @@ async def diagnostic():
     Set DEBUG=true environment variable to enable full diagnostics.
     """
     logger.info("Diagnostic check called")
+    
+    # Initialize engine lazily on first use
+    db_engine, _ = get_db_engine()
     
     # Use helper functions for consistent environment detection
     is_debug = is_debug_mode()
@@ -716,6 +762,9 @@ async def ready():
             status_code=200,
             media_type="application/json"
         )
+    
+    # Initialize engine lazily on first use
+    db_engine, _ = get_db_engine()
     
     try:
         if db_engine:
@@ -821,6 +870,9 @@ else:
 @app.get("/")
 async def root():
     """Root endpoint with API information"""
+    # Initialize engine lazily on first use
+    db_engine, _ = get_db_engine()
+    
     return {
         "message": "HireMeBahamas API",
         "name": "HireMeBahamas API",
