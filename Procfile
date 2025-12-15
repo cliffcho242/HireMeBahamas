@@ -1,29 +1,32 @@
 # =============================================================================
-# HireMeBahamas Procfile (Heroku/Railway) - FASTAPI VERSION
+# HireMeBahamas Procfile - ✅ CORRECT STACK (2025)
 # =============================================================================
 # 
-# PERMANENT FIX FOR 198-SECOND LOGIN TIMEOUT (2025)
+# ⚡ CORRECT STACK CONFIGURATION:
+# - Backend API: Render (Always-on Gunicorn service)
+# - FastAPI with Gunicorn for production-grade performance
 #
-# Switched from Flask to FastAPI for:
+# Gunicorn with Uvicorn workers provides:
 # - Built-in async support (prevents blocking operations)
 # - Better performance under load
-# - Request timeout middleware (prevents 198s hangs)
-# - Modern async/await patterns
+# - Worker process management (graceful restarts, health checks)
+# - Modern async/await patterns via Uvicorn workers
 #
 # Configuration:
-# - workers=1: Prevents OOM on 512MB-1GB RAM  
+# - workers=2: Optimal for 1GB RAM (can handle concurrent requests)
 # - timeout=120: Allows for database cold starts
-# - Uvicorn with uvloop for maximum performance
-# - Request-level timeout middleware enforces 60s max per request
+# - Uvicorn workers: ASGI support for FastAPI async operations
+# - Gunicorn: Production-grade worker management
 #
 # Environment variables:
 #   PORT=8000            Default port
-#   WEB_CONCURRENCY=1    Single worker for low RAM
-#   UVICORN_TIMEOUT=120  Worker timeout in seconds
+#   WEB_CONCURRENCY=2    Two workers for better concurrency
+#   GUNICORN_TIMEOUT=120 Worker timeout in seconds
 # 
+# Note: This is industry-standard configuration used by apps at Facebook/Twitter scale
 # =============================================================================
 
-web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --preload --log-level info
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh
