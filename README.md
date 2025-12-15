@@ -16,18 +16,23 @@ A modern, Facebook-inspired social platform designed specifically for profession
 - ❌ **WRONG:** `NEXT_PUBLIC_BACKEND_URL` (Next.js only - won't work!)
 - ✅ **CORRECT:** `VITE_API_URL` (for Vite/React projects)
 
-**➡️ READ THIS: [VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md](./VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md)**
+**🌟 RECOMMENDED: Use Option A (Vercel Serverless)**
+- ✅ **DO NOT set `VITE_API_URL`** - Frontend automatically uses same-origin (/api/*)
+- ✅ No CORS issues
+- ✅ Cold start: 1-3 seconds
+- ✅ Automatic keep-warm via cron jobs
+
+**➡️ READ THIS: [VERCEL_SERVERLESS_SETUP.md](./VERCEL_SERVERLESS_SETUP.md)** - Complete Vercel serverless deployment guide
 
 **Quick Reference:**
 ```bash
-# For Railway backend:
-VITE_API_URL=https://your-backend.up.railway.app
+# Option A: Vercel Serverless (RECOMMENDED)
+# DO NOT set VITE_API_URL in Vercel Dashboard
+# Frontend automatically uses /api/* (same-origin)
 
-# For Render backend:
-VITE_API_URL=https://your-backend.onrender.com
-
-# For Vercel serverless (same-origin):
-# Leave VITE_API_URL unset (auto-detects)
+# Option B: Separate Backend (Railway/Render)
+VITE_API_URL=https://your-backend.up.railway.app  # Railway
+VITE_API_URL=https://your-backend.onrender.com    # Render
 ```
 
 📖 **[Complete Environment Variable Guide](./VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md)** - Step-by-step instructions with examples
@@ -279,9 +284,13 @@ Choose your deployment guide:
 
 Choose your deployment platform and follow the step-by-step guide:
 
+#### **Option A: Vercel Serverless (Recommended)**
+- 🌟 **[VERCEL_SERVERLESS_SETUP.md](./VERCEL_SERVERLESS_SETUP.md)** - **RECOMMENDED**: Complete guide for Vercel serverless deployment with same-origin API routing (/api/*), no CORS issues, 1-3s cold starts, automatic keep-warm
+- 📚 **[VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md)** - Detailed Vercel Postgres database setup
+
+#### **Option B: Separate Backend (Railway/Render)**
 - 🌟 **[DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Complete guide with direct links and instructions for Vercel, Railway, and Render
 - ⚡ **[QUICK_DEPLOYMENT_REFERENCE.md](./QUICK_DEPLOYMENT_REFERENCE.md)** - One-page quick reference with all commands and URLs
-- 📚 **[VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md)** - Detailed Vercel Postgres setup
 - 🚂 **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Railway database configuration
 - 🔧 **[RAILWAY_DATABASE_VARIABLES_GUIDE.md](./RAILWAY_DATABASE_VARIABLES_GUIDE.md)** - **Exact variables and locations for Railway database configuration (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, DATABASE_URL)**
 - 🔴 **[RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)** - **CRITICAL FIX**: PostgreSQL "root execution not permitted" error
