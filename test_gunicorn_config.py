@@ -17,7 +17,7 @@ def test_gunicorn_config():
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     
     # Set minimal environment for testing
-    os.environ.setdefault("PORT", "8080")
+    os.environ.setdefault("PORT", "10000")
     os.environ.setdefault("WEB_CONCURRENCY", "2")
     os.environ.setdefault("WEB_THREADS", "4")
     os.environ.setdefault("GUNICORN_TIMEOUT", "60")
