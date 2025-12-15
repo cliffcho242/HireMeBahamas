@@ -555,8 +555,8 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     if retry_delay is None:
         retry_delay = DB_INIT_RETRY_DELAY
     
-    # Import models using relative import for package consistency
-    from . import models  # noqa: F401 - Import models for table registration
+    # Import models using absolute import
+    from app import models  # noqa: F401 - Import models for table registration
     
     for attempt in range(max_retries):
         try:

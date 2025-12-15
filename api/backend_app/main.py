@@ -202,7 +202,7 @@ logger = logging.getLogger(__name__)
 HAS_GRAPHQL = False
 _graphql_router_factory = None
 try:
-    from .graphql.schema import create_graphql_router as _graphql_router_factory
+    from app.graphql.schema import create_graphql_router as _graphql_router_factory
     HAS_GRAPHQL = True
     logger.info("✅ GraphQL support enabled")
 except ImportError:
