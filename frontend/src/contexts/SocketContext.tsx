@@ -32,7 +32,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     if (!user || !token) return;
 
     // Use environment variable or fall back to same-origin for serverless deployments
-    const socketUrl = (import.meta as ImportMeta & { env?: { VITE_SOCKET_URL?: string } }).env?.VITE_SOCKET_URL || window.location.origin;
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
     
     // Create socket connection
     const newSocket = io(socketUrl, {
