@@ -18,6 +18,7 @@ Health checks in cron jobs should only verify the function is responsive, not ch
 """
 import json
 import os
+import secrets
 import time
 from http.server import BaseHTTPRequestHandler
 
@@ -45,6 +46,21 @@ class handler(BaseHTTPRequestHandler):
         """
         start_time = time.time()
         current_timestamp = int(start_time)
+        
+        # Check for CRON_SECRET authorization
+        cron_secret = os.getenv("CRON_SECRET")
+        if cron_secret:
+            auth_header = self.headers.get("Authorization", "")
+            expected_auth = f"Bearer {cron_secret}"
+            # Use constant-time comparison to prevent timing attacks
+            if not secrets.compare_digest(auth_header, expected_auth):
+                self._set_headers(401)
+                error_response = {
+                    "error": "Unauthorized",
+                    "message": "Invalid or missing Authorization header"
+                }
+                self.wfile.write(json.dumps(error_response).encode())
+                return
         
         try:
             response_data = {

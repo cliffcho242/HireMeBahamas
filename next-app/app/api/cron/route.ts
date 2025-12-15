@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 import { kv } from "@vercel/kv";
+import { timingSafeEqual } from "crypto";
 
 // Edge Runtime for fastest cron execution
 export const runtime = "edge";
@@ -16,7 +17,48 @@ export const dynamic = "force-dynamic";
  * 
  * Schedule: every 5 minutes (configured in vercel.json)
  */
-export async function GET() {
+export async function GET(request: Request) {
+  // Check for CRON_SECRET authorization
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const authHeader = request.headers.get("Authorization") || "";
+    const expectedAuth = `Bearer ${cronSecret}`;
+    
+    // Use constant-time comparison to prevent timing attacks
+    try {
+      // timingSafeEqual requires equal-length buffers and will throw if lengths differ
+      // We check lengths first to avoid the exception, which allows us to return
+      // a consistent error response. The length check itself may leak the expected
+      // length, but this is acceptable since the format "Bearer {secret}" is known.
+      const authBuffer = Buffer.from(authHeader);
+      const expectedBuffer = Buffer.from(expectedAuth);
+      
+      // Check if lengths match before calling timingSafeEqual
+      const lengthsMatch = authBuffer.length === expectedBuffer.length;
+      
+      // Perform timing-safe comparison only if lengths match
+      const valuesMatch = lengthsMatch && timingSafeEqual(authBuffer, expectedBuffer);
+      
+      if (!valuesMatch) {
+        return NextResponse.json(
+          {
+            error: "Unauthorized",
+            message: "Invalid or missing Authorization header",
+          },
+          { status: 401 }
+        );
+      }
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error: "Unauthorized",
+          message: "Invalid or missing Authorization header",
+        },
+        { status: 401 }
+      );
+    }
+  }
+
   const startTime = Date.now();
   const results: Record<string, unknown> = {};
 
