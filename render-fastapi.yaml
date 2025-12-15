@@ -1,0 +1,230 @@
+# =============================================================================
+# FACEBOOK LIGHTNING SPEED — RENDER FASTAPI (ALWAYS ON, US-EAST)
+# =============================================================================
+# Target: < 1s load from Facebook/Instagram | 50-150ms API | Zero cold starts
+# Stack: Facebook/Instagram → Vercel Edge CDN → Render FastAPI → Neon PostgreSQL
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # MAIN FASTAPI SERVICE - ALWAYS ON (US-EAST)
+  # ===========================================================================
+  - type: web
+    name: hiremebahamas-fastapi
+    runtime: python
+    region: oregon  # US-West (Render doesn't have US-East, Oregon is closest with low latency)
+    
+    # ===========================================================================
+    # PLAN: STANDARD ($25/mo) - ALWAYS ON, ZERO COLD STARTS
+    # ===========================================================================
+    # Standard plan guarantees:
+    # - Always-on instances (no spin-down)
+    # - 1GB RAM (sufficient for connection pool + cache)
+    # - Auto-scaling for traffic spikes
+    # - Health checks every 30s
+    # ===========================================================================
+    plan: standard
+    
+    # Auto-scaling configuration
+    scaling:
+      minInstances: 1      # Always keep 1 instance warm
+      maxInstances: 3      # Scale up to 3 for high traffic
+      targetCPUPercent: 75
+      targetMemoryPercent: 80
+    
+    # ===========================================================================
+    # BUILD COMMAND - OPTIMIZED INSTALLATION
+    # ===========================================================================
+    # Use pip directly with --only-binary to avoid compilation
+    buildCommand: |
+      pip install --upgrade pip &&
+      pip install --only-binary=:all: -r backend/requirements.txt
+    
+    # ===========================================================================
+    # START COMMAND - OPTIMIZED UVICORN
+    # ===========================================================================
+    # Single worker with uvloop for maximum performance
+    # --proxy-headers: Trust Render's load balancer
+    # --forwarded-allow-ips='*': Accept X-Forwarded-* headers
+    startCommand: |
+      cd backend && 
+      uvicorn app.main:app \
+        --host 0.0.0.0 \
+        --port $PORT \
+        --workers 1 \
+        --loop uvloop \
+        --proxy-headers \
+        --forwarded-allow-ips='*' \
+        --timeout-keep-alive 65 \
+        --log-level info
+    
+    # ===========================================================================
+    # ENVIRONMENT VARIABLES - OPTIMIZED FOR PERFORMANCE
+    # ===========================================================================
+    envVars:
+      # Application Settings
+      - key: ENVIRONMENT
+        value: production
+      
+      - key: SECRET_KEY
+        generateValue: true
+      
+      - key: FRONTEND_URL
+        value: https://hiremebahamas.vercel.app
+      
+      # Python Settings
+      - key: PYTHONUNBUFFERED
+        value: "true"
+      
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      
+      # ===========================================================================
+      # DATABASE CONNECTION - NEON POSTGRESQL (POOLED)
+      # ===========================================================================
+      # Set DATABASE_URL in Render dashboard:
+      # Format: postgresql+asyncpg://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/db?sslmode=require
+      # 
+      # CRITICAL: Use Neon's pooled connection endpoint for best performance:
+      # - Pooled endpoint: ep-xxxx-pooler.us-east-1.aws.neon.tech
+      # - Direct endpoint: ep-xxxx.us-east-1.aws.neon.tech
+      # 
+      # For 50-150ms response times, use POOLED endpoint!
+      # ===========================================================================
+      
+      # Connection Pool Configuration (optimized for Neon)
+      - key: DB_POOL_SIZE
+        value: "10"
+      
+      - key: DB_MAX_OVERFLOW
+        value: "5"
+      
+      - key: DB_POOL_TIMEOUT
+        value: "30"
+      
+      - key: DB_POOL_RECYCLE
+        value: "300"
+      
+      - key: DB_CONNECT_TIMEOUT
+        value: "10"
+      
+      - key: DB_COMMAND_TIMEOUT
+        value: "30"
+      
+      - key: DB_STATEMENT_TIMEOUT_MS
+        value: "30000"
+      
+      # SSL Configuration
+      - key: DB_SSL_MODE
+        value: require
+      
+      # ===========================================================================
+      # PERFORMANCE OPTIMIZATIONS
+      # ===========================================================================
+      # Redis Cache (optional, for sub-100ms responses)
+      # Set REDIS_URL if using Upstash or Render Redis
+      # Format: redis://:password@host:port
+      
+      # Trust Render's load balancer for correct client IPs
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+      
+      # Disable debug mode in production
+      - key: DEBUG
+        value: "false"
+    
+    # ===========================================================================
+    # HEALTH CHECK - INSTANT RESPONSE
+    # ===========================================================================
+    # Use /health endpoint which responds in <5ms without database check
+    # This prevents false negatives during database maintenance
+    # ===========================================================================
+    healthCheckPath: /health
+    
+    # Health check timing (standard plan)
+    # Grace period: 180s (handles any deployment delays)
+    # Interval: 30s (checks every 30 seconds)
+    # Timeout: 10s (health endpoint responds in <5ms, so 10s is generous)
+    healthCheck:
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+
+  # ===========================================================================
+  # KEEP-ALIVE WORKER (FREE) - BACKUP WARMTH
+  # ===========================================================================
+  # Even though Standard plan is always-on, this provides extra assurance
+  # Pings /health every 60 seconds to keep connections warm
+  # ===========================================================================
+  - type: worker
+    name: keepalive-worker
+    runtime: python
+    region: oregon
+    plan: free
+    
+    buildCommand: pip install requests
+    
+    startCommand: |
+      python -c "
+      import requests
+      import time
+      import os
+      
+      url = os.getenv('BACKEND_URL', 'https://hiremebahamas-fastapi.onrender.com')
+      print(f'Keep-alive worker started for {url}')
+      
+      while True:
+          try:
+              response = requests.get(f'{url}/health', timeout=5)
+              print(f'✓ Health check: {response.status_code}')
+          except Exception as e:
+              print(f'✗ Health check failed: {e}')
+          time.sleep(60)  # Ping every 60 seconds
+      "
+    
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "true"
+      
+      - key: BACKEND_URL
+        value: https://hiremebahamas-fastapi.onrender.com
+
+  # ===========================================================================
+  # CACHE WARMER (CRON) - SUB-100MS RESPONSES
+  # ===========================================================================
+  # Warms up cache every 5 minutes for frequently accessed data
+  # Ensures first user gets fast response
+  # ===========================================================================
+  - type: cron
+    name: cache-warmer
+    region: oregon
+    plan: free
+    schedule: "*/5 * * * *"  # Every 5 minutes
+    
+    dockerImage: curlimages/curl:latest
+    dockerCommand: |
+      curl -f -s -X POST https://hiremebahamas-fastapi.onrender.com/warm-cache || echo "Cache warming failed (may not exist yet)"
+
+# =============================================================================
+# DEPLOYMENT NOTES:
+# =============================================================================
+# 1. Update FRONTEND_URL in Vercel env vars to point to this Render service:
+#    VITE_API_URL=https://hiremebahamas-fastapi.onrender.com
+#
+# 2. Set DATABASE_URL in Render dashboard with Neon pooled connection:
+#    postgresql+asyncpg://user:pass@ep-xxxx-pooler.us-east-1.aws.neon.tech:5432/db?sslmode=require
+#
+# 3. Optional: Set REDIS_URL for caching (Upstash Redis recommended)
+#    redis://:password@region.upstash.io:port
+#
+# 4. Deploy to Render:
+#    - Connect GitHub repo
+#    - Select this YAML file
+#    - Deploy
+#
+# 5. Monitor performance:
+#    - API response times should be 50-150ms
+#    - Zero cold starts (Standard plan always-on)
+#    - Zero 502/503 errors
+# =============================================================================

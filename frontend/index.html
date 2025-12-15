@@ -74,10 +74,19 @@
     <!-- Preconnect for Performance - Establish early connections -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="http://127.0.0.1:8008" />
+    
+    <!-- Preconnect to Render FastAPI backend (Always On) -->
+    <!-- Update this URL to your actual Render service URL -->
+    <link rel="preconnect" href="https://hiremebahamas-fastapi.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://hiremebahamas-fastapi.onrender.com" />
     
     <!-- Preconnect for CDN (Vercel Edge Network) -->
     <link rel="preconnect" href="https://vercel.live" crossorigin />
+    
+    <!-- Facebook/Instagram optimization - Preconnect to FB domains for faster redirects -->
+    <link rel="dns-prefetch" href="https://connect.facebook.net" />
+    <link rel="dns-prefetch" href="https://www.facebook.com" />
+    <link rel="dns-prefetch" href="https://www.instagram.com" />
     
     <!-- HTTP/2 Resource Hints for Multiplexing -->
     <!-- Preload critical assets for faster initial render -->
@@ -85,6 +94,7 @@
     
     <!-- Prefetch likely navigation targets for instant page transitions -->
     <link rel="prefetch" href="/api/auth/me" as="fetch" crossorigin />
+    <link rel="prefetch" href="/api/health" as="fetch" crossorigin />
 
     <title>HireMeBahamas - Caribbean Job Platform</title>
 

@@ -162,22 +162,31 @@ _masked_url = _mask_database_url(DATABASE_URL)
 logger.info(f"Database URL: {_masked_url}")
 
 # =============================================================================
-# POOL CONFIGURATION - OPTIMIZED FOR SERVERLESS (Dec 2025)
+# POOL CONFIGURATION - OPTIMIZED FOR NEON POSTGRESQL (Dec 2025)
 # =============================================================================
 # CRITICAL: pool_recycle=300 prevents connection issues by recycling connections
 # before they become stale. This is serverless-friendly and prevents SSL EOF errors.
-# MAX_OVERFLOW=3 allows burst capacity without exhausting memory
+# 
+# NEON-SPECIFIC OPTIMIZATIONS:
+# - Use pooled connection endpoint (ep-xxxx-pooler.neon.tech) for best performance
+# - Higher pool size (10) for Render Always-On service with 1GB RAM
+# - Aggressive recycling (300s) to prevent stale connections
+# - MAX_OVERFLOW=5 for traffic spikes from Facebook/Instagram
 # =============================================================================
-POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "2"))  # Minimum connections (2 = safe for 512MB)
-MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "3"))  # Burst capacity
+POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))  # Higher for Always-On service (1GB RAM)
+MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "5"))  # Burst capacity for traffic spikes
 POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for connection
-POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (serverless-friendly)
+POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (Neon-friendly)
 
 # =============================================================================
-# CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RAILWAY
+# CONNECTION TIMEOUT CONFIGURATION - OPTIMIZED FOR NEON + RENDER
 # =============================================================================
 # These timeouts prevent the dreaded "Connection timed out" error
-CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "45"))  # 45s for Railway cold starts
+# NEON OPTIMIZATIONS:
+# - Lower connect_timeout (10s) since Neon is typically fast and stable
+# - Keep command_timeout at 30s for complex queries
+# - Add statement_timeout for query safety
+CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))  # 10s for Neon (fast connection)
 COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
 STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
 
