@@ -13,7 +13,8 @@ import {
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Use environment variable or fall back to same-origin for serverless deployments
+const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
 interface UserLoginStats {
   total_users: number;
