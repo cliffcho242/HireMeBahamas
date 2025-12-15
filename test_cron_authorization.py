@@ -149,7 +149,7 @@ def test_env_example():
             print("  ✗ .env.example missing CRON_SECRET")
             return False
             
-        if 'cron' in content.lower() or 'Cron' in content:
+        if 'cron' in content.lower():
             print("  ✓ .env.example documents cron usage")
         else:
             print("  ✗ .env.example missing cron documentation")

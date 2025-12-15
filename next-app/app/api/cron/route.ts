@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 import { kv } from "@vercel/kv";
+import { timingSafeEqual } from "crypto";
 
 // Edge Runtime for fastest cron execution
 export const runtime = "edge";
@@ -28,19 +29,7 @@ export async function GET(request: Request) {
       const authBuffer = Buffer.from(authHeader);
       const expectedBuffer = Buffer.from(expectedAuth);
       
-      // Ensure both buffers are the same length to use timingSafeEqual
-      if (authBuffer.length !== expectedBuffer.length) {
-        return NextResponse.json(
-          {
-            error: "Unauthorized",
-            message: "Invalid or missing Authorization header",
-          },
-          { status: 401 }
-        );
-      }
-      
-      const crypto = require("crypto");
-      if (!crypto.timingSafeEqual(authBuffer, expectedBuffer)) {
+      if (!timingSafeEqual(authBuffer, expectedBuffer)) {
         return NextResponse.json(
           {
             error: "Unauthorized",
