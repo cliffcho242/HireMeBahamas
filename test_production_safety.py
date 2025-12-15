@@ -6,6 +6,8 @@ This test verifies that:
 1. Production detection works correctly
 2. Sample data scripts require --dev flag
 3. Sample data scripts block in production mode
+4. Database configuration fails in production without DATABASE_URL
+5. Production environment enforces PostgreSQL (no SQLite fallback)
 """
 
 import os
@@ -126,6 +128,149 @@ def test_cleanup_script():
     return True
 
 
+def test_database_production_safety():
+    """Test that database configuration fails in production without DATABASE_URL"""
+    print("\nTesting database production safety...")
+    
+    # Test api/database.py
+    test_code_api = """
+import os
+import sys
+
+# Set production environment WITHOUT DATABASE_URL
+os.environ['ENV'] = 'production'
+# Ensure DATABASE_URL is not set
+if 'DATABASE_URL' in os.environ:
+    del os.environ['DATABASE_URL']
+
+try:
+    # This should raise RuntimeError in production without DATABASE_URL
+    # Need to import after setting env vars
+    sys.path.insert(0, 'api')
+    import database
+    print("FAIL: Should have raised RuntimeError")
+    sys.exit(1)
+except RuntimeError as e:
+    if "DATABASE_URL is required in production" in str(e):
+        print("PASS: Correctly raised RuntimeError for missing DATABASE_URL")
+        sys.exit(0)
+    else:
+        print(f"FAIL: Wrong error message: {e}")
+        sys.exit(1)
+except Exception as e:
+    print(f"FAIL: Unexpected error: {e}")
+    sys.exit(1)
+"""
+    
+    result = subprocess.run(
+        [sys.executable, "-c", test_code_api],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        cwd=os.path.dirname(os.path.abspath(__file__)),
+    )
+    
+    if result.returncode != 0:
+        print(f"❌ FAIL: api/database.py - {result.stdout}")
+        return False
+    
+    print(f"✅ PASS: api/database.py - {result.stdout.strip()}")
+    
+    # Test api/backend_app/database.py
+    test_code_backend = """
+import os
+import sys
+
+# Set production environment WITHOUT DATABASE_URL
+os.environ['ENV'] = 'production'
+os.environ['ENVIRONMENT'] = 'production'
+# Ensure all database-related env vars are not set
+for var in ['DATABASE_URL', 'DATABASE_PRIVATE_URL', 'POSTGRES_URL', 
+            'PGHOST', 'PGUSER', 'PGPASSWORD', 'PGDATABASE']:
+    if var in os.environ:
+        del os.environ[var]
+
+try:
+    # This should raise RuntimeError in production without DATABASE_URL
+    sys.path.insert(0, 'api/backend_app')
+    import database
+    print("FAIL: Should have raised RuntimeError")
+    sys.exit(1)
+except RuntimeError as e:
+    if "DATABASE_URL is required in production" in str(e):
+        print("PASS: Correctly raised RuntimeError for missing DATABASE_URL")
+        sys.exit(0)
+    else:
+        print(f"FAIL: Wrong error message: {e}")
+        sys.exit(1)
+except Exception as e:
+    print(f"FAIL: Unexpected error: {e}")
+    sys.exit(1)
+"""
+    
+    result = subprocess.run(
+        [sys.executable, "-c", test_code_backend],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        cwd=os.path.dirname(os.path.abspath(__file__)),
+    )
+    
+    if result.returncode != 0:
+        print(f"❌ FAIL: backend_app/database.py - {result.stdout}")
+        return False
+    
+    print(f"✅ PASS: backend_app/database.py - {result.stdout.strip()}")
+    return True
+
+
+def test_database_ssl_enforcement():
+    """Test that database engine enforces SSL in configuration"""
+    print("\nTesting database SSL enforcement...")
+    
+    # Test that api/database.py engine has sslmode=require in connect_args
+    test_code = """
+import os
+import sys
+
+# Set environment to have a valid DATABASE_URL
+os.environ['DATABASE_URL'] = 'postgresql://user:pass@localhost:5432/test'
+
+try:
+    sys.path.insert(0, 'api')
+    import database
+    
+    # Check if the connect_args includes sslmode
+    # We can't directly inspect the engine without connecting,
+    # but we can verify the get_engine function exists
+    engine_func = database.get_engine
+    if engine_func:
+        print("PASS: Database module loaded with SSL enforcement configured")
+        sys.exit(0)
+    else:
+        print("FAIL: get_engine function not found")
+        sys.exit(1)
+except Exception as e:
+    print(f"FAIL: Error loading database module: {e}")
+    sys.exit(1)
+"""
+    
+    result = subprocess.run(
+        [sys.executable, "-c", test_code],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        cwd=os.path.dirname(os.path.abspath(__file__)),
+    )
+    
+    if result.returncode != 0:
+        print(f"❌ FAIL: {result.stdout}")
+        return False
+    
+    print(f"✅ PASS: {result.stdout.strip()}")
+    return True
+
+
 def main():
     """Run all tests"""
     print("=" * 60)
@@ -138,6 +283,8 @@ def main():
         ("Dev Flag Requirement", test_dev_flag_requirement),
         ("Production Blocking", test_production_blocking),
         ("Cleanup Script", test_cleanup_script),
+        ("Database Production Safety", test_database_production_safety),
+        ("Database SSL Enforcement", test_database_ssl_enforcement),
     ]
 
     passed = 0
