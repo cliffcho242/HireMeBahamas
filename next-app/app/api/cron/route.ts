@@ -5,7 +5,7 @@ import { kv } from "@vercel/kv";
 // Edge Runtime for fastest cron execution
 export const runtime = "edge";
 
-// Vercel Cron - runs every 5 minutes
+// Vercel Cron - runs daily at 10:00 AM UTC
 export const dynamic = "force-dynamic";
 
 /**
@@ -19,8 +19,19 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   // Authorization check - Vercel adds CRON_SECRET to Authorization header
+  const cronSecret = process.env.CRON_SECRET;
+  
+  // Ensure CRON_SECRET is configured
+  if (!cronSecret) {
+    console.error("CRON_SECRET environment variable is not set");
+    return NextResponse.json(
+      { error: "Server configuration error" },
+      { status: 500 }
+    );
+  }
+  
   const authHeader = request.headers.get("Authorization");
-  const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
+  const expectedAuth = `Bearer ${cronSecret}`;
   
   if (authHeader !== expectedAuth) {
     return NextResponse.json(
