@@ -105,7 +105,7 @@ def when_ready(server):
         startup_time = time.time() - _master_start_time
         print(f"✅ Gunicorn ready to accept connections in {startup_time:.2f}s")
     print(f"   Listening on {bind}")
-    print(f"   Health: GET /health (instant, no dependencies)")
+    print(f"   Health: GET /health (instant)")
     print(f"   Ready: GET /ready (with DB check)")
     print(f"   Workers will initialize independently")
     print(f"🎉 HireMeBahamas API is ready for Railway healthcheck")

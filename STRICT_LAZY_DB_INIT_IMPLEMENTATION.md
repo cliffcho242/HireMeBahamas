@@ -210,10 +210,10 @@ Starting HireMeBahamas API initialization (NO database connections)...
 Bcrypt pre-warmed successfully
 Redis cache connected successfully
 LAZY IMPORT COMPLETE — FULL APP LIVE (DB connects on first request)
-Health:   GET /health (instant, no DB)
-Liveness: GET /live (instant, no DB)
-Ready:    GET /ready (instant, no DB)
-Ready:    GET /ready/db (creates first DB connection)
+Health:   GET /health (instant)
+Liveness: GET /live (instant)
+Ready:    GET /ready (instant)
+Ready:    GET /ready/db (with DB check)
 
 ✅ STRICT LAZY PATTERN ACTIVE:
    - NO database connections at startup
