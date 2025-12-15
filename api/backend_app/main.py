@@ -228,6 +228,7 @@ from app.core.security import prewarm_bcrypt_async
 from app.core.redis_cache import redis_cache, warm_cache
 from app.core.db_health import check_database_health, get_database_stats
 from app.core.timeout_middleware import add_timeout_middleware
+from app.core.environment import get_cors_origins
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -285,20 +286,8 @@ add_timeout_middleware(app, timeout=60)
 
 # Configure CORS - Allow development and production origins
 # In production, localhost URLs are excluded to prevent misconfiguration
-_is_production = os.getenv("ENVIRONMENT", "").lower() == "production" or os.getenv("VERCEL_ENV", "").lower() == "production"
-_allowed_origins = [
-    "https://hiremebahamas.com",
-    "https://www.hiremebahamas.com",
-    "https://*.vercel.app",  # Vercel preview deployments
-]
-# Add localhost origins only in development
-if not _is_production:
-    _allowed_origins.extend([
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",  # Vite default
-        "http://127.0.0.1:5173",
-    ])
+# Uses shared environment utility for consistent configuration
+_allowed_origins = get_cors_origins()
 
 app.add_middleware(
     CORSMiddleware,
