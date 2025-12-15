@@ -301,8 +301,8 @@ def test_health_endpoint_code_analysis():
     # Find health endpoint
     in_health_endpoint = False
     health_lines = []
-    brace_count = 0
     found_health = False
+    indent_level = None
     
     for i, line in enumerate(lines):
         if '@app.get("/health")' in line:
@@ -311,21 +311,24 @@ def test_health_endpoint_code_analysis():
             continue
         
         if in_health_endpoint:
+            # Capture the function definition line to determine base indentation
+            if 'async def health' in line or 'def health' in line:
+                # Calculate indentation level of the function definition
+                indent_level = len(line) - len(line.lstrip())
+                health_lines.append(line)
+                continue
+            
             health_lines.append(line)
             
-            # Track indentation/scope
-            if 'def ' in line and 'health' not in line.lower():
-                break
-            if '@app.' in line:
-                break
+            # If we have the indent level, detect when we've left the function
+            if indent_level is not None and line.strip():
+                current_indent = len(line) - len(line.lstrip())
+                # If we hit a line at the same or lower indentation that isn't part of our function, we're done
+                if current_indent <= indent_level and not line.strip().startswith('#'):
+                    break
             
-            # Check for return statement at root level (end of function)
-            if line.strip().startswith('return ') and not line.strip().startswith('return None'):
-                # Continue a few more lines to capture the full return
-                for j in range(i + 1, min(i + 5, len(lines))):
-                    health_lines.append(lines[j])
-                    if '}' in lines[j] and lines[j].strip() == '}':
-                        break
+            # Alternative: detect next decorator or class/function definition at module level
+            if line.strip().startswith('@app.') or (line.strip().startswith('def ') and not line.strip().startswith('    ')):
                 break
     
     if not found_health:

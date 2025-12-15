@@ -640,7 +640,7 @@ async def health():
         "timestamp": int(time.time()),
         "version": "2.0.0",
         "backend": "available" if HAS_BACKEND else "fallback",
-        "database_url_set": bool(DATABASE_URL),
+        "database_url": "configured" if DATABASE_URL else "not_set",
         "jwt": "configured" if JWT_SECRET != "dev-secret-key-change-in-production" else "using_default",
     }
     
