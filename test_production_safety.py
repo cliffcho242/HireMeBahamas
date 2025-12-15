@@ -184,11 +184,9 @@ import sys
 # Set production environment WITHOUT DATABASE_URL
 os.environ['ENV'] = 'production'
 os.environ['ENVIRONMENT'] = 'production'
-# Ensure all database-related env vars are not set
-for var in ['DATABASE_URL', 'DATABASE_PRIVATE_URL', 'POSTGRES_URL', 
-            'PGHOST', 'PGUSER', 'PGPASSWORD', 'PGDATABASE']:
-    if var in os.environ:
-        del os.environ[var]
+# Ensure DATABASE_URL is not set (PG* variables no longer supported)
+if 'DATABASE_URL' in os.environ:
+    del os.environ['DATABASE_URL']
 
 try:
     # This should raise RuntimeError in production without DATABASE_URL

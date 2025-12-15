@@ -43,16 +43,13 @@ def validate_environment():
     
     if is_valid:
         db_host = get_database_host()
-        if source == "Individual PG* variables":
-            print(f"✅ Individual PostgreSQL variables configured (PGHOST={db_host})")
-            warnings.append("Using individual PG* variables instead of DATABASE_URL")
-        else:
-            print(f"✅ {source} configured: {db_host or '***'}")
+        print(f"✅ DATABASE_URL configured: {db_host or '***'}")
     else:
-        print(f"❌ DATABASE_URL not set and missing individual variables: {', '.join(missing_vars)}")
-        print("   Required variables: PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, DATABASE_URL")
-        print("   Configure DATABASE_URL or all individual PG* variables in Railway dashboard")
-        errors.append("DATABASE_URL not configured and missing required PG* variables")
+        print(f"❌ DATABASE_URL not set")
+        print("   Required: DATABASE_URL with Neon PostgreSQL connection string")
+        print("   Format: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require")
+        print("   Configure DATABASE_URL in Railway dashboard or deployment platform")
+        errors.append("DATABASE_URL not configured")
     
     # Check SECRET_KEY
     secret_key = os.getenv("SECRET_KEY")

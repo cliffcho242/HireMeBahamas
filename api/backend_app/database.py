@@ -40,31 +40,7 @@ _project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
-try:
-    from db_config_validation import validate_database_config
-except ImportError:
-    # Fallback if db_config_validation is not available (shouldn't happen in normal deployment)
-    def validate_database_config():
-        """Fallback validation function."""
-        database_url = (
-            os.getenv("DATABASE_PRIVATE_URL") or 
-            os.getenv("POSTGRES_URL") or 
-            os.getenv("DATABASE_URL")
-        )
-        if database_url:
-            return True, "DATABASE_URL", []
-        
-        missing_vars = []
-        if not os.getenv("PGHOST"):
-            missing_vars.append("PGHOST")
-        if not os.getenv("PGUSER"):
-            missing_vars.append("PGUSER")
-        if not os.getenv("PGPASSWORD"):
-            missing_vars.append("PGPASSWORD")
-        if not os.getenv("PGDATABASE"):
-            missing_vars.append("PGDATABASE")
-        
-        return len(missing_vars) == 0, "Individual PG* variables", missing_vars
+# No need for db_config_validation import anymore since we only use DATABASE_URL
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -81,11 +57,11 @@ DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@invalid.local
 # DATABASE URL CONFIGURATION
 # =============================================================================
 # Priority order:
-# 1. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
-# 2. POSTGRES_URL (Vercel Postgres primary connection)
-# 3. DATABASE_URL (Standard PostgreSQL connection)
-# 4. Construct from individual PG* variables (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE)
-# 5. Local development default (only for development, not production)
+# 1. DATABASE_URL (Standard PostgreSQL connection - REQUIRED)
+# 2. Local development default (only for development, not production)
+#
+# NEON DATABASE FORMAT:
+# DATABASE_URL=postgresql://USER:ENCODED_PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require
 # =============================================================================
 
 # Check if we're in production mode
@@ -93,12 +69,8 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 # Also check ENV for consistency with api/database.py
 ENV = os.getenv("ENV", "development")
 
-# Get database URL with proper fallback
-DATABASE_URL = (
-    os.getenv("DATABASE_PRIVATE_URL") or 
-    os.getenv("POSTGRES_URL") or
-    os.getenv("DATABASE_URL")
-)
+# Get database URL - only DATABASE_URL is supported
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Strip whitespace from DATABASE_URL to prevent connection errors
 if DATABASE_URL:
@@ -110,56 +82,18 @@ if DATABASE_URL:
 # This prevents silent SQLite usage in production while allowing app to start
 # Check both ENV and ENVIRONMENT variables for consistency across the application
 if (ENV == "production" or ENVIRONMENT == "production") and not DATABASE_URL:
-    # Check if we can construct from PG* variables
-    pghost = os.getenv("PGHOST")
-    pguser = os.getenv("PGUSER")
-    pgpassword = os.getenv("PGPASSWORD")
-    pgdatabase = os.getenv("PGDATABASE")
-    
-    # If we don't have all required PG* variables, log warning
-    if not all([pghost, pguser, pgpassword, pgdatabase]):
-        logger.warning(
-            "DATABASE_URL is required in production. "
-            "SQLite fallback is disabled. "
-            "Please set DATABASE_URL, POSTGRES_URL, DATABASE_PRIVATE_URL, "
-            "or all individual variables (PGHOST, PGUSER, PGPASSWORD, PGDATABASE)."
-        )
+    logger.warning(
+        "DATABASE_URL is required in production. "
+        "Please set DATABASE_URL environment variable with your Neon PostgreSQL connection string. "
+        "Format: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require"
+    )
+    # Use placeholder to prevent crashes, connections will fail gracefully
+    DATABASE_URL = DB_PLACEHOLDER_URL
+elif not DATABASE_URL:
+    # Use local development default only in development mode
+    DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+    logger.warning("Using default local development database URL. Set DATABASE_URL for production.")
 # =============================================================================
-
-# If DATABASE_URL is not provided, try to construct it from individual PG* variables
-if not DATABASE_URL:
-    pghost = os.getenv("PGHOST")
-    pgport = os.getenv("PGPORT", "5432")
-    pguser = os.getenv("PGUSER")
-    pgpassword = os.getenv("PGPASSWORD")
-    pgdatabase = os.getenv("PGDATABASE")
-    
-    # Check if all required individual variables are present using shared validation
-    is_valid, source, missing_vars = validate_database_config()
-    
-    if is_valid and source == "Individual PG* variables":
-        # Strip whitespace from database name to prevent connection errors
-        pgdatabase = pgdatabase.strip() if pgdatabase else pgdatabase
-        # URL-encode password to handle special characters
-        encoded_password = quote_plus(pgpassword)
-        DATABASE_URL = f"postgresql+asyncpg://{pguser}:{encoded_password}@{pghost}:{pgport}/{pgdatabase}"
-        logger.info("Constructed DATABASE_URL from individual PG* environment variables")
-    elif (ENV == "production" or ENVIRONMENT == "production"):
-        # In production, we need either DATABASE_URL or all individual PG* variables
-        # Production-safe: log warning instead of raising exception
-        logger.warning(
-            f"DATABASE_URL must be set in production. "
-            f"Please set DATABASE_URL, POSTGRES_URL, DATABASE_PRIVATE_URL, "
-            f"or all individual variables (PGHOST, PGUSER, PGPASSWORD, PGDATABASE). "
-            f"Note: PGPORT is optional (defaults to 5432). "
-            f"Missing: {', '.join(missing_vars)}"
-        )
-        # Use placeholder to prevent crashes, connections will fail gracefully
-        DATABASE_URL = DB_PLACEHOLDER_URL
-    else:
-        # Use local development default only in development mode
-        DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
-        logger.warning("Using default local development database URL. Set DATABASE_URL for production.")
 
 # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
 # This handles cases where the 'p' is missing from "postgresql"
