@@ -83,8 +83,10 @@ if (ENV_API) {
   API_BASE_URL = 'http://localhost:8000';
 }
 
-// 🔍 TEMP DEBUG: Check if API URL is properly configured
-console.log("API URL:", import.meta.env.VITE_API_URL);
+// 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
+if (import.meta.env.DEV) {
+  console.log("API URL:", import.meta.env.VITE_API_URL);
+}
 
 // Log API configuration on startup (development only)
 if (typeof window !== 'undefined' && import.meta.env.DEV) {

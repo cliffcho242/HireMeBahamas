@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import './SocialFeed.css';
 
-// 🔍 TEMP DEBUG: Check if API URL is properly configured
-console.log("API URL:", import.meta.env.VITE_API_URL);
+// 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
+if (import.meta.env.DEV) {
+  console.log("API URL:", import.meta.env.VITE_API_URL);
+}
 
 // ✅ Correct API URL pattern: Use environment variable or same-origin
-const API = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+const API = import.meta.env.VITE_API_URL || window.location.origin;
 
 // Enhanced API service with AI features
 const socialAPI = {

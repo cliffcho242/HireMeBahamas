@@ -5,8 +5,10 @@ import axios from 'axios';
 import { User } from '../types/user';
 import { Job } from '../types/job';
 
-// 🔍 TEMP DEBUG: Check if API URL is properly configured
-console.log("API URL:", import.meta.env.VITE_API_URL);
+// 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
+if (import.meta.env.DEV) {
+  console.log("API URL:", import.meta.env.VITE_API_URL);
+}
 
 // ❌ ABSOLUTE BAN: Never use localhost in production
 // Get backend URL from environment or use same-origin (for Vercel deployments)
