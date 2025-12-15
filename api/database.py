@@ -184,7 +184,7 @@ def get_engine():
                 max_overflow=max_overflow,     # Limited overflow
                 pool_recycle=pool_recycle,     # Recycle connections every 5 minutes
                 connect_args={
-                    "connect_timeout": connect_timeout,  # Connection timeout (5s default)
+                    "connect_timeout": connect_timeout,  # Connection timeout (45s default)
                     "command_timeout": command_timeout,  # Query timeout (30s default)
                     "sslmode": "require",                # Enforce SSL for production safety
                 },

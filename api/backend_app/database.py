@@ -139,9 +139,9 @@ if not DATABASE_URL:
         encoded_password = quote_plus(pgpassword)
         DATABASE_URL = f"postgresql+asyncpg://{pguser}:{encoded_password}@{pghost}:{pgport}/{pgdatabase}"
         logger.info("Constructed DATABASE_URL from individual PG* environment variables")
-    elif ENVIRONMENT == "production":
+    elif (ENV == "production" or ENVIRONMENT == "production"):
         # In production, we need either DATABASE_URL or all individual PG* variables
-        raise ValueError(
+        raise RuntimeError(
             f"DATABASE_URL must be set in production. "
             f"Please set DATABASE_URL, POSTGRES_URL, DATABASE_PRIVATE_URL, "
             f"or all individual variables (PGHOST, PGUSER, PGPASSWORD, PGDATABASE). "
