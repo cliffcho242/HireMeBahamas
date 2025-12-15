@@ -19,6 +19,10 @@ from db_url_utils import validate_database_url_structure
 class TestNeonDatabaseURLValidation:
     """Test cases for NEON (Vercel Postgres) DATABASE_URL validation."""
     
+    def _assert_whitespace_error(self, error):
+        """Helper method to check if error message mentions whitespace."""
+        assert 'whitespace' in error.lower() or 'spaces' in error.lower()
+    
     def test_valid_neon_format(self):
         """Test valid NEON PostgreSQL URL with all required components."""
         url = "postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
@@ -48,7 +52,7 @@ class TestNeonDatabaseURLValidation:
         url = " postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
         is_valid, error = validate_database_url_structure(url)
         assert not is_valid, "URL with leading whitespace should fail"
-        assert "whitespace" in error.lower() or "spaces" in error.lower()
+        self._assert_whitespace_error(error)
         print("✅ Leading whitespace rejection: PASSED")
     
     def test_invalid_trailing_whitespace(self):
@@ -56,7 +60,7 @@ class TestNeonDatabaseURLValidation:
         url = "postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require "
         is_valid, error = validate_database_url_structure(url)
         assert not is_valid, "URL with trailing whitespace should fail"
-        assert "whitespace" in error.lower() or "spaces" in error.lower()
+        self._assert_whitespace_error(error)
         print("✅ Trailing whitespace rejection: PASSED")
     
     def test_invalid_embedded_space_in_path(self):
@@ -64,7 +68,7 @@ class TestNeonDatabaseURLValidation:
         url = "postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname ?sslmode=require"
         is_valid, error = validate_database_url_structure(url)
         assert not is_valid, "URL with space before query string should fail"
-        assert "whitespace" in error.lower() or "spaces" in error.lower()
+        self._assert_whitespace_error(error)
         print("✅ Embedded space in path rejection: PASSED")
     
     def test_invalid_space_in_password(self):
@@ -72,7 +76,7 @@ class TestNeonDatabaseURLValidation:
         url = "postgresql://USER:PASS WORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
         is_valid, error = validate_database_url_structure(url)
         assert not is_valid, "URL with space in password should fail"
-        assert "whitespace" in error.lower() or "spaces" in error.lower()
+        self._assert_whitespace_error(error)
         print("✅ Space in password rejection: PASSED")
     
     def test_invalid_tab_character(self):
@@ -80,7 +84,7 @@ class TestNeonDatabaseURLValidation:
         url = "postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname\t?sslmode=require"
         is_valid, error = validate_database_url_structure(url)
         assert not is_valid, "URL with tab character should fail"
-        assert "whitespace" in error.lower()
+        self._assert_whitespace_error(error)
         print("✅ Tab character rejection: PASSED")
     
     def test_invalid_newline_character(self):
@@ -88,7 +92,7 @@ class TestNeonDatabaseURLValidation:
         url = "postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname\n?sslmode=require"
         is_valid, error = validate_database_url_structure(url)
         assert not is_valid, "URL with newline should fail"
-        assert "whitespace" in error.lower()
+        self._assert_whitespace_error(error)
         print("✅ Newline character rejection: PASSED")
     
     def test_invalid_missing_port(self):
