@@ -356,7 +356,7 @@ Choose your deployment platform and follow the step-by-step guide:
 - 🌟 **[DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Complete guide with direct links and instructions for Vercel, Railway, and Render
 - ⚡ **[QUICK_DEPLOYMENT_REFERENCE.md](./QUICK_DEPLOYMENT_REFERENCE.md)** - One-page quick reference with all commands and URLs
 - 🚂 **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Railway database configuration
-- 🔧 **[RAILWAY_DATABASE_VARIABLES_GUIDE.md](./RAILWAY_DATABASE_VARIABLES_GUIDE.md)** - **Exact variables and locations for Railway database configuration (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, DATABASE_URL)**
+- 🔧 **[RAILWAY_DATABASE_VARIABLES_GUIDE.md](./RAILWAY_DATABASE_VARIABLES_GUIDE.md)** - **Exact configuration for Railway database (DATABASE_URL only)**
 - 🔴 **[RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)** - **CRITICAL FIX**: PostgreSQL "root execution not permitted" error
 - ⚠️ **[RAILWAY_POSTGRESQL_SETUP.md](./RAILWAY_POSTGRESQL_SETUP.md)** - **How to correctly set up PostgreSQL on Railway (use managed database service!)**
 
