@@ -541,9 +541,10 @@ async def db_readiness_check(db: AsyncSession = Depends(get_db)):
 
 # Quick health check endpoint (no database dependency - faster for cold starts)
 @app.get("/health/ping")
-async def health_ping():
+def health_ping():
     """Ultra-fast health ping endpoint
     
+    ✅ PRODUCTION-GRADE: Database-free, instant response.
     Returns immediately without database check.
     Use this for load balancer health checks and quick availability tests.
     """
