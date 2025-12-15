@@ -228,11 +228,25 @@ export default defineConfig({
     // Enable module preload for HTTP/2 multiplexing benefits
     modulePreload: {
       polyfill: true, // Polyfill for older browsers
+      resolveDependencies: (url, deps) => {
+        // Preload critical chunks
+        return deps.filter(dep => {
+          return dep.includes('vendor') || dep.includes('ui');
+        });
+      },
     },
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
+        pure_funcs: ['console.log', 'console.debug', 'console.trace'],
+        passes: 2,
+      },
+      mangle: {
+        safari10: true,
+      },
+      format: {
+        comments: false,
       },
     },
     rollupOptions: {
@@ -242,18 +256,47 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
         // Optimized chunking for HTTP/2 parallel loading
-        manualChunks: {
-          // Core React libraries - loaded first for initial render
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          // UI animation and icons - separate chunk for HTTP/2 multiplexing
-          ui: ['framer-motion', '@heroicons/react'],
-          // Form handling libraries - loaded on demand
-          forms: ['react-hook-form', '@hookform/resolvers', 'yup'],
-          // Data fetching and state - critical for data loading
-          query: ['@tanstack/react-query', 'axios'],
-          // Utility libraries
-          utils: ['date-fns', 'clsx', 'tailwind-merge'],
+        manualChunks: (id) => {
+          // Vendor chunk for core React libraries
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor';
+            }
+            // UI libraries chunk
+            if (id.includes('framer-motion') || id.includes('@heroicons') || id.includes('lucide-react')) {
+              return 'ui';
+            }
+            // Form libraries chunk
+            if (id.includes('react-hook-form') || id.includes('yup') || id.includes('@hookform')) {
+              return 'forms';
+            }
+            // Query and data fetching
+            if (id.includes('@tanstack/react-query') || id.includes('axios')) {
+              return 'query';
+            }
+            // Utility libraries
+            if (id.includes('date-fns') || id.includes('clsx') || id.includes('tailwind-merge')) {
+              return 'utils';
+            }
+            // Socket.io and real-time
+            // Use more specific check to avoid false positives
+            if (id.includes('/node_modules/socket.io')) {
+              return 'realtime';
+            }
+            // Large libraries get their own chunks
+            if (id.includes('@apollo/client')) {
+              return 'apollo';
+            }
+            if (id.includes('@sendbird')) {
+              return 'sendbird';
+            }
+            // All other node_modules in a common chunk
+            return 'vendor-common';
+          }
         },
+        // Note: experimentalMinChunkSize is experimental and may cause issues
+        // Test thoroughly before using in production
+        // experimentalMinChunkSize: 20000, // 20KB minimum
       },
     },
   },
