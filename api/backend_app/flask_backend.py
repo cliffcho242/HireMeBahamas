@@ -46,20 +46,26 @@ except Exception as e:
 
 @app.route("/health")
 def health():
-    logger.info("Health check endpoint called")
-    return jsonify({"status": "healthy", "message": "HireMeBahamas API is running"})
+    """Fast health check endpoint - no database dependency.
+    
+    🚫 NO database queries
+    🚫 NO external service calls
+    🚫 NO authentication checks
+    🚫 NO logging (for maximum speed)
+    """
+    return jsonify({"status": "ok"}), 200
 
 
 @app.route("/health/ping")
 def health_ping():
     """Ultra-fast health ping endpoint
     
-    ❌ No DB access
-    ❌ No external calls
-    ❌ No disk access
+    🚫 NO database queries
+    🚫 NO external service calls
+    🚫 NO authentication checks
     Target latency: < 30ms
     """
-    return jsonify({"status": "ok"})
+    return jsonify({"status": "ok"}), 200
 
 
 @app.route("/")
