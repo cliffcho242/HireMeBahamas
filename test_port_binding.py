@@ -8,11 +8,16 @@ with appropriate defaults.
 import os
 import ast
 import re
+from pathlib import Path
+
+# Get the repository root directory
+REPO_ROOT = Path(__file__).parent
 
 
 def test_final_backend_postgresql_port_binding():
     """Test that final_backend_postgresql.py uses environment variable for port."""
-    with open('/home/runner/work/HireMeBahamas/HireMeBahamas/final_backend_postgresql.py', 'r') as f:
+    file_path = REPO_ROOT / 'final_backend_postgresql.py'
+    with open(file_path, 'r') as f:
         content = f.read()
     
     # Check if the file contains the correct pattern
@@ -41,7 +46,8 @@ def test_final_backend_postgresql_port_binding():
 
 def test_backend_app_main_port_binding():
     """Test that backend/app/main.py uses environment variable for port."""
-    with open('/home/runner/work/HireMeBahamas/HireMeBahamas/backend/app/main.py', 'r') as f:
+    file_path = REPO_ROOT / 'backend' / 'app' / 'main.py'
+    with open(file_path, 'r') as f:
         content = f.read()
     
     # Check if the file contains the correct pattern
@@ -71,7 +77,8 @@ def test_backend_app_main_port_binding():
 
 def test_gunicorn_config_port_binding():
     """Test that gunicorn.conf.py uses environment variable for port."""
-    with open('/home/runner/work/HireMeBahamas/HireMeBahamas/gunicorn.conf.py', 'r') as f:
+    file_path = REPO_ROOT / 'gunicorn.conf.py'
+    with open(file_path, 'r') as f:
         content = f.read()
     
     # Check if the file contains the correct pattern
@@ -87,7 +94,8 @@ def test_gunicorn_config_port_binding():
 
 def test_procfile_uses_port_variable():
     """Test that Procfile uses $PORT variable."""
-    with open('/home/runner/work/HireMeBahamas/HireMeBahamas/Procfile', 'r') as f:
+    file_path = REPO_ROOT / 'Procfile'
+    with open(file_path, 'r') as f:
         content = f.read()
     
     # Should use $PORT in the web command
