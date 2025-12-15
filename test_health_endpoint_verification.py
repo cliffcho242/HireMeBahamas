@@ -8,9 +8,12 @@ Render requires:
 """
 import sys
 import os
+import traceback
+from pathlib import Path
 
 # Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+backend_path = Path(__file__).parent / 'backend'
+sys.path.insert(0, str(backend_path))
 
 def test_health_endpoint():
     """Test that health endpoint exists and returns correct format"""
@@ -18,9 +21,14 @@ def test_health_endpoint():
     print("Testing Health Endpoint for Render Deployment")
     print("="*60)
     
-    # Import the FastAPI app
-    from app.main import app
-    from fastapi.testclient import TestClient
+    try:
+        # Import the FastAPI app
+        from app.main import app
+        from fastapi.testclient import TestClient
+    except ImportError as e:
+        print(f"❌ Failed to import required modules: {e}")
+        print(f"   Make sure you're running from the project root and dependencies are installed")
+        raise
     
     client = TestClient(app)
     
@@ -67,6 +75,5 @@ if __name__ == "__main__":
         sys.exit(0)
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
