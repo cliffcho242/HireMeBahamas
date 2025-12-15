@@ -14,6 +14,22 @@ import sys
 import os
 from pathlib import Path
 
+# Configuration files to check
+REQUIREMENTS_FILES = [
+    "requirements.txt",
+    "api/requirements.txt"
+]
+
+BUILD_SCRIPT = "build.sh"
+PYPROJECT_FILE = "pyproject.toml"
+RENDER_BUILDPACK_FILE = ".render-buildpacks.json"
+
+DEPLOYMENT_CONFIGS = [
+    ("render.yaml", "bash build.sh", "render.yaml uses build.sh"),
+    ("render.yaml", "gunicorn", "render.yaml uses gunicorn"),
+    ("api/render.yaml", "bash build.sh", "api/render.yaml uses build.sh"),
+]
+
 
 def print_status(message, status="info"):
     """Print colored status message"""
@@ -65,48 +81,47 @@ def main():
     
     # Check 1: Gunicorn in requirements.txt
     print("Checking requirements files...")
-    if not check_file_contains("requirements.txt", "gunicorn", "gunicorn in requirements.txt"):
-        all_checks_passed = False
-    
-    if not check_file_contains("api/requirements.txt", "gunicorn", "gunicorn in api/requirements.txt"):
-        all_checks_passed = False
+    for req_file in REQUIREMENTS_FILES:
+        if not check_file_contains(req_file, "gunicorn", f"gunicorn in {req_file}"):
+            all_checks_passed = False
     
     print()
     
     # Check 2: Gunicorn in pyproject.toml
     print("Checking pyproject.toml...")
-    if not check_file_contains("pyproject.toml", "gunicorn", "gunicorn in pyproject.toml"):
+    if not check_file_contains(PYPROJECT_FILE, "gunicorn", "gunicorn in pyproject.toml"):
         all_checks_passed = False
     
     print()
     
     # Check 3: Build script exists and is executable
     print("Checking build script...")
-    build_script = Path("build.sh")
+    build_script = Path(BUILD_SCRIPT)
     if build_script.exists():
-        print_status("build.sh exists", "success")
+        print_status(f"{BUILD_SCRIPT} exists", "success")
         if os.access(build_script, os.X_OK):
-            print_status("build.sh is executable", "success")
+            print_status(f"{BUILD_SCRIPT} is executable", "success")
         else:
-            print_status("build.sh is NOT executable", "warning")
-            print_status("Run: chmod +x build.sh", "info")
+            print_status(f"{BUILD_SCRIPT} is NOT executable", "warning")
+            print_status(f"Run: chmod +x {BUILD_SCRIPT}", "info")
     else:
-        print_status("build.sh does not exist", "error")
+        print_status(f"{BUILD_SCRIPT} does not exist", "error")
         all_checks_passed = False
     
     print()
     
     # Check 4: .render-buildpacks.json exists
     print("Checking Render buildpack configuration...")
-    if Path(".render-buildpacks.json").exists():
-        print_status(".render-buildpacks.json exists", "success")
-        check_file_contains(
-            ".render-buildpacks.json",
+    if Path(RENDER_BUILDPACK_FILE).exists():
+        print_status(f"{RENDER_BUILDPACK_FILE} exists", "success")
+        if not check_file_contains(
+            RENDER_BUILDPACK_FILE,
             "heroku-buildpack-python",
             "Python buildpack configured"
-        )
+        ):
+            all_checks_passed = False
     else:
-        print_status(".render-buildpacks.json does not exist", "error")
+        print_status(f"{RENDER_BUILDPACK_FILE} does not exist", "error")
         all_checks_passed = False
     
     print()
@@ -124,9 +139,10 @@ def main():
     
     # Check 6: Verify deployment configurations
     print("Checking deployment configurations...")
-    check_file_contains("render.yaml", "bash build.sh", "render.yaml uses build.sh")
-    check_file_contains("render.yaml", "gunicorn", "render.yaml uses gunicorn")
-    check_file_contains("api/render.yaml", "bash build.sh", "api/render.yaml uses build.sh")
+    for filepath, search_string, description in DEPLOYMENT_CONFIGS:
+        if not check_file_contains(filepath, search_string, description):
+            # Don't fail the entire check if deployment configs are optional
+            print_status(f"{description} check failed (non-critical)", "warning")
     
     print()
     
