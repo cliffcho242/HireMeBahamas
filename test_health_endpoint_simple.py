@@ -54,23 +54,33 @@ def test_health_endpoint_no_db_dependency():
     with open(main_file, 'r') as f:
         lines = f.readlines()
     
-    # Find the health endpoint
+    # Find the health endpoint - use more robust parsing
     in_health_func = False
     health_lines = []
+    found_def = False
+    brace_count = 0
     
     for i, line in enumerate(lines):
+        # Start capturing when we find the health decorator
         if '@app.get("/health"' in line or '@app.head("/health"' in line:
             in_health_func = True
             continue
         
         if in_health_func:
-            health_lines.append(line)
+            # Found the function definition
+            if line.strip().startswith('def health('):
+                found_def = True
+                health_lines.append(line)
+                continue
             
-            # End of function
-            if line.strip().startswith('@app.') or (
-                line.strip().startswith('def ') and 'health' not in line.lower()
-            ):
-                break
+            # Once we found def, capture until we hit a new decorator or function at same indentation
+            if found_def:
+                # Check if we've reached the end (new decorator or top-level code)
+                if (line.strip().startswith('@app.') and 'health' not in line.lower()) or \
+                   (line.strip().startswith('print(') and 'NUCLEAR' in line):
+                    break
+                
+                health_lines.append(line)
     
     health_code = ''.join(health_lines)
     

@@ -50,18 +50,19 @@ def health():
 Several test files verify the health endpoint:
 
 1. **`test_health_endpoint_simple.py`** - Simple verification test (recommended)
+   - Tests that the health endpoint exists
+   - Verifies the response format
+   - Confirms no database dependencies
    ```bash
    python test_health_endpoint_simple.py
    ```
 
 2. **`test_health_database_free.py`** - Comprehensive database-free verification
+   - Code analysis to verify no database calls
+   - Runtime tests for performance
+   - Validates multiple health endpoints
    ```bash
    python test_health_database_free.py
-   ```
-
-3. **`test_health_endpoint.py`** - Original endpoint test
-   ```bash
-   python test_health_endpoint.py
    ```
 
 ### Manual Testing
@@ -93,13 +94,15 @@ The health endpoint is designed for production use with the following characteri
 
 ## Related Endpoints
 
-The backend also provides additional health check endpoints:
+The backend also provides additional health check endpoints in `backend/app/main.py`:
 
-- `/live` - Liveness probe (instant, no dependencies)
-- `/ready` - Readiness probe (instant, no database check)
-- `/ready/db` - Full database connectivity check
-- `/health/ping` - Ultra-fast ping endpoint
-- `/health/detailed` - Detailed health check with database stats
+- `/live` (lines 54-69) - Liveness probe (instant, no dependencies)
+- `/ready` (lines 72-92) - Readiness probe (instant, no database check)
+- `/ready/db` (lines 562-590) - Full database connectivity check with AsyncSession
+- `/health/ping` (lines 594-602) - Ultra-fast ping endpoint
+- `/health/cache` (lines 624-631) - Cache health status and statistics
+- `/api/health` (lines 635-641) - Simple API health check
+- `/health/detailed` (lines 645-690) - Detailed health check with database stats
 
 ## Port Configuration
 
