@@ -107,4 +107,4 @@ cmds = [
 [start]
 # Use uvicorn to start the FastAPI application
 # Railway/Render will inject PORT environment variable
-cmd = "uvicorn api.backend_app.main:app --host 0.0.0.0 --port $PORT"
+cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"

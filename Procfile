@@ -23,7 +23,7 @@
 # 
 # =============================================================================
 
-web: uvicorn api.backend_app.main:app --host 0.0.0.0 --port $PORT
+web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh
