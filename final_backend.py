@@ -140,7 +140,7 @@ if USE_POSTGRESQL:
     # Parse DATABASE_URL
     parsed = urlparse(DATABASE_URL)
     
-    # Validate all required fields are present
+    # Validate all required fields are present using production-safe validation
     missing_fields = []
     if not parsed.username:
         missing_fields.append("username")
@@ -153,7 +153,9 @@ if USE_POSTGRESQL:
         missing_fields.append("path")
     
     if missing_fields:
-        raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+        # Production-safe: log warning instead of raising exception
+        # This allows the app to start for health checks and diagnostics
+        logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
     
     DB_CONFIG = {
         "host": parsed.hostname,

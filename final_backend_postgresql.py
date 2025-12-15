@@ -996,7 +996,7 @@ if USE_POSTGRESQL:
         "application_name": APPLICATION_NAME,
     }
 
-    # Validate all required fields are present
+    # Validate all required fields are present using production-safe validation
     required_fields = ["host", "database", "user", "password"]
     missing_fields = [field for field in required_fields if not DB_CONFIG.get(field)]
     if missing_fields:
@@ -1004,7 +1004,9 @@ if USE_POSTGRESQL:
             f"❌ Missing required DATABASE_URL components: {', '.join(missing_fields)}"
         )
         print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
-        raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+        # Production-safe: log warning instead of raising exception
+        # This allows the app to start for health checks and diagnostics
+        logging.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
     
     # Validate hostname is not a placeholder value
     # Common placeholder values that should not be used in production

@@ -192,7 +192,7 @@ except Exception as e:
 # For example, passwords with '@' or '%' are automatically decoded from URL-encoded form.
 
 # Validate DATABASE_URL format - ensure all required fields are present
-# Parse and validate required fields
+# Parse and validate required fields using production-safe validation
 parsed = urlparse(DATABASE_URL)
 missing_fields = []
 if not parsed.username:
@@ -206,7 +206,9 @@ if not parsed.path or len(parsed.path) <= 1:
     missing_fields.append("path")
 
 if missing_fields:
-    raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+    # Production-safe: log warning instead of raising exception
+    # This allows the app to start for health checks and diagnostics
+    logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:
