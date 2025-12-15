@@ -334,7 +334,8 @@ if db_engine is None and HAS_DB and DATABASE_URL:
         logger.info("Creating fallback database engine with asyncpg...")
         db_engine = create_async_engine(
             db_url,
-            pool_pre_ping=True,
+            pool_pre_ping=True,            # Validate connections before use
+            pool_recycle=300,              # Recycle connections every 5 minutes (serverless-friendly)
             pool_size=1,
             max_overflow=0,
             connect_args={"timeout": 5, "command_timeout": 5}
