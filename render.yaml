@@ -1,44 +1,25 @@
 # =============================================================================
-# ⚠️  DEPRECATED: HireMeBahamas Backend - Render Deployment Configuration
+# HireMeBahamas Backend - Render Deployment Configuration
+# FINAL SPEED ARCHITECTURE (2025)
 # =============================================================================
 # 
-# ⛔ THIS FILE IS DEPRECATED AND SHOULD NOT BE USED ⛔
+# ⚡ FINAL SPEED ARCHITECTURE:
+# - Frontend: Vercel Edge CDN (Global, <200ms)
+# - Backend: Render FastAPI (Always On, High Performance)
+# - Database: Neon PostgreSQL (Serverless, TCP + SSL)
 # 
-# ⚠️  MIGRATION TO VERCEL + RAILWAY COMPLETE
-# 
-# 🚀 MIGRATE NOW: See MIGRATE_FROM_RENDER.md for complete migration guide!
-# 
-# New architecture:
-# - Frontend: Vercel (Edge + Static)
-# - Backend: Railway (Python/Flask) OR Vercel Serverless
-# - Database: Railway PostgreSQL OR Vercel Postgres
-# - Cost: $0-7/month (vs $25-50/month on Render)
-# - Performance: <200ms response (vs 2-5 min cold starts)
-# - Zero downtime: No 502 errors!
+# This architecture provides:
+# - ⚡ Fast: Global CDN + Always-On backend
+# - 🔒 Stable: No cold starts, no downtime
+# - 🌍 Global: Edge network worldwide
+# - 💰 Scales well: Efficient pricing
+# - 🧠 Industry-standard: Proven tech stack
 #
-# ⛔ DO NOT DEPLOY TO RENDER ⛔
-# This file is kept for historical reference only.
-# All Render services should be deleted after migration.
-# 
-# If you are seeing errors about DATABASE_URL containing placeholder hostname 'host',
-# it means you are using example values instead of real database credentials.
-# 
-# ✅ MIGRATION STEPS:
-# 1. 📖 Read: MIGRATE_FROM_RENDER.md (complete step-by-step guide)
-# 2. 💾 Backup: python3 scripts/backup_database.py --source render
-# 3. 🚀 Deploy: Follow RENDER_TO_VERCEL_MIGRATION.md or RENDER_TO_RAILWAY_MIGRATION.md
-# 4. ⚙️  Update: Configure VITE_API_URL in Vercel or remove it for serverless
-# 5. ✅ Verify: python3 scripts/test_deployment.py --url https://your-app.vercel.app
-# 6. 🗑️  Delete: Remove Render services after 1-2 weeks verification
-#
-# For quick reference: RENDER_MIGRATION_QUICKSTART.md
-# For visual guide: RENDER_MIGRATION_VISUAL.md
-#
-# OLD CONFIGURATION (for reference only - DO NOT USE):
-# - Standard plan ($25/mo) with 1GB RAM
-# - Single worker + 180s timeout
-# - Health check at /health with 300s grace period
-# - Keep-alive background worker pinging every 45s
+# Configuration:
+# - Standard plan ($25/mo) with 1GB RAM for Always On
+# - FastAPI with Uvicorn for maximum performance
+# - Neon PostgreSQL with connection pooling
+# - Health check at /health with optimized settings
 # =============================================================================
 
 services:
@@ -48,15 +29,13 @@ services:
     region: oregon
     
     # ==========================================================================
-    # PLAN SELECTION - Standard recommended for zero 502s
+    # PLAN SELECTION - Standard plan for ALWAYS ON architecture
     # ==========================================================================
-    # STARTER ($7/mo, 512MB RAM):
-    #   - Good for low traffic, may have occasional slow cold starts
-    #   - Set WEB_CONCURRENCY=1, WEB_THREADS=2
-    #
-    # STANDARD ($25/mo, 1GB RAM) - RECOMMENDED:
-    #   - Always On, no 502s, fast responses
-    #   - Set WEB_CONCURRENCY=1, WEB_THREADS=4
+    # STANDARD ($25/mo, 1GB RAM) - REQUIRED FOR FINAL SPEED ARCHITECTURE:
+    #   - Always On: Zero cold starts, instant responses
+    #   - High Performance: FastAPI + Uvicorn optimized
+    #   - Stable: No 502 errors, consistent uptime
+    #   - Production-Ready: Suitable for global traffic
     # ==========================================================================
     plan: standard
     
@@ -68,22 +47,24 @@ services:
       targetMemoryPercent: 85
     
     # ============================================================================
-    # MASTERMIND FIX 2025 — RENDER BUILD COMMAND (COPY-PASTE EXACTLY)
+    # BUILD COMMAND - Install dependencies
     # ============================================================================
-    # Use build script to avoid Poetry auto-detection issues with pyproject.toml
-    buildCommand: bash build.sh
+    buildCommand: pip install -r backend/requirements.txt
     
     # ==========================================================================
-    # START COMMAND - Uvicorn
+    # START COMMAND - FastAPI with Uvicorn (FINAL SPEED ARCHITECTURE)
     # ==========================================================================
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # FastAPI provides maximum performance with async support
+    # Uvicorn with uvloop for optimized event loop
+    # Single worker optimized for Standard plan (1GB RAM)
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
     
     envVars:
-      - key: FLASK_ENV
-        value: production
       - key: ENVIRONMENT
         value: production
       - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
         generateValue: true
       - key: FRONTEND_URL
         value: https://hiremebahamas.vercel.app
@@ -91,104 +72,62 @@ services:
         value: "true"
       - key: PYTHON_VERSION
         value: "3.12.0"
-      # Nuclear configuration - single worker, high timeout
-      - key: WEB_CONCURRENCY
-        value: "1"
-      - key: WEB_THREADS
-        value: "4"
-      - key: GUNICORN_TIMEOUT
-        value: "180"
-      - key: GUNICORN_KEEPALIVE
+      # ==========================================================================
+      # NEON POSTGRESQL CONNECTION SETTINGS
+      # ==========================================================================
+      # Neon provides serverless PostgreSQL with connection pooling
+      # Connection string format for Neon:
+      # postgresql://user:password@ep-xxxxx.region.aws.neon.tech/dbname?sslmode=require
+      # 
+      # Required settings for Neon:
+      # - sslmode=require: Neon requires SSL/TLS connections
+      # - Connection pooling: Neon handles pooling automatically
+      # - TCP connection: Direct TCP+SSL connection to Neon
+      #
+      # Set DATABASE_URL in Render Dashboard Environment Variables:
+      # Example: postgresql://user:pass@ep-xxxxx.us-east-1.aws.neon.tech:5432/hiremebahamas?sslmode=require
+      # ==========================================================================
+      - key: DB_POOL_SIZE
         value: "5"
-      - key: PRELOAD_APP
-        value: "true"
-      # Database keepalive thread
-      - key: DB_KEEPALIVE_ENABLED
-        value: "true"
-      # Trust Render's load balancer
+      - key: DB_MAX_OVERFLOW
+        value: "10"
+      - key: DB_POOL_TIMEOUT
+        value: "30"
+      - key: DB_POOL_RECYCLE
+        value: "3600"
+      - key: DB_ECHO
+        value: "false"
+      # ==========================================================================
+      # FASTAPI PERFORMANCE SETTINGS
+      # ==========================================================================
+      - key: WORKERS
+        value: "1"
+      - key: WORKER_CLASS
+        value: "uvicorn.workers.UvicornWorker"
+      - key: KEEPALIVE
+        value: "5"
+      - key: TIMEOUT
+        value: "30"
+      # Trust Render's load balancer for proxy headers
       - key: FORWARDED_ALLOW_IPS
         value: "*"
-      # Nuclear pool configuration
-      - key: DB_POOL_SIZE
-        value: "2"
-      - key: DB_CONNECT_TIMEOUT
-        value: "45"
-      - key: DB_POOL_RECYCLE
-        value: "120"
-      # DATABASE_URL must be set manually in Render dashboard
-      # ⚠️  DO NOT USE 'host' AS HOSTNAME - Use your actual database hostname!
-      # ⚠️  Get the real connection string from your database provider
-      # NUCLEAR FORMAT (URL-encoded spaces and equals):
-      # postgresql://user:pass@YOUR-DB-HOSTNAME.example.com:5432/db?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
-      # Alternative (non-encoded):
-      # postgresql://user:pass@YOUR-DB-HOSTNAME.example.com:5432/db?sslmode=require&options=-c jit=off&connect_timeout=45
     
     # ==========================================================================
-    # HEALTH CHECK - Nuclear Settings (2025 Render Edition)
+    # HEALTH CHECK - FINAL SPEED ARCHITECTURE (Always On)
     # ==========================================================================
-    # AVAILABLE ENDPOINTS (all respond in <5ms):
-    #   /health  - Instant liveness check, no DB (use for Render health path)
-    #   /live    - Kubernetes-style liveness probe, no DB
-    #   /ready   - Readiness check with DB connectivity (returns 503 if DB down)
-    #   /ready/db - Full DB health with session (use for deep checks)
-    #   /ping    - Simple "pong" response for keepalive workers
-    #   /metrics - Prometheus metrics (for monitoring)
+    # With Standard plan (Always On), health checks are instant
+    # No cold starts, no warm-up needed
     #
-    # RENDER DASHBOARD SETTINGS (COPY-PASTE):
+    # AVAILABLE ENDPOINTS:
+    #   /health  - Instant health check (recommended for Render)
+    #   /ready   - Readiness check with DB connectivity
+    #
+    # RENDER DASHBOARD SETTINGS:
     #   Health Check Path: /health
-    #   Grace Period: 300 seconds (5 min - handles worst-case cold start)
-    #   Health Check Timeout: 30 seconds
-    #   Health Check Interval: 30 seconds (default)
+    #   Grace Period: 60 seconds (minimal - Always On service)
+    #   Health Check Timeout: 10 seconds
+    #   Health Check Interval: 30 seconds
     #
-    # WHY /health AND NOT /ready?
-    #   /health responds instantly (<5ms) even during cold starts
-    #   /ready checks DB connectivity, which may timeout during cold starts
-    #   Using /health prevents Render from killing the container prematurely
+    # Note: With Always On (Standard plan), no keepalive workers needed!
     # ==========================================================================
     healthCheckPath: /health
-
-  # ==========================================================================
-  # KEEP-ALIVE BACKGROUND WORKER
-  # ==========================================================================
-  # Pings /health every 45 seconds to prevent cold starts
-  # Cost: $0 on Render Free tier for Background Workers
-  # ==========================================================================
-  - type: worker
-    name: keep-alive
-    runtime: python
-    region: oregon
-    plan: free
-    buildCommand: pip install requests
-    startCommand: python keep_alive.py
-    envVars:
-      - key: PYTHONUNBUFFERED
-        value: "true"
-      - key: RENDER_EXTERNAL_URL
-        value: https://hiremebahamas.onrender.com
-
-  # ==========================================================================
-  # CRON JOB - Backup Keepalive
-  # ==========================================================================
-  # Pings /health every 5 minutes as backup
-  # Uses minimal Docker image (5MB vs full Python)
-  # ==========================================================================
-  - type: cron
-    name: keepalive-ping
-    region: oregon
-    plan: free
-    schedule: "*/5 * * * *"
-    dockerImage: curlimages/curl:latest
-    dockerCommand: curl -f -s -o /dev/null https://hiremebahamas.onrender.com/health
-
-  # ==========================================================================
-  # CACHE WARMING CRON JOB
-  # ==========================================================================
-  # Pre-warms cache every 5 minutes for sub-100ms responses
-  # ==========================================================================
-  - type: cron
-    name: cache-warmer
-    region: oregon
-    plan: free
-    schedule: "*/5 * * * *"
-    dockerImage: curlimages/curl:latest
-    dockerCommand: curl -f -s -X POST https://hiremebahamas.onrender.com/warm-cache
