@@ -16,6 +16,20 @@ _engine = None
 # Module-level logger
 logger = logging.getLogger(__name__)
 
+# =============================================================================
+# PRODUCTION SAFETY: FORCE PRODUCTION TO FAIL WITHOUT POSTGRES
+# =============================================================================
+# This prevents silent SQLite usage in production
+ENV = os.getenv("ENV", "development")
+DATABASE_URL_ENV = os.getenv("DATABASE_URL")
+
+if ENV == "production" and not DATABASE_URL_ENV:
+    raise RuntimeError(
+        "DATABASE_URL is required in production. "
+        "SQLite fallback is disabled."
+    )
+# =============================================================================
+
 
 def get_database_url():
     """Get and validate DATABASE_URL from environment
@@ -162,15 +176,17 @@ def get_engine():
             max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "3"))
             pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "300"))
             
+            # Production-safe engine configuration with SSL enforcement
             _engine = create_async_engine(
                 db_url,
+                pool_pre_ping=True,            # Validate connections before use
                 pool_size=pool_size,           # Small pool for serverless
                 max_overflow=max_overflow,     # Limited overflow
                 pool_recycle=pool_recycle,     # Recycle connections every 5 minutes
-                pool_pre_ping=True,            # Validate connections before use
                 connect_args={
-                    "timeout": connect_timeout,        # Connection timeout
-                    "command_timeout": command_timeout, # Query timeout
+                    "connect_timeout": connect_timeout,  # Connection timeout (45s default)
+                    "command_timeout": command_timeout,  # Query timeout (30s default)
+                    "sslmode": "require",                # Enforce SSL for production safety
                 },
                 echo=False,                    # Disable SQL logging in production
             )

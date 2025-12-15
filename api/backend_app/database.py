@@ -85,6 +85,8 @@ logger = logging.getLogger(__name__)
 
 # Check if we're in production mode
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+# Also check ENV for consistency with api/database.py
+ENV = os.getenv("ENV", "development")
 
 # Get database URL with proper fallback
 DATABASE_URL = (
@@ -96,6 +98,28 @@ DATABASE_URL = (
 # Strip whitespace from DATABASE_URL to prevent connection errors
 if DATABASE_URL:
     DATABASE_URL = DATABASE_URL.strip()
+
+# =============================================================================
+# PRODUCTION SAFETY: FORCE PRODUCTION TO FAIL WITHOUT POSTGRES
+# =============================================================================
+# This prevents silent SQLite usage in production
+# Check both ENV and ENVIRONMENT variables for consistency across the application
+if (ENV == "production" or ENVIRONMENT == "production") and not DATABASE_URL:
+    # Check if we can construct from PG* variables
+    pghost = os.getenv("PGHOST")
+    pguser = os.getenv("PGUSER")
+    pgpassword = os.getenv("PGPASSWORD")
+    pgdatabase = os.getenv("PGDATABASE")
+    
+    # If we don't have all required PG* variables, fail immediately
+    if not all([pghost, pguser, pgpassword, pgdatabase]):
+        raise RuntimeError(
+            "DATABASE_URL is required in production. "
+            "SQLite fallback is disabled. "
+            "Please set DATABASE_URL, POSTGRES_URL, DATABASE_PRIVATE_URL, "
+            "or all individual variables (PGHOST, PGUSER, PGPASSWORD, PGDATABASE)."
+        )
+# =============================================================================
 
 # If DATABASE_URL is not provided, try to construct it from individual PG* variables
 if not DATABASE_URL:
@@ -115,9 +139,9 @@ if not DATABASE_URL:
         encoded_password = quote_plus(pgpassword)
         DATABASE_URL = f"postgresql+asyncpg://{pguser}:{encoded_password}@{pghost}:{pgport}/{pgdatabase}"
         logger.info("Constructed DATABASE_URL from individual PG* environment variables")
-    elif ENVIRONMENT == "production":
+    elif (ENV == "production" or ENVIRONMENT == "production"):
         # In production, we need either DATABASE_URL or all individual PG* variables
-        raise ValueError(
+        raise RuntimeError(
             f"DATABASE_URL must be set in production. "
             f"Please set DATABASE_URL, POSTGRES_URL, DATABASE_PRIVATE_URL, "
             f"or all individual variables (PGHOST, PGUSER, PGPASSWORD, PGDATABASE). "
