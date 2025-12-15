@@ -794,28 +794,55 @@ async def ready():
 # ============================================================================
 @app.get("/auth/me")
 async def get_current_user(authorization: str = Header(None)):
-    """Get current authenticated user from JWT token"""
+    """Get current authenticated user from JWT token.
     
+    This endpoint ALWAYS returns 200 status to allow frontend to check
+    authentication status without treating lack of authentication as an error.
+    
+    Returns:
+        - authenticated: true, user: {...} when valid token provided
+        - authenticated: false when no token or invalid token
+    """
+    
+    # Check if JWT library is available
     if not HAS_JOSE:
-        raise HTTPException(
-            status_code=503,
-            detail="JWT library not available"
+        logger.error("JWT library not available")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "authenticated": False,
+                "reason": "jwt_unavailable",
+                "message": "Authentication service temporarily unavailable"
+            }
         )
     
+    # Check if authorization header is provided
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=401,
-            detail="Missing or invalid authorization header"
+        return JSONResponse(
+            status_code=200,
+            content={
+                "authenticated": False,
+                "reason": "no_token",
+                "message": "No authentication token provided"
+            }
         )
     
     token = authorization.replace("Bearer ", "")
     
     try:
+        # Decode JWT token
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         user_id = payload.get("sub")
         
         if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token payload")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "authenticated": False,
+                    "reason": "invalid_token",
+                    "message": "Invalid token payload"
+                }
+            )
         
         # Try to get user from database first
         user = await get_user_from_db(int(user_id))
@@ -825,19 +852,57 @@ async def get_current_user(authorization: str = Header(None)):
             user = MOCK_USERS.get(str(user_id))
         
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "authenticated": False,
+                    "reason": "user_not_found",
+                    "message": "User not found"
+                }
+            )
         
-        return {"success": True, "user": user}
+        # Successfully authenticated
+        return JSONResponse(
+            status_code=200,
+            content={
+                "authenticated": True,
+                "user": user
+            }
+        )
         
     except ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    except HTTPException:
-        raise
+        return JSONResponse(
+            status_code=200,
+            content={
+                "authenticated": False,
+                "reason": "token_expired",
+                "message": "Token has expired"
+            }
+        )
+    except JWTError as e:
+        logger.warning(f"JWT decode error: {e}")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "authenticated": False,
+                "reason": "invalid_token",
+                "message": "Invalid token"
+            }
+        )
     except Exception as e:
-        logger.error(f"Unexpected error: {type(e).__name__}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        # Log unexpected errors but still return 200 to avoid 500 errors
+        logger.error(f"Unexpected error in /auth/me: {type(e).__name__}: {e}")
+        if is_debug_mode():
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "authenticated": False,
+                "reason": "internal_error",
+                "message": "An unexpected error occurred during authentication"
+            }
+        )
 
 # ============================================================================
 # INCLUDE BACKEND ROUTERS IF AVAILABLE
