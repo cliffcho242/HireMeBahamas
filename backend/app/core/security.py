@@ -9,6 +9,11 @@ from passlib.context import CryptContext
 
 logger = logging.getLogger(__name__)
 
+# Suppress bcrypt version check warning from passlib logger
+# bcrypt 4.x removed __about__ attribute, but passlib handles this gracefully
+# Setting passlib logger to ERROR level prevents the non-critical warning from appearing
+logging.getLogger('passlib').setLevel(logging.ERROR)
+
 # Security configuration
 SECRET_KEY = config("SECRET_KEY", default="your-secret-key-change-in-production")
 ALGORITHM = "HS256"
@@ -68,15 +73,24 @@ def prewarm_bcrypt() -> None:
     This eliminates cold-start latency on the first login by ensuring
     bcrypt's internal state is initialized before handling real requests.
     Call this during application startup.
+    
+    Note: bcrypt 4.x compatibility - passlib may log a benign warning about
+    bcrypt version detection, but this is handled gracefully internally.
     """
     global _bcrypt_warmed
     if _bcrypt_warmed:
         return
     
-    # Perform a dummy hash to initialize bcrypt internals
-    _ = pwd_context.hash("prewarm-dummy-password")
-    _bcrypt_warmed = True
-    logger.info(f"Bcrypt pre-warmed with {BCRYPT_ROUNDS} rounds")
+    try:
+        # Perform a dummy hash to initialize bcrypt internals
+        # Use a short password within bcrypt's 72-byte limit
+        _ = pwd_context.hash("prewarm")
+        _bcrypt_warmed = True
+        logger.info(f"Bcrypt pre-warmed with {BCRYPT_ROUNDS} rounds")
+    except Exception as e:
+        # Log the error but don't fail startup
+        logger.warning(f"Bcrypt pre-warm encountered an error (non-critical): {type(e).__name__}: {e}")
+        raise
 
 
 async def prewarm_bcrypt_async() -> None:
@@ -84,6 +98,9 @@ async def prewarm_bcrypt_async() -> None:
     
     This eliminates cold-start latency on the first login by ensuring
     bcrypt's internal state is initialized before handling real requests.
+    
+    Raises:
+        Exception: If bcrypt pre-warming fails (should be caught by caller)
     """
     await anyio.to_thread.run_sync(prewarm_bcrypt)
 

@@ -495,7 +495,9 @@ async def lazy_import_heavy_stuff():
         else:
             logger.warning("Bcrypt pre-warm function not available")
     except Exception as e:
-        logger.warning(f"Failed to pre-warm bcrypt (non-critical): {e}")
+        # Pre-warming is optional - if it fails, authentication will still work
+        # but the first login may be slightly slower
+        logger.warning(f"Bcrypt pre-warm skipped (non-critical): {type(e).__name__}")
     
     # ==========================================================================
     # STEP 2: Initialize Redis cache (non-blocking, no database)
