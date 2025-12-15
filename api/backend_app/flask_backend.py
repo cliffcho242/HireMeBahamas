@@ -50,6 +50,18 @@ def health():
     return jsonify({"status": "healthy", "message": "HireMeBahamas API is running"})
 
 
+@app.route("/health/ping")
+def health_ping():
+    """Ultra-fast health ping endpoint
+    
+    ❌ No DB access
+    ❌ No external calls
+    ❌ No disk access
+    Target latency: < 30ms
+    """
+    return jsonify({"status": "ok"})
+
+
 @app.route("/")
 def root():
     logger.info("Root endpoint called")

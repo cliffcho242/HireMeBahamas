@@ -622,6 +622,17 @@ async def health():
     """
     return {"ok": True}
 
+@app.get("/health/ping", include_in_schema=False)
+def health_ping():
+    """Ultra-fast health ping endpoint
+    
+    ❌ No DB access
+    ❌ No external calls
+    ❌ No disk access
+    Target latency: < 30ms
+    """
+    return {"status": "ok"}
+
 @app.get("/status")
 async def status():
     """
