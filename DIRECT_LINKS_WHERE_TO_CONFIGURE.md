@@ -178,9 +178,15 @@ PORT = 10000
 
 ## 🎨 Frontend Configuration (Vercel)
 
+### ✅ FRONTEND (Vercel) — FINAL CONFIG
+
+**IMPORTANT:** This project uses **Vite** (React), not Next.js. Environment variables must use `VITE_` prefix, not `NEXT_PUBLIC_`.
+
 ### If Using Separate Backend (Railway or Render)
 
 **Direct Link**: https://vercel.com/dashboard → Select your **frontend project** → **Settings** → **Environment Variables**
+
+**Or use this URL pattern**: `https://vercel.com/[your-team]/[project-name]/settings/environment-variables`
 
 **What to add:**
 ```bash
@@ -192,10 +198,30 @@ VITE_SOCKET_URL = [Same as VITE_API_URL]
 ```bash
 # For Railway backend
 VITE_API_URL = https://your-app.up.railway.app
+VITE_SOCKET_URL = https://your-app.up.railway.app
 
-# For Render backend
+# For Render backend  
 VITE_API_URL = https://your-app.onrender.com
+VITE_SOCKET_URL = https://your-app.onrender.com
 ```
+
+**⚠️ Common Mistake:** Do NOT use `NEXT_PUBLIC_BACKEND_URL` or `NEXT_PUBLIC_API_URL` - those are for Next.js projects only. This is a Vite/React project that requires `VITE_API_URL`.
+
+### If Using Vercel Serverless Backend (Same-Origin)
+
+```bash
+# Do NOT set VITE_API_URL
+# The frontend automatically detects Vercel deployment and uses same-origin
+# API calls go to: window.location.origin + '/api'
+```
+
+**How to add:**
+1. Click **"Add New"** button
+2. Enter **Name** (e.g., `VITE_API_URL`)
+3. Enter **Value** (paste your backend URL with https://)
+4. Select **All** environments (Production, Preview, Development)
+5. Click **Save**
+6. Click **Deployments** → **Redeploy** latest deployment to apply changes
 
 ---
 
