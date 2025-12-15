@@ -49,7 +49,7 @@ def health():
     
     ✅ CRITICAL: Does NOT touch the database to ensure instant response.
     """
-    return {"ok": True}
+    return {"status": "ok"}
 
 
 # LIVENESS PROBE — Kubernetes/Render liveness check
