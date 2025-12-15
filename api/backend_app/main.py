@@ -233,7 +233,6 @@ from app.core.security import prewarm_bcrypt_async
 from app.core.redis_cache import redis_cache, warm_cache
 from app.core.db_health import check_database_health, get_database_stats
 from app.core.timeout_middleware import add_timeout_middleware
-from app.core.environment import get_cors_origins
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -289,16 +288,14 @@ app.openapi_url = "/openapi.json"
 # =============================================================================
 add_timeout_middleware(app, timeout=60)
 
-# Configure CORS - Allow development and production origins
-# In production, localhost URLs are excluded to prevent misconfiguration
-# Uses shared environment utility for consistent configuration
-_allowed_origins = get_cors_origins()
-
+# Configure CORS - Allow all origins for browser compatibility
+# NOTE: allow_credentials must be False when using wildcard origins per CORS spec
+# If you need credentials, specify explicit allowed origins instead
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allowed_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -755,11 +752,10 @@ else:
 
 # Initialize Socket.IO for real-time messaging (if available)
 if HAS_SOCKETIO:
-    # Reuse CORS origins from middleware configuration (excludes localhost in production)
-    # ❌ ABSOLUTE BAN: Never allow localhost in production (handled by _allowed_origins)
+    # Allow all origins for Socket.IO to match CORS middleware configuration
     sio = socketio.AsyncServer(
         async_mode='asgi',
-        cors_allowed_origins=_allowed_origins
+        cors_allowed_origins="*"
     )
 
     # Create Socket.IO ASGI app
