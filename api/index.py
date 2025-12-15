@@ -747,39 +747,17 @@ async def diagnostic():
 
 @app.get("/ready")
 async def ready():
-    """Readiness check with database validation"""
-    if not HAS_DB or not DATABASE_URL:
-        return Response(
-            content='{"status":"degraded","database":"unavailable"}',
-            status_code=200,
-            media_type="application/json"
-        )
+    """Lightweight readiness check - no database calls
     
-    # Initialize engine lazily on first use
-    db_engine, _ = get_db_engine()
-    
-    try:
-        if db_engine:
-            async with db_engine.begin() as conn:
-                await conn.execute(text("SELECT 1"))
-            
-            return {
-                "status": "ready",
-                "database": "connected",
-                "timestamp": int(time.time()),
-            }
-        else:
-            return Response(
-                content='{"status":"not_ready","error":"Database engine not initialized"}',
-                status_code=503,
-                media_type="application/json"
-            )
-    except Exception as e:
-        return Response(
-            content=f'{{"status":"not_ready","error":"{str(e)[:100]}"}}',
-            status_code=503,
-            media_type="application/json"
-        )
+    ✅ CRITICAL: Does NOT touch the database to ensure instant response.
+    This endpoint indicates the application is ready to serve traffic.
+    For explicit database health checks, use /diagnostic or /status endpoints.
+    """
+    return {
+        "status": "ready",
+        "message": "Application is ready to serve traffic",
+        "timestamp": int(time.time()),
+    }
 
 # ============================================================================
 # AUTH ME ENDPOINT
