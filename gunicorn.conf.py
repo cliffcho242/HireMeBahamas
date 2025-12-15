@@ -51,16 +51,27 @@ max_requests = 1000
 max_requests_jitter = 100
 
 # ============================================================================
-# PRELOAD & PERFORMANCE (Critical for Cold Start Elimination)
+# PRELOAD & PERFORMANCE (DATABASE SAFETY - CRITICAL)
 # ============================================================================
-# Preload app setting:
-# - True: Load app once before forking (faster requests, slower startup)
-# - False: Each worker loads app independently (faster startup, slower first requests)
+# ⚠️ CRITICAL WARNING: Never use --preload with databases!
 #
-# CRITICAL FIX: Set to False to allow Gunicorn to start listening immediately
-# This prevents Railway health check failures during app initialization.
-# Workers will initialize independently, allowing /health to respond while
-# database connections and other resources are still initializing.
+# Preload app setting:
+# - True: Load app once before forking (DANGEROUS with databases)
+# - False: Each worker loads app independently (SAFE with databases)
+#
+# Why preload_app = False is critical for database applications:
+# 1. Database connection pools cannot be safely shared across fork()
+# 2. Each worker needs its own database connections
+# 3. Prevents health check failures during initialization
+# 4. Allows /health endpoint to respond while workers initialize
+# 5. Avoids worker synchronization issues with shared state
+#
+# ⚠️ NEVER override this with --preload on the command line!
+# Command line: poetry run gunicorn final_backend_postgresql:application --config gunicorn.conf.py
+# Do NOT add: --preload (this would override the safe setting below)
+#
+# SAFE COMMAND:   gunicorn app:application --config gunicorn.conf.py
+# UNSAFE COMMAND: gunicorn app:application --config gunicorn.conf.py --preload
 preload_app = False
 
 # ============================================================================

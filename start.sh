@@ -3,18 +3,24 @@
 # HireMeBahamas Backend Startup Script
 # =============================================================================
 # 
-# NUCLEAR FIX FOR 502 BAD GATEWAY (2025)
+# DATABASE-SAFE STARTUP CONFIGURATION (2025)
 # 
-# This script eliminates cold start timeouts with:
+# This script provides reliable startup with:
 # 1. Database migrations before app start
 # 2. Preload health check to verify app can load
-# 3. Gunicorn with --preload for instant first request
+# 3. Gunicorn WITHOUT --preload (critical for database safety)
+#
+# ⚠️ CRITICAL: Never use --preload with databases!
+# The --preload flag causes:
+# - Database connection pool issues
+# - Worker synchronization problems
+# - Health check failures during initialization
+# - Shared state issues between workers
 #
 # Configuration (via environment variables):
 #   WEB_CONCURRENCY=2       Two workers for optimal performance
 #   WEB_THREADS=4           Threads per worker (8 total concurrent requests)
 #   GUNICORN_TIMEOUT=60     Worker timeout (optimized for always-on)
-#   PRELOAD_APP=true        Enable app preloading
 #
 # For Render:
 #   - Standard plan ($25/mo, 1GB RAM): WEB_CONCURRENCY=2, WEB_THREADS=4
@@ -31,7 +37,7 @@ echo "Environment: ${ENVIRONMENT:-development}"
 echo "Workers: ${WEB_CONCURRENCY:-2}"
 echo "Threads: ${WEB_THREADS:-4}"
 echo "Timeout: ${GUNICORN_TIMEOUT:-60}s"
-echo "Preload: ${PRELOAD_APP:-true}"
+echo "Preload: False (database-safe mode)"
 echo "=============================================="
 
 # Run database migrations
@@ -65,15 +71,15 @@ else
     exit 1
 fi
 
-# Start Gunicorn with nuclear configuration
+# Start Gunicorn with database-safe configuration
 echo ""
 echo "🚀 Starting Gunicorn server..."
-echo "   Config: gunicorn.conf.py"
+echo "   Config: gunicorn.conf.py (preload_app=False)"
 echo "   App: final_backend_postgresql:application"
 echo "   Bind: 0.0.0.0:${PORT:-8080}"
 echo "   Timeout: ${GUNICORN_TIMEOUT:-60}s"
+echo "   ⚠️  NOT using --preload (database safety)"
 echo ""
 
 exec gunicorn final_backend_postgresql:application \
-    --config gunicorn.conf.py \
-    --preload
+    --config gunicorn.conf.py
