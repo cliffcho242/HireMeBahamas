@@ -93,6 +93,7 @@ except Exception as e:
 # Test 6: Test that regular endpoint is separate (no 405 conflict)
 print("\n6. Test Main App Endpoint (ensure no 405 conflict):")
 try:
+    # Note: BACKEND_URL is for the main app, PUBLIC_BASE_URL is for admin panel
     backend_url = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
     r = requests.get(f"{backend_url}/health", timeout=10)
     print(f"   Status: {r.status_code}")
@@ -111,6 +112,7 @@ print("\nAdmin Panel:")
 print(f"  Backend: {BASE_URL}")
 print("  Login: admin@hiremebahamas.com / Admin123456!")
 print("\nMain App (Users):")
+# Note: BACKEND_URL is for the main app, PUBLIC_BASE_URL is for admin panel
 backend_url = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
 print(f"  Backend: {backend_url}")
 print("  Frontend: https://hiremebahamas.com")
