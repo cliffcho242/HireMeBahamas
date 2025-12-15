@@ -31,7 +31,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   useEffect(() => {
     if (!user || !token) return;
 
-    const socketUrl = (import.meta as ImportMeta & { env?: { VITE_SOCKET_URL?: string } }).env?.VITE_SOCKET_URL || 'http://localhost:8000';
+    // Use environment variable or fall back to same-origin for serverless deployments
+    const socketUrl = (import.meta as ImportMeta & { env?: { VITE_SOCKET_URL?: string } }).env?.VITE_SOCKET_URL || window.location.origin;
     
     // Create socket connection
     const newSocket = io(socketUrl, {

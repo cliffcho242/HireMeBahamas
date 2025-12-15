@@ -13,7 +13,9 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/admin': {
-        target: 'http://localhost:8000',
+        // Proxy configuration for local development server only
+        // In production, admin-panel uses VITE_API_URL environment variable (see src/lib/api.ts)
+        target: process.env.VITE_API_URL || 'http://localhost:8000',
         changeOrigin: true,
       },
     },
