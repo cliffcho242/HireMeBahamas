@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import random
+import re
 import signal
 import sqlite3
 import sys
@@ -17,7 +18,7 @@ import psycopg2
 from psycopg2 import sql, OperationalError
 from psycopg2.extras import RealDictCursor
 from psycopg2 import pool
-from urllib.parse import urlparse, parse_qs, unquote
+from urllib.parse import urlparse, parse_qs, unquote, urlunparse
 
 import bcrypt
 import jwt
@@ -790,18 +791,37 @@ DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
 if DATABASE_URL:
     DATABASE_URL = DATABASE_URL.strip()
     
-    # Remove any internal whitespace from the DATABASE_URL
+    # Remove any internal whitespace from the hostname only
     # This fixes issues where hostnames have accidental spaces like "neon. tech" instead of "neon.tech"
     # Common issue: "ep-dawn-cloud-a4rbrgox.us-east-1.aws.neon. tech" should be "neon.tech"
-    import re
+    # We only remove spaces from the hostname to avoid breaking passwords that may contain spaces
     if ' ' in DATABASE_URL:
-        original_url = DATABASE_URL
-        # Remove all whitespace from the URL
-        DATABASE_URL = re.sub(r'\s+', '', DATABASE_URL)
-        print(f"⚠️  WARNING: DATABASE_URL contained whitespace - removed spaces automatically")
-        print(f"   Original length: {len(original_url)} characters")
-        print(f"   Fixed length: {len(DATABASE_URL)} characters")
-        print(f"   Please update your DATABASE_URL environment variable to remove spaces")
+        try:
+            parsed = urlparse(DATABASE_URL)
+            if parsed.hostname and ' ' in parsed.hostname:
+                # Remove all whitespace from hostname only
+                fixed_hostname = re.sub(r'\s+', '', parsed.hostname)
+                # Reconstruct the URL with the fixed hostname
+                # We need to manually reconstruct the netloc since urlunparse uses the parsed result
+                fixed_netloc = parsed.netloc.replace(parsed.hostname, fixed_hostname)
+                fixed_url = urlunparse((
+                    parsed.scheme,
+                    fixed_netloc,
+                    parsed.path,
+                    parsed.params,
+                    parsed.query,
+                    parsed.fragment
+                ))
+                logger.warning(
+                    "DATABASE_URL hostname contained whitespace - removed automatically. "
+                    "Please update your DATABASE_URL environment variable. "
+                    "Original hostname: '%s', Fixed hostname: '%s'",
+                    parsed.hostname, fixed_hostname
+                )
+                DATABASE_URL = fixed_url
+        except Exception as e:
+            # If parsing fails, log a warning but don't crash
+            logger.error("Failed to parse DATABASE_URL for whitespace removal: %s", e)
 
 # Normalize DATABASE_URL for psycopg2 compatibility
 # If the URL uses postgresql+asyncpg:// scheme (for SQLAlchemy/asyncpg), convert it
