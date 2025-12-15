@@ -106,11 +106,36 @@ This is the recommended configuration file with:
 }
 ```
 
-To use this configuration, rename it to `vercel.json`:
+To use this configuration:
+
+1. **If you don't have a `vercel.json` file**, rename `vercel_immortal.json`:
 ```bash
-cp vercel_immortal.json vercel.json
+mv vercel_immortal.json vercel.json
 git add vercel.json
 git commit -m "Use recommended Vercel serverless configuration"
+git push
+```
+
+2. **If you already have a `vercel.json` file**, merge the cron jobs section:
+```bash
+# Backup your current vercel.json
+cp vercel.json vercel.json.backup
+
+# Manually merge the cron jobs section from vercel_immortal.json into your vercel.json
+# Add these to your existing vercel.json:
+# "crons": [
+#   {
+#     "path": "/api/health",
+#     "schedule": "*/5 * * * *"
+#   },
+#   {
+#     "path": "/api/database/ping",
+#     "schedule": "*/10 * * * *"
+#   }
+# ]
+
+git add vercel.json
+git commit -m "Add keep-warm cron jobs to Vercel configuration"
 git push
 ```
 

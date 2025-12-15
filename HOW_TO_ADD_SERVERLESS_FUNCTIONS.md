@@ -321,10 +321,26 @@ def do_GET(self):
 For frontend access, include CORS headers:
 
 ```python
+import os
+
 def _set_headers(self, status=200):
     self.send_response(status)
     self.send_header("Content-Type", "application/json")
-    self.send_header("Access-Control-Allow-Origin", "*")
+    
+    # SECURITY BEST PRACTICE: Configure CORS based on environment
+    # For production, use specific domain from environment variable
+    # Never use "*" in production - it's a security risk!
+    allowed_origin = os.getenv("FRONTEND_URL", "*")
+    
+    # For Vercel same-origin deployment, CORS may not be needed at all
+    # since frontend and backend are on the same domain
+    if allowed_origin != "*":
+        self.send_header("Access-Control-Allow-Origin", allowed_origin)
+        self.send_header("Access-Control-Allow-Credentials", "true")
+    else:
+        # Only for development/testing - NOT for production!
+        self.send_header("Access-Control-Allow-Origin", "*")
+    
     self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
     self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
     self.end_headers()
@@ -333,6 +349,12 @@ def do_OPTIONS(self):
     """Handle CORS preflight"""
     self._set_headers(200)
 ```
+
+**SECURITY NOTE**: 
+- For **Vercel same-origin deployments** (Option A), CORS headers are often not needed since frontend and backend share the same domain
+- For **separate backend deployments** (Option B), use `FRONTEND_URL` environment variable to restrict origins
+- Never use `"*"` for `Access-Control-Allow-Origin` in production
+- Set `FRONTEND_URL=https://your-app.vercel.app` in Vercel Dashboard
 
 ### 5. Response Format
 

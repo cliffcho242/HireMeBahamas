@@ -27,7 +27,13 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        
+        # SECURITY: Configure CORS based on environment
+        # For production, use specific domain from environment variable
+        # For development/demo, allow all origins (use with caution)
+        allowed_origin = os.getenv("FRONTEND_URL", "*")
+        self.send_header("Access-Control-Allow-Origin", allowed_origin)
+        
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
