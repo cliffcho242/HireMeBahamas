@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,10 +15,23 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Configure CORS
+# Configure CORS - exclude localhost in production
+_is_production = os.getenv("ENVIRONMENT", "").lower() == "production"
+_allowed_origins = []
+if not _is_production:
+    # Localhost only in development
+    _allowed_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+else:
+    # Production origins
+    _allowed_origins = [
+        "https://hiremebahamas.com",
+        "https://www.hiremebahamas.com",
+        "https://*.vercel.app",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
