@@ -158,10 +158,11 @@ except Exception as e:
 
 try:
     from .core.redis_cache import redis_cache, warm_cache
-    print("✅ Redis cache imported successfully")
+    print("✅ Redis cache (legacy) imported successfully")
 except Exception as e:
-    print(f"Redis cache import failed: {e}")
+    print(f"Redis cache (legacy) not available: {e}")
     redis_cache = warm_cache = None
+    # Note: Using new cache system from app.core.cache instead
 
 try:
     from .core.db_health import check_database_health, get_database_stats
@@ -713,7 +714,18 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
         health_response["database"]["pool"] = {"error": str(e)}
     
     # Add cache stats
-    health_response["cache"] = await redis_cache.health_check()
+    try:
+        if redis_cache is not None:
+            health_response["cache"] = await redis_cache.health_check()
+        else:
+            # Use new cache system
+            from .core.cache import _redis_available, _redis_client
+            if _redis_available and _redis_client:
+                health_response["cache"] = {"status": "healthy", "backend": "redis"}
+            else:
+                health_response["cache"] = {"status": "healthy", "backend": "in-memory"}
+    except Exception as e:
+        health_response["cache"] = {"status": "degraded", "error": str(e)}
     
     return health_response
 

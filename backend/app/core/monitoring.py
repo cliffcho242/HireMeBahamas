@@ -9,6 +9,7 @@ Tracks and logs:
 """
 import time
 import logging
+import threading
 from typing import Optional, Dict, Any
 from functools import wraps
 from fastapi import Request
@@ -16,6 +17,8 @@ from fastapi import Request
 logger = logging.getLogger(__name__)
 
 # Performance metrics storage (in-memory for simplicity)
+# Thread-safe with lock for concurrent access
+_metrics_lock = threading.Lock()
 _metrics = {
     "requests": {"total": 0, "by_endpoint": {}},
     "response_times": {"total_ms": 0, "count": 0, "by_endpoint": {}},
@@ -26,42 +29,43 @@ _metrics = {
 
 
 def track_request_time(endpoint: str, duration_ms: float, status_code: int):
-    """Track request timing and status.
+    """Track request timing and status (thread-safe).
     
     Args:
         endpoint: API endpoint path
         duration_ms: Request duration in milliseconds
         status_code: HTTP status code
     """
-    # Update total requests
-    _metrics["requests"]["total"] += 1
-    if endpoint not in _metrics["requests"]["by_endpoint"]:
-        _metrics["requests"]["by_endpoint"][endpoint] = 0
-    _metrics["requests"]["by_endpoint"][endpoint] += 1
-    
-    # Update response times
-    _metrics["response_times"]["total_ms"] += duration_ms
-    _metrics["response_times"]["count"] += 1
-    
-    if endpoint not in _metrics["response_times"]["by_endpoint"]:
-        _metrics["response_times"]["by_endpoint"][endpoint] = {
-            "total_ms": 0,
-            "count": 0,
-            "min_ms": float('inf'),
-            "max_ms": 0,
-        }
-    
-    endpoint_metrics = _metrics["response_times"]["by_endpoint"][endpoint]
-    endpoint_metrics["total_ms"] += duration_ms
-    endpoint_metrics["count"] += 1
-    endpoint_metrics["min_ms"] = min(endpoint_metrics["min_ms"], duration_ms)
-    endpoint_metrics["max_ms"] = max(endpoint_metrics["max_ms"], duration_ms)
-    
-    # Update error counts
-    if 400 <= status_code < 500:
-        _metrics["errors"]["4xx"] += 1
-    elif status_code >= 500:
-        _metrics["errors"]["5xx"] += 1
+    with _metrics_lock:
+        # Update total requests
+        _metrics["requests"]["total"] += 1
+        if endpoint not in _metrics["requests"]["by_endpoint"]:
+            _metrics["requests"]["by_endpoint"][endpoint] = 0
+        _metrics["requests"]["by_endpoint"][endpoint] += 1
+        
+        # Update response times
+        _metrics["response_times"]["total_ms"] += duration_ms
+        _metrics["response_times"]["count"] += 1
+        
+        if endpoint not in _metrics["response_times"]["by_endpoint"]:
+            _metrics["response_times"]["by_endpoint"][endpoint] = {
+                "total_ms": 0,
+                "count": 0,
+                "min_ms": float('inf'),
+                "max_ms": 0,
+            }
+        
+        endpoint_metrics = _metrics["response_times"]["by_endpoint"][endpoint]
+        endpoint_metrics["total_ms"] += duration_ms
+        endpoint_metrics["count"] += 1
+        endpoint_metrics["min_ms"] = min(endpoint_metrics["min_ms"], duration_ms)
+        endpoint_metrics["max_ms"] = max(endpoint_metrics["max_ms"], duration_ms)
+        
+        # Update error counts
+        if 400 <= status_code < 500:
+            _metrics["errors"]["4xx"] += 1
+        elif status_code >= 500:
+            _metrics["errors"]["5xx"] += 1
     
     # Log slow requests (>150ms)
     if duration_ms > 150:
@@ -77,86 +81,90 @@ def track_request_time(endpoint: str, duration_ms: float, status_code: int):
 
 
 def track_cache_hit():
-    """Track a cache hit."""
-    _metrics["cache"]["hits"] += 1
+    """Track a cache hit (thread-safe)."""
+    with _metrics_lock:
+        _metrics["cache"]["hits"] += 1
 
 
 def track_cache_miss():
-    """Track a cache miss."""
-    _metrics["cache"]["misses"] += 1
+    """Track a cache miss (thread-safe)."""
+    with _metrics_lock:
+        _metrics["cache"]["misses"] += 1
 
 
 def track_database_query(duration_ms: float):
-    """Track a database query.
+    """Track a database query (thread-safe).
     
     Args:
         duration_ms: Query duration in milliseconds
     """
-    _metrics["database"]["queries"] += 1
-    _metrics["database"]["total_time_ms"] += duration_ms
+    with _metrics_lock:
+        _metrics["database"]["queries"] += 1
+        _metrics["database"]["total_time_ms"] += duration_ms
 
 
 def get_performance_metrics() -> Dict[str, Any]:
-    """Get current performance metrics.
+    """Get current performance metrics (thread-safe).
     
     Returns:
         Dictionary with all performance metrics
     """
-    # Calculate averages
-    avg_response_time = (
-        _metrics["response_times"]["total_ms"] / _metrics["response_times"]["count"]
-        if _metrics["response_times"]["count"] > 0
-        else 0
-    )
-    
-    avg_db_time = (
-        _metrics["database"]["total_time_ms"] / _metrics["database"]["queries"]
-        if _metrics["database"]["queries"] > 0
-        else 0
-    )
-    
-    cache_hit_rate = (
-        _metrics["cache"]["hits"]
-        / (_metrics["cache"]["hits"] + _metrics["cache"]["misses"])
-        if (_metrics["cache"]["hits"] + _metrics["cache"]["misses"]) > 0
-        else 0
-    )
-    
-    # Calculate per-endpoint averages
-    endpoint_stats = {}
-    for endpoint, metrics in _metrics["response_times"]["by_endpoint"].items():
-        endpoint_stats[endpoint] = {
-            "avg_ms": metrics["total_ms"] / metrics["count"],
-            "min_ms": metrics["min_ms"],
-            "max_ms": metrics["max_ms"],
-            "count": metrics["count"],
+    with _metrics_lock:
+        # Calculate averages
+        avg_response_time = (
+            _metrics["response_times"]["total_ms"] / _metrics["response_times"]["count"]
+            if _metrics["response_times"]["count"] > 0
+            else 0
+        )
+        
+        avg_db_time = (
+            _metrics["database"]["total_time_ms"] / _metrics["database"]["queries"]
+            if _metrics["database"]["queries"] > 0
+            else 0
+        )
+        
+        cache_hit_rate = (
+            _metrics["cache"]["hits"]
+            / (_metrics["cache"]["hits"] + _metrics["cache"]["misses"])
+            if (_metrics["cache"]["hits"] + _metrics["cache"]["misses"]) > 0
+            else 0
+        )
+        
+        # Calculate per-endpoint averages
+        endpoint_stats = {}
+        for endpoint, metrics in _metrics["response_times"]["by_endpoint"].items():
+            endpoint_stats[endpoint] = {
+                "avg_ms": metrics["total_ms"] / metrics["count"],
+                "min_ms": metrics["min_ms"],
+                "max_ms": metrics["max_ms"],
+                "count": metrics["count"],
+            }
+        
+        return {
+            "requests": {
+                "total": _metrics["requests"]["total"],
+                "avg_response_time_ms": round(avg_response_time, 2),
+            },
+            "cache": {
+                "hit_rate": round(cache_hit_rate * 100, 2),
+                "hits": _metrics["cache"]["hits"],
+                "misses": _metrics["cache"]["misses"],
+            },
+            "database": {
+                "queries": _metrics["database"]["queries"],
+                "avg_query_time_ms": round(avg_db_time, 2),
+            },
+            "errors": {
+                "4xx": _metrics["errors"]["4xx"],
+                "5xx": _metrics["errors"]["5xx"],
+            },
+            "endpoints": endpoint_stats,
+            "performance_targets": {
+                "api_response_target_ms": "50-150",
+                "cache_hit_rate_target": ">80%",
+                "page_load_target": "<1s",
+            },
         }
-    
-    return {
-        "requests": {
-            "total": _metrics["requests"]["total"],
-            "avg_response_time_ms": round(avg_response_time, 2),
-        },
-        "cache": {
-            "hit_rate": round(cache_hit_rate * 100, 2),
-            "hits": _metrics["cache"]["hits"],
-            "misses": _metrics["cache"]["misses"],
-        },
-        "database": {
-            "queries": _metrics["database"]["queries"],
-            "avg_query_time_ms": round(avg_db_time, 2),
-        },
-        "errors": {
-            "4xx": _metrics["errors"]["4xx"],
-            "5xx": _metrics["errors"]["5xx"],
-        },
-        "endpoints": endpoint_stats,
-        "performance_targets": {
-            "api_response_target_ms": "50-150",
-            "cache_hit_rate_target": ">80%",
-            "page_load_target": "<1s",
-        },
-    }
 
 
 def monitor_performance(func):

@@ -129,6 +129,22 @@ async def get_cached(key: str) -> Optional[Any]:
     return None
 
 
+def _json_serializer(obj):
+    """Custom JSON serializer for objects not serializable by default."""
+    from datetime import datetime, date
+    from uuid import UUID
+    from decimal import Decimal
+    
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    elif isinstance(obj, UUID):
+        return str(obj)
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    else:
+        return str(obj)
+
+
 async def set_cached(key: str, value: Any, ttl: int = 300) -> None:
     """Set a value in cache with TTL in seconds.
     
@@ -142,7 +158,7 @@ async def set_cached(key: str, value: Any, ttl: int = 300) -> None:
                 await redis.setex(
                     key,
                     ttl,
-                    json.dumps(value, default=str)  # default=str handles datetime
+                    json.dumps(value, default=_json_serializer)
                 )
         except Exception as e:
             logger.debug(f"Redis set error: {e}")
