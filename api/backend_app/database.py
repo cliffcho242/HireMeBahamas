@@ -16,12 +16,12 @@
 #
 # RAILWAY ENV VARS (copy-paste):
 # DATABASE_URL=${DATABASE_URL}  # Auto-injected by Railway
-# DB_POOL_RECYCLE=120
+# DB_POOL_RECYCLE=300
 # DB_SSL_MODE=require
 #
 # RENDER ENV VARS (copy-paste):
 # DATABASE_URL=postgresql+asyncpg://user:pass@RAILWAY_HOST:5432/railway?sslmode=require
-# DB_POOL_RECYCLE=120
+# DB_POOL_RECYCLE=300
 # DB_SSL_MODE=require
 #
 # After deployment: Zero SSL EOF errors, zero connection drops, zero log spam.
@@ -208,16 +208,16 @@ _masked_url = _mask_database_url(DATABASE_URL)
 logger.info(f"Database URL: {_masked_url}")
 
 # =============================================================================
-# POOL CONFIGURATION - MASTERMIND FIX for Railway SSL EOF (Dec 2025)
+# POOL CONFIGURATION - OPTIMIZED FOR SERVERLESS (Dec 2025)
 # =============================================================================
-# CRITICAL: pool_recycle=120 prevents SSL EOF errors by recycling connections
-# before Railway's SSL termination proxy silently drops them.
+# CRITICAL: pool_recycle=300 prevents connection issues by recycling connections
+# before they become stale. This is serverless-friendly and prevents SSL EOF errors.
 # MAX_OVERFLOW=3 allows burst capacity without exhausting memory
 # =============================================================================
 POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "2"))  # Minimum connections (2 = safe for 512MB)
 MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "3"))  # Burst capacity
 POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for connection
-POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "120"))  # Recycle every 2 min (CRITICAL for Railway)
+POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (serverless-friendly)
 
 # =============================================================================
 # CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RAILWAY
@@ -301,66 +301,107 @@ def _get_ssl_context() -> ssl.SSLContext:
     return ctx
 
 # =============================================================================
-# CREATE ASYNC ENGINE - MASTERMIND FINAL FIX FOR SSL EOF ERRORS
+# CREATE ASYNC ENGINE - LAZY INITIALIZATION FOR SERVERLESS (Vercel/Render)
 # =============================================================================
-# This engine configuration PERMANENTLY FIXES "SSL error: unexpected eof while reading":
+# ✅ GOOD PATTERN: Lazy connection initialization
+# - Defers connection until first request (not at module import)
+# - Uses pool_pre_ping=True to validate connections before use
+# - Uses pool_recycle=300 (5 min) to prevent stale connections
+#
+# This pattern PERMANENTLY FIXES serverless issues:
 # 1. TLS 1.3 only via _get_ssl_context() - prevents SSL termination bugs
 # 2. pool_pre_ping=True - validates connections before use (detects dead connections)
-# 3. pool_recycle=120 - recycles before Railway drops idle connections (2 min)
+# 3. pool_recycle=300 - recycles connections (serverless-friendly)
 # 4. JIT=off - prevents first-query compilation delays
 # 5. connect_timeout=45 - allows Railway cold starts
 #
-# COPY-PASTE ENV VARS FOR RAILWAY/RENDER:
+# COPY-PASTE ENV VARS FOR RAILWAY/RENDER/VERCEL:
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
-# DB_POOL_RECYCLE=120
+# DB_POOL_RECYCLE=300
 # DB_FORCE_TLS_1_3=true
 # =============================================================================
 
-engine = create_async_engine(
-    DATABASE_URL,
-    # Pool configuration (CRITICAL for SSL EOF fix)
-    pool_size=POOL_SIZE,
-    max_overflow=MAX_OVERFLOW,
-    pool_pre_ping=True,  # Validate connections before use (detects stale connections)
-    pool_recycle=POOL_RECYCLE,  # Recycle every 2 min (prevents SSL EOF)
-    pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
-    
-    # Echo SQL for debugging (disabled in production)
-    echo=os.getenv("DB_ECHO", "false").lower() == "true",
-    
-    # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
-    connect_args={
-        # Connection timeout (45s for Railway cold starts)
-        "timeout": CONNECT_TIMEOUT,
-        
-        # Query timeout (30s per query)
-        "command_timeout": COMMAND_TIMEOUT,
-        
-        # PostgreSQL server settings
-        "server_settings": {
-            # CRITICAL: Disable JIT to prevent 60s+ first-query delays
-            "jit": "off",
-            # Statement timeout in milliseconds
-            "statement_timeout": str(STATEMENT_TIMEOUT_MS),
-            # Application name for pg_stat_activity
-            "application_name": "hiremebahamas",
-        },
-        
-        # SSL configuration - THE MASTERMIND FIX
-        # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
-        # Uses TLS 1.3 only + no cert verification for Railway compatibility
-        "ssl": _get_ssl_context(),
-    }
-)
+# Global engine instance (initialized lazily on first use)
+_engine = None
 
+def get_engine():
+    """Get or create database engine (lazy initialization for serverless).
+    
+    ✅ GOOD PATTERN: Defers connection until first request.
+    This prevents connection issues on Vercel/Render where connections
+    at module import time can cause failures.
+    
+    Returns:
+        AsyncEngine: Database engine instance
+    """
+    global _engine
+    
+    if _engine is None:
+        _engine = create_async_engine(
+            DATABASE_URL,
+            # Pool configuration (CRITICAL for serverless + SSL EOF fix)
+            pool_size=POOL_SIZE,
+            max_overflow=MAX_OVERFLOW,
+            pool_pre_ping=True,  # Validate connections before use (detects stale connections)
+            pool_recycle=POOL_RECYCLE,  # Recycle connections (default: 300s for serverless)
+            pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
+            
+            # Echo SQL for debugging (disabled in production)
+            echo=os.getenv("DB_ECHO", "false").lower() == "true",
+            
+            # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
+            connect_args={
+                # Connection timeout (45s for Railway cold starts)
+                "timeout": CONNECT_TIMEOUT,
+                
+                # Query timeout (30s per query)
+                "command_timeout": COMMAND_TIMEOUT,
+                
+                # PostgreSQL server settings
+                "server_settings": {
+                    # CRITICAL: Disable JIT to prevent 60s+ first-query delays
+                    "jit": "off",
+                    # Statement timeout in milliseconds
+                    "statement_timeout": str(STATEMENT_TIMEOUT_MS),
+                    # Application name for pg_stat_activity
+                    "application_name": "hiremebahamas",
+                },
+                
+                # SSL configuration - THE MASTERMIND FIX
+                # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
+                # Uses TLS 1.3 only + no cert verification for Railway compatibility
+                "ssl": _get_ssl_context(),
+            }
+        )
+        logger.info(
+            f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
+            f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
+        )
+    
+    return _engine
+
+# For backward compatibility: create engine property that calls get_engine()
+# This allows existing code like `from backend_app.database import engine` to work
+# but the actual engine is created lazily on first access
+class LazyEngine:
+    """Wrapper to provide lazy engine initialization while maintaining compatibility."""
+    def __getattr__(self, name):
+        # Delegate all attribute access to the lazily-initialized engine
+        return getattr(get_engine(), name)
+
+engine = LazyEngine()
+
+# Log database configuration (engine will be created on first use)
 logger.info(
-    f"Database engine created: pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
+    f"Database configured (lazy init): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
     f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
 )
 
 # =============================================================================
 # SESSION FACTORY - Optimized for async operations
 # =============================================================================
+# Note: sessionmaker works with LazyEngine because it doesn't actually use the engine
+# until sessions are created (at runtime, not import time)
 AsyncSessionLocal = sessionmaker(
     engine, 
     class_=AsyncSession, 
@@ -472,9 +513,11 @@ async def close_db():
     
     Called during application shutdown to release all connections.
     """
-    global _db_initialized
+    global _db_initialized, _engine
     try:
-        await engine.dispose()
+        if _engine is not None:
+            await _engine.dispose()
+            _engine = None
         _db_initialized = False
         logger.info("Database connections closed")
     except Exception as e:
