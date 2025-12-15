@@ -1,6 +1,30 @@
 """
 Database connection helper for Vercel Serverless API
 Lightweight, fast, optimized for cold starts
+
+✅ PLATFORM-AWARE CONFIGURATION:
+
+Rule 1 & 2: Render/Railway vs Vercel
+- Render/Railway: Real servers with persistent connections
+  * Use standard pool sizes (5-10 connections)
+  * Connection pooling is efficient and recommended
+  * Background keepalive workers can maintain connections
+  
+- Vercel: Serverless functions with cold starts
+  * Use minimal pool sizes (1-2 connections)
+  * Connections don't persist between invocations
+  * Each function invocation may need to reconnect
+  * Lazy initialization is critical (no import-time connections)
+
+Rule 3: Neon = TCP + SSL
+- Always require explicit hostname:port
+- Always enforce sslmode=require
+- No Unix socket connections
+
+Rule 5: Bad config logs warnings, not crashes
+- Invalid DATABASE_URL returns None, logs warning
+- Allows health checks to work even with bad config
+- Enables diagnostic endpoints to run
 """
 import os
 import logging

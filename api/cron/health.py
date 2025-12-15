@@ -2,6 +2,13 @@
 Vercel Cron Job Handler - Health Check & Keep-Alive
 ====================================================
 
+✅ FINAL RULES (PRODUCTION-READY DEPLOYMENT):
+    1. Render/Railway = real server (persistent connections, long-running processes)
+    2. Vercel = serverless (stateless functions, cold starts)
+    3. Neon = TCP + SSL (requires explicit TCP connection with SSL enabled)
+    4. Health must work without DB (instant response, no dependencies)
+    5. Bad config logs warnings, not crashes (graceful degradation)
+
 Replaces Render's keep-alive background worker with Vercel Cron Jobs.
 
 Schedule: Every 5 minutes (*/5 * * * *)
@@ -9,9 +16,9 @@ Purpose: Keeps serverless functions warm and monitors health
 Cost: Free on Vercel Hobby tier (up to 2 cron jobs)
 
 This endpoint:
-1. Confirms the API is responsive
+1. Confirms the API is responsive (RULE 4: no database dependency)
 2. Reports execution time for monitoring
-3. Can be extended to ping database or other services
+3. Works even with invalid database configuration (RULE 5: graceful degradation)
 """
 import json
 import os

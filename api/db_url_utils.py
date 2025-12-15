@@ -3,6 +3,18 @@ Database URL utility functions for Vercel Postgres and other cloud databases.
 
 This module provides shared utilities for processing database connection URLs,
 including automatic SSL mode enforcement for Vercel Postgres (Neon).
+
+✅ RULE 3: Neon = TCP + SSL
+Neon (Vercel Postgres) requires:
+- Explicit hostname (not localhost or Unix sockets)
+- Port number (usually :5432)
+- SSL mode enabled (?sslmode=require)
+- TCP connection (not Unix socket)
+
+Examples:
+  ✅ CORRECT: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/db?sslmode=require
+  ❌ WRONG: postgresql://user:pass@localhost/db (Unix socket, no SSL)
+  ❌ WRONG: postgresql://user:pass@ep-xxxx.neon.tech/db (missing port and SSL)
 """
 import logging
 from typing import Tuple
