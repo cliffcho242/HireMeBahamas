@@ -59,6 +59,16 @@ def main():
         "Missing sslmode parameter"
     )
     
+    test_url(
+        '"postgresql://user:password@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"',
+        "Wrapped in double quotes"
+    )
+    
+    test_url(
+        "'postgresql://user:password@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require'",
+        "Wrapped in single quotes"
+    )
+    
     # GOOD Examples (should be accepted)
     print("\n\n✅ GOOD EXAMPLES (should be accepted):")
     

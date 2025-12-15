@@ -20,6 +20,7 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
     3. Must use TCP connection (no Unix sockets)
     4. Must have SSL mode configured
     5. Must not contain whitespace (leading, trailing, or embedded)
+    6. Must not contain quotes (single or double)
     
     Args:
         db_url: Database connection URL to validate
@@ -39,6 +40,11 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
         - postgresql://user:pass @ep-xxxx.neon.tech:5432/dbname?sslmode=require
         -  postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require
         
+        ❌ BAD (contains quotes):
+        - "postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require"
+        - 'postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require'
+        - postgresql://"user":pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require
+        
         ✅ CORRECT (Neon example):
         postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require
         ✔ Real hostname (ep-xxxx.us-east-1.aws.neon.tech)
@@ -46,6 +52,7 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
         ✔ TCP enforced
         ✔ SSL required (?sslmode=require)
         ✔ No spaces
+        ✔ No quotes
     """
     if not db_url:
         return False, "DATABASE_URL is empty or None"
@@ -64,6 +71,17 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
         return False, (
             "DATABASE_URL contains whitespace characters. "
             "Remove all spaces, tabs, and newlines from the connection string. "
+            "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
+        )
+    
+    # Check for quotes (single or double)
+    # Quotes should not be in the DATABASE_URL as they can cause parsing errors
+    # and are often a sign of incorrect copy-paste from configuration files
+    if '"' in db_url or "'" in db_url:
+        return False, (
+            "DATABASE_URL contains quote characters (single or double quotes). "
+            "Remove all quotes from the connection string. "
+            "Do not wrap the URL in quotes - paste it directly without any surrounding quotes. "
             "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
         )
     
