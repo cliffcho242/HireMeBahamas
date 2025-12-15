@@ -7,6 +7,36 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 ---
 
+## 🚨 **URGENT: Are You Currently Deployed on Render?**
+
+**If you're experiencing high costs ($25-50/month) or slow performance on Render, migrate now!**
+
+### 🚀 **Quick Migration (30-60 minutes)**
+
+**➡️ [Complete Migration Guide: MIGRATE_FROM_RENDER.md](./MIGRATE_FROM_RENDER.md)** - Step-by-step instructions for migrating from Render to Vercel or Railway
+
+**What you'll gain:**
+- 💰 **Save $20-45/month** - Move to $0-7/month platforms
+- ⚡ **100x faster** - <200ms response vs 2-5 minute cold starts  
+- 🚀 **Zero downtime** - No more 502 Bad Gateway errors
+- 🌍 **Global CDN** - Better performance worldwide
+
+**Migration steps include:**
+1. ✅ Follow migration documentation (30 min read)
+2. ✅ Backup your database (automated script provided)
+3. ✅ Deploy to Vercel or Railway (10-15 minutes)
+4. ✅ Update frontend `VITE_API_URL` (or remove it for Vercel serverless)
+5. ✅ Test and verify (5 minutes)
+6. ✅ Delete Render services (after verification period)
+
+**Quick links:**
+- 📖 [RENDER_TO_VERCEL_MIGRATION.md](./RENDER_TO_VERCEL_MIGRATION.md) - Migrate to Vercel ($0/month)
+- 📖 [RENDER_TO_RAILWAY_MIGRATION.md](./RENDER_TO_RAILWAY_MIGRATION.md) - Migrate to Railway ($5-7/month)
+- 🔧 [Database Backup Script](./scripts/backup_database.py) - Automated backup tool
+- ✅ [Test Your Migration](./scripts/test_deployment.py) - Verify everything works
+
+---
+
 ## 🚨 **IMPORTANT: Vercel Frontend Environment Variables**
 
 **Are you trying to configure environment variables for Vercel frontend deployment?**
