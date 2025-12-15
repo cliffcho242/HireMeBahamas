@@ -72,16 +72,31 @@ if missing_fields:
     # This allows the app to start for health checks and diagnostics
     logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
-# Additional validation for cloud deployment requirements
+# Additional validation for cloud deployment requirements - ABSOLUTE BANS in production
 if parsed.hostname:
     hostname = parsed.hostname.lower()
-    # Reject localhost/127.0.0.1 which may cause Unix socket usage
-    if hostname in ('localhost', '127.0.0.1', '::1'):
+    # ABSOLUTE BAN: localhost/127.0.0.1 in production (causes Unix socket usage)
+    if settings.ENVIRONMENT == "production" and hostname in ('localhost', '127.0.0.1', '::1'):
+        raise ValueError(
+            f"❌ ABSOLUTE BAN: DATABASE_URL uses 'localhost' in production. "
+            f"Found: '{parsed.hostname}'. "
+            "Production MUST use remote database hostname. "
+            "Example: ep-xxxx.us-east-1.aws.neon.tech or containers-us-west-123.railway.app"
+        )
+    elif hostname in ('localhost', '127.0.0.1', '::1'):
         logger.warning(
             f"⚠️  DATABASE_URL uses '{parsed.hostname}' which may cause socket usage. "
             "For cloud deployments, use a remote database hostname. "
             "Example: ep-xxxx.us-east-1.aws.neon.tech"
         )
+
+# ABSOLUTE BAN: Unix sockets in production
+if settings.ENVIRONMENT == "production" and ('/var/run/' in DATABASE_URL or 'unix:/' in DATABASE_URL):
+    raise ValueError(
+        f"❌ ABSOLUTE BAN: DATABASE_URL contains Unix socket path in production. "
+        "Production MUST use TCP connections with explicit hostname and port. "
+        "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
+    )
 
 # Check for SSL mode requirement
 query_params = parsed.query.lower() if parsed.query else ""
