@@ -410,14 +410,25 @@ class LazyEngine:
             The attribute value from the actual engine
             
         Raises:
-            AttributeError: If the engine or attribute doesn't exist
+            RuntimeError: If engine creation fails
+            AttributeError: If the attribute doesn't exist on the engine
         """
         try:
             actual_engine = get_engine()
+        except Exception as e:
+            # Engine creation failed - this is a configuration or connection error
+            raise RuntimeError(
+                f"LazyEngine: Failed to create database engine during access to '{name}'. "
+                f"Check your DATABASE_URL and network connectivity. "
+                f"Original error: {type(e).__name__}: {e}"
+            ) from e
+        
+        try:
             return getattr(actual_engine, name)
         except AttributeError as e:
+            # Attribute doesn't exist on the engine
             raise AttributeError(
-                f"LazyEngine: Failed to access attribute '{name}' on database engine. "
+                f"LazyEngine: Database engine has no attribute '{name}'. "
                 f"Original error: {e}"
             ) from e
 
