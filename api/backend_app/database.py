@@ -314,59 +314,75 @@ def _get_ssl_context() -> ssl.SSLContext:
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
 # DB_POOL_RECYCLE=120
 # DB_FORCE_TLS_1_3=true
+#
+# VERCEL-SPECIFIC SAFETY NET (HIGHLY RECOMMENDED):
+# Wrapping engine creation in try-except prevents cold-start crashes
+# when database is temporarily unavailable.
 # =============================================================================
 
-engine = create_async_engine(
-    DATABASE_URL,
-    # Pool configuration (CRITICAL for SSL EOF fix)
-    pool_size=POOL_SIZE,
-    max_overflow=MAX_OVERFLOW,
-    pool_pre_ping=True,  # Validate connections before use (detects stale connections)
-    pool_recycle=POOL_RECYCLE,  # Recycle every 2 min (prevents SSL EOF)
-    pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
-    
-    # Echo SQL for debugging (disabled in production)
-    echo=os.getenv("DB_ECHO", "false").lower() == "true",
-    
-    # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
-    connect_args={
-        # Connection timeout (45s for Railway cold starts)
-        "timeout": CONNECT_TIMEOUT,
+# Vercel-specific safety net: Wrap DB init to prevent cold-start crashes
+try:
+    engine = create_async_engine(
+        DATABASE_URL,
+        # Pool configuration (CRITICAL for SSL EOF fix)
+        pool_size=POOL_SIZE,
+        max_overflow=MAX_OVERFLOW,
+        pool_pre_ping=True,  # Validate connections before use (detects stale connections)
+        pool_recycle=POOL_RECYCLE,  # Recycle every 2 min (prevents SSL EOF)
+        pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
         
-        # Query timeout (30s per query)
-        "command_timeout": COMMAND_TIMEOUT,
+        # Echo SQL for debugging (disabled in production)
+        echo=os.getenv("DB_ECHO", "false").lower() == "true",
         
-        # PostgreSQL server settings
-        "server_settings": {
-            # CRITICAL: Disable JIT to prevent 60s+ first-query delays
-            "jit": "off",
-            # Statement timeout in milliseconds
-            "statement_timeout": str(STATEMENT_TIMEOUT_MS),
-            # Application name for pg_stat_activity
-            "application_name": "hiremebahamas",
-        },
-        
-        # SSL configuration - THE MASTERMIND FIX
-        # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
-        # Uses TLS 1.3 only + no cert verification for Railway compatibility
-        "ssl": _get_ssl_context(),
-    }
-)
+        # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
+        connect_args={
+            # Connection timeout (45s for Railway cold starts)
+            "timeout": CONNECT_TIMEOUT,
+            
+            # Query timeout (30s per query)
+            "command_timeout": COMMAND_TIMEOUT,
+            
+            # PostgreSQL server settings
+            "server_settings": {
+                # CRITICAL: Disable JIT to prevent 60s+ first-query delays
+                "jit": "off",
+                # Statement timeout in milliseconds
+                "statement_timeout": str(STATEMENT_TIMEOUT_MS),
+                # Application name for pg_stat_activity
+                "application_name": "hiremebahamas",
+            },
+            
+            # SSL configuration - THE MASTERMIND FIX
+            # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
+            # Uses TLS 1.3 only + no cert verification for Railway compatibility
+            "ssl": _get_ssl_context(),
+        }
+    )
 
-logger.info(
-    f"Database engine created: pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
-    f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
-)
+    logger.info(
+        f"Database engine created: pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
+        f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
+    )
+except Exception as e:
+    print("DB init failed:", e)
+    logger.error(f"Database engine initialization failed: {e}")
+    engine = None
 
 # =============================================================================
 # SESSION FACTORY - Optimized for async operations
 # =============================================================================
-AsyncSessionLocal = sessionmaker(
-    engine, 
-    class_=AsyncSession, 
-    expire_on_commit=False,  # Don't expire objects after commit (reduces DB round-trips)
-    autoflush=False,  # Manual flush for better performance control
-)
+# Only create session factory if engine was successfully initialized
+if engine is not None:
+    AsyncSessionLocal = sessionmaker(
+        engine, 
+        class_=AsyncSession, 
+        expire_on_commit=False,  # Don't expire objects after commit (reduces DB round-trips)
+        autoflush=False,  # Manual flush for better performance control
+    )
+else:
+    # Fallback: Create a placeholder that will fail gracefully
+    AsyncSessionLocal = None
+    logger.warning("Database session factory not created - engine initialization failed")
 
 # Create declarative base for ORM models
 Base = declarative_base()
@@ -388,8 +404,11 @@ async def get_db():
         AsyncSession: Database session for query execution
         
     Raises:
-        RuntimeError: If database connection fails
+        RuntimeError: If database connection fails or engine not initialized
     """
+    if AsyncSessionLocal is None:
+        raise RuntimeError("Database not available - engine initialization failed")
+    
     try:
         async with AsyncSessionLocal() as session:
             yield session
@@ -406,7 +425,13 @@ async def get_async_session():
     """Get async database session (alias for get_db).
     
     Provided for API consistency - use get_db() as primary dependency.
+    
+    Raises:
+        RuntimeError: If database connection fails or engine not initialized
     """
+    if AsyncSessionLocal is None:
+        raise RuntimeError("Database not available - engine initialization failed")
+    
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -436,6 +461,12 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
         bool: True if initialization succeeded, False otherwise
     """
     global _db_initialized, _db_init_error
+    
+    # Check if engine was successfully initialized
+    if engine is None:
+        _db_init_error = "Database engine not initialized"
+        logger.error("Cannot initialize database: engine is None")
+        return False
     
     # Use defaults from environment if not specified
     if max_retries is None:
@@ -473,6 +504,11 @@ async def close_db():
     Called during application shutdown to release all connections.
     """
     global _db_initialized
+    
+    if engine is None:
+        logger.warning("Cannot close database: engine is None")
+        return
+    
     try:
         await engine.dispose()
         _db_initialized = False
@@ -489,6 +525,9 @@ async def test_db_connection() -> tuple[bool, Optional[str]]:
     Returns:
         Tuple of (success: bool, error_message: Optional[str])
     """
+    if engine is None:
+        return False, "Database engine not initialized"
+    
     try:
         from sqlalchemy import text
         async with engine.connect() as conn:
@@ -525,6 +564,15 @@ async def get_pool_status() -> dict:
     Returns:
         Dictionary with pool metrics for health checks and debugging
     """
+    if engine is None:
+        return {
+            "error": "Database engine not initialized",
+            "pool_size": POOL_SIZE,
+            "max_overflow": MAX_OVERFLOW,
+            "pool_recycle_seconds": POOL_RECYCLE,
+            "connect_timeout_seconds": CONNECT_TIMEOUT,
+        }
+    
     pool = engine.pool
     return {
         "pool_size": pool.size() if hasattr(pool, 'size') else POOL_SIZE,
