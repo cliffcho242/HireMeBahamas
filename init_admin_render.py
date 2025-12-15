@@ -10,7 +10,12 @@ import os
 
 import requests
 
-BACKEND_URL = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
+# Get backend URL from environment variable
+# For production, set BACKEND_URL explicitly. Falls back to Vercel for testing.
+BASE_URL = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
+
+# Maintain backward compatibility with existing code
+BACKEND_URL = BASE_URL
 
 
 def create_admin():

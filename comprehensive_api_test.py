@@ -20,8 +20,11 @@ from datetime import datetime
 import requests
 
 # Get backend URL from environment variable
-# Default to Vercel deployment if not set
-BACKEND_URL = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
+# For production, set BACKEND_URL explicitly. Falls back to Vercel for testing.
+BASE_URL = os.getenv("BACKEND_URL", "https://hiremebahamas.vercel.app")
+
+# Maintain backward compatibility with existing code
+BACKEND_URL = BASE_URL
 TEST_EMAIL = "testuser@example.com"
 TEST_PASSWORD = "TestPass123"
 
@@ -36,7 +39,7 @@ def test_backend_health():
     """Test backend health endpoint"""
     print_header("1. BACKEND HEALTH CHECK")
     try:
-        r = requests.get(f"{BACKEND_URL}/health", timeout=30)
+        r = requests.get(f"{BASE_URL}/health", timeout=30)
         print(f"Status: {r.status_code}")
         if r.status_code == 200:
             data = r.json()
