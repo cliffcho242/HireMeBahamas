@@ -9,7 +9,7 @@ if (import.meta.env.DEV) {
 }
 
 // ✅ Correct API URL pattern: Use environment variable or same-origin
-const API = import.meta.env.VITE_API_URL || window.location.origin;
+const API = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
 // Enhanced API service with AI features
 const socialAPI = {
