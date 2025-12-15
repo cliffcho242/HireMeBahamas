@@ -31,7 +31,11 @@ def validate_requirements():
         return False
     
     content = req_file.read_text()
-    lines = [line.strip() for line in content.split('\n') if line.strip() and not line.strip().startswith('#')]
+    lines = []
+    for line in content.split('\n'):
+        stripped = line.strip()
+        if stripped and not stripped.startswith('#'):
+            lines.append(stripped)
     
     print("=" * 70)
     print("REQUIREMENTS.TXT VALIDATION")
@@ -64,7 +68,7 @@ def validate_requirements():
     print("\n" + "=" * 70)
     
     # Special check for FastAPI being explicitly listed (not commented)
-    fastapi_pattern = re.compile(r'^fastapi==[\d.]+$', re.IGNORECASE)
+    fastapi_pattern = re.compile(r'^fastapi==\d+(\.\d+)*$', re.IGNORECASE)
     fastapi_found = any(fastapi_pattern.match(line) for line in lines)
     
     if fastapi_found:
