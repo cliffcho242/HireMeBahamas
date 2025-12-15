@@ -367,6 +367,13 @@ async def log_requests(request: Request, call_next):
         response = await call_next(request)
         duration_ms = int((time.time() - start_time) * 1000)
         
+        # Track performance metrics
+        try:
+            from .core.monitoring import track_request_time
+            track_request_time(request.url.path, duration_ms, response.status_code)
+        except Exception:
+            pass  # Monitoring is non-critical
+        
         # Determine log level and capture error details for failed requests
         if response.status_code < 400:
             # Success - log at INFO level
@@ -709,6 +716,33 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
     health_response["cache"] = await redis_cache.health_check()
     
     return health_response
+
+
+# Performance metrics endpoint
+@app.get("/metrics", tags=["monitoring"])
+async def get_metrics():
+    """Get performance metrics for monitoring
+    
+    Returns metrics including:
+    - Average API response times
+    - Cache hit rates
+    - Database query statistics
+    - Error rates
+    - Per-endpoint performance
+    
+    Target metrics:
+    - API response: 50-150ms
+    - Cache hit rate: >80%
+    - Page load: <1s
+    """
+    try:
+        from .core.monitoring import get_performance_metrics
+        return get_performance_metrics()
+    except ImportError:
+        return {
+            "error": "Performance monitoring not available",
+            "message": "Install monitoring dependencies to enable this endpoint"
+        }
 
 
 # Include routers with /api prefix to match frontend expectations (with safety checks)

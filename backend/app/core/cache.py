@@ -95,6 +95,12 @@ async def get_cached(key: str) -> Optional[Any]:
             if redis:
                 value = await redis.get(key)
                 if value:
+                    # Track cache hit
+                    try:
+                        from .monitoring import track_cache_hit
+                        track_cache_hit()
+                    except ImportError:
+                        pass
                     return json.loads(value)
         except Exception as e:
             logger.debug(f"Redis get error: {e}")
@@ -103,9 +109,23 @@ async def get_cached(key: str) -> Optional[Any]:
     if key in _cache:
         value, expires_at = _cache[key]
         if expires_at > time.time():
+            # Track cache hit
+            try:
+                from .monitoring import track_cache_hit
+                track_cache_hit()
+            except ImportError:
+                pass
             return value
         # Expired, remove it
         del _cache[key]
+    
+    # Track cache miss
+    try:
+        from .monitoring import track_cache_miss
+        track_cache_miss()
+    except ImportError:
+        pass
+    
     return None
 
 
