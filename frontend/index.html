@@ -74,7 +74,9 @@
     <!-- Preconnect for Performance - Establish early connections -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="http://127.0.0.1:8008" />
+    
+    <!-- Preconnect to API endpoint (same-origin for Vercel serverless) -->
+    <link rel="preconnect" href="/api" crossorigin />
     
     <!-- Preconnect for CDN (Vercel Edge Network) -->
     <link rel="preconnect" href="https://vercel.live" crossorigin />
@@ -85,6 +87,16 @@
     
     <!-- Prefetch likely navigation targets for instant page transitions -->
     <link rel="prefetch" href="/api/auth/me" as="fetch" crossorigin />
+    <link rel="prefetch" href="/api/posts?skip=0&limit=20" as="fetch" crossorigin />
+    
+    <!-- Preload critical fonts for sub-1s First Contentful Paint -->
+    <link
+      rel="preload"
+      href="https://fonts.gstatic.com/s/inter/v12/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
 
     <title>HireMeBahamas - Caribbean Job Platform</title>
 

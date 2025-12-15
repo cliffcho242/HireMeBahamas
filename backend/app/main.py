@@ -515,6 +515,27 @@ async def lazy_import_heavy_stuff():
         logger.warning(f"Redis connection failed (non-critical): {e}")
     
     # ==========================================================================
+    # STEP 3: Warm up cache and database connections (optional, non-blocking)
+    # ==========================================================================
+    try:
+        from .core.cache import warmup_cache
+        await warmup_cache()
+        logger.info("Cache warmup completed")
+    except Exception as e:
+        logger.debug(f"Cache warmup skipped: {e}")
+    
+    # ==========================================================================
+    # STEP 4: Run performance optimizations (background task)
+    # ==========================================================================
+    # Run performance optimizations in background to avoid blocking startup
+    try:
+        from .core.performance import run_all_performance_optimizations
+        asyncio.create_task(run_all_performance_optimizations())
+        logger.info("Performance optimizations scheduled")
+    except Exception as e:
+        logger.debug(f"Performance optimizations skipped: {e}")
+    
+    # ==========================================================================
     # STRICT LAZY INITIALIZATION: NO DATABASE OPERATIONS AT STARTUP
     # ==========================================================================
     # ✅ Database engine is created lazily by LazyEngine wrapper

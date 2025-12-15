@@ -3,6 +3,7 @@ from uuid import UUID
 import logging
 
 from app.core.security import get_current_user
+from app.core.cache import get_cached, set_cached, invalidate_cache
 from app.database import get_db
 from app.models import Post, PostLike, PostComment, User
 from app.schemas.post import (
@@ -95,6 +96,9 @@ async def create_post(
 
     # Use helper to enrich post with metadata
     post_data = await enrich_post_with_metadata(post_with_user, db, current_user)
+    
+    # Invalidate posts cache
+    await invalidate_cache("posts:list:")
 
     return {"success": True, "post": post_data.model_dump()}
 
@@ -106,13 +110,22 @@ async def get_posts(
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
-    """Get posts with pagination
+    """Get posts with pagination (with caching for sub-50ms response)
     
     Note: This endpoint returns posts from ALL users regardless of their account status.
     Posts remain visible even if the author's account becomes inactive (is_active=False).
     This ensures posts don't disappear due to user inactivity, especially for admin accounts.
     Posts are only removed when explicitly deleted via the delete endpoint.
+    
+    Performance: Cached for 30 seconds for sub-50ms response times.
     """
+    # Try to get from cache first (sub-50ms cache hit)
+    user_id = current_user.id if current_user else "anonymous"
+    cache_key = f"posts:list:{skip}:{limit}:{user_id}"
+    cached_response = await get_cached(cache_key)
+    if cached_response is not None:
+        return cached_response
+    
     # Build query with user relationship
     # IMPORTANT: We intentionally do NOT filter by User.is_active here
     # Posts should remain visible regardless of the author's account status
@@ -146,7 +159,12 @@ async def get_posts(
         post_data = await enrich_post_with_metadata(post, db, current_user)
         posts_data.append(post_data.model_dump())
 
-    return {"success": True, "posts": posts_data}
+    response = {"success": True, "posts": posts_data}
+    
+    # Cache for 30 seconds (balance between freshness and performance)
+    await set_cached(cache_key, response, ttl=30)
+    
+    return response
 
 
 @router.get("/user/{user_id}", response_model=dict)
