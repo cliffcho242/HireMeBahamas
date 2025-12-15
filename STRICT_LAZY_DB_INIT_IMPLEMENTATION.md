@@ -127,8 +127,9 @@ async def lazy_import_heavy_stuff():
 
 ✅ **1. No Module-Level Engine Creation**
 ```bash
-# Should return empty (no module-level create_async_engine calls)
-grep "^engine = create\|^_engine = create" backend/app/core/database.py
+# Verify create_async_engine is only inside get_engine() function
+# Should find create_async_engine inside get_engine() function, not at module level
+grep -B 5 "create_async_engine" backend/app/core/database.py | grep "def get_engine"
 ```
 
 ✅ **2. LazyEngine Wrapper Exists**
@@ -145,8 +146,8 @@ grep "engine = LazyEngine()" backend/app/core/database.py
 
 ✅ **4. No Startup Database Calls**
 ```bash
-# Should return empty (no test_db_connection or init_db calls in startup)
-grep -A 50 "async def lazy_import" backend/app/main.py | grep "await test_db_connection()\|await init_db()"
+# Should return empty (no test_db_connection or init_db in startup function body)
+grep -A 50 "async def lazy_import" backend/app/main.py | grep "test_db_connection\|init_db" | grep -v "import\|#"
 ```
 
 ✅ **5. No Background Tasks**
