@@ -11,11 +11,17 @@
  */
 
 export default function handler(req, res) {
+  // Verify CRON_SECRET is configured
+  if (!process.env.CRON_SECRET) {
+    console.error('CRON_SECRET environment variable is not set');
+    return res.status(500).end('Server configuration error');
+  }
+  
   // Check authorization header
   const authHeader = req.headers.authorization;
   const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
   
-  if (authHeader !== expectedAuth) {
+  if (!authHeader || authHeader !== expectedAuth) {
     return res.status(401).end('Unauthorized');
   }
   
