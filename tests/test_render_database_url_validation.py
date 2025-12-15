@@ -6,7 +6,6 @@ correctly identifies valid and invalid DATABASE_URL formats.
 """
 
 import sys
-import os
 import pytest
 from pathlib import Path
 
