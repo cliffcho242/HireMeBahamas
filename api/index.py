@@ -574,7 +574,7 @@ async def health():
     """Instant health check - responds in <5ms"""
     logger.info("Health check called")
     response = {
-        "status": "healthy",
+        "status": "ok",
         "platform": "vercel-serverless",
         "region": os.getenv("VERCEL_REGION", "unknown"),
         "timestamp": int(time.time()),

@@ -93,7 +93,7 @@ except ImportError as e:
     async def health():
         """Health check endpoint"""
         return JSONResponse({
-            "status": "healthy",
+            "status": "ok",
             "mode": "fallback",
             "platform": "vercel-serverless",
             "error": str(e)
