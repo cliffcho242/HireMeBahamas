@@ -177,13 +177,13 @@ except ImportError:
     # Logger not available yet, will log later
 
 # Import APIs
-from .api import analytics, auth, debug, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
-from .database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
-from .core.metrics import get_metrics_response, set_app_info
-from .core.security import prewarm_bcrypt_async
-from .core.redis_cache import redis_cache, warm_cache
-from .core.db_health import check_database_health, get_database_stats
-from .core.timeout_middleware import add_timeout_middleware
+from app.api import analytics, auth, debug, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
+from app.database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
+from app.core.metrics import get_metrics_response, set_app_info
+from app.core.security import prewarm_bcrypt_async
+from app.core.redis_cache import redis_cache, warm_cache
+from app.core.db_health import check_database_health, get_database_stats
+from app.core.timeout_middleware import add_timeout_middleware
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
