@@ -413,6 +413,10 @@ def get_engine():
                         # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
                         # Uses TLS 1.3 only + no cert verification for Railway compatibility
                         "ssl": _get_ssl_context(),
+                        
+                        # FORCE TCP + SSL: Guarantee TCP connection with SSL encryption
+                        # This ensures SSL is required even if DATABASE_URL or env vars are misconfigured
+                        "sslmode": "require",
                     }
                 )
                 logger.info(
