@@ -1,25 +1,28 @@
 # =============================================================================
 # HireMeBahamas Backend - Render Deployment Configuration
-# FINAL SPEED ARCHITECTURE (2025)
+# ✅ CORRECT STACK (2025)
 # =============================================================================
 # 
-# ⚡ FINAL SPEED ARCHITECTURE:
-# - Frontend: Vercel Edge CDN (Global, <200ms)
-# - Backend: Render FastAPI (Always On, High Performance)
-# - Database: Neon PostgreSQL (Serverless, TCP + SSL)
+# ⚡ CORRECT STACK - INDUSTRY STANDARD:
+# - Frontend: Vercel (CDN, Edge, static & dynamic UI)
+# - Backend API: Render (Always-on Gunicorn service)
+# - Database: Neon PostgreSQL (managed, scalable)
 # 
 # This architecture provides:
 # - ⚡ Fast: Global CDN + Always-On backend
 # - 🔒 Stable: No cold starts, no downtime
 # - 🌍 Global: Edge network worldwide
 # - 💰 Scales well: Efficient pricing
-# - 🧠 Industry-standard: Proven tech stack
+# - 🧠 Industry-standard: Proven tech stack used by Facebook/Twitter scale apps
 #
 # Configuration:
 # - Standard plan ($25/mo) with 1GB RAM for Always On
-# - FastAPI with Uvicorn for maximum performance
+# - FastAPI with Gunicorn (production WSGI server with Uvicorn workers)
 # - Neon PostgreSQL with connection pooling
 # - Health check at /health with optimized settings
+# 
+# Optional Phase 2:
+# - Redis (sessions, feeds, caching) - Industry standard for scale
 # =============================================================================
 
 services:
@@ -52,13 +55,14 @@ services:
     buildCommand: pip install -r backend/requirements.txt
     
     # ==========================================================================
-    # START COMMAND - FastAPI with Uvicorn (FINAL SPEED ARCHITECTURE)
+    # START COMMAND - FastAPI with Gunicorn (CORRECT STACK)
     # ==========================================================================
-    # FastAPI provides maximum performance with async support
-    # Uvicorn with uvloop for optimized event loop
-    # Single worker optimized for Standard plan (1GB RAM)
-    # Working directory is set to backend/ for consistent path resolution
-    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --log-level info
+    # Gunicorn with Uvicorn workers for production-grade performance
+    # - Gunicorn: Production WSGI server with worker management
+    # - Uvicorn workers: ASGI support for FastAPI async operations
+    # - 2 workers optimized for Standard plan (1GB RAM)
+    # - Working directory is set to backend/ for consistent path resolution
+    startCommand: cd backend && gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --log-level info
     
     envVars:
       - key: ENVIRONMENT

@@ -1,5 +1,12 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
+  "_comment": "⚠️ DEPRECATED: Railway backend is no longer recommended. Use Render instead. See CORRECT_STACK.md for the official stack.",
+  "_correctStack": {
+    "frontend": "Vercel (CDN, Edge, static & dynamic UI)",
+    "backend": "Render (Always-on Gunicorn service)",
+    "database": "Neon PostgreSQL (managed, scalable)",
+    "optional": "Redis (sessions, feeds, caching) - Phase 2"
+  },
   "build": {
     "builder": "NIXPACKS",
     "dockerfilePath": null,

@@ -7,29 +7,37 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 ---
 
-## 🚀 **FINAL SPEED ARCHITECTURE (LOCKED IN)**
+## 🚀 **✅ CORRECT STACK (Industry Standard)**
 
 **The production-ready architecture for maximum performance and stability:**
 
 ```
 Facebook / Instagram Users
         ↓
-Vercel Edge CDN (Frontend)
+Vercel (CDN, Edge, static & dynamic UI)
         ↓ HTTPS
-Render FastAPI Backend (Always On)
+Render (Always-on Gunicorn service)
         ↓ TCP + SSL
-Neon PostgreSQL (Serverless)
+Neon PostgreSQL (managed, scalable)
 ```
 
-### Why This Architecture?
+### Why This Stack?
 
 - ⚡ **Fast**: <200ms response times globally via Vercel Edge CDN
 - 🔒 **Stable**: Always On backend with zero cold starts
 - 🌍 **Global**: 100+ edge locations worldwide
 - 💰 **Scales Well**: $25-44/month for production-ready infrastructure
-- 🧠 **Industry-Standard**: Proven tech stack (FastAPI, PostgreSQL, Edge CDN)
+- 🧠 **Industry-Standard**: Proven tech stack used by apps at Facebook/Twitter scale
+- 🚀 **Production-Ready**: Gunicorn is battle-tested for high-scale applications
 
-**📖 [Complete Setup Guide: FINAL_SPEED_ARCHITECTURE.md](./FINAL_SPEED_ARCHITECTURE.md)**
+### Optional Phase 2
+- **Redis**: Sessions, feeds, caching (industry standard for scale)
+
+### 📖 Documentation
+- **[✅ CORRECT_STACK.md](./CORRECT_STACK.md)** - **START HERE**: Official stack definition and rationale
+- **[FINAL_SPEED_ARCHITECTURE.md](./FINAL_SPEED_ARCHITECTURE.md)** - Complete setup guide and deployment instructions
+
+⚠️ **Note**: Railway backend documentation in this repository is deprecated. Use **Render** for all new deployments.
 
 ---
 

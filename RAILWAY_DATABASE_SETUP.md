@@ -1,5 +1,18 @@
 # 🗄️ Railway Database Setup Guide
 
+> ⚠️ **DEPRECATED**: Railway backend is no longer recommended for new deployments.
+> 
+> **Use the ✅ CORRECT STACK instead:**
+> - Frontend: Vercel
+> - Backend: **Render** (Always-on Gunicorn service)
+> - Database: Neon PostgreSQL
+> 
+> 📖 See [CORRECT_STACK.md](./CORRECT_STACK.md) for the official stack definition.
+> 
+> This document is kept for reference only for existing Railway users who need to migrate.
+
+---
+
 ⚠️ **CRITICAL WARNING**: If you see the error "root execution of the PostgreSQL server is not permitted", you are trying to deploy PostgreSQL as a container. See [RAILWAY_POSTGRESQL_SETUP.md](./RAILWAY_POSTGRESQL_SETUP.md) for the correct solution.
 
 📋 **NEED EXACT VARIABLES & LOCATIONS?** See [RAILWAY_DATABASE_VARIABLES_GUIDE.md](./RAILWAY_DATABASE_VARIABLES_GUIDE.md) for a comprehensive guide on configuring PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, and DATABASE_URL with exact Railway locations.
