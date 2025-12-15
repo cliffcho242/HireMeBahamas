@@ -43,6 +43,10 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
 
+# Placeholder value for invalid database configuration
+# This allows the app to start for health checks even with invalid config
+DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@localhost:5432/placeholder"
+
 # =============================================================================
 # DATABASE URL CONFIGURATION
 # =============================================================================
@@ -68,7 +72,11 @@ DATABASE_URL = os.getenv('DATABASE_URL') or \
 # For local development only - require explicit configuration in production
 if not DATABASE_URL:
     if ENVIRONMENT == "production":
-        raise ValueError("DATABASE_URL must be set in production")
+        # Production-safe: log warning instead of raising exception
+        # This allows the app to start for health checks and diagnostics
+        logger.warning("DATABASE_URL must be set in production")
+        # Use a placeholder to prevent crashes, connections will fail gracefully
+        DATABASE_URL = DB_PLACEHOLDER_URL
     else:
         # Use local development default only in development mode
         DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
@@ -89,7 +97,7 @@ if DATABASE_URL.startswith("postgresql://"):
     logger.info("Converted DATABASE_URL to asyncpg driver format")
 
 # Validate DATABASE_URL format - ensure all required fields are present
-# Parse and validate required fields
+# Parse and validate required fields using production-safe validation
 parsed = urlparse(DATABASE_URL)
 missing_fields = []
 if not parsed.username:
@@ -103,7 +111,9 @@ if not parsed.path or len(parsed.path) <= 1:
     missing_fields.append("path")
 
 if missing_fields:
-    raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+    # Production-safe: log warning instead of raising exception
+    # This allows the app to start for health checks and diagnostics
+    logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:

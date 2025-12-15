@@ -919,6 +919,10 @@ if not USE_POSTGRESQL:
 _db_initialized = False
 _db_init_lock = threading.Lock()
 
+# Placeholder value for invalid database configuration
+# This allows the app to start for health checks even with invalid config
+DB_PLACEHOLDER_VALUE = "placeholder"
+
 # Error message length limit for health checks
 MAX_ERROR_MESSAGE_LENGTH = 500
 
@@ -942,11 +946,19 @@ if USE_POSTGRESQL:
     try:
         database = parsed.path[1:] if parsed.path and len(parsed.path) > 1 else None
         if not database:
-            raise ValueError("Database name is missing from DATABASE_URL")
+            # Production-safe: log warning instead of raising exception
+            logging.warning(
+                f"Database name is missing from DATABASE_URL. "
+                f"Format should be: {DATABASE_URL_FORMAT}"
+            )
+            database = DB_PLACEHOLDER_VALUE  # Use placeholder to prevent crash
     except (ValueError, IndexError) as e:
-        print(f"❌ Error parsing DATABASE_URL: {e}")
-        print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
-        raise
+        # Production-safe: log warning instead of raising exception
+        logging.warning(
+            f"Error parsing DATABASE_URL: {e}. "
+            f"Format should be: {DATABASE_URL_FORMAT}"
+        )
+        database = DB_PLACEHOLDER_VALUE  # Use placeholder to prevent crash
 
     # Parse query string for SSL mode and other options
     query_params = parse_qs(parsed.query)
@@ -996,7 +1008,7 @@ if USE_POSTGRESQL:
         "application_name": APPLICATION_NAME,
     }
 
-    # Validate all required fields are present
+    # Validate all required fields are present using production-safe validation
     required_fields = ["host", "database", "user", "password"]
     missing_fields = [field for field in required_fields if not DB_CONFIG.get(field)]
     if missing_fields:
@@ -1004,7 +1016,9 @@ if USE_POSTGRESQL:
             f"❌ Missing required DATABASE_URL components: {', '.join(missing_fields)}"
         )
         print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
-        raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+        # Production-safe: log warning instead of raising exception
+        # This allows the app to start for health checks and diagnostics
+        logging.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
     
     # Validate hostname is not a placeholder value
     # Common placeholder values that should not be used in production

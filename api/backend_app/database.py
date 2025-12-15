@@ -72,6 +72,10 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
 
+# Placeholder value for invalid database configuration
+# This allows the app to start for health checks even with invalid config
+DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@localhost:5432/placeholder"
+
 # =============================================================================
 # DATABASE URL CONFIGURATION
 # =============================================================================
@@ -100,9 +104,9 @@ if DATABASE_URL:
     DATABASE_URL = DATABASE_URL.strip()
 
 # =============================================================================
-# PRODUCTION SAFETY: FORCE PRODUCTION TO FAIL WITHOUT POSTGRES
+# PRODUCTION SAFETY: WARN IF POSTGRES NOT CONFIGURED (PRODUCTION-SAFE)
 # =============================================================================
-# This prevents silent SQLite usage in production
+# This prevents silent SQLite usage in production while allowing app to start
 # Check both ENV and ENVIRONMENT variables for consistency across the application
 if (ENV == "production" or ENVIRONMENT == "production") and not DATABASE_URL:
     # Check if we can construct from PG* variables
@@ -111,9 +115,9 @@ if (ENV == "production" or ENVIRONMENT == "production") and not DATABASE_URL:
     pgpassword = os.getenv("PGPASSWORD")
     pgdatabase = os.getenv("PGDATABASE")
     
-    # If we don't have all required PG* variables, fail immediately
+    # If we don't have all required PG* variables, log warning
     if not all([pghost, pguser, pgpassword, pgdatabase]):
-        raise RuntimeError(
+        logger.warning(
             "DATABASE_URL is required in production. "
             "SQLite fallback is disabled. "
             "Please set DATABASE_URL, POSTGRES_URL, DATABASE_PRIVATE_URL, "
@@ -141,13 +145,16 @@ if not DATABASE_URL:
         logger.info("Constructed DATABASE_URL from individual PG* environment variables")
     elif (ENV == "production" or ENVIRONMENT == "production"):
         # In production, we need either DATABASE_URL or all individual PG* variables
-        raise RuntimeError(
+        # Production-safe: log warning instead of raising exception
+        logger.warning(
             f"DATABASE_URL must be set in production. "
             f"Please set DATABASE_URL, POSTGRES_URL, DATABASE_PRIVATE_URL, "
             f"or all individual variables (PGHOST, PGUSER, PGPASSWORD, PGDATABASE). "
             f"Note: PGPORT is optional (defaults to 5432). "
             f"Missing: {', '.join(missing_vars)}"
         )
+        # Use placeholder to prevent crashes, connections will fail gracefully
+        DATABASE_URL = DB_PLACEHOLDER_URL
     else:
         # Use local development default only in development mode
         DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
@@ -192,7 +199,7 @@ except Exception as e:
 # For example, passwords with '@' or '%' are automatically decoded from URL-encoded form.
 
 # Validate DATABASE_URL format - ensure all required fields are present
-# Parse and validate required fields
+# Parse and validate required fields using production-safe validation
 parsed = urlparse(DATABASE_URL)
 missing_fields = []
 if not parsed.username:
@@ -206,7 +213,9 @@ if not parsed.path or len(parsed.path) <= 1:
     missing_fields.append("path")
 
 if missing_fields:
-    raise ValueError(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+    # Production-safe: log warning instead of raising exception
+    # This allows the app to start for health checks and diagnostics
+    logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:

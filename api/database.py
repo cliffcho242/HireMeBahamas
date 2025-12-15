@@ -8,7 +8,7 @@ import re
 from urllib.parse import urlparse, urlunparse
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
-from db_url_utils import ensure_sslmode
+from .db_url_utils import ensure_sslmode
 
 # Global engine (reused across invocations)
 _engine = None
@@ -17,16 +17,17 @@ _engine = None
 logger = logging.getLogger(__name__)
 
 # =============================================================================
-# PRODUCTION SAFETY: FORCE PRODUCTION TO FAIL WITHOUT POSTGRES
+# PRODUCTION SAFETY: WARN IF POSTGRES NOT CONFIGURED (PRODUCTION-SAFE)
 # =============================================================================
-# This prevents silent SQLite usage in production
+# This prevents silent SQLite usage in production while allowing app to start
 ENV = os.getenv("ENV", "development")
 DATABASE_URL_ENV = os.getenv("DATABASE_URL")
 
 if ENV == "production" and not DATABASE_URL_ENV:
-    raise RuntimeError(
+    logger.warning(
         "DATABASE_URL is required in production. "
-        "SQLite fallback is disabled."
+        "SQLite fallback is disabled. "
+        "App will start but database operations will fail."
     )
 # =============================================================================
 
@@ -34,11 +35,14 @@ if ENV == "production" and not DATABASE_URL_ENV:
 def get_database_url():
     """Get and validate DATABASE_URL from environment
     
+    Production-safe validation that logs warnings instead of raising exceptions.
+    This allows the app to start for health checks and diagnostics.
+    
     Note: SQLAlchemy's create_async_engine() automatically handles URL decoding for
     special characters in username/password. No manual decoding is needed.
     
-    Raises:
-        ValueError: If DATABASE_URL is not set or has invalid format
+    Returns:
+        str | None: Database URL if valid, None if invalid (with warnings logged)
     """
     db_url = os.getenv("DATABASE_URL", "")
     
@@ -46,16 +50,18 @@ def get_database_url():
     db_url = db_url.strip()
     
     if not db_url:
-        raise ValueError("DATABASE_URL environment variable not set")
+        logger.warning("DATABASE_URL environment variable not set")
+        return None
     
     # Validate basic URL structure before processing
     # PostgreSQL connection string should match pattern: postgresql://[user[:password]@]host[:port][/dbname][?param=value]
     # This prevents the cryptic asyncpg error: "The string did not match the expected pattern"
     if not re.match(r'^(postgres|postgresql)://', db_url):
-        raise ValueError(
+        logger.warning(
             f"Invalid DATABASE_URL format. Must start with 'postgres://' or 'postgresql://'. "
             f"Example: postgresql://user:password@host:5432/dbname"
         )
+        return None
     
     # Check for common mistakes that cause "pattern" errors
     # 1. Missing host (e.g., "postgresql://:password@/dbname")
@@ -67,17 +73,19 @@ def get_database_url():
         
         # Validate netloc (user:pass@host:port) is present
         if not test_parse.netloc:
-            raise ValueError(
+            logger.warning(
                 f"Invalid DATABASE_URL: missing host/port information. "
                 f"Please check your environment variables. See SECURITY.md for proper format."
             )
+            return None
         
         # Check if hostname is present (netloc could be just ":port" which is invalid)
         if test_parse.netloc.startswith(':') or '@:' in test_parse.netloc:
-            raise ValueError(
+            logger.warning(
                 f"Invalid DATABASE_URL: missing hostname. "
                 f"Please check your environment variables. See SECURITY.md for proper format."
             )
+            return None
         
         # Validate hostname is not a placeholder value
         # Common placeholder values that should not be used in production
@@ -92,10 +100,8 @@ def get_database_url():
         
         hostname = test_parse.hostname
         if hostname and hostname.lower() in PLACEHOLDER_HOSTS:
-            # CHANGED: Previously raised ValueError which prevented app startup on Render/other platforms
-            # Now logs warning instead - allows app to start so health checks can report the issue
-            # This matches behavior in final_backend_postgresql.py (lines 1028-1029)
-            # Database connections will fail but app remains accessible for diagnosis
+            # Production-safe: log warning instead of raising exception
+            # This allows the app to start for health checks and diagnostics
             logger.warning(
                 f"⚠️  DATABASE_URL contains placeholder hostname '{hostname}'. "
                 f"Please replace it with your actual database hostname. "
@@ -105,15 +111,13 @@ def get_database_url():
                 f"For other providers: check your database dashboard for connection details."
             )
             
-    except ValueError:
-        # Re-raise our custom ValueError messages
-        raise
     except Exception as e:
-        # Catch any other parsing errors and provide helpful message
-        raise ValueError(
+        # Catch any parsing errors and log warning
+        logger.warning(
             f"Invalid DATABASE_URL format: {str(e)}. "
             f"Please check your environment variables. See SECURITY.md for proper format."
         )
+        return None
     
     # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
     # This handles cases where the 'p' is missing from "postgresql"
@@ -158,15 +162,30 @@ def get_database_url():
 def get_engine():
     """Get or create database engine (singleton pattern)
     
-    Raises:
-        ValueError: If DATABASE_URL format is invalid
-        Exception: If engine creation fails for other reasons
+    Production-safe: logs warnings instead of raising exceptions for invalid config.
+    This allows health checks to run even with invalid DATABASE_URL.
+    
+    **IMPORTANT BEHAVIOR CHANGE**: This function now returns None on failure
+    instead of raising exceptions. Callers must check for None return value:
+    
+        engine = get_engine()
+        if engine is None:
+            # Handle invalid database configuration
+            return error_response()
+    
+    Returns:
+        AsyncEngine | None: Database engine if successful, None if DATABASE_URL is invalid
     """
     global _engine
     
     if _engine is None:
         try:
             db_url = get_database_url()
+            
+            # If validation failed, get_database_url() returns None
+            if not db_url:
+                logger.warning("Cannot create database engine: invalid or missing DATABASE_URL")
+                return None
             
             # Get configurable timeout values from environment
             # CRITICAL: 45s timeout for Railway cold starts and cloud database latency
@@ -190,35 +209,31 @@ def get_engine():
                 },
                 echo=False,                    # Disable SQL logging in production
             )
-        except ValueError:
-            # Re-raise ValueError from get_database_url() with helpful message
-            raise
         except Exception as e:
-            # Catch asyncpg errors and provide helpful context
+            # Catch asyncpg errors and log warnings instead of raising
             error_msg = str(e).lower()
             
             # Check for the specific "pattern" error from asyncpg
             if "did not match" in error_msg and "pattern" in error_msg:
-                raise ValueError(
+                logger.warning(
                     f"Invalid DATABASE_URL format detected by asyncpg driver. "
                     f"The connection string doesn't match the expected PostgreSQL format. "
                     f"Please check your DATABASE_URL environment variable. "
                     f"See SECURITY.md for proper format."
-                ) from e
+                )
+                return None
             
             # Check for other common asyncpg errors
             if "invalid" in error_msg and "dsn" in error_msg:
-                raise ValueError(
+                logger.warning(
                     f"Invalid PostgreSQL DSN (Data Source Name) in DATABASE_URL. "
                     f"Please check your environment variables. See SECURITY.md for proper format."
-                ) from e
+                )
+                return None
             
-            # For other errors, provide context but preserve original error
-            logger.error(f"Failed to create database engine: {e}")
-            raise Exception(
-                f"Database engine creation failed: {e}. "
-                f"Please check your DATABASE_URL configuration."
-            ) from e
+            # For other errors, log warning but don't raise
+            logger.warning(f"Failed to create database engine: {e}. Please check your DATABASE_URL configuration.")
+            return None
     
     return _engine
 
