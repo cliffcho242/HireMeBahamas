@@ -16,7 +16,23 @@ export const dynamic = "force-dynamic";
  * 
  * Schedule: every 5 minutes (configured in vercel.json)
  */
-export async function GET() {
+export async function GET(request: Request) {
+  // Check for CRON_SECRET authorization
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const authHeader = request.headers.get("Authorization");
+    const expectedAuth = `Bearer ${cronSecret}`;
+    if (authHeader !== expectedAuth) {
+      return NextResponse.json(
+        {
+          error: "Unauthorized",
+          message: "Invalid or missing Authorization header",
+        },
+        { status: 401 }
+      );
+    }
+  }
+
   const startTime = Date.now();
   const results: Record<string, unknown> = {};
 

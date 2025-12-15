@@ -15,7 +15,23 @@ export const dynamic = "force-dynamic";
  * - Latency testing from different regions
  * - Edge network verification
  */
-export async function GET() {
+export async function GET(request: Request) {
+  // Check for CRON_SECRET authorization when called from cron
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const authHeader = request.headers.get("Authorization");
+    const expectedAuth = `Bearer ${cronSecret}`;
+    if (authHeader !== expectedAuth) {
+      return NextResponse.json(
+        {
+          error: "Unauthorized",
+          message: "Invalid or missing Authorization header",
+        },
+        { status: 401 }
+      );
+    }
+  }
+
   const startTime = Date.now();
 
   try {
