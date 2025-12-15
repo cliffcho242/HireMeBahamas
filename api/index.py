@@ -620,7 +620,7 @@ async def health():
     
     ✅ CRITICAL: Does NOT touch the database to ensure instant response.
     """
-    return {"ok": True}
+    return {"status": "ok"}
 
 @app.get("/health/ping", include_in_schema=False)
 def health_ping():
