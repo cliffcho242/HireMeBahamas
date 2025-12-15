@@ -42,7 +42,7 @@ def get_database_url():
     special characters in username/password. No manual decoding is needed.
     
     Returns:
-        str: Database URL if valid, empty string if invalid (with warnings logged)
+        str | None: Database URL if valid, None if invalid (with warnings logged)
     """
     db_url = os.getenv("DATABASE_URL", "")
     
@@ -51,7 +51,7 @@ def get_database_url():
     
     if not db_url:
         logger.warning("DATABASE_URL environment variable not set")
-        return ""
+        return None
     
     # Validate basic URL structure before processing
     # PostgreSQL connection string should match pattern: postgresql://[user[:password]@]host[:port][/dbname][?param=value]
@@ -61,7 +61,7 @@ def get_database_url():
             f"Invalid DATABASE_URL format. Must start with 'postgres://' or 'postgresql://'. "
             f"Example: postgresql://user:password@host:5432/dbname"
         )
-        return ""
+        return None
     
     # Check for common mistakes that cause "pattern" errors
     # 1. Missing host (e.g., "postgresql://:password@/dbname")
@@ -77,7 +77,7 @@ def get_database_url():
                 f"Invalid DATABASE_URL: missing host/port information. "
                 f"Please check your environment variables. See SECURITY.md for proper format."
             )
-            return ""
+            return None
         
         # Check if hostname is present (netloc could be just ":port" which is invalid)
         if test_parse.netloc.startswith(':') or '@:' in test_parse.netloc:
@@ -85,7 +85,7 @@ def get_database_url():
                 f"Invalid DATABASE_URL: missing hostname. "
                 f"Please check your environment variables. See SECURITY.md for proper format."
             )
-            return ""
+            return None
         
         # Validate hostname is not a placeholder value
         # Common placeholder values that should not be used in production
@@ -117,7 +117,7 @@ def get_database_url():
             f"Invalid DATABASE_URL format: {str(e)}. "
             f"Please check your environment variables. See SECURITY.md for proper format."
         )
-        return ""
+        return None
     
     # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
     # This handles cases where the 'p' is missing from "postgresql"
@@ -165,8 +165,16 @@ def get_engine():
     Production-safe: logs warnings instead of raising exceptions for invalid config.
     This allows health checks to run even with invalid DATABASE_URL.
     
+    **IMPORTANT BEHAVIOR CHANGE**: This function now returns None on failure
+    instead of raising exceptions. Callers must check for None return value:
+    
+        engine = get_engine()
+        if engine is None:
+            # Handle invalid database configuration
+            return error_response()
+    
     Returns:
-        Engine if successful, None if DATABASE_URL is invalid
+        AsyncEngine | None: Database engine if successful, None if DATABASE_URL is invalid
     """
     global _engine
     
@@ -174,7 +182,7 @@ def get_engine():
         try:
             db_url = get_database_url()
             
-            # If validation failed, get_database_url() returns empty string
+            # If validation failed, get_database_url() returns None
             if not db_url:
                 logger.warning("Cannot create database engine: invalid or missing DATABASE_URL")
                 return None

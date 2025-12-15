@@ -72,6 +72,10 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
 
+# Placeholder value for invalid database configuration
+# This allows the app to start for health checks even with invalid config
+DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@localhost:5432/placeholder"
+
 # =============================================================================
 # DATABASE URL CONFIGURATION
 # =============================================================================
@@ -150,7 +154,7 @@ if not DATABASE_URL:
             f"Missing: {', '.join(missing_vars)}"
         )
         # Use placeholder to prevent crashes, connections will fail gracefully
-        DATABASE_URL = "postgresql+asyncpg://placeholder:placeholder@localhost:5432/placeholder"
+        DATABASE_URL = DB_PLACEHOLDER_URL
     else:
         # Use local development default only in development mode
         DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"

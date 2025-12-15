@@ -919,6 +919,10 @@ if not USE_POSTGRESQL:
 _db_initialized = False
 _db_init_lock = threading.Lock()
 
+# Placeholder value for invalid database configuration
+# This allows the app to start for health checks even with invalid config
+DB_PLACEHOLDER_VALUE = "placeholder"
+
 # Error message length limit for health checks
 MAX_ERROR_MESSAGE_LENGTH = 500
 
@@ -943,15 +947,18 @@ if USE_POSTGRESQL:
         database = parsed.path[1:] if parsed.path and len(parsed.path) > 1 else None
         if not database:
             # Production-safe: log warning instead of raising exception
-            print("❌ Database name is missing from DATABASE_URL")
-            print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
-            logging.warning("Database name is missing from DATABASE_URL")
-            database = "placeholder"  # Use placeholder to prevent crash
+            logging.warning(
+                f"Database name is missing from DATABASE_URL. "
+                f"Format should be: {DATABASE_URL_FORMAT}"
+            )
+            database = DB_PLACEHOLDER_VALUE  # Use placeholder to prevent crash
     except (ValueError, IndexError) as e:
-        print(f"❌ Error parsing DATABASE_URL: {e}")
-        print(f"DATABASE_URL format should be: {DATABASE_URL_FORMAT}")
-        logging.warning(f"Error parsing DATABASE_URL: {e}")
-        database = "placeholder"  # Use placeholder to prevent crash
+        # Production-safe: log warning instead of raising exception
+        logging.warning(
+            f"Error parsing DATABASE_URL: {e}. "
+            f"Format should be: {DATABASE_URL_FORMAT}"
+        )
+        database = DB_PLACEHOLDER_VALUE  # Use placeholder to prevent crash
 
     # Parse query string for SSL mode and other options
     query_params = parse_qs(parsed.query)
