@@ -3,9 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import './SocialFeed.css';
 
+// 🔍 TEMP DEBUG: Check if API URL is properly configured
+console.log("API URL:", import.meta.env.VITE_API_URL);
+
+// ✅ Correct API URL pattern: Use environment variable or same-origin
+const API = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+
 // Enhanced API service with AI features
 const socialAPI = {
-  baseURL: '/api',
+  baseURL: API,
   
   async request(endpoint: string, options: any = {}) {
     const token = localStorage.getItem('auth_token');

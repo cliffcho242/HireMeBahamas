@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+// 🔍 TEMP DEBUG: Check if API URL is properly configured
+console.log("API URL:", import.meta.env.VITE_API_URL);
+
 // Use environment variable or fall back to same-origin for serverless deployments
 const API_BASE_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
