@@ -5,6 +5,7 @@
 # =============================================================================
 import os
 import logging
+import asyncio
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
@@ -210,7 +211,6 @@ async def startup():
     
     # Warm cache in background
     if warm_cache is not None:
-        import asyncio
         asyncio.create_task(warm_cache())
     
     logger.info("✅ API READY | Docs: /docs | Health: /health | Ready: /ready")
