@@ -60,12 +60,12 @@ def health():
 def health_ping():
     """Ultra-fast health ping endpoint
     
-    ❌ No DB access
-    ❌ No external calls
-    ❌ No disk access
+    🚫 NO database queries
+    🚫 NO external service calls
+    🚫 NO authentication checks
     Target latency: < 30ms
     """
-    return jsonify({"status": "ok"})
+    return jsonify({"status": "ok"}), 200
 
 
 @app.route("/")
