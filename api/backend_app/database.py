@@ -31,6 +31,7 @@ import os
 import logging
 import ssl
 import sys
+import threading
 from typing import Optional
 from urllib.parse import urlparse, quote_plus, urlunparse
 
@@ -323,6 +324,7 @@ def _get_ssl_context() -> ssl.SSLContext:
 
 # Global engine instance (initialized lazily on first use)
 _engine = None
+_engine_lock = threading.Lock()
 
 def get_engine():
     """Get or create database engine (lazy initialization for serverless).
@@ -331,52 +333,59 @@ def get_engine():
     This prevents connection issues on Vercel/Render where connections
     at module import time can cause failures.
     
+    Thread-safe: Uses a lock to ensure only one engine is created even
+    when accessed from multiple threads simultaneously.
+    
     Returns:
         AsyncEngine: Database engine instance
     """
     global _engine
     
+    # Double-checked locking pattern for thread safety
     if _engine is None:
-        _engine = create_async_engine(
-            DATABASE_URL,
-            # Pool configuration (CRITICAL for serverless + SSL EOF fix)
-            pool_size=POOL_SIZE,
-            max_overflow=MAX_OVERFLOW,
-            pool_pre_ping=True,  # Validate connections before use (detects stale connections)
-            pool_recycle=POOL_RECYCLE,  # Recycle connections (default: 300s for serverless)
-            pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
-            
-            # Echo SQL for debugging (disabled in production)
-            echo=os.getenv("DB_ECHO", "false").lower() == "true",
-            
-            # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
-            connect_args={
-                # Connection timeout (45s for Railway cold starts)
-                "timeout": CONNECT_TIMEOUT,
-                
-                # Query timeout (30s per query)
-                "command_timeout": COMMAND_TIMEOUT,
-                
-                # PostgreSQL server settings
-                "server_settings": {
-                    # CRITICAL: Disable JIT to prevent 60s+ first-query delays
-                    "jit": "off",
-                    # Statement timeout in milliseconds
-                    "statement_timeout": str(STATEMENT_TIMEOUT_MS),
-                    # Application name for pg_stat_activity
-                    "application_name": "hiremebahamas",
-                },
-                
-                # SSL configuration - THE MASTERMIND FIX
-                # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
-                # Uses TLS 1.3 only + no cert verification for Railway compatibility
-                "ssl": _get_ssl_context(),
-            }
-        )
-        logger.info(
-            f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
-            f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
-        )
+        with _engine_lock:
+            # Check again inside the lock in case another thread created it
+            if _engine is None:
+                _engine = create_async_engine(
+                    DATABASE_URL,
+                    # Pool configuration (CRITICAL for serverless + SSL EOF fix)
+                    pool_size=POOL_SIZE,
+                    max_overflow=MAX_OVERFLOW,
+                    pool_pre_ping=True,  # Validate connections before use (detects stale connections)
+                    pool_recycle=POOL_RECYCLE,  # Recycle connections (default: 300s for serverless)
+                    pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
+                    
+                    # Echo SQL for debugging (disabled in production)
+                    echo=os.getenv("DB_ECHO", "false").lower() == "true",
+                    
+                    # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
+                    connect_args={
+                        # Connection timeout (45s for Railway cold starts)
+                        "timeout": CONNECT_TIMEOUT,
+                        
+                        # Query timeout (30s per query)
+                        "command_timeout": COMMAND_TIMEOUT,
+                        
+                        # PostgreSQL server settings
+                        "server_settings": {
+                            # CRITICAL: Disable JIT to prevent 60s+ first-query delays
+                            "jit": "off",
+                            # Statement timeout in milliseconds
+                            "statement_timeout": str(STATEMENT_TIMEOUT_MS),
+                            # Application name for pg_stat_activity
+                            "application_name": "hiremebahamas",
+                        },
+                        
+                        # SSL configuration - THE MASTERMIND FIX
+                        # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
+                        # Uses TLS 1.3 only + no cert verification for Railway compatibility
+                        "ssl": _get_ssl_context(),
+                    }
+                )
+                logger.info(
+                    f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
+                    f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
+                )
     
     return _engine
 
