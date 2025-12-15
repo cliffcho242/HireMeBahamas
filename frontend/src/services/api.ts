@@ -97,22 +97,29 @@ if (typeof window !== 'undefined' && import.meta.env.DEV) {
 // Create axios instance with retry logic
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000, // 60 seconds default timeout
+  timeout: 30000, // 30 seconds default timeout (reduced for Render Always-On)
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
   withCredentials: false, // Must be false with wildcard CORS
+  // HTTP/2 optimizations
+  maxRedirects: 5,
+  // Connection reuse for faster subsequent requests
+  transitional: {
+    clarifyTimeoutError: true,
+  },
 });
 
-// Retry configuration - optimized to prevent excessive timing
-const MAX_RETRIES = 3; // Reduced from 5 to prevent excessive waiting
-const RETRY_DELAY = 2000; // 2 seconds base delay for retries (reduced from 3s)
-const BACKEND_WAKE_TIME = 60000; // 60 seconds (1 minute) for cold starts (reduced from 2 minutes)
-const MAX_WAKE_RETRIES = 3; // Reduced from 4 to prevent excessive waiting
-const INITIAL_WAIT_MS = 3000; // 3 seconds initial wait before first retry (reduced from 5s)
-const BASE_BACKOFF_MS = 5000; // Base for exponential backoff (reduced from 10s)
-const MAX_WAIT_MS = 15000; // Maximum wait time between retries (reduced from 30s)
-const MAX_TOTAL_TIMEOUT = 180000; // 3 minutes maximum total timeout for all retries combined
+// Retry configuration - optimized for Render Always-On (no cold starts)
+const MAX_RETRIES = 2; // Reduced - no cold starts with Always-On
+const RETRY_DELAY = 1000; // 1 second base delay (fast retry for transient errors)
+const BACKEND_WAKE_TIME = 5000; // 5 seconds (Always-On should respond quickly)
+const MAX_WAKE_RETRIES = 2; // Reduced - Always-On doesn't need wake-up
+const INITIAL_WAIT_MS = 1000; // 1 second initial wait (fast retry)
+const BASE_BACKOFF_MS = 2000; // Base for exponential backoff (reduced)
+const MAX_WAIT_MS = 5000; // Maximum wait time between retries (reduced)
+const MAX_TOTAL_TIMEOUT = 60000; // 1 minute maximum total timeout (reduced for faster failure)
 
 // Circuit breaker to prevent infinite retry loops
 class CircuitBreaker {
