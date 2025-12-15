@@ -623,7 +623,7 @@ async def health():
     return {"ok": True}
 
 @app.get("/health/ping", include_in_schema=False)
-async def health_ping():
+def health_ping():
     """Ultra-fast health ping endpoint
     
     ❌ No DB access
