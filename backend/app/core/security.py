@@ -83,7 +83,6 @@ def prewarm_bcrypt() -> None:
     
     try:
         # Perform a dummy hash to initialize bcrypt internals
-        # Use a short password within bcrypt's 72-byte limit
         _ = pwd_context.hash("prewarm")
         _bcrypt_warmed = True
         logger.info(f"Bcrypt pre-warmed with {BCRYPT_ROUNDS} rounds")
