@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   
   // Ensure CRON_SECRET is configured
   if (!cronSecret) {
-    console.error("CRON_SECRET environment variable is not set");
+    console.error("Required environment configuration is missing");
     return NextResponse.json(
       { error: "Server configuration error" },
       { status: 500 }

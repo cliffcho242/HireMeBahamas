@@ -37,7 +37,11 @@ The endpoint is protected with a secret to prevent unauthorized access.
 1. In your Vercel project dashboard, go to **Settings** → **Environment Variables**
 2. Add a new environment variable:
    - **Name:** `CRON_SECRET`
-   - **Value:** A secure random string (e.g., generated with `openssl rand -hex 32`)
+   - **Value:** A secure random string. Generate one using:
+     - OpenSSL: `openssl rand -hex 32`
+     - Node.js: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+     - Python: `python -c "import secrets; print(secrets.token_hex(32))"`
+     - Or use a secure online generator like [1Password](https://1password.com/password-generator/)
    - **Environment:** All (Production, Preview, Development)
 
 3. Redeploy your application for the changes to take effect
@@ -127,8 +131,15 @@ You can monitor cron job executions in:
 - Redeploy after adding the environment variable
 
 ### Function timeout
-- The current timeout is 30 seconds (configured in `vercel.json`)
-- If operations take longer, optimize queries or increase the limit
+- The default timeout for serverless functions on Vercel is 10 seconds (Hobby plan) or up to 60 seconds (Pro plan)
+- If operations take longer, optimize queries or add a `maxDuration` configuration in `vercel.json`:
+  ```json
+  "functions": {
+    "app/api/cron/route.ts": {
+      "maxDuration": 30
+    }
+  }
+  ```
 
 ## Additional Resources
 
