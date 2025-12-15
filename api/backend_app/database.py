@@ -9,7 +9,7 @@
 # 2. SSLContext + CERT_NONE - proper asyncpg SSL configuration
 # 3. pool_recycle=120 - aggressive recycling before Railway drops connections
 # 4. pool_pre_ping=True - validate connections before use
-# 5. connect_timeout=45 - handle Railway cold starts
+# 5. connect_timeout=5 - handle Railway cold starts
 #
 # DATABASE_URL FORMAT (copy-paste):
 # postgresql+asyncpg://user:password@host:5432/database?sslmode=require
@@ -258,7 +258,7 @@ POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (
 # CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RAILWAY
 # =============================================================================
 # These timeouts prevent the dreaded "Connection timed out" error
-CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "45"))  # 45s for Railway cold starts
+CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))  # 5s for Railway cold starts
 COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
 STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
 
@@ -348,7 +348,7 @@ def _get_ssl_context() -> ssl.SSLContext:
 # 2. pool_pre_ping=True - validates connections before use (detects dead connections)
 # 3. pool_recycle=300 - recycles connections (serverless-friendly)
 # 4. JIT=off - prevents first-query compilation delays
-# 5. connect_timeout=45 - allows Railway cold starts
+# 5. connect_timeout=5 - allows Railway cold starts
 #
 # COPY-PASTE ENV VARS FOR RAILWAY/RENDER/VERCEL:
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
@@ -407,7 +407,7 @@ def get_engine():
                         
                         # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
                         connect_args={
-                            # Connection timeout (45s for Railway cold starts)
+                            # Connection timeout (5s for Railway cold starts)
                             "timeout": CONNECT_TIMEOUT,
                             
                             # Query timeout (30s per query)
