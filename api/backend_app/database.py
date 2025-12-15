@@ -74,7 +74,8 @@ logger = logging.getLogger(__name__)
 
 # Placeholder value for invalid database configuration
 # This allows the app to start for health checks even with invalid config
-DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@localhost:5432/placeholder"
+# IMPORTANT: Uses a non-routable address (not localhost) to prevent accidental connections
+DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@invalid.local:5432/placeholder"
 
 # =============================================================================
 # DATABASE URL CONFIGURATION

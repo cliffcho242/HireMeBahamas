@@ -1,7 +1,16 @@
 import logging
+import os
+import sys
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# Add backend_app to path for imports
+backend_app_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_app_dir not in sys.path:
+    sys.path.insert(0, backend_app_dir)
+
+from core.environment import get_cors_origins
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -14,10 +23,13 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Configure CORS
+# Configure CORS - exclude localhost in production
+# Uses shared environment utility for consistent configuration
+_allowed_origins = get_cors_origins()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],

@@ -11,7 +11,10 @@ Cost: Free on Vercel Hobby tier (up to 2 cron jobs)
 This endpoint:
 1. Confirms the API is responsive
 2. Reports execution time for monitoring
-3. Can be extended to ping database or other services
+
+IMPORTANT: This endpoint MUST NOT ping the database or any external services.
+Background database pings break serverless environments and cause connection pool exhaustion.
+Health checks in cron jobs should only verify the function is responsive, not check dependencies.
 """
 import json
 import os

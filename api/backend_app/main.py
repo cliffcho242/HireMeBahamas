@@ -228,6 +228,7 @@ from app.core.security import prewarm_bcrypt_async
 from app.core.redis_cache import redis_cache, warm_cache
 from app.core.db_health import check_database_health, get_database_stats
 from app.core.timeout_middleware import add_timeout_middleware
+from app.core.environment import get_cors_origins
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -284,17 +285,13 @@ app.openapi_url = "/openapi.json"
 add_timeout_middleware(app, timeout=60)
 
 # Configure CORS - Allow development and production origins
+# In production, localhost URLs are excluded to prevent misconfiguration
+# Uses shared environment utility for consistent configuration
+_allowed_origins = get_cors_origins()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",  # Vite default
-        "http://127.0.0.1:5173",
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-        "https://*.vercel.app",  # Vercel preview deployments
-    ],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
@@ -757,16 +754,10 @@ else:
 
 # Initialize Socket.IO for real-time messaging (if available)
 if HAS_SOCKETIO:
+    # Reuse CORS origins from middleware configuration (excludes localhost in production)
     sio = socketio.AsyncServer(
         async_mode='asgi',
-        cors_allowed_origins=[
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "https://hiremebahamas.com",
-            "https://www.hiremebahamas.com",
-        ]
+        cors_allowed_origins=_allowed_origins
     )
 
     # Create Socket.IO ASGI app
