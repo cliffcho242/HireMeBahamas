@@ -22,8 +22,36 @@ export async function GET(request: Request) {
     const authHeader = request.headers.get("Authorization") || "";
     const expectedAuth = `Bearer ${cronSecret}`;
     
-    // Simple comparison for edge runtime (crypto module not available in edge)
-    if (authHeader !== expectedAuth) {
+    // Timing-safe comparison using Web Crypto API (edge runtime compatible)
+    const encoder = new TextEncoder();
+    const authKey = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(authHeader),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const expectedKey = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(expectedAuth),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    
+    // Compare using HMAC signatures (timing-safe)
+    const authSignature = await crypto.subtle.sign("HMAC", authKey, encoder.encode("check"));
+    const expectedSignature = await crypto.subtle.sign("HMAC", expectedKey, encoder.encode("check"));
+    
+    // Convert to hex for comparison
+    const authHex = Array.from(new Uint8Array(authSignature))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    const expectedHex = Array.from(new Uint8Array(expectedSignature))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    if (authHex !== expectedHex) {
       return NextResponse.json(
         {
           error: "Unauthorized",

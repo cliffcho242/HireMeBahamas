@@ -4,8 +4,9 @@ import { kv } from "@vercel/kv";
 import { verifyAuth } from "@/lib/auth";
 import { z } from "zod";
 
-// Edge runtime for ultra-fast job listings
-export const runtime = "edge";
+// Node.js runtime for jobs (POST requires bcrypt/database operations)
+// GET requests still benefit from caching headers
+export const runtime = "nodejs";
 export const revalidate = 60; // Revalidate every 60 seconds
 
 // Job query schema
