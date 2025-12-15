@@ -449,7 +449,7 @@ async def log_requests(request: Request, call_next):
 
 
 # =============================================================================
-# LAZY DATABASE INITIALIZATION - Warm DB on /ready, NOT on startup
+# STRICT LAZY INITIALIZATION - NO DATABASE CONNECTIONS AT STARTUP
 # =============================================================================
 @app.on_event("startup")
 async def lazy_import_heavy_stuff():
@@ -458,30 +458,19 @@ async def lazy_import_heavy_stuff():
     This ensures health endpoints respond instantly during cold starts,
     while heavy database, cache, and API components are loaded after.
     
-    CRITICAL: Database initialization is LAZY - it only happens on first request
-    or when /ready is called. This prevents 502 errors during Railway cold starts.
+    ✅ STRICT LAZY PATTERN (per requirements):
+    - 🚫 NO warm-up pings at startup
+    - 🚫 NO background keepalive loops
+    - 🚫 NO engine.connect() at import time
+    - ✅ Database engine created lazily on first actual request
+    - ✅ TCP + SSL with pool_pre_ping=True and pool_recycle=300
+    
+    This prevents ALL database connections until first actual database request.
     """
-    logger.info("Starting HireMeBahamas API full initialization...")
+    logger.info("Starting HireMeBahamas API initialization (NO database connections)...")
     
     # ==========================================================================
-    # STEP 1: Test database connectivity (non-blocking)
-    # ==========================================================================
-    # We test connectivity but don't fail if DB is still cold-starting
-    try:
-        if test_db_connection is not None:
-            db_ok, db_error = await test_db_connection()
-            if db_ok:
-                logger.info("Database connection verified on startup")
-            else:
-                # Log but don't fail - DB will be initialized on first request
-                logger.warning(f"Database not ready on startup (will retry on first request): {db_error}")
-        else:
-            logger.warning("Database test function not available")
-    except Exception as e:
-        logger.warning(f"Database connection test failed (will retry on first request): {e}")
-    
-    # ==========================================================================
-    # STEP 2: Pre-warm bcrypt (non-blocking)
+    # STEP 1: Pre-warm bcrypt (non-blocking, no database)
     # ==========================================================================
     try:
         if prewarm_bcrypt_async is not None:
@@ -493,7 +482,7 @@ async def lazy_import_heavy_stuff():
         logger.warning(f"Failed to pre-warm bcrypt (non-critical): {e}")
     
     # ==========================================================================
-    # STEP 3: Initialize Redis cache (non-blocking)
+    # STEP 2: Initialize Redis cache (non-blocking, no database)
     # ==========================================================================
     try:
         if redis_cache is not None:
@@ -508,36 +497,29 @@ async def lazy_import_heavy_stuff():
         logger.warning(f"Redis connection failed (non-critical): {e}")
     
     # ==========================================================================
-    # STEP 4: Initialize database tables (with retry)
+    # STRICT LAZY INITIALIZATION: NO DATABASE OPERATIONS AT STARTUP
     # ==========================================================================
-    # This uses retry logic to handle Railway cold starts
-    # Retry configuration is controlled by environment variables:
-    # - DB_INIT_MAX_RETRIES (default: 3)
-    # - DB_INIT_RETRY_DELAY (default: 2.0 seconds)
-    try:
-        if init_db is not None:
-            success = await init_db()  # Uses env var defaults for retry config
-            if success:
-                logger.info("Database tables initialized successfully")
-            else:
-                logger.warning("Database initialization deferred to first request")
-        else:
-            logger.warning("Database init function not available")
-    except Exception as e:
-        # Log but don't crash - DB will be initialized on first request
-        logger.warning(f"Database initialization failed, will retry on first request: {e}")
+    # ✅ Database engine is created lazily by LazyEngine wrapper
+    # ✅ First connection happens on first actual database request
+    # ✅ No test_db_connection() at startup (removed)
+    # ✅ No init_db() at startup (removed)
+    # ✅ No warm_cache() background task (removed)
+    #
+    # Database initialization (creating tables) will happen automatically
+    # when first endpoint requiring database access is called.
+    # This is handled by the lazy engine wrapper and get_db() dependency.
     
-    # ==========================================================================
-    # STEP 5: Schedule cache warm-up in background
-    # ==========================================================================
-    if warm_cache is not None:
-        asyncio.create_task(warm_cache())
-    
-    logger.info("LAZY IMPORT COMPLETE — FULL APP LIVE (DB warms on /ready)")
+    logger.info("LAZY IMPORT COMPLETE — FULL APP LIVE (DB connects on first request)")
     logger.info("Health:   GET /health (instant, no DB)")
     logger.info("Liveness: GET /live (instant, no DB)")
-    logger.info("Ready:    GET /ready (checks DB connectivity)")
-    logger.info("Ready:    GET /ready/db (full DB check with session)")
+    logger.info("Ready:    GET /ready (instant, no DB)")
+    logger.info("Ready:    GET /ready/db (creates first DB connection)")
+    logger.info("")
+    logger.info("✅ STRICT LAZY PATTERN ACTIVE:")
+    logger.info("   - NO database connections at startup")
+    logger.info("   - NO warm-up pings")
+    logger.info("   - NO background keepalive loops")
+    logger.info("   - Database connects on first actual request only")
 
 
 @app.on_event("shutdown")
