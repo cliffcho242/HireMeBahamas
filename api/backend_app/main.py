@@ -82,6 +82,50 @@ if 'app' not in sys.modules:
         except ImportError:
             # Skip modules that might not be available (graceful degradation)
             pass
+    
+    # CRITICAL FIX: Alias api submodule and its children to support absolute imports
+    # This enables "from app.api import X" and "from app.api.auth import Y" patterns
+    import backend_app.api
+    sys.modules['app.api'] = backend_app.api
+    inject_typing_exports(backend_app.api)
+    
+    # Dynamically alias all api submodules to handle all "from app.api.X" imports
+    _api_modules = ['analytics', 'auth', 'debug', 'hireme', 'jobs', 'messages', 
+                    'notifications', 'posts', 'profile_pictures', 'reviews', 'upload', 'users']
+    for _module_name in _api_modules:
+        try:
+            _module = __import__(f'backend_app.api.{_module_name}', fromlist=[''])
+            sys.modules[f'app.api.{_module_name}'] = _module
+            inject_typing_exports(_module)
+        except ImportError:
+            # Skip modules that might not be available (graceful degradation)
+            pass
+    
+    # CRITICAL FIX: Alias database module to support "from app.database import X"
+    try:
+        import backend_app.database
+        sys.modules['app.database'] = backend_app.database
+        inject_typing_exports(backend_app.database)
+    except ImportError:
+        # Database module might not be available in all environments
+        pass
+    
+    # CRITICAL FIX: Alias graphql submodule to support "from app.graphql.X import Y"
+    try:
+        import backend_app.graphql
+        sys.modules['app.graphql'] = backend_app.graphql
+        inject_typing_exports(backend_app.graphql)
+        
+        # Also alias graphql.schema specifically since it's imported
+        try:
+            import backend_app.graphql.schema
+            sys.modules['app.graphql.schema'] = backend_app.graphql.schema
+            inject_typing_exports(backend_app.graphql.schema)
+        except ImportError:
+            pass
+    except ImportError:
+        # GraphQL module is optional and might not be available
+        pass
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -177,13 +221,13 @@ except ImportError:
     # Logger not available yet, will log later
 
 # Import APIs
-from .api import analytics, auth, debug, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
-from .database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
-from .core.metrics import get_metrics_response, set_app_info
-from .core.security import prewarm_bcrypt_async
-from .core.redis_cache import redis_cache, warm_cache
-from .core.db_health import check_database_health, get_database_stats
-from .core.timeout_middleware import add_timeout_middleware
+from app.api import analytics, auth, debug, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
+from app.database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
+from app.core.metrics import get_metrics_response, set_app_info
+from app.core.security import prewarm_bcrypt_async
+from app.core.redis_cache import redis_cache, warm_cache
+from app.core.db_health import check_database_health, get_database_stats
+from app.core.timeout_middleware import add_timeout_middleware
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -202,7 +246,7 @@ logger = logging.getLogger(__name__)
 HAS_GRAPHQL = False
 _graphql_router_factory = None
 try:
-    from .graphql.schema import create_graphql_router as _graphql_router_factory
+    from app.graphql.schema import create_graphql_router as _graphql_router_factory
     HAS_GRAPHQL = True
     logger.info("✅ GraphQL support enabled")
 except ImportError:
