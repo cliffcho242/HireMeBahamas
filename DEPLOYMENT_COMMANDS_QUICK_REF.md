@@ -63,19 +63,19 @@ Located at: `/Procfile` or `/backend/Procfile`
 ### ❌ WRONG: Multi-line command in dashboard
 ```
 # This will FAIL in deployment dashboards
-gunicorn app:app \
+gunicorn app.main:app \
   --bind 0.0.0.0:$PORT \
   --workers 2
 ```
 
 **Why it fails:** Backslashes and line breaks are treated as literal characters, causing "unrecognized arguments" error.
 
-### ❌ WRONG: Using `app:app` instead of `app.main:app`
+### ⚠️ NOT RECOMMENDED: Using `app:app`
 ```
 gunicorn app:app --bind 0.0.0.0:$PORT
 ```
 
-**Why it fails:** This project uses FastAPI located at `app.main:app`, not `app:app`.
+**Why not recommended:** While `app:app` technically works as a wrapper, it's ambiguous and less clear than using the direct entry points (`app.main:app` for FastAPI or `final_backend_postgresql:application` for Flask).
 
 ### ✅ CORRECT: Single-line command
 ```

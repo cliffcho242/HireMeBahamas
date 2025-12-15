@@ -6,9 +6,16 @@ This document provides the correct entry points for starting HireMeBahamas backe
 
 ## ⚠️ Critical Warnings
 
-### Never Use `app:app` for Gunicorn
+### Recommended Entry Points
 
-The pattern `gunicorn app:app` is **incorrect** for this project. Use one of the documented entry points below.
+For this project, use these **recommended** entry points:
+- **FastAPI:** `app.main:app` or `api.backend_app.main:app`
+- **Flask:** `final_backend_postgresql:application`
+
+**Note:** While `app:app` technically exists as a wrapper, it's **not recommended** because:
+- It's ambiguous (could be Flask or FastAPI)
+- Less clear than the direct entry points
+- May cause confusion in debugging
 
 ### Single-Line Commands for Deployment Dashboards
 
@@ -19,8 +26,8 @@ The pattern `gunicorn app:app` is **incorrect** for this project. Use one of the
 
 **Example of ERROR:**
 ```
-# ❌ WRONG - Will fail in deployment dashboards
-gunicorn app:app \
+# ❌ WRONG - Multi-line with backslashes will fail in deployment dashboards
+gunicorn app.main:app \
   --bind 0.0.0.0:$PORT \
   --workers 2
 ```
@@ -28,7 +35,7 @@ gunicorn app:app \
 **Correct approach:**
 ```
 # ✅ CORRECT - Single line for deployment dashboards
-gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
+gunicorn app.main:app --bind 0.0.0.0:$PORT --workers 2
 ```
 
 ## Flask Backend (Gunicorn)

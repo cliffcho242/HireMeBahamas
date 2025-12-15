@@ -7,7 +7,7 @@ Deployment fails with the error:
 ```
 ==> Build successful 🎉
 ==> Deploying...
-==> Running 'gunicorn app:app \   --bind 0.0.0.0:$PORT \   --workers 2 \   --timeout 120 \   --graceful-timeout 30 \   --log-level info.main.app'
+==> Running 'gunicorn app:app \   --bind 0.0.0.0:$PORT \   --workers 2 \   --timeout 120 \   --graceful-timeout 30 \   --log-level info'
 usage: gunicorn [OPTIONS] [APP_MODULE]
 gunicorn: error: unrecognized arguments:        
 ==> Exited with exit code 2
@@ -82,19 +82,20 @@ After updating the start command:
 
 ## Additional Issues to Check
 
-### Issue 1: Wrong App Module (`app:app` instead of `app.main:app`)
+### Issue 1: Using Non-Recommended App Module
 
-The error shows `gunicorn app:app` which is **incorrect** for this project.
+The error may show `gunicorn app:app` which, while technically valid as a wrapper, is **not recommended** for this project.
 
-**Fix:** Use the correct entry point:
-- For FastAPI: `app.main:app`
-- For Flask: `final_backend_postgresql:application`
+**Fix:** Use the recommended entry points:
+- For FastAPI: `app.main:app` (recommended)
+- For Flask: `final_backend_postgresql:application` (recommended)
+- `app:app` works but is less clear and harder to debug
 
-### Issue 2: Malformed End of Command
+### Issue 2: Command Arguments Appearing on Separate Lines
 
-The error shows `--log-level info.main.app` which looks like the command got corrupted.
+When you see the command with extra spacing or arguments on separate lines, it means backslashes are being interpreted literally.
 
-**Fix:** Ensure the command ends with `--log-level info` (no extra text)
+**Fix:** Ensure the command is a single line with no backslashes when configuring in deployment dashboards
 
 ### Issue 3: Using Gunicorn Instead of Uvicorn
 
