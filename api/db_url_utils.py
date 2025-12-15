@@ -19,6 +19,7 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
     2. Must contain a port number
     3. Must use TCP connection (no Unix sockets)
     4. Must have SSL mode configured
+    5. Must not contain whitespace (leading, trailing, or embedded)
     
     Args:
         db_url: Database connection URL to validate
@@ -33,15 +34,38 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
         - postgresql://user:pass@localhost/dbname
         - postgresql://user:pass@127.0.0.1/dbname
         
+        ❌ BAD (contains whitespace):
+        - postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname ?sslmode=require
+        - postgresql://user:pass @ep-xxxx.neon.tech:5432/dbname?sslmode=require
+        -  postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require
+        
         ✅ CORRECT (Neon example):
         postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require
-        ✔ Host present
-        ✔ Port present
+        ✔ Real hostname (ep-xxxx.us-east-1.aws.neon.tech)
+        ✔ Port present (:5432)
         ✔ TCP enforced
-        ✔ SSL required
+        ✔ SSL required (?sslmode=require)
+        ✔ No spaces
     """
     if not db_url:
         return False, "DATABASE_URL is empty or None"
+    
+    # Check 0: Must not contain whitespace
+    # Whitespace in URLs can cause parsing errors and connection failures
+    if db_url != db_url.strip():
+        return False, (
+            "DATABASE_URL contains leading or trailing whitespace. "
+            "Remove all spaces from the connection string. "
+            "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
+        )
+    
+    # Check for embedded whitespace (spaces within the URL)
+    if ' ' in db_url or '\t' in db_url or '\n' in db_url:
+        return False, (
+            "DATABASE_URL contains whitespace characters. "
+            "Remove all spaces, tabs, and newlines from the connection string. "
+            "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
+        )
     
     try:
         # Parse the URL
