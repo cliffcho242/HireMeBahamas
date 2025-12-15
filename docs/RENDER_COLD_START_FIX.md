@@ -1,8 +1,52 @@
-# Eliminating Cold Starts on Render (Production Best Practice)
+# ⚠️ DEPRECATED: This Guide Contains Unsafe Database Practices
 
-> **Last Updated:** November 2025 | **Tested with:** Render Starter/Standard plans, Gunicorn 23.0+
+> **Last Updated:** November 2025 | **Status:** DEPRECATED (December 2025)
+> 
+> ⛔ **DO NOT USE THIS GUIDE** - It recommends using `--preload` with databases, which is DANGEROUS!
+
+## ⚠️ Why This Guide is Deprecated
+
+The `--preload` flag is **NOT safe for database applications** because:
+
+1. **Database connection pools cannot be safely shared across fork()**
+   - Connections established before fork() are shared with child processes
+   - This causes connection pool corruption and deadlocks
+
+2. **Worker synchronization issues**
+   - Shared state between workers leads to race conditions
+   - Database transactions can become corrupted
+
+3. **Health check failures**
+   - If database initialization fails during preload, all workers fail
+   - No graceful degradation possible
+
+## ✅ Correct Approach (December 2025)
+
+**Use `preload_app = False` in gunicorn.conf.py:**
+- Each worker loads the app independently
+- Each worker gets its own database connections
+- Workers can initialize while health checks respond
+- Slightly slower first requests (50-200ms) but safe and reliable
+
+**Safe start command:**
+```bash
+gunicorn final_backend_postgresql:application --config gunicorn.conf.py
+```
+
+**DO NOT ADD `--preload` flag!**
+
+For the current best practices, see:
+- `start.sh` - Current safe startup script
+- `gunicorn.conf.py` - Current safe configuration
+- `RAILWAY_HEALTHCHECK_FIX_SUMMARY.md` - Why preload_app=False is critical
+
+---
+
+# Original Content (UNSAFE - FOR REFERENCE ONLY)
 
 This guide provides the **exact, battle-tested configuration** to eliminate 30-120 second cold starts on Render, even after 10+ hours of no traffic.
+
+**⚠️ WARNING: The following content recommends unsafe database practices. Do not follow these instructions!**
 
 ## The Problem
 

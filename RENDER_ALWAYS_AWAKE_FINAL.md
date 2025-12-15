@@ -54,10 +54,17 @@ while True:
 ## 3. WEB SERVICE START COMMAND
 
 ```bash
-gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
+gunicorn final_backend_postgresql:application --config gunicorn.conf.py
 ```
 
-> **Note**: The app is Flask-based. The `--preload` flag eliminates cold starts by loading the app before forking workers.
+> **Note**: The app is Flask-based with PostgreSQL database.
+> 
+> ⚠️ **CRITICAL**: Do NOT use `--preload` flag with databases! It causes:
+> - Database connection pool issues
+> - Worker synchronization problems
+> - Health check failures during initialization
+> 
+> The config file (`gunicorn.conf.py`) has `preload_app = False` for database safety.
 
 ---
 
@@ -84,9 +91,10 @@ def health_ping():
 ## 5. DEPLOYMENT CHECKLIST
 
 ### Step 1: Deploy Web Service (Already Done)
-- [x] `startCommand: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload`
+- [x] `startCommand: gunicorn final_backend_postgresql:application --config gunicorn.conf.py`
 - [x] Health routes `/health` and `/health/ping` exist
 - [x] `healthCheckPath: /health` configured
+- [x] ⚠️ NOT using `--preload` flag (database safety)
 
 ### Step 2: Deploy Background Worker
 1. Go to **Render Dashboard** → **New** → **Background Worker**

@@ -113,10 +113,11 @@ startCommand: uvicorn api.backend_app.main:app --host 0.0.0.0 --port $PORT
 ---
 
 ### 5. `render.yaml` (Render Deployment - Legacy)
-**Before:**
+**Before (UNSAFE - had --preload):**
 ```yaml
 startCommand: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
 ```
+⚠️ **The --preload flag was dangerous with databases!**
 
 **After:**
 ```yaml
@@ -126,7 +127,7 @@ startCommand: uvicorn api.backend_app.main:app --host 0.0.0.0 --port $PORT
 **Changes:**
 - Replaced gunicorn with uvicorn
 - Updated module path to FastAPI app
-- Removed preload flag
+- Removed dangerous --preload flag (critical for database safety)
 
 ---
 
