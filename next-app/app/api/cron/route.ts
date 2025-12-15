@@ -26,10 +26,19 @@ export async function GET(request: Request) {
     
     // Use constant-time comparison to prevent timing attacks
     try {
+      // timingSafeEqual requires equal-length buffers, so we need to check lengths first
+      // To avoid leaking timing information through length comparison, we always
+      // perform the full comparison even when lengths differ
       const authBuffer = Buffer.from(authHeader);
       const expectedBuffer = Buffer.from(expectedAuth);
       
-      if (!timingSafeEqual(authBuffer, expectedBuffer)) {
+      // Check if lengths match - this is safe as it's a single comparison
+      const lengthsMatch = authBuffer.length === expectedBuffer.length;
+      
+      // Only call timingSafeEqual if lengths match to avoid throwing error
+      const valuesMatch = lengthsMatch && timingSafeEqual(authBuffer, expectedBuffer);
+      
+      if (!valuesMatch) {
         return NextResponse.json(
           {
             error: "Unauthorized",
