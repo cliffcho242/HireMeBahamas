@@ -88,9 +88,8 @@ def prewarm_bcrypt() -> None:
         _bcrypt_warmed = True
         logger.info(f"Bcrypt pre-warmed with {BCRYPT_ROUNDS} rounds")
     except Exception as e:
-        # Log the error but don't fail startup
+        # Log the error but don't fail startup - pre-warming is optional
         logger.warning(f"Bcrypt pre-warm encountered an error (non-critical): {type(e).__name__}: {e}")
-        raise
 
 
 async def prewarm_bcrypt_async() -> None:
@@ -99,8 +98,9 @@ async def prewarm_bcrypt_async() -> None:
     This eliminates cold-start latency on the first login by ensuring
     bcrypt's internal state is initialized before handling real requests.
     
-    Raises:
-        Exception: If bcrypt pre-warming fails (should be caught by caller)
+    Note: This function is non-critical and will not raise exceptions.
+    If pre-warming fails, authentication will still work but the first
+    login may be slightly slower.
     """
     await anyio.to_thread.run_sync(prewarm_bcrypt)
 
