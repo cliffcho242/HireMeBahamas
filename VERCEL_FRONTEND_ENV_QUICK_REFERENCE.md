@@ -245,6 +245,6 @@ Question: Where is your backend deployed?
 
 ---
 
-**Last Updated:** December 15, 2025  
+**Last Updated:** December 15, 2024  
 **Project:** HireMeBahamas  
 **Framework:** Vite (React) - NOT Next.js
