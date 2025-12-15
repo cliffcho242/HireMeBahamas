@@ -50,9 +50,10 @@ def test_fastapi_cors_middleware():
     print(f"✅ CORS allows all headers: {allow_headers}")
     
     # Check allow_credentials
+    # NOTE: When allow_origins=["*"], allow_credentials must be False per CORS spec
     allow_credentials = cors_config.get('allow_credentials', False)
-    assert allow_credentials == True, f"Expected allow_credentials=True, got {allow_credentials}"
-    print(f"✅ CORS allows credentials: {allow_credentials}")
+    assert allow_credentials == False, f"Expected allow_credentials=False (required with wildcard origins), got {allow_credentials}"
+    print(f"✅ CORS credentials disabled (required for wildcard origins): {allow_credentials}")
     
     print("\n✅ All CORS configuration tests passed!")
 

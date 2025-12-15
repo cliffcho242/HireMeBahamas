@@ -289,11 +289,12 @@ app.openapi_url = "/openapi.json"
 add_timeout_middleware(app, timeout=60)
 
 # Configure CORS - Allow all origins for browser compatibility
-# This prevents browser from blocking cross-origin requests
+# NOTE: allow_credentials must be False when using wildcard origins per CORS spec
+# If you need credentials, specify explicit allowed origins instead
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
