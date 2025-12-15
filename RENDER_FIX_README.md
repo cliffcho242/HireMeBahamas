@@ -9,8 +9,10 @@
 ```bash
 # In Render Dashboard:
 Build Command: bash build.sh
-Start Command: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
+Start Command: gunicorn final_backend_postgresql:application --config gunicorn.conf.py
 ```
+
+⚠️ **IMPORTANT**: Do NOT use `--preload` flag with databases! It causes connection pool issues.
 
 ✅ **Status**: Fixed and tested (8/8 tests passing)
 
@@ -93,8 +95,10 @@ Should output: `✅ Passed: 8/8`
 ### 3. Configure Render (2 minutes)
 In Render Dashboard:
 - **Build Command**: `bash build.sh`
-- **Start Command**: `gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload`
+- **Start Command**: `gunicorn final_backend_postgresql:application --config gunicorn.conf.py`
 - **Environment Variables**: Set DATABASE_URL, SECRET_KEY, etc.
+
+⚠️ **Note**: Do NOT use `--preload` flag - it causes database connection issues!
 
 ### 4. Deploy (5 minutes)
 Click "Create Web Service" and watch it succeed! 🎉
