@@ -38,7 +38,8 @@ const Stories: React.FC = () => {
 
   const fetchStories = async () => {
     try {
-      const response = await axios.get('http://127.0.0.1:8008/api/stories');
+      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+      const response = await axios.get(`${apiUrl}/api/stories`);
       if (response.data.success) {
         setStories(response.data.stories);
       }
@@ -86,8 +87,9 @@ const Stories: React.FC = () => {
     const formData = new FormData();
     formData.append('file', file);
 
+    const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
     const response = await axios.post(
-      'http://127.0.0.1:8008/api/upload/story-file',
+      `${apiUrl}/api/upload/story-file`,
       formData,
       {
         headers: {
@@ -142,8 +144,9 @@ const Stories: React.FC = () => {
       }
 
       // Create story
+      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
       const response = await axios.post(
-        'http://127.0.0.1:8008/api/stories',
+        `${apiUrl}/api/stories`,
         {
           content: storyContent,
           image_path: imagePath,

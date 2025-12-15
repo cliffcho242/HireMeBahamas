@@ -122,18 +122,12 @@ export function getCurrentApiUrl(): string {
   
   // Otherwise, check if we're in production
   if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    const isProduction = hostname === 'hiremebahamas.com' || 
-                         hostname === 'www.hiremebahamas.com';
-    const isVercel = hostname.includes('.vercel.app');
-    
-    if (isProduction || isVercel) {
-      return window.location.origin;
-    }
+    // If no explicit env var is set, use same-origin (for Vercel serverless)
+    return window.location.origin;
   }
   
-  // Default for local development
-  return 'http://127.0.0.1:8000';
+  // Fallback for non-browser environments (should not be reached)
+  return 'http://localhost:8000';
 }
 
 /**

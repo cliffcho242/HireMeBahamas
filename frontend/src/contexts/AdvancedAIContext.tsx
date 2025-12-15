@@ -54,7 +54,9 @@ interface AdvancedAIProviderProps {
 
 export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
   children,
-  apiBaseUrl = 'http://127.0.0.1:8009/api/ai'
+  apiBaseUrl = import.meta.env.VITE_API_URL 
+    ? `${import.meta.env.VITE_API_URL}/api/ai`
+    : (typeof window !== 'undefined' ? `${window.location.origin}/api/ai` : '/api/ai')
 }) => {
   const [aiSystemHealth, setAISystemHealth] = useState<any>({});
   const [isAIOnline, setIsAIOnline] = useState(false);
