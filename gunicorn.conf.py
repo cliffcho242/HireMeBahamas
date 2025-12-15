@@ -19,9 +19,10 @@ bind = f"0.0.0.0:{os.environ.get('PORT', '8080')}"
 # Typical CPU allocation: Free tier: 0.1-0.5 CPU, Paid: 1+ CPU
 cpu_count = multiprocessing.cpu_count()
 
-# Workers: 1 for Free tier, 2 for Starter+, auto for Standard
+# Workers: 2 for production to prevent single-worker blocking
 # Use WEB_CONCURRENCY env var to override
-workers = int(os.environ.get("WEB_CONCURRENCY", "1"))
+# REQUIRED: Multiple workers prevent one slow request from freezing the app
+workers = int(os.environ.get("WEB_CONCURRENCY", "2"))
 
 # Worker class: gthread for I/O-bound operations (database queries)
 worker_class = "gthread"
@@ -33,9 +34,9 @@ threads = int(os.environ.get("WEB_THREADS", "4"))
 # ============================================================================
 # TIMEOUT CONFIGURATION (Critical for 502 Prevention)
 # ============================================================================
-# Worker timeout: 120s (2 minutes) - handles cold starts + slow queries
-# Cloud platforms (Railway/Render) can take 30-60s on cold start
-timeout = int(os.environ.get("GUNICORN_TIMEOUT", "120"))
+# Worker timeout: 60s - prevents long-running requests from hanging
+# REQUIRED: 60s timeout prevents blocking and improves responsiveness
+timeout = int(os.environ.get("GUNICORN_TIMEOUT", "60"))
 
 # Graceful timeout: 30s for in-flight requests during shutdown
 graceful_timeout = 30

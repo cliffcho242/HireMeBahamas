@@ -134,10 +134,11 @@ logger.info(f"Database URL: {_masked_url}")
 # =============================================================================
 # CRITICAL: pool_recycle=300 prevents connection issues by recycling connections
 # before they become stale. This is serverless-friendly and prevents SSL EOF errors.
-# MAX_OVERFLOW=3 allows burst capacity without exhausting memory
+# MAX_OVERFLOW=10 allows burst capacity without exhausting memory
+# REQUIRED: pool_size=5 and max_overflow=10 for production load handling
 # =============================================================================
-POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "2"))  # Minimum connections (2 = safe for 512MB)
-MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "3"))  # Burst capacity
+POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))  # 5 connections for production
+MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "10"))  # Burst capacity up to 15 total
 POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for connection
 POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (serverless-friendly)
 
@@ -145,7 +146,8 @@ POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (
 # CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RAILWAY
 # =============================================================================
 # These timeouts prevent the dreaded "Connection timed out" error
-CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "45"))  # 45s for Railway cold starts
+# REQUIRED: Hard 5s timeout to prevent DNS failures from hanging minutes
+CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))  # 5s hard timeout for DNS failures
 COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
 STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
 
@@ -293,8 +295,8 @@ def get_engine():
                             "jit": "off",
                             # Statement timeout in milliseconds
                             "statement_timeout": str(STATEMENT_TIMEOUT_MS),
-                            # Application name for pg_stat_activity
-                            "application_name": "hiremebahamas",
+                            # Application name for pg_stat_activity (render-app for production)
+                            "application_name": "render-app",
                         },
                         
                         # SSL configuration - THE MASTERMIND FIX

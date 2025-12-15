@@ -155,22 +155,26 @@ def get_engine():
             db_url = get_database_url()
             
             # Get configurable timeout values from environment
-            # CRITICAL: 45s timeout for Railway cold starts and cloud database latency
-            connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "45"))
+            # REQUIRED: Hard 5s timeout to prevent DNS failures from hanging minutes
+            connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
             command_timeout = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))
-            pool_size = int(os.getenv("DB_POOL_SIZE", "2"))
-            max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "3"))
+            # REQUIRED: pool_size=5 and max_overflow=10 for production load handling
+            pool_size = int(os.getenv("DB_POOL_SIZE", "5"))
+            max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "10"))
             pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "300"))
             
             _engine = create_async_engine(
                 db_url,
-                pool_size=pool_size,           # Small pool for serverless
-                max_overflow=max_overflow,     # Limited overflow
+                pool_size=pool_size,           # 5 connections for production
+                max_overflow=max_overflow,     # Burst capacity up to 15 total
                 pool_recycle=pool_recycle,     # Recycle connections every 5 minutes
                 pool_pre_ping=True,            # Validate connections before use
                 connect_args={
-                    "timeout": connect_timeout,        # Connection timeout
+                    "timeout": connect_timeout,        # 5s hard timeout for DNS failures
                     "command_timeout": command_timeout, # Query timeout
+                    "server_settings": {
+                        "application_name": "render-app",  # Application name for pg_stat_activity
+                    },
                 },
                 echo=False,                    # Disable SQL logging in production
             )
