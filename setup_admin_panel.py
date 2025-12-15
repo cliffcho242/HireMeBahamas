@@ -201,22 +201,26 @@ os.chdir("..")
 
 print("Starting admin backend test...")
 test_code = """
+import os
 import requests
 import time
+
+# Get base URL from environment or default to localhost for local dev
+BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8000")
 
 # Give backend time to start
 time.sleep(2)
 
 try:
     # Test health endpoint
-    r = requests.get('http://localhost:8000/admin/health', timeout=5)
+    r = requests.get(f'{BASE_URL}/admin/health', timeout=5)
     if r.status_code == 200:
         print('✅ Admin backend health check: OK')
     else:
         print(f'⚠️  Health check returned: {r.status_code}')
     
     # Test login
-    r = requests.post('http://localhost:8000/admin/auth/login',
+    r = requests.post(f'{BASE_URL}/admin/auth/login',
                      json={'email': 'admin@hiremebahamas.com', 'password': 'Admin123456!'},
                      timeout=5)
     if r.status_code == 200:
