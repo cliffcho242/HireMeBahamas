@@ -14,6 +14,7 @@ postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=r
 2. **✔ Port number**: `:5432` explicitly specified
 3. **✔ SSL mode**: `?sslmode=require` for encrypted connections
 4. **✔ No spaces**: No leading, trailing, or embedded whitespace
+5. **✔ No quotes**: No single or double quotes wrapping or within the URL
 
 ## Implementation Details
 
@@ -39,6 +40,15 @@ if ' ' in db_url or '\t' in db_url or '\n' in db_url:
         "Remove all spaces, tabs, and newlines from the connection string. "
         "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
     )
+
+# Check for quotes (single or double)
+if '"' in db_url or "'" in db_url:
+    return False, (
+        "DATABASE_URL contains quote characters (single or double quotes). "
+        "Remove all quotes from the connection string. "
+        "Do not wrap the URL in quotes - paste it directly without any surrounding quotes. "
+        "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
+    )
 ```
 
 **Benefits**:
@@ -50,7 +60,7 @@ if ' ' in db_url or '\t' in db_url or '\n' in db_url:
 
 **File**: `test_neon_database_url_validation.py`
 
-Created 15 test cases covering:
+Created 20 test cases covering:
 
 ✅ **Valid Scenarios**:
 - NEON format with real endpoint
@@ -68,8 +78,13 @@ Created 15 test cases covering:
 - Missing port number
 - Missing SSL mode
 - Localhost hostname
+- Double quotes wrapping URL
+- Single quotes wrapping URL
+- Quotes in username
+- Quotes in password
+- Quotes in hostname
 
-**Test Results**: 15/15 passing ✅
+**Test Results**: 20/20 passing ✅
 
 ### 3. Documentation Updates
 
@@ -252,6 +267,9 @@ If you have an existing `DATABASE_URL` in your environment variables:
 
 **Issue**: "DATABASE_URL contains whitespace characters"
 - **Solution**: Remove all spaces from the URL. Copy from dashboard instead of typing manually.
+
+**Issue**: "DATABASE_URL contains quote characters"
+- **Solution**: Remove all quotes from the URL. Do not wrap the URL in quotes - paste it directly without any surrounding quotes.
 
 **Issue**: "DATABASE_URL missing port number"
 - **Solution**: Add `:5432` after the hostname.

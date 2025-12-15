@@ -143,6 +143,46 @@ class TestNeonDatabaseURLValidation:
         assert is_valid, f"NEON URL with asyncpg driver should pass: {error}"
         assert error == ""
         print("✅ NEON with asyncpg driver: PASSED")
+    
+    def test_invalid_double_quotes_wrapping(self):
+        """Test that URL wrapped in double quotes is rejected."""
+        url = '"postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"'
+        is_valid, error = validate_database_url_structure(url)
+        assert not is_valid, "URL wrapped in double quotes should fail"
+        assert "quote" in error.lower()
+        print("✅ Double quotes wrapping rejection: PASSED")
+    
+    def test_invalid_single_quotes_wrapping(self):
+        """Test that URL wrapped in single quotes is rejected."""
+        url = "'postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require'"
+        is_valid, error = validate_database_url_structure(url)
+        assert not is_valid, "URL wrapped in single quotes should fail"
+        assert "quote" in error.lower()
+        print("✅ Single quotes wrapping rejection: PASSED")
+    
+    def test_invalid_quotes_in_username(self):
+        """Test that quotes in username portion is rejected."""
+        url = 'postgresql://"user":PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require'
+        is_valid, error = validate_database_url_structure(url)
+        assert not is_valid, "URL with quotes in username should fail"
+        assert "quote" in error.lower()
+        print("✅ Quotes in username rejection: PASSED")
+    
+    def test_invalid_quotes_in_password(self):
+        """Test that quotes in password portion is rejected."""
+        url = "postgresql://user:'PASSWORD'@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
+        is_valid, error = validate_database_url_structure(url)
+        assert not is_valid, "URL with quotes in password should fail"
+        assert "quote" in error.lower()
+        print("✅ Quotes in password rejection: PASSED")
+    
+    def test_invalid_quotes_in_hostname(self):
+        """Test that quotes in hostname portion is rejected."""
+        url = 'postgresql://user:PASSWORD@"ep-xxxx.us-east-1.aws.neon.tech":5432/dbname?sslmode=require'
+        is_valid, error = validate_database_url_structure(url)
+        assert not is_valid, "URL with quotes in hostname should fail"
+        assert "quote" in error.lower()
+        print("✅ Quotes in hostname rejection: PASSED")
 
 
 def run_all_tests():
@@ -165,6 +205,11 @@ def run_all_tests():
         ("NEON with additional params", test_class.test_neon_with_additional_params),
         ("NEON with encoded special chars", test_class.test_neon_with_special_chars_in_password),
         ("NEON with asyncpg driver", test_class.test_neon_asyncpg_driver),
+        ("Double quotes wrapping rejection", test_class.test_invalid_double_quotes_wrapping),
+        ("Single quotes wrapping rejection", test_class.test_invalid_single_quotes_wrapping),
+        ("Quotes in username rejection", test_class.test_invalid_quotes_in_username),
+        ("Quotes in password rejection", test_class.test_invalid_quotes_in_password),
+        ("Quotes in hostname rejection", test_class.test_invalid_quotes_in_hostname),
     ]
     
     passed = 0
