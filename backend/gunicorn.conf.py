@@ -37,10 +37,14 @@ workers = int(os.environ.get("WEB_CONCURRENCY", "4"))
 # Uvicorn workers provide ASGI support with excellent async/await performance
 worker_class = "uvicorn.workers.UvicornWorker"
 
-# Note: Uvicorn workers handle concurrency internally via async event loop
-# The 'threads' parameter is not used with UvicornWorker, but we keep it for documentation
-# Total capacity: 4 workers, each handling multiple concurrent requests via async
-# Expected capacity: ~16+ concurrent requests with async handling
+# Note: UvicornWorker does NOT use the threads parameter (async event loop handles concurrency)
+# This parameter is kept ONLY for compatibility when switching worker classes
+# With UvicornWorker:
+# - Each worker runs an async event loop
+# - Concurrency is handled via async/await, not threads
+# - Each worker can handle ~100+ concurrent connections
+# - Total capacity: 4 workers × ~100+ = 400+ concurrent connections
+# If you switch to 'gthread' worker class, threads parameter will be used
 threads = int(os.environ.get("WEB_THREADS", "4"))
 
 # ============================================================================

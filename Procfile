@@ -14,8 +14,8 @@
 #
 # Configuration (Step 10 - Scaling to 100K+ Users):
 # - workers=4: Optimized for 100K+ concurrent users with Redis caching
-# - threads=4: Each worker handles 4 concurrent requests
-# - Total capacity: 16 concurrent requests (4 workers × 4 threads)
+# - worker_class=uvicorn.workers.UvicornWorker: ASGI server with async support
+# - Total capacity: 4 workers × ~100+ async connections = 400+ concurrent
 # - timeout=120: Allows for database cold starts
 # - Uvicorn workers: ASGI support for FastAPI async operations
 # - Gunicorn: Production-grade worker management
@@ -23,7 +23,7 @@
 #
 # Environment variables:
 #   PORT=8000            Default port
-#   WEB_CONCURRENCY=4    Four workers for 100K+ users (16 total capacity with 4 threads)
+#   WEB_CONCURRENCY=4    Four workers for 100K+ users (400+ concurrent with async)
 #   GUNICORN_TIMEOUT=120 Worker timeout in seconds
 # 
 # Expected Performance After Step 10:
@@ -31,7 +31,7 @@
 # - Auth: <50ms
 # - Health: <30ms
 # - DB load: Very low (Redis handles most requests)
-# - Concurrent capacity: 16 requests
+# - Concurrent capacity: 400+ connections (async event loop)
 # 
 # Note: This is Facebook-level architecture with Redis caching
 # =============================================================================
