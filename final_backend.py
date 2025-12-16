@@ -174,8 +174,9 @@ else:
 def get_db_connection():
     """Get database connection (PostgreSQL on Railway, SQLite locally)"""
     if USE_POSTGRESQL:
+        # ✅ Use DATABASE_URL only (SSL is already in the URL)
         conn = psycopg2.connect(
-            DATABASE_URL, sslmode="require", cursor_factory=RealDictCursor
+            DATABASE_URL, cursor_factory=RealDictCursor
         )
         return conn
     else:

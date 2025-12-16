@@ -39,17 +39,10 @@ def connect_db():
         # PostgreSQL database
         try:
             import psycopg2
-            from urllib.parse import urlparse
 
+            # ✅ Use DATABASE_URL only (SSL is already in the URL)
             db_url = os.environ.get("DATABASE_URL")
-            result = urlparse(db_url)
-            conn = psycopg2.connect(
-                database=result.path[1:],
-                user=result.username,
-                password=result.password,
-                host=result.hostname,
-                port=result.port,
-            )
+            conn = psycopg2.connect(db_url)
             return conn
         except ImportError:
             print("Error: psycopg2 not installed. Run: pip install psycopg2-binary")
