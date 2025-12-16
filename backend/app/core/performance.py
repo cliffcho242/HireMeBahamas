@@ -134,9 +134,8 @@ async def analyze_query_performance():
     
     This helps identify slow queries that need optimization.
     """
-    engine = get_engine()
-    
     try:
+        engine = get_engine()
         async with engine.begin() as conn:
             # Get slow queries from pg_stat_statements if available
             result = await conn.execute(text("""
@@ -156,13 +155,15 @@ async def analyze_query_performance():
                 logger.info("Top 10 slowest queries:")
                 for row in rows:
                     logger.info(
-                        f"  {row[3]}ms avg - {row[1]} calls - {row[0][:100]}"
+                        "  %sms avg - %s calls - %s",
+                        row[3], row[1], row[0][:100]
                     )
             else:
                 logger.info("pg_stat_statements not available or no queries logged")
                 
     except Exception as e:
-        logger.debug(f"Could not analyze query performance: {e}")
+        logger.debug("Could not analyze query performance: %s", e)
+
 
 
 async def warmup_database_connections():
