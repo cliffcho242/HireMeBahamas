@@ -309,6 +309,7 @@ def get_engine():
                         # The "ssl": _get_ssl_context() provides the actual TLS 1.3 SSL configuration
                     }
                 )
+                logger.info("✅ Database engine initialized successfully")
                 logger.info(
                     f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
                     f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"

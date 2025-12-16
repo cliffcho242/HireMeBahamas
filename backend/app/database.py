@@ -116,8 +116,9 @@ if DATABASE_URL.startswith("postgresql://"):
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
-# Only validate if DATABASE_URL is actually configured (not placeholder)
-if DATABASE_URL and DATABASE_URL != DB_PLACEHOLDER_URL:
+# Only validate if DATABASE_URL is actually configured (not placeholder or local dev default)
+LOCAL_DEV_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+if DATABASE_URL and DATABASE_URL != DB_PLACEHOLDER_URL and DATABASE_URL != LOCAL_DEV_URL:
     parsed = urlparse(DATABASE_URL)
     missing_fields = []
     if not parsed.username:
