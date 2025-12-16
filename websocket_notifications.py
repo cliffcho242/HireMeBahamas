@@ -241,7 +241,11 @@ class WebSocketNotificationManager:
             User data dict if valid, None otherwise
         """
         try:
-            secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here-change-in-production')
+            secret_key = os.getenv('SECRET_KEY')
+            if not secret_key:
+                logger.error("SECRET_KEY environment variable not set - WebSocket authentication disabled")
+                return None
+            
             payload = jwt.decode(token, secret_key, algorithms=['HS256'])
             
             # Extract user info from token
@@ -268,6 +272,10 @@ class WebSocketNotificationManager:
         """
         Broadcast user online/offline status.
         
+        Note: This broadcasts to all clients. For better scalability with many users,
+        consider implementing selective broadcasting to only friends/followers or
+        using rate limiting for status updates.
+        
         Args:
             user_id: User ID
             status: 'online' or 'offline'
@@ -275,6 +283,8 @@ class WebSocketNotificationManager:
         if not self.socketio:
             return
         
+        # For now, broadcast to all clients
+        # TODO: Implement selective broadcasting to friends/followers for better scaling
         self.socketio.emit('user_status', {
             'user_id': user_id,
             'status': status,
@@ -379,7 +389,7 @@ class WebSocketNotificationManager:
 _notification_manager: Optional[WebSocketNotificationManager] = None
 
 
-def init_websocket_notifications(app, redis_url: Optional[str] = None) -> WebSocketNotificationManager:
+def init_websocket_notifications(app, redis_url: Optional[str] = None) -> Optional[WebSocketNotificationManager]:
     """
     Initialize WebSocket notification system with Flask app.
     
@@ -388,14 +398,15 @@ def init_websocket_notifications(app, redis_url: Optional[str] = None) -> WebSoc
         redis_url: Redis connection URL for pub/sub (optional)
         
     Returns:
-        WebSocketNotificationManager instance
+        WebSocketNotificationManager instance or None if not available
     """
     global _notification_manager
     
     if not HAS_SOCKETIO:
         logger.warning("Flask-SocketIO not available - WebSocket features disabled")
-        _notification_manager = WebSocketNotificationManager()  # Dummy instance
-        return _notification_manager
+        # Return None instead of dummy instance to make it clear WebSocket is unavailable
+        _notification_manager = None
+        return None
     
     _notification_manager = WebSocketNotificationManager(app, redis_url)
     logger.info("✅ WebSocket notification system initialized")

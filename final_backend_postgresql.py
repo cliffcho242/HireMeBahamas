@@ -10382,7 +10382,12 @@ print(f"✅ Application ready to serve requests (startup time: {_startup_time_ms
 
 # Export application for gunicorn
 # Use socketio app if WebSocket is enabled, otherwise use Flask app
-application = socketio if socketio else app
+if socketio:
+    application = socketio
+    print("✅ Exporting SocketIO application for WSGI server")
+else:
+    application = app
+    print("ℹ️  Exporting Flask application for WSGI server (WebSocket disabled)")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
