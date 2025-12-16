@@ -129,7 +129,7 @@
                 <span class="icon">🌐</span>
                 Frontend Server
             </div>
-            <div class="status-message">Running at http://localhost:3000</div>
+            <div class="status-message" id="frontend-url">Checking frontend URL...</div>
         </div>
 
         <div id="api-status" class="status-box loading">
@@ -144,17 +144,20 @@
             <span class="spinner"></span> Running diagnostics...
         </button>
 
-        <div class="info">
+        <div class="info" id="quick-links">
             <strong>Quick Links:</strong><br>
-            📱 Frontend: <a href="http://localhost:3000" target="_blank">http://localhost:3000</a><br>
-            🔧 Backend: <a href="http://127.0.0.1:8008/health" target="_blank">http://127.0.0.1:8008/health</a><br>
+            📱 Frontend: <a href="#" target="_blank" id="frontend-link">Loading...</a><br>
+            🔧 Backend: <a href="#" target="_blank" id="backend-link">Loading...</a><br>
             🔐 Login: admin@hiremebahamas.com / admin123
         </div>
     </div>
 
     <script>
-        const backendURL = 'http://127.0.0.1:8008';
-        const frontendURL = 'http://localhost:3000';
+        // Detect environment and use appropriate URLs
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const protocol = isLocalhost ? 'http:' : 'https:';
+        const backendURL = isLocalhost ? 'http://127.0.0.1:8008' : `${protocol}//${window.location.hostname}`;
+        const frontendURL = isLocalhost ? 'http://localhost:3000' : `${protocol}//${window.location.hostname}`;
 
         async function checkBackend() {
             const statusBox = document.getElementById('backend-status');
@@ -262,6 +265,13 @@
                 };
             }
         }
+
+        // Update UI with detected URLs
+        document.getElementById('frontend-url').textContent = `Running at ${frontendURL}`;
+        document.getElementById('frontend-link').href = frontendURL;
+        document.getElementById('frontend-link').textContent = frontendURL;
+        document.getElementById('backend-link').href = `${backendURL}/health`;
+        document.getElementById('backend-link').textContent = `${backendURL}/health`;
 
         // Run diagnostics on page load
         runDiagnostics();
