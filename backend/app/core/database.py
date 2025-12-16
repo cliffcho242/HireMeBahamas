@@ -443,6 +443,10 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     This function is called during startup to ensure database tables exist.
     Uses retry logic to handle Railway cold starts and transient failures.
     
+    ⚠️  PRODUCTION SAFETY: This function gracefully handles DB unavailability.
+    The app will start successfully even if table creation fails at startup.
+    Tables will be created automatically on first database request via lazy initialization.
+    
     Args:
         max_retries: Maximum number of retry attempts (default from env: 3)
         retry_delay: Delay between retries in seconds (default from env: 2.0)
@@ -478,7 +482,7 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
                 import asyncio
                 await asyncio.sleep(retry_delay * (attempt + 1))  # Exponential backoff
     
-    logger.error(f"Database initialization failed after {max_retries} attempts")
+    logger.warning(f"DB init skipped: Database initialization failed after {max_retries} attempts")
     return False
 
 
