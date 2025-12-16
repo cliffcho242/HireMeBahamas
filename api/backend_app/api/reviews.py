@@ -113,8 +113,13 @@ async def get_user_reviews(
 
 
 @router.get("/job/{job_id}", response_model=List[ReviewResponse])
-async def get_job_reviews(job_id: UUID, db: AsyncSession = Depends(get_db)):
-    """Get all reviews for a specific job"""
+async def get_job_reviews(
+    job_id: UUID, 
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=50),  # Max 50 for mobile optimization
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all reviews for a specific job (paginated, optimized for mobile)"""
     result = await db.execute(
         select(Review)
         .options(
@@ -124,6 +129,8 @@ async def get_job_reviews(job_id: UUID, db: AsyncSession = Depends(get_db)):
         )
         .where(Review.job_id == job_id)
         .order_by(desc(Review.created_at))
+        .offset(skip)
+        .limit(limit)
     )
 
     reviews = result.scalars().all()
@@ -132,9 +139,12 @@ async def get_job_reviews(job_id: UUID, db: AsyncSession = Depends(get_db)):
 
 @router.get("/my/given", response_model=List[ReviewResponse])
 async def get_my_given_reviews(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=50),  # Max 50 for mobile optimization
+    current_user: User = Depends(get_current_user), 
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get reviews given by current user"""
+    """Get reviews given by current user (paginated, optimized for mobile)"""
     result = await db.execute(
         select(Review)
         .options(
@@ -144,6 +154,8 @@ async def get_my_given_reviews(
         )
         .where(Review.reviewer_id == current_user.id)
         .order_by(desc(Review.created_at))
+        .offset(skip)
+        .limit(limit)
     )
 
     reviews = result.scalars().all()
@@ -152,9 +164,12 @@ async def get_my_given_reviews(
 
 @router.get("/my/received", response_model=List[ReviewResponse])
 async def get_my_received_reviews(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=50),  # Max 50 for mobile optimization
+    current_user: User = Depends(get_current_user), 
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get reviews received by current user"""
+    """Get reviews received by current user (paginated, optimized for mobile)"""
     result = await db.execute(
         select(Review)
         .options(
@@ -164,6 +179,8 @@ async def get_my_received_reviews(
         )
         .where(Review.reviewee_id == current_user.id)
         .order_by(desc(Review.created_at))
+        .offset(skip)
+        .limit(limit)
     )
 
     reviews = result.scalars().all()

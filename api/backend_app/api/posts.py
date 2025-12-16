@@ -107,11 +107,11 @@ async def create_post(
 @router.get("/", response_model=dict)
 async def get_posts(
     skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=50),  # Max 50 for mobile optimization
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
-    """Get posts with pagination (Facebook-style caching)
+    """Get posts with pagination (Facebook-style caching, optimized for mobile)
     
     Performance optimization:
     - 95% of requests served from Redis cache
@@ -187,11 +187,11 @@ async def get_posts(
 async def get_user_posts(
     user_id: int,
     skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=50),  # Max 50 for mobile optimization
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
-    """Get posts for a specific user with pagination
+    """Get posts for a specific user with pagination (optimized for mobile)
     
     Note: This endpoint returns posts from the specified user regardless of their account status.
     Posts remain visible even if the author's account becomes inactive (is_active=False).

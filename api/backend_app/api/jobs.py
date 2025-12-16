@@ -59,7 +59,7 @@ async def create_job(
 @router.get("/", response_model=JobListResponse)
 async def get_jobs(
     skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=50),  # Max 50 for mobile optimization
     category: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
     is_remote: Optional[bool] = Query(None),
@@ -69,7 +69,7 @@ async def get_jobs(
     status: Optional[str] = Query("active"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get jobs with filtering and pagination"""
+    """Get jobs with filtering and pagination (optimized for mobile - efficient count)"""
     query = select(Job).options(selectinload(Job.employer))
 
     # Apply filters
@@ -94,11 +94,12 @@ async def get_jobs(
     if filters:
         query = query.where(and_(*filters))
 
-    # Get total count
-    count_result = await db.execute(
-        select(Job).where(and_(*filters)) if filters else select(Job)
-    )
-    total = len(count_result.all())
+    # Get total count efficiently (use func.count instead of loading all rows)
+    count_query = select(func.count()).select_from(Job)
+    if filters:
+        count_query = count_query.where(and_(*filters))
+    count_result = await db.execute(count_query)
+    total = count_result.scalar()
 
     # Apply pagination and ordering
     query = query.order_by(desc(Job.created_at)).offset(skip).limit(limit)
@@ -319,10 +320,12 @@ async def apply_to_job(
 @router.get("/{job_id}/applications", response_model=List[JobApplicationResponse])
 async def get_job_applications(
     job_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=50),  # Max 50 for mobile optimization
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get applications for a job (job owner only)"""
+    """Get applications for a job (job owner only, paginated, optimized for mobile)"""
     # Check if job exists and user owns it
     result = await db.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
@@ -346,6 +349,8 @@ async def get_job_applications(
         )
         .where(JobApplication.job_id == job_id)
         .order_by(desc(JobApplication.created_at))
+        .offset(skip)
+        .limit(limit)
     )
     applications = result.scalars().all()
 
@@ -354,14 +359,19 @@ async def get_job_applications(
 
 @router.get("/my/posted", response_model=List[JobResponse])
 async def get_my_posted_jobs(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=50),  # Max 50 for mobile optimization
+    current_user: User = Depends(get_current_user), 
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get jobs posted by current user"""
+    """Get jobs posted by current user (paginated, optimized for mobile)"""
     result = await db.execute(
         select(Job)
         .options(selectinload(Job.employer))
         .where(Job.employer_id == current_user.id)
         .order_by(desc(Job.created_at))
+        .offset(skip)
+        .limit(limit)
     )
     jobs = result.scalars().all()
 
@@ -370,9 +380,12 @@ async def get_my_posted_jobs(
 
 @router.get("/my/applications", response_model=List[JobApplicationResponse])
 async def get_my_applications(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=50),  # Max 50 for mobile optimization
+    current_user: User = Depends(get_current_user), 
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get applications submitted by current user"""
+    """Get applications submitted by current user (paginated, optimized for mobile)"""
     result = await db.execute(
         select(JobApplication)
         .options(
@@ -381,6 +394,8 @@ async def get_my_applications(
         )
         .where(JobApplication.applicant_id == current_user.id)
         .order_by(desc(JobApplication.created_at))
+        .offset(skip)
+        .limit(limit)
     )
     applications = result.scalars().all()
 
