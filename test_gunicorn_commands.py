@@ -87,6 +87,10 @@ def check_gunicorn_args(cmd_str):
                 skip_next = True  # Skip the directory argument
             i += 1
             continue
+        # Skip Poetry command prefix
+        if part == 'poetry' and i + 1 < len(parts) and parts[i + 1] == 'run':
+            i += 2  # Skip both 'poetry' and 'run'
+            continue
         # Skip environment variable references
         if part.startswith('$') or '${' in part:
             i += 1

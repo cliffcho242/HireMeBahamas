@@ -29,11 +29,13 @@ watchPatterns = [
 ]
 
 [deploy]
-# STEP 10 - SCALING TO 100K+ USERS
-# Gunicorn with 4 workers using UvicornWorker (async event loop)
-# Capacity: 4 workers × ~100+ async connections = 400+ concurrent connections
-# Uses gunicorn.conf.py for complete configuration (workers, worker_class, timeouts)
-startCommand = "cd backend && gunicorn app.main:app --config gunicorn.conf.py"
+# STEP 18 - PRODUCTION COMMANDS (FINAL)
+# Poetry-managed Gunicorn with configuration file
+# - Poetry: Consistent dependency management across environments
+# - Gunicorn with 4 workers using UvicornWorker (async event loop)
+# - Capacity: 4 workers × ~100+ async connections = 400+ concurrent connections
+# - Configuration: All settings centralized in gunicorn.conf.py
+startCommand = "cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py"
 healthcheckPath = "/health"
 healthcheckTimeout = 180
 restartPolicyType = "ON_FAILURE"

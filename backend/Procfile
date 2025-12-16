@@ -1,47 +1,54 @@
 # =============================================================================
-# HireMeBahamas Procfile - STEP 10 SCALING TO 100K+ USERS
+# HireMeBahamas Procfile - STEP 18: Production Commands (Final)
 # =============================================================================
 # 
 # This Procfile is for Railway/Heroku deployments
 # For Render, see render.yaml in the root directory
 #
-# STEP 10 - SCALING TO 100K+ USERS:
+# STEP 18 - PRODUCTION COMMANDS (FINAL):
+# - Poetry for consistent dependency management
 # - FastAPI for maximum performance with async support
 # - Gunicorn with Uvicorn workers for production-grade worker management
+# - Configuration centralized in gunicorn.conf.py
 # - 4 workers using async event loops = 400+ concurrent connections
 # - Redis cache handles most requests (Facebook-level performance)
 # - Neon PostgreSQL with connection pooling
-# - Uses gunicorn.conf.py for complete configuration
 #
-# Configuration:
+# Benefits of Poetry + Config File Approach:
+# - All dependencies managed in pyproject.toml
+# - Deterministic builds with poetry.lock
+# - All Gunicorn settings centralized in gunicorn.conf.py
+# - Easier maintenance and updates
+# - Production-ready configuration
+#
+# Configuration (from gunicorn.conf.py):
 # - workers=4: Four workers for 100K+ concurrent users
-# - worker_class=uvicorn.workers.UvicornWorker: ASGI server with async support
-# - Total capacity: 4 workers × ~100+ async connections = 400+ concurrent
-# - FastAPI: Built-in async support, prevents blocking
-# - Gunicorn: Production worker management with graceful restarts
-# - Redis: In-memory caching reduces DB load significantly
+# - worker_class=uvicorn.workers.UvicornWorker: ASGI async support
+# - timeout=60: Fast responses on always-on service
+# - preload_app=False: Safe for database applications
+# - Total capacity: 400+ concurrent connections (4 workers × async event loop)
 #
 # Environment variables (set in platform dashboard):
 #   PORT=8000                 Default port
-#   WEB_CONCURRENCY=4         Number of workers (default: 4)
+#   WEB_CONCURRENCY=4         Override worker count (optional)
 #   DATABASE_URL=postgresql://...  Neon PostgreSQL connection string
 #   SECRET_KEY=...            Generated secret key
 #   JWT_SECRET_KEY=...        Generated JWT secret
 #   ENVIRONMENT=production    Production mode
 #   REDIS_URL=...            Redis connection string (optional)
 # 
-# Expected Performance After Step 10:
+# Expected Performance:
 # - Feed: 20-60ms (with Redis caching)
 # - Auth: <50ms
 # - Health: <30ms
 # - DB load: Very low (Redis handles most requests)
-# - Concurrent capacity: 400+ connections (async event loop)
+# - Concurrent capacity: 400+ connections
 # - Supported users: 100K+ concurrent
 # =============================================================================
 
-# Main web process - FastAPI with Gunicorn (STEP 10 - SCALING TO 100K+ USERS)
+# Main web process - Poetry-managed Gunicorn (STEP 18)
 # Note: When using this Procfile, ensure the working directory is 'backend/'
 # Railway/Heroku should have root directory set to 'backend/' in settings
-# If root is the project root, use: cd backend && ...
+# If root is the project root, use: cd backend && poetry run gunicorn ...
 # Uses gunicorn.conf.py for complete configuration (workers, threads, timeouts, etc.)
-web: gunicorn app.main:app --config gunicorn.conf.py
+web: poetry run gunicorn app.main:app --config gunicorn.conf.py

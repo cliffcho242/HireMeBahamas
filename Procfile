@@ -1,42 +1,44 @@
 # =============================================================================
-# HireMeBahamas Procfile - ✅ CORRECT STACK (2025) - Step 7.6 Cached Traffic
+# HireMeBahamas Procfile - STEP 18: Production Commands (Final)
 # =============================================================================
 # 
-# ⚡ OPTIMIZED FOR CACHED TRAFFIC:
-# - Backend API: Render (Always-on Gunicorn service)
-# - FastAPI with Gunicorn + Redis caching for Facebook-level performance
+# ⚡ POETRY-MANAGED PRODUCTION DEPLOYMENT:
+# - Poetry: Consistent dependency management with poetry.lock
+# - Gunicorn: Production WSGI server with config file
+# - FastAPI: Modern async web framework
+# - Redis caching: Facebook-level performance
 #
-# Gunicorn with Uvicorn workers provides:
-# - Built-in async support (prevents blocking operations)
-# - Better performance under load
-# - Worker process management (graceful restarts, health checks)
-# - Modern async/await patterns via Uvicorn workers
+# Benefits of Poetry + Config File Approach (STEP 18):
+# - All dependencies managed in pyproject.toml
+# - Deterministic builds with poetry.lock
+# - All Gunicorn settings centralized in gunicorn.conf.py
+# - Easier maintenance and updates
+# - Production-ready configuration
 #
-# Configuration (Step 10 - Scaling to 100K+ Users):
+# Configuration (from gunicorn.conf.py):
 # - workers=4: Optimized for 100K+ concurrent users with Redis caching
-# - worker_class=uvicorn.workers.UvicornWorker: ASGI server with async support
-# - Total capacity: 4 workers × ~100+ async connections = 400+ concurrent
-# - timeout=120: Allows for database cold starts
-# - Uvicorn workers: ASGI support for FastAPI async operations
-# - Gunicorn: Production-grade worker management
-# - NO --preload: Safer for database applications (see gunicorn.conf.py)
+# - worker_class=uvicorn.workers.UvicornWorker: ASGI async support
+# - timeout=60: Fast responses on always-on service
+# - preload_app=False: Safe for database applications
+# - Total capacity: 400+ concurrent connections (4 workers × async event loop)
 #
-# Environment variables:
-#   PORT=8000            Default port
-#   WEB_CONCURRENCY=4    Four workers for 100K+ users (400+ concurrent with async)
-#   GUNICORN_TIMEOUT=120 Worker timeout in seconds
+# Environment variables (set in deployment platform):
+#   PORT=8000            Default port (auto-detected in gunicorn.conf.py)
+#   WEB_CONCURRENCY=4    Override worker count (optional, default in config)
+#   GUNICORN_TIMEOUT=60  Override timeout (optional, default in config)
 # 
-# Expected Performance After Step 10:
+# Expected Performance:
 # - Feed: 20-60ms (with Redis caching)
 # - Auth: <50ms
 # - Health: <30ms
 # - DB load: Very low (Redis handles most requests)
-# - Concurrent capacity: 400+ connections (async event loop)
+# - Concurrent capacity: 400+ connections
+# - Supported users: 100K+ concurrent
 # 
-# Note: This is Facebook-level architecture with Redis caching
+# Note: This is Facebook-level architecture with Poetry dependency management
 # =============================================================================
 
-web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-4} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --log-level info
+web: poetry run gunicorn app.main:app --config gunicorn.conf.py
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh
