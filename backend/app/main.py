@@ -510,7 +510,7 @@ async def startup():
     This prevents ALL database connections until first actual database request.
     """
     startup_start = time.time()
-    logger.info(f"🚀 AGGRESSIVE NON-BLOCKING STARTUP (Render Forever Fix)")
+    logger.info(f"🚀 Optimized non-blocking startup for Render deployment")
     logger.info(f"   Health endpoints ACTIVE immediately")
     logger.info(f"   Background initialization scheduled")
     
@@ -584,8 +584,7 @@ async def startup():
     # CRITICAL: Schedule background initialization as a fire-and-forget task
     # This returns IMMEDIATELY, allowing startup to complete in <5ms
     # ==========================================================================
-    loop = asyncio.get_event_loop()
-    loop.create_task(init_background())
+    asyncio.create_task(init_background())
     
     startup_duration = time.time() - startup_start
     logger.info(f"✅ Startup completed IMMEDIATELY in {startup_duration:.3f}s")
