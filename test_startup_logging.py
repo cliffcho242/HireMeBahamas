@@ -107,8 +107,8 @@ def test_log_formatting():
     # Test emoji rendering (just verify they don't cause errors)
     test_emojis = ["🚀", "📍", "💾", "🌐", "🖥️", "🏥", "🔑", "✅", "❌", "⚠️", "ℹ️"]
     for emoji in test_emojis:
-        # Just verify we can print them without errors
-        _ = f"{emoji} Test"
+        # Just verify we can format them without errors
+        test_string = f"{emoji} Test"
     print(f"  ✅ Emojis render without errors")
     
     print("\n✅ Log formatting tests passed!")

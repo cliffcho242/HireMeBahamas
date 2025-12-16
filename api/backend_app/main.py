@@ -537,6 +537,11 @@ async def lazy_import_heavy_stuff():
     
     This prevents ALL database connections until first actual database request.
     """
+    # Import environment utilities here to keep them in the lazy initialization
+    # section (only imported when app starts, not at module load time)
+    from app.core.environment import is_production, is_development
+    from urllib.parse import urlparse
+    
     logger.info("=" * 80)
     logger.info("🚀 Starting HireMeBahamas API")
     logger.info("=" * 80)
@@ -544,7 +549,6 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     # DEPLOYMENT ENVIRONMENT INFORMATION
     # ==========================================================================
-    from app.core.environment import is_production, is_development
     
     environment = os.getenv("ENVIRONMENT", "development")
     vercel_env = os.getenv("VERCEL_ENV", "not set")
@@ -561,7 +565,6 @@ async def lazy_import_heavy_stuff():
     database_url = os.getenv("DATABASE_URL", "not set")
     if database_url and database_url != "not set":
         # Parse URL to show connection info without credentials
-        from urllib.parse import urlparse
         try:
             parsed = urlparse(database_url)
             db_host = parsed.hostname or "unknown"
