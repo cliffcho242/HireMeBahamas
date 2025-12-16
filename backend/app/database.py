@@ -61,27 +61,7 @@ DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@localhost:543
 # Check if we're in production mode
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
-def _get_fallback_database_url(reason: str) -> str:
-    """Get fallback DATABASE_URL based on environment.
-    
-    Args:
-        reason: Reason for using fallback (for logging)
-        
-    Returns:
-        Fallback database URL (placeholder for production, local dev for development)
-    """
-    if ENVIRONMENT == "production":
-        # Production-safe: log warning instead of raising exception
-        # This allows the app to start for health checks and diagnostics
-        logger.warning(f"DATABASE_URL {reason}, using placeholder")
-        # Use a placeholder to prevent crashes, connections will fail gracefully
-        return DB_PLACEHOLDER_URL
-    else:
-        # Use local development default only in development mode
-        logger.warning(f"DATABASE_URL {reason}, using default local development database URL")
-        return "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
-
-# Get database URL with proper fallback
+# Get database URL
 # Priority order as per configuration requirements:
 # 1. DATABASE_URL (primary connection URL)
 # 2. POSTGRES_URL (Vercel Postgres connection)
@@ -90,60 +70,61 @@ DATABASE_URL = os.getenv('DATABASE_URL') or \
                os.getenv('POSTGRES_URL') or \
                os.getenv('DATABASE_PRIVATE_URL')
 
-# For local development only - require explicit configuration in production
+# Validate DATABASE_URL is set
 if not DATABASE_URL:
-    DATABASE_URL = _get_fallback_database_url("not set")
+    logger.error("DATABASE_URL is not set. Please set DATABASE_URL environment variable.")
+else:
+    # Strip whitespace to prevent connection errors from misconfigured environment variables
+    DATABASE_URL = DATABASE_URL.strip()
 
-# Strip whitespace to prevent connection errors from misconfigured environment variables
-DATABASE_URL = DATABASE_URL.strip()
+    # Check if DATABASE_URL is empty after stripping (whitespace-only string)
+    if not DATABASE_URL:
+        logger.error("DATABASE_URL is empty (whitespace-only). Please set a valid DATABASE_URL.")
 
-# Check if DATABASE_URL is empty after stripping (whitespace-only string)
-# If so, treat it as if it wasn't set at all
-if not DATABASE_URL:
-    DATABASE_URL = _get_fallback_database_url("is empty (whitespace-only)")
+# Only process DATABASE_URL if it is set
+if DATABASE_URL:
+    # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
+    # This handles cases where the 'p' is missing from "postgresql"
+    if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace("ostgresql", "postgresql")
+        logger.info("✓ Auto-fixed DATABASE_URL typo: 'ostgresql' → 'postgresql' (update env var to fix permanently)")
 
-# Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
-# This handles cases where the 'p' is missing from "postgresql"
-if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("ostgresql", "postgresql")
-    logger.info("✓ Auto-fixed DATABASE_URL typo: 'ostgresql' → 'postgresql' (update env var to fix permanently)")
+    # Convert sync PostgreSQL URLs to async driver format
+    if DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+        logger.info("Converted DATABASE_URL to asyncpg driver format")
 
-# Convert sync PostgreSQL URLs to async driver format
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-    logger.info("Converted DATABASE_URL to asyncpg driver format")
+    # Validate DATABASE_URL format - ensure all required fields are present
+    # Parse and validate required fields using production-safe validation
+    parsed = urlparse(DATABASE_URL)
+    missing_fields = []
+    if not parsed.username:
+        missing_fields.append("username")
+    if not parsed.password:
+        missing_fields.append("password")
+    if not parsed.hostname:
+        missing_fields.append("hostname")
+    if not parsed.port:
+        missing_fields.append("port (explicit port required, e.g., :5432)")
+    if not parsed.path or len(parsed.path) <= 1:
+        # path should be /database_name, so length > 1
+        missing_fields.append("path")
 
-# Validate DATABASE_URL format - ensure all required fields are present
-# Parse and validate required fields using production-safe validation
-parsed = urlparse(DATABASE_URL)
-missing_fields = []
-if not parsed.username:
-    missing_fields.append("username")
-if not parsed.password:
-    missing_fields.append("password")
-if not parsed.hostname:
-    missing_fields.append("hostname")
-if not parsed.port:
-    missing_fields.append("port (explicit port required, e.g., :5432)")
-if not parsed.path or len(parsed.path) <= 1:
-    # path should be /database_name, so length > 1
-    missing_fields.append("path")
+    if missing_fields:
+        # Production-safe: log warning instead of raising exception
+        # This allows the app to start for health checks and diagnostics
+        logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
-if missing_fields:
-    # Production-safe: log warning instead of raising exception
-    # This allows the app to start for health checks and diagnostics
-    logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
-
-# Additional validation for cloud deployment requirements
-if parsed.hostname:
-    hostname = parsed.hostname.lower()
-    # Reject localhost/127.0.0.1 which may cause Unix socket usage
-    if hostname in ('localhost', '127.0.0.1', '::1'):
-        logger.warning(
-            f"⚠️  DATABASE_URL uses '{parsed.hostname}' which may cause socket usage. "
-            "For cloud deployments, use a remote database hostname. "
-            "Example: ep-xxxx.us-east-1.aws.neon.tech"
-        )
+    # Additional validation for cloud deployment requirements
+    if parsed.hostname:
+        hostname = parsed.hostname.lower()
+        # Reject localhost/127.0.0.1 which may cause Unix socket usage
+        if hostname in ('localhost', '127.0.0.1', '::1'):
+            logger.warning(
+                f"⚠️  DATABASE_URL uses '{parsed.hostname}' which may cause socket usage. "
+                "For cloud deployments, use a remote database hostname. "
+                "Example: ep-xxxx.us-east-1.aws.neon.tech"
+            )
 
 # Check for SSL mode requirement
 query_params = parsed.query.lower() if parsed.query else ""

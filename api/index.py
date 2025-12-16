@@ -231,13 +231,8 @@ JWT_SECRET = (
 )
 JWT_ALGORITHM = "HS256"
 
-# Database URL with HIREME_ prefix support
-DATABASE_URL = (
-    os.getenv("HIREME_DATABASE_URL") or
-    os.getenv("DATABASE_URL") or
-    os.getenv("HIREME_POSTGRES_URL") or
-    os.getenv("POSTGRES_URL")
-)
+# Database URL - only use DATABASE_URL environment variable
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # CORS origins - Allow all origins for Vercel deployments
 # Vercel preview deployments have dynamic URLs, so we need to be permissive

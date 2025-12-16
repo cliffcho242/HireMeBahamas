@@ -24,8 +24,6 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from decouple import config
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -390,16 +388,10 @@ async def create_indexes():
     """Create all performance indexes."""
     import asyncpg
     
-    DATABASE_URL = config(
-        "DATABASE_PRIVATE_URL",
-        default=config(
-            "DATABASE_URL", 
-            default="postgresql://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
-        )
-    )
+    DATABASE_URL = os.environ.get("DATABASE_PRIVATE_URL") or os.environ.get("DATABASE_URL")
     
     # Convert async URL to sync
-    if DATABASE_URL.startswith("postgresql+asyncpg://"):
+    if DATABASE_URL and DATABASE_URL.startswith("postgresql+asyncpg://"):
         DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
     
     logger.info(f"Connecting to database...")
@@ -481,15 +473,9 @@ async def analyze_tables():
     """Run ANALYZE on tables to update statistics after creating indexes."""
     import asyncpg
     
-    DATABASE_URL = config(
-        "DATABASE_PRIVATE_URL",
-        default=config(
-            "DATABASE_URL", 
-            default="postgresql://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
-        )
-    )
+    DATABASE_URL = os.environ.get("DATABASE_PRIVATE_URL") or os.environ.get("DATABASE_URL")
     
-    if DATABASE_URL.startswith("postgresql+asyncpg://"):
+    if DATABASE_URL and DATABASE_URL.startswith("postgresql+asyncpg://"):
         DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
     
     tables = list(set(idx[0] for idx in INDEXES))

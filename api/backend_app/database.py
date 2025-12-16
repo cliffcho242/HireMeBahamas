@@ -83,75 +83,74 @@ if DATABASE_URL:
 # This prevents silent SQLite usage in production while allowing app to start
 # Check both ENV and ENVIRONMENT variables for consistency across the application
 if (ENV == "production" or ENVIRONMENT == "production") and not DATABASE_URL:
-    logger.warning(
+    logger.error(
         "DATABASE_URL is required in production. "
         "Please set DATABASE_URL environment variable with your Neon PostgreSQL connection string. "
         "Format: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require"
     )
-    # Use placeholder to prevent crashes, connections will fail gracefully
-    DATABASE_URL = DB_PLACEHOLDER_URL
 elif not DATABASE_URL:
-    # Use local development default only in development mode
-    DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
-    logger.warning("Using default local development database URL. Set DATABASE_URL for production.")
+    # No fallback in development - DATABASE_URL must be explicitly set
+    logger.error("DATABASE_URL is not set. Please set DATABASE_URL environment variable.")
 # =============================================================================
 
-# Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
-# This handles cases where the 'p' is missing from "postgresql"
-if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("ostgresql", "postgresql")
-    logger.info("✓ Auto-fixed DATABASE_URL typo: 'ostgresql' → 'postgresql' (update env var to fix permanently)")
+# Only process DATABASE_URL if it is set
+if DATABASE_URL:
+    # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
+    # This handles cases where the 'p' is missing from "postgresql"
+    if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace("ostgresql", "postgresql")
+        logger.info("✓ Auto-fixed DATABASE_URL typo: 'ostgresql' → 'postgresql' (update env var to fix permanently)")
 
-# Convert sync PostgreSQL URLs to async driver format
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-    logger.info("Converted DATABASE_URL to asyncpg driver format")
+    # Convert sync PostgreSQL URLs to async driver format
+    if DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+        logger.info("Converted DATABASE_URL to asyncpg driver format")
 
-# Strip whitespace from database name in the URL path
-# This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
-try:
-    parsed_url = urlparse(DATABASE_URL)
-    if parsed_url.path:
-        # Strip leading slash and whitespace from database name
-        db_name = parsed_url.path.lstrip('/').strip()
-        if db_name and db_name != parsed_url.path.lstrip('/'):
-            # Reconstruct URL with cleaned database name only if it was changed
-            new_path = '/' + db_name
-            DATABASE_URL = urlunparse((
-                parsed_url.scheme,
-                parsed_url.netloc,
-                new_path,
-                parsed_url.params,
-                parsed_url.query,
-                parsed_url.fragment
-            ))
-            logger.info(f"✓ Auto-stripped whitespace from database name in URL")
-except Exception as e:
-    # If URL parsing fails, log warning but continue with original URL
-    logger.warning(f"Could not parse DATABASE_URL for database name sanitization: {e}")
+    # Strip whitespace from database name in the URL path
+    # This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
+    try:
+        parsed_url = urlparse(DATABASE_URL)
+        if parsed_url.path:
+            # Strip leading slash and whitespace from database name
+            db_name = parsed_url.path.lstrip('/').strip()
+            if db_name and db_name != parsed_url.path.lstrip('/'):
+                # Reconstruct URL with cleaned database name only if it was changed
+                new_path = '/' + db_name
+                DATABASE_URL = urlunparse((
+                    parsed_url.scheme,
+                    parsed_url.netloc,
+                    new_path,
+                    parsed_url.params,
+                    parsed_url.query,
+                    parsed_url.fragment
+                ))
+                logger.info(f"✓ Auto-stripped whitespace from database name in URL")
+    except Exception as e:
+        # If URL parsing fails, log warning but continue with original URL
+        logger.warning(f"Could not parse DATABASE_URL for database name sanitization: {e}")
 
-# NOTE: SQLAlchemy's create_async_engine() automatically handles URL decoding for
-# special characters in username/password. No manual decoding is needed here.
-# For example, passwords with '@' or '%' are automatically decoded from URL-encoded form.
+    # NOTE: SQLAlchemy's create_async_engine() automatically handles URL decoding for
+    # special characters in username/password. No manual decoding is needed here.
+    # For example, passwords with '@' or '%' are automatically decoded from URL-encoded form.
 
-# Validate DATABASE_URL format - ensure all required fields are present
-# Parse and validate required fields using production-safe validation
-parsed = urlparse(DATABASE_URL)
-missing_fields = []
-if not parsed.username:
-    missing_fields.append("username")
-if not parsed.password:
-    missing_fields.append("password")
-if not parsed.hostname:
-    missing_fields.append("hostname")
-if not parsed.path or len(parsed.path) <= 1:
-    # path should be /database_name, so length > 1
-    missing_fields.append("path")
+    # Validate DATABASE_URL format - ensure all required fields are present
+    # Parse and validate required fields using production-safe validation
+    parsed = urlparse(DATABASE_URL)
+    missing_fields = []
+    if not parsed.username:
+        missing_fields.append("username")
+    if not parsed.password:
+        missing_fields.append("password")
+    if not parsed.hostname:
+        missing_fields.append("hostname")
+    if not parsed.path or len(parsed.path) <= 1:
+        # path should be /database_name, so length > 1
+        missing_fields.append("path")
 
-if missing_fields:
-    # Production-safe: log warning instead of raising exception
-    # This allows the app to start for health checks and diagnostics
-    logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+    if missing_fields:
+        # Production-safe: log warning instead of raising exception
+        # This allows the app to start for health checks and diagnostics
+        logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:
@@ -174,8 +173,9 @@ def _mask_database_url(url: str) -> str:
     except (ValueError, IndexError):
         return url
 
-_masked_url = _mask_database_url(DATABASE_URL)
-logger.info(f"Database URL: {_masked_url}")
+if DATABASE_URL:
+    _masked_url = _mask_database_url(DATABASE_URL)
+    logger.info(f"Database URL: {_masked_url}")
 
 # =============================================================================
 # POOL CONFIGURATION - OPTIMIZED FOR PRODUCTION (Dec 2025)
