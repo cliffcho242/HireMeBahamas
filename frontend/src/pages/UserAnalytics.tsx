@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { API } from '../services/api';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import {
@@ -13,8 +14,8 @@ import {
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 
-// Use environment variable or fall back to same-origin for serverless deployments
-const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
+// Use centralized API constant
+const API_URL = API;
 
 interface UserLoginStats {
   total_users: number;

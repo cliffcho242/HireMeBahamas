@@ -83,6 +83,9 @@ if (ENV_API) {
   API_BASE_URL = 'http://localhost:8000';
 }
 
+// Export API constant for use in fetch calls
+export const API = API_BASE_URL;
+
 // 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
 if (import.meta.env.DEV) {
   console.log("API URL:", import.meta.env.VITE_API_URL);

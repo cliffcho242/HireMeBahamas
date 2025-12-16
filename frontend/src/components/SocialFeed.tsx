@@ -1,15 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Social feed component with dynamic API responses
 import { useState, useEffect, useCallback } from 'react';
+import { API } from '../services/api';
 import './SocialFeed.css';
-
-// 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
-if (import.meta.env.DEV) {
-  console.log("API URL:", import.meta.env.VITE_API_URL);
-}
-
-// ✅ Correct API URL pattern: Use environment variable or same-origin
-const API = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
 // Enhanced API service with AI features
 const socialAPI = {
