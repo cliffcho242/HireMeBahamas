@@ -73,16 +73,19 @@ class Settings:
         """
         database_url = cls.DATABASE_URL
         
+        # Strip whitespace to prevent connection errors from misconfigured environment variables
+        if database_url:
+            database_url = database_url.strip()
+        
         # For local development only - require explicit configuration in production
+        # Check after stripping to handle whitespace-only strings (e.g., "   ")
         if not database_url:
             if cls.ENVIRONMENT == "production":
                 raise ValueError("DATABASE_URL must be set in production")
             else:
                 # Use local development default only in development mode
+                logger.warning("DATABASE_URL not set or empty (whitespace-only), using default local development database URL")
                 database_url = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
-        
-        # Strip whitespace to prevent connection errors
-        database_url = database_url.strip()
         
         # Fix common typos in DATABASE_URL
         if "ostgresql" in database_url and "postgresql" not in database_url:
