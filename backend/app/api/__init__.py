@@ -16,7 +16,11 @@ This design ensures that:
 """
 
 __all__ = [
+    'analytics',
     'auth',
+    'debug',
+    'feed',
+    'health',
     'hireme', 
     'jobs',
     'messages',
