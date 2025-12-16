@@ -187,6 +187,7 @@ except Exception as e:
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
 SLOW_REQUEST_THRESHOLD_MS = 3000  # 3 seconds
 MAX_ERROR_BODY_SIZE = 10240  # 10KB - prevent reading large response bodies
+STARTUP_OPERATION_TIMEOUT = 5.0  # 5 seconds - timeout for non-critical startup operations
 
 # Configure logging with more detail
 # Check if runtime logs directory exists (e.g., in CI/test environment)
@@ -510,10 +511,13 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     try:
         if prewarm_bcrypt_async is not None:
-            await prewarm_bcrypt_async()
+            # Add timeout protection to prevent worker hanging
+            await asyncio.wait_for(prewarm_bcrypt_async(), timeout=STARTUP_OPERATION_TIMEOUT)
             logger.info("Bcrypt pre-warmed successfully")
         else:
             logger.warning("Bcrypt pre-warm function not available")
+    except asyncio.TimeoutError:
+        logger.warning(f"Bcrypt pre-warm timed out after {STARTUP_OPERATION_TIMEOUT}s (non-critical)")
     except Exception as e:
         # Pre-warming is optional - if it fails, authentication will still work
         # but the first login may be slightly slower
@@ -524,13 +528,16 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     try:
         if redis_cache is not None:
-            redis_available = await redis_cache.connect()
+            # Add timeout protection to prevent worker hanging on Redis connection
+            redis_available = await asyncio.wait_for(redis_cache.connect(), timeout=STARTUP_OPERATION_TIMEOUT)
             if redis_available:
                 logger.info("Redis cache connected successfully")
             else:
                 logger.info("Using in-memory cache fallback")
         else:
             logger.info("Redis cache not available")
+    except asyncio.TimeoutError:
+        logger.warning(f"Redis connection timed out after {STARTUP_OPERATION_TIMEOUT}s (falling back to in-memory cache)")
     except Exception as e:
         logger.warning(f"Redis connection failed (non-critical): {e}")
     
@@ -539,8 +546,11 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     try:
         from .core.cache import warmup_cache
-        await warmup_cache()
+        # Add timeout protection to prevent worker hanging on cache warmup
+        await asyncio.wait_for(warmup_cache(), timeout=STARTUP_OPERATION_TIMEOUT)
         logger.info("Cache warmup completed")
+    except asyncio.TimeoutError:
+        logger.warning(f"Cache warmup timed out after {STARTUP_OPERATION_TIMEOUT}s (non-critical)")
     except Exception as e:
         logger.debug(f"Cache warmup skipped: {e}")
     
