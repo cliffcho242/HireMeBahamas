@@ -85,6 +85,10 @@ htmlcov/
 *.db-journal
 node_modules/
 
+# PROHIBITED: Railway deployment (Backend must be ONLY on Render)
+railway.toml
+railway.json
+
 # Drizzle migrations (root)
 drizzle/
 dist/
