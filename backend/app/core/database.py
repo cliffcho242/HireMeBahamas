@@ -305,13 +305,8 @@ def get_engine():
                         # The SSL context is provided via the "ssl" key in connect_args
                         "ssl": _get_ssl_context(),
                         
-                        # FORCE TCP + SSL: Guarantee TCP connection with SSL encryption
-                        # This ensures SSL is required even if DATABASE_URL or env vars are misconfigured
-                        # NOTE: Both "ssl" and "sslmode" parameters in connect_args coexist safely:
-                        # - "sslmode": "require" ensures connection fails if SSL is unavailable
-                        # - "ssl": _get_ssl_context() provides the actual TLS 1.3 SSL configuration
-                        # This dual-layer approach provides defense-in-depth security
-                        "sslmode": "require",
+                        # NOTE: sslmode=require is set in the DATABASE_URL query string, not here
+                        # The "ssl": _get_ssl_context() provides the actual TLS 1.3 SSL configuration
                     }
                 )
                 logger.info(
