@@ -141,11 +141,14 @@ try:
     from .users import routes as users_routes
     from .feed import routes as feed_routes
     from .health import router as health_router
+    # Import versioned API v1 router
+    from .api.v1 import router as v1_router
     print("✅ API routers imported successfully")
 except Exception as e:
     print(f"API router import failed: {e}")
     auth_routes = hireme_router = jobs_router = messages_router = notifications_router = None
     feed_routes = profile_pictures_router = reviews_router = upload_router = users_routes = health_router = None
+    v1_router = None
 
 try:
     from .database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
@@ -833,6 +836,11 @@ if upload_router is not None:
 # Include health check router (no prefix as it provides /health, /ready endpoints)
 if health_router is not None:
     app.include_router(health_router, tags=["health"])
+
+# Include versioned API v1 router
+if v1_router is not None:
+    app.include_router(v1_router, tags=["v1"])
+    logger.info("✅ V1 API router registered at /api/v1")
 
 # Include GraphQL router (if available)
 if HAS_GRAPHQL:
