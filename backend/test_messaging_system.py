@@ -61,10 +61,12 @@ async def test_messaging_setup():
         print("✓ All messaging setup tests passed!")
         print("=" * 60)
         print("\nChat functionality is ready to use!")
-        print("\nNext steps:")
+        print("\nNext steps for LOCAL DEVELOPMENT:")
         print("1. Start the backend server: uvicorn app.main:socket_app --reload")
         print("2. Start the frontend: cd frontend && npm run dev")
         print("3. Register/login users and test the messaging feature")
+        print("\n⚠️  NOTE: --reload is for LOCAL DEVELOPMENT ONLY")
+        print("   NEVER use --reload in production (doubles memory, causes SIGTERM)")
         
         return True
         
