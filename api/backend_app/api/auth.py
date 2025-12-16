@@ -288,13 +288,15 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     )
 
     # Try to find user by email first, then by phone number
-    # Use cached lookups for better performance
+    # NOTE: Login requires hashed_password for verification, so we query database directly
+    # (cannot use cache since hashed_password is excluded for security)
     db_query_start = time.time()
-    user = await user_cache.get_user_by_email(db, user_data.email)
+    result = await db.execute(select(User).where(User.email == user_data.email))
+    user = result.scalar_one_or_none()
     db_email_query_ms = int((time.time() - db_query_start) * 1000)
     
     logger.info(
-        f"[{request_id}] User lookup (email) completed in {db_email_query_ms}ms"
+        f"[{request_id}] Database query (email lookup) completed in {db_email_query_ms}ms"
     )
     
     # Track total DB time
@@ -309,11 +311,12 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
                 f"[{request_id}] Email not found, attempting phone number lookup"
             )
             db_query_start = time.time()
-            user = await user_cache.get_user_by_phone(db, user_data.email)
+            result = await db.execute(select(User).where(User.phone == user_data.email))
+            user = result.scalar_one_or_none()
             db_phone_query_ms = int((time.time() - db_query_start) * 1000)
             total_db_ms += db_phone_query_ms
             logger.info(
-                f"[{request_id}] User lookup (phone) completed in {db_phone_query_ms}ms"
+                f"[{request_id}] Database query (phone lookup) completed in {db_phone_query_ms}ms"
             )
 
     if not user:

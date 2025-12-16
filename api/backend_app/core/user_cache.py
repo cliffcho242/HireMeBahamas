@@ -5,12 +5,20 @@ This module provides high-performance user caching to reduce database queries
 for frequently accessed user data, particularly during authentication and
 user profile lookups.
 
+IMPORTANT: Cached user objects exclude hashed_password for security.
+This means:
+- ✓ Use cached lookups for token validation (get_current_user)
+- ✓ Use cached lookups for user profile views
+- ✗ Do NOT use cached lookups for login/password verification
+  (login must query database directly to get hashed_password)
+
 Features:
 - Cache user objects by ID for fast token validation
 - Cache user lookups by email and username
 - Automatic cache invalidation on user updates
 - Fallback to database on cache miss
 - Graceful degradation when Redis is unavailable
+- Proper datetime deserialization from ISO strings
 
 Performance targets:
 - Cached user lookup: <1ms
@@ -20,11 +28,15 @@ Performance targets:
 Usage:
     from app.core.user_cache import user_cache
     
-    # Get user by ID (for auth)
+    # Get user by ID (for token validation - RECOMMENDED)
     user = await user_cache.get_user_by_id(db, user_id)
     
-    # Get user by email (for login)
-    user = await user_cache.get_user_by_email(db, email)
+    # Get user for profile display (RECOMMENDED)
+    user = await user_cache.get_user_by_username(db, username)
+    
+    # For login with password verification (query DB directly, not cache):
+    # result = await db.execute(select(User).where(User.email == email))
+    # user = result.scalar_one_or_none()
     
     # Invalidate on update
     await user_cache.invalidate_user(user_id)
@@ -50,9 +62,16 @@ class UserCache:
     User-specific caching layer with multiple lookup strategies.
     
     Provides efficient caching for user objects accessed during:
-    - Authentication (user_id from JWT token)
-    - Login (email/phone lookup)
-    - Profile views (user_id or username lookup)
+    - Token validation (user_id from JWT token) - RECOMMENDED USE
+    - Profile views (user_id or username lookup) - RECOMMENDED USE
+    
+    NOT suitable for:
+    - Login/password verification (requires hashed_password from DB)
+    
+    Security note: Cached user objects exclude hashed_password field.
+    This prevents password hashes from being stored in cache (defense-in-depth).
+    Any authentication flow requiring password verification must query the
+    database directly to obtain the hashed_password field.
     """
     
     def __init__(self):
