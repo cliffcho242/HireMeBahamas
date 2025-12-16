@@ -3,6 +3,7 @@ import logging
 import re
 
 from app.api.auth import get_current_user
+from app.core.cache import get_cached, set_cached, invalidate_cache
 from app.database import get_db
 from app.models import Follow, Notification, NotificationType, User, Post
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -108,7 +109,19 @@ async def get_users(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get list of users with optional search"""
+    """Get list of users with optional search (cached for <100ms response)
+    
+    Performance: Cached for 3 minutes (180s) since user data doesn't change frequently.
+    Cache key includes current user to ensure personalized follow status.
+    """
+    # Build cache key including current user for personalized results
+    cache_key = f"users:list:{skip}:{limit}:{search}:{current_user.id}"
+    
+    # Try to get from cache first (sub-100ms cache hit)
+    cached_response = await get_cached(cache_key)
+    if cached_response is not None:
+        return cached_response
+    
     query = select(User).where(User.is_active == True, User.id != current_user.id)
 
     if search:
@@ -173,7 +186,12 @@ async def get_users(
             }
         )
 
-    return {"success": True, "users": users_data, "total": total}
+    response = {"success": True, "users": users_data, "total": total}
+    
+    # Cache for 3 minutes (user data doesn't change frequently)
+    await set_cached(cache_key, response, ttl=180)
+    
+    return response
 
 
 # NOTE: Static routes must be defined BEFORE dynamic routes like /{identifier}
@@ -518,6 +536,9 @@ async def follow_user(
     db.add(notification)
     
     await db.commit()
+    
+    # Invalidate users cache after follow action
+    await invalidate_cache("users:list:")
 
     return {"success": True, "message": "User followed successfully"}
 
@@ -546,6 +567,9 @@ async def unfollow_user(
 
     db.delete(follow)
     await db.commit()
+    
+    # Invalidate users cache after unfollow action
+    await invalidate_cache("users:list:")
 
     return {"success": True, "message": "User unfollowed successfully"}
 

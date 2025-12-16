@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from app.core.security import get_current_user
+from app.core.cache import get_cached, set_cached, invalidate_cache
 from app.database import get_db
 from app.models import Job, JobApplication, Notification, NotificationType, Post, User
 from app.schemas.job import (
@@ -52,6 +53,10 @@ async def create_job(
     )
     db.add(db_post)
     await db.commit()
+    
+    # Invalidate jobs cache after creating new job
+    await invalidate_cache("jobs:list:")
+    await invalidate_cache("jobs:stats:")
 
     return job_with_employer
 
@@ -69,7 +74,19 @@ async def get_jobs(
     status: Optional[str] = Query("active"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get jobs with filtering and pagination"""
+    """Get jobs with filtering and pagination (cached for <100ms response)
+    
+    Performance: Cached for 2 minutes for sub-100ms response times.
+    Cache key includes all filter parameters to ensure correct results.
+    """
+    # Build cache key from all parameters
+    cache_key = f"jobs:list:{skip}:{limit}:{category}:{location}:{is_remote}:{budget_min}:{budget_max}:{search}:{status}"
+    
+    # Try to get from cache first (sub-100ms cache hit)
+    cached_response = await get_cached(cache_key)
+    if cached_response is not None:
+        return JobListResponse(**cached_response)
+    
     query = select(Job).options(selectinload(Job.employer))
 
     # Apply filters
@@ -106,7 +123,13 @@ async def get_jobs(
     result = await db.execute(query)
     jobs = result.scalars().all()
 
-    return JobListResponse(jobs=jobs, total=total, skip=skip, limit=limit)
+    response = JobListResponse(jobs=jobs, total=total, skip=skip, limit=limit)
+    
+    # Cache for 2 minutes (balance between freshness and performance)
+    # Jobs don't change as frequently as posts, so longer TTL is acceptable
+    await set_cached(cache_key, response.model_dump(), ttl=120)
+    
+    return response
 
 
 @router.get("/{job_id}", response_model=JobResponse)
@@ -165,6 +188,10 @@ async def update_job(
         select(Job).options(selectinload(Job.employer)).where(Job.id == job_id)
     )
     updated_job = result.scalar_one()
+    
+    # Invalidate jobs cache after updating job
+    await invalidate_cache("jobs:list:")
+    await invalidate_cache("jobs:stats:")
 
     return updated_job
 
@@ -192,6 +219,10 @@ async def delete_job(
 
     await db.delete(job)
     await db.commit()
+    
+    # Invalidate jobs cache after deleting job
+    await invalidate_cache("jobs:list:")
+    await invalidate_cache("jobs:stats:")
 
     return {"message": "Job deleted successfully"}
 
@@ -389,8 +420,18 @@ async def get_my_applications(
 
 @router.get("/stats/overview")
 async def get_job_stats(db: AsyncSession = Depends(get_db)):
-    """Get job statistics overview"""
+    """Get job statistics overview (cached for <100ms response)
+    
+    Performance: Cached for 5 minutes (300s) since statistics don't need
+    to be real-time and this is a relatively expensive query.
+    """
     from datetime import datetime, timedelta
+    
+    # Try to get from cache first (sub-100ms cache hit)
+    cache_key = "jobs:stats:overview"
+    cached_response = await get_cached(cache_key)
+    if cached_response is not None:
+        return cached_response
 
     # Get total active jobs
     active_jobs_result = await db.execute(
@@ -413,7 +454,7 @@ async def get_job_stats(db: AsyncSession = Depends(get_db)):
     )
     new_this_week = new_jobs_result.scalar()
 
-    return {
+    response = {
         "success": True,
         "stats": {
             "active_jobs": active_jobs,
@@ -421,4 +462,9 @@ async def get_job_stats(db: AsyncSession = Depends(get_db)):
             "new_this_week": new_this_week,
         },
     }
+    
+    # Cache for 5 minutes (statistics don't need to be real-time)
+    await set_cached(cache_key, response, ttl=300)
+    
+    return response
 
