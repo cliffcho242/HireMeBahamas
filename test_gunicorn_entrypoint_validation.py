@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Test Script: Validate Gunicorn Entrypoint Configuration
 =========================================================
@@ -39,8 +39,6 @@ def test_file_structure():
         return False
     print(f"  ✅ PASS: {backend_main} exists")
     
-    # Check that app.py does NOT exist in backend/ (to avoid confusion)
-    # Note: It's OK if it exists as a wrapper, but main.py should be in app/
     return True
 
 
@@ -132,7 +130,7 @@ def test_poetry_usage():
         "nixpacks.toml"
     ]
     
-    all_use_poetry = True
+    all_checked = True
     
     for config_file in config_files:
         config_path = Path(config_file)
@@ -147,9 +145,9 @@ def test_poetry_usage():
                 print(f"  ✅ PASS: {config_file} uses 'poetry run gunicorn'")
             else:
                 print(f"  ⚠️  WARNING: {config_file} uses gunicorn without Poetry")
-                # This is a warning, not a failure
+                # This is a warning, not a failure - some deployments may not use Poetry
     
-    return all_use_poetry
+    return all_checked
 
 
 def main():
