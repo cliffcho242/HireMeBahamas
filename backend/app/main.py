@@ -585,20 +585,13 @@ async def startup():
     
     startup_duration = time.time() - startup_start
     logger.info(f"✅ Application startup complete in {startup_duration:.3f}s")
-    logger.info("")
-    logger.info("Expected logs (per problem statement):")
-    logger.info("  ✅ Booting worker with pid ...")
-    logger.info("  ✅ Application startup complete")
-    logger.info("")
-    logger.info("You should NOT see:")
-    logger.info("  ❌ Worker was sent SIGTERM")
-    logger.info("")
-    logger.info("Why this fix is permanent:")
-    logger.info("  • Render kills slow starters → We start instantly")
-    logger.info("  • Gunicorn defaults unsafe → We use workers=1")
-    logger.info("  • One worker = predictable memory")
-    logger.info("  • Async startup = instant health")
-    logger.info("  • DB warms after app is alive")
+    logger.info("   Background initialization running in parallel")
+    
+    # Production configuration (see PRODUCTION_CONFIG_COMPLIANCE.md):
+    # - Workers: 1 (predictable memory)
+    # - Health: Instant (no DB)
+    # - DB: Lazy (connects on first request)
+    # - Startup: Async (non-blocking)
 
 
 @app.on_event("shutdown")

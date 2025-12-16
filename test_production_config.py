@@ -72,8 +72,18 @@ def test_no_reload_flag():
         content = procfile.read_text()
         
         # Check that --reload is NOT present (excluding comments)
-        lines = [line for line in content.split('\n') if not line.strip().startswith('#')]
-        if any('--reload' in line for line in lines):
+        lines = content.split('\n')
+        has_reload = False
+        for line in lines:
+            # Skip comment lines
+            if line.strip().startswith('#'):
+                continue
+            # Check if --reload is in the actual command
+            if '--reload' in line:
+                has_reload = True
+                break
+        
+        if has_reload:
             print(f"   ❌ {procfile}: Contains --reload flag")
             return False
         else:
@@ -83,7 +93,21 @@ def test_no_reload_flag():
     render_config = Path("render.yaml")
     if render_config.exists():
         content = render_config.read_text()
-        if '--reload' in content and not content.split('--reload')[0].rstrip().endswith('#'):
+        lines = content.split('\n')
+        has_reload = False
+        for line in lines:
+            # Skip comment lines and lines with reload only in comments
+            if '#' in line:
+                # Check if --reload appears before the comment
+                before_comment = line.split('#')[0]
+                if '--reload' in before_comment:
+                    has_reload = True
+                    break
+            elif '--reload' in line:
+                has_reload = True
+                break
+        
+        if has_reload:
             print(f"   ❌ render.yaml: Contains --reload flag")
             return False
         else:
@@ -214,7 +238,20 @@ def test_async_startup():
             print(f"   ⚠️  Startup may not use background tasks")
         
         # Check that there are no blocking DB calls in main startup
-        if 'await init_db()' in startup_code and 'create_task' not in startup_code.split('await init_db()')[0]:
+        # Look for await init_db() that's NOT inside a create_task
+        has_blocking_init = False
+        if 'await init_db()' in startup_code:
+            # Check if it's wrapped in create_task
+            lines = startup_code.split('\n')
+            for i, line in enumerate(lines):
+                if 'await init_db()' in line:
+                    # Look at previous lines to see if we're inside create_task
+                    context = '\n'.join(lines[max(0, i-5):i])
+                    if 'create_task' not in context and 'async def ' not in context:
+                        has_blocking_init = True
+                        break
+        
+        if has_blocking_init:
             print(f"   ⚠️  Startup may have blocking DB initialization")
         else:
             print(f"   ✅ No blocking DB calls in startup")
