@@ -19,7 +19,7 @@ Usage:
 """
 import time
 import logging
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict, List
 from collections import defaultdict
 from threading import Lock
 
@@ -42,13 +42,11 @@ RATE_LIMIT_EXCLUDE_PATHS = [
     "/metrics",
 ]
 
-# Redis configuration
-REDIS_URL = config(
-    "REDIS_URL",
-    default=config(
-        "REDIS_PRIVATE_URL",
-        default=config("UPSTASH_REDIS_REST_URL", default="")
-    )
+# Redis configuration - check environment variables in order of precedence
+REDIS_URL = (
+    config("REDIS_URL", default="") or 
+    config("REDIS_PRIVATE_URL", default="") or 
+    config("UPSTASH_REDIS_REST_URL", default="")
 )
 
 
@@ -73,7 +71,7 @@ class RateLimiter:
         self._redis_available = False
         
         # In-memory fallback storage
-        self._memory_store: dict[str, list[float]] = defaultdict(list)
+        self._memory_store: Dict[str, List[float]] = defaultdict(list)
         self._memory_lock = Lock()
         
         # Stats for monitoring
@@ -159,8 +157,10 @@ class RateLimiter:
             # Get request timestamps for this IP
             requests = self._memory_store[ip]
             
-            # Remove expired timestamps
-            requests[:] = [ts for ts in requests if ts > window_start]
+            # Remove expired timestamps - use while loop for better performance
+            # than list comprehension for large lists
+            while requests and requests[0] <= window_start:
+                requests.pop(0)
             
             self._stats["memory_hits"] += 1
             
