@@ -1,9 +1,11 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from uuid import UUID
 import logging
 
 from app.core.security import get_current_user
 from app.core.cache import get_cached, set_cached, invalidate_cache
+from app.core.cache_headers import CacheStrategy, handle_conditional_request, apply_performance_headers
+from app.core.pagination import paginate_auto, format_paginated_response
 from app.database import get_db
 from app.models import Post, PostLike, PostComment, User
 from app.schemas.post import (
@@ -15,13 +17,78 @@ from app.schemas.post import (
     PostUser,
     CommentUser,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+async def batch_get_post_metadata(
+    post_ids: List[int],
+    db: AsyncSession,
+    current_user: Optional[User] = None
+) -> Dict[int, Dict]:
+    """
+    Batch fetch metadata for multiple posts to prevent N+1 queries.
+    
+    Returns dict mapping post_id to metadata:
+    {
+        post_id: {
+            'likes_count': int,
+            'comments_count': int,
+            'is_liked': bool
+        }
+    }
+    """
+    if not post_ids:
+        return {}
+    
+    # Batch fetch likes counts for all posts in one query
+    likes_query = (
+        select(PostLike.post_id, func.count(PostLike.id).label('count'))
+        .where(PostLike.post_id.in_(post_ids))
+        .group_by(PostLike.post_id)
+    )
+    likes_result = await db.execute(likes_query)
+    likes_counts = {row.post_id: row.count for row in likes_result}
+    
+    # Batch fetch comments counts for all posts in one query
+    comments_query = (
+        select(PostComment.post_id, func.count(PostComment.id).label('count'))
+        .where(PostComment.post_id.in_(post_ids))
+        .group_by(PostComment.post_id)
+    )
+    comments_result = await db.execute(comments_query)
+    comments_counts = {row.post_id: row.count for row in comments_result}
+    
+    # Batch fetch user likes if user is authenticated
+    user_likes = set()
+    if current_user:
+        user_likes_query = (
+            select(PostLike.post_id)
+            .where(
+                and_(
+                    PostLike.post_id.in_(post_ids),
+                    PostLike.user_id == current_user.id
+                )
+            )
+        )
+        user_likes_result = await db.execute(user_likes_query)
+        user_likes = {row.post_id for row in user_likes_result}
+    
+    # Build metadata dictionary
+    metadata = {}
+    for post_id in post_ids:
+        metadata[post_id] = {
+            'likes_count': likes_counts.get(post_id, 0),
+            'comments_count': comments_counts.get(post_id, 0),
+            'is_liked': post_id in user_likes
+        }
+    
+    return metadata
 
 
 async def enrich_post_with_metadata(
@@ -76,6 +143,30 @@ async def enrich_post_with_metadata(
     )
 
 
+def enrich_post_with_cached_metadata(
+    post: Post,
+    metadata: Dict
+) -> PostResponse:
+    """
+    Enrich a post with pre-fetched metadata (for batch operations).
+    """
+    return PostResponse(
+        id=post.id,
+        user_id=post.user_id,
+        user=PostUser.model_validate(post.user),
+        content=post.content,
+        image_url=post.image_url,
+        video_url=post.video_url,
+        post_type=post.post_type,
+        related_job_id=post.related_job_id,
+        likes_count=metadata.get('likes_count', 0),
+        comments_count=metadata.get('comments_count', 0),
+        is_liked=metadata.get('is_liked', False),
+        created_at=post.created_at,
+        updated_at=post.updated_at,
+    )
+
+
 @router.post("/", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_post(
     post: PostCreate,
@@ -105,43 +196,66 @@ async def create_post(
 
 @router.get("/", response_model=dict)
 async def get_posts(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    request: Request,
+    # Dual pagination support
+    cursor: Optional[str] = Query(None, description="Cursor for cursor-based pagination (mobile)"),
+    skip: Optional[int] = Query(None, ge=0, description="Offset for offset-based pagination (web)"),
+    page: Optional[int] = Query(None, ge=1, description="Page number (alternative to skip)"),
+    limit: int = Query(20, ge=1, le=100, description="Number of posts to return"),
+    direction: str = Query("next", regex="^(next|previous)$", description="Pagination direction"),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
-    """Get posts with pagination (with caching for sub-50ms response)
+    """Get posts with dual pagination support (cursor or offset-based)
     
-    Note: This endpoint returns posts from ALL users regardless of their account status.
-    Posts remain visible even if the author's account becomes inactive (is_active=False).
-    This ensures posts don't disappear due to user inactivity, especially for admin accounts.
-    Posts are only removed when explicitly deleted via the delete endpoint.
+    Mobile API Optimization Features:
+    - **Dual Pagination**: Supports both cursor-based (efficient for infinite scroll) 
+      and offset-based (page numbers) pagination
+    - **HTTP Caching**: Returns 304 Not Modified when content hasn't changed (ETag validation)
+    - **N+1 Prevention**: Batches all likes/comments queries to prevent N+1 problems
     
-    Performance: Cached for 30 seconds for sub-50ms response times.
+    Pagination Modes:
+    - Cursor-based (recommended for mobile): Use `cursor` parameter
+    - Offset-based (for web): Use `skip` or `page` parameter
+    - Default: cursor-based starting from the most recent posts
+    
+    Note: Posts remain visible regardless of author's account status.
+    Performance: Cached for 60 seconds with stale-while-revalidate.
     """
     # Try to get from cache first (sub-50ms cache hit)
     user_id = current_user.id if current_user else "anonymous"
-    cache_key = f"posts:list:{skip}:{limit}:{user_id}"
+    cache_params = f"{cursor}:{skip}:{page}:{limit}:{direction}"
+    cache_key = f"posts:list:{cache_params}:{user_id}"
     cached_response = await get_cached(cache_key)
     if cached_response is not None:
-        return cached_response
+        # Return cached response with HTTP caching headers
+        response = handle_conditional_request(request, cached_response, CacheStrategy.POSTS)
+        apply_performance_headers(response)
+        return response
     
-    # Build query with user relationship
+    # Build query with user relationship (eager loading to prevent N+1)
     # IMPORTANT: We intentionally do NOT filter by User.is_active here
     # Posts should remain visible regardless of the author's account status
-    query = select(Post).options(selectinload(Post.user)).order_by(desc(Post.created_at))
+    base_query = select(Post).options(selectinload(Post.user))
 
-    # Apply pagination
-    query = query.offset(skip).limit(limit)
+    # Use dual pagination system (auto-detects mode)
+    posts, pagination_meta = await paginate_auto(
+        db=db,
+        query=base_query,
+        model_class=Post,
+        cursor=cursor,
+        skip=skip,
+        page=page,
+        limit=limit,
+        direction=direction,
+        order_by_field="created_at",
+        order_direction="desc",
+        count_total=False,  # Expensive for large datasets
+    )
 
-    result = await db.execute(query)
-    posts = result.scalars().all()
-
-    # Build response with like/comment counts using helper
-    posts_data = []
+    # Filter out posts with missing user relationships
+    valid_posts = []
     for post in posts:
-        # Defensive check: ensure post has a valid user relationship
-        # This handles edge cases where user might be deleted but post remains
         if not post.user:
             logger.warning(
                 f"Post {post.id} has no associated user relationship - "
@@ -149,48 +263,63 @@ async def get_posts(
             )
             continue
         
-        # Additional check: log if post is from an inactive user (for monitoring)
+        # Log inactive users for monitoring
         if not post.user.is_active:
             logger.info(
                 f"Including post {post.id} from inactive user {post.user.id} "
                 f"({post.user.email}) in feed - posts remain visible after user inactivity"
             )
         
-        post_data = await enrich_post_with_metadata(post, db, current_user)
-        posts_data.append(post_data.model_dump())
+        valid_posts.append(post)
 
-    response = {"success": True, "posts": posts_data}
+    # Batch fetch metadata for all posts (prevents N+1 queries)
+    post_ids = [post.id for post in valid_posts]
+    metadata_batch = await batch_get_post_metadata(post_ids, db, current_user)
+
+    # Build response with pre-fetched metadata
+    posts_data = []
+    for post in valid_posts:
+        post_metadata = metadata_batch.get(post.id, {
+            'likes_count': 0,
+            'comments_count': 0,
+            'is_liked': False
+        })
+        post_response = enrich_post_with_cached_metadata(post, post_metadata)
+        posts_data.append(post_response.model_dump())
+
+    response = format_paginated_response(posts_data, pagination_meta)
     
-    # Cache for 30 seconds (balance between freshness and performance)
-    await set_cached(cache_key, response, ttl=30)
+    # Cache for 60 seconds (balance between freshness and performance)
+    await set_cached(cache_key, response, ttl=60)
     
-    return response
+    # Return with HTTP caching headers
+    json_response = handle_conditional_request(request, response, CacheStrategy.POSTS)
+    apply_performance_headers(json_response)
+    return json_response
 
 
 @router.get("/user/{user_id}", response_model=dict)
 async def get_user_posts(
+    request: Request,
     user_id: int,
-    skip: int = Query(0, ge=0),
+    # Dual pagination support
+    cursor: Optional[str] = Query(None, description="Cursor for cursor-based pagination (mobile)"),
+    skip: Optional[int] = Query(None, ge=0, description="Offset for offset-based pagination (web)"),
+    page: Optional[int] = Query(None, ge=1, description="Page number (alternative to skip)"),
     limit: int = Query(20, ge=1, le=100),
+    direction: str = Query("next", regex="^(next|previous)$"),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
-    """Get posts for a specific user with pagination
+    """Get posts for a specific user with dual pagination and N+1 prevention
     
-    Note: This endpoint returns posts from the specified user regardless of their account status.
-    Posts remain visible even if the author's account becomes inactive (is_active=False).
-    This ensures posts don't disappear due to user inactivity.
-    Posts are only removed when explicitly deleted via the delete endpoint.
+    Mobile API Optimization Features:
+    - **Dual Pagination**: Cursor-based (mobile) or offset-based (web)
+    - **HTTP Caching**: ETag validation with 304 Not Modified responses
+    - **N+1 Prevention**: Batch fetching of likes/comments metadata
     
-    Args:
-        user_id: The ID of the user whose posts to fetch
-        skip: Number of posts to skip (for pagination)
-        limit: Maximum number of posts to return (default 20, max 100)
-        db: Database session
-        current_user: Currently authenticated user (optional)
-        
-    Returns:
-        List of posts for the specified user
+    Note: Posts remain visible regardless of author's account status.
+    Performance: Cached with stale-while-revalidate strategy.
     """
     # Verify user exists
     user_result = await db.execute(select(User).where(User.id == user_id))
@@ -202,27 +331,32 @@ async def get_user_posts(
             detail="User not found"
         )
     
-    # Build query for user's posts with user relationship
+    # Build query for user's posts with user relationship (eager loading)
     # IMPORTANT: We intentionally do NOT filter by User.is_active here
-    # Posts should remain visible regardless of the author's account status
-    query = (
+    base_query = (
         select(Post)
         .options(selectinload(Post.user))
         .where(Post.user_id == user_id)
-        .order_by(desc(Post.created_at))
     )
 
-    # Apply pagination
-    query = query.offset(skip).limit(limit)
+    # Use dual pagination system
+    posts, pagination_meta = await paginate_auto(
+        db=db,
+        query=base_query,
+        model_class=Post,
+        cursor=cursor,
+        skip=skip,
+        page=page,
+        limit=limit,
+        direction=direction,
+        order_by_field="created_at",
+        order_direction="desc",
+        count_total=False,
+    )
 
-    result = await db.execute(query)
-    posts = result.scalars().all()
-
-    # Build response with like/comment counts using helper
-    posts_data = []
+    # Filter valid posts
+    valid_posts = []
     for post in posts:
-        # Defensive check: ensure post has a valid user relationship
-        # This handles edge cases where user might be deleted but post remains
         if not post.user:
             logger.warning(
                 f"Post {post.id} has no associated user relationship - "
@@ -230,17 +364,35 @@ async def get_user_posts(
             )
             continue
         
-        # Additional check: log if post is from an inactive user (for monitoring)
         if not post.user.is_active:
             logger.info(
                 f"Including post {post.id} from inactive user {post.user.id} "
                 f"({post.user.email}) in user profile - posts remain visible after user inactivity"
             )
         
-        post_data = await enrich_post_with_metadata(post, db, current_user)
-        posts_data.append(post_data.model_dump())
+        valid_posts.append(post)
 
-    return {"success": True, "posts": posts_data}
+    # Batch fetch metadata (prevents N+1 queries)
+    post_ids = [post.id for post in valid_posts]
+    metadata_batch = await batch_get_post_metadata(post_ids, db, current_user)
+
+    # Build response with pre-fetched metadata
+    posts_data = []
+    for post in valid_posts:
+        post_metadata = metadata_batch.get(post.id, {
+            'likes_count': 0,
+            'comments_count': 0,
+            'is_liked': False
+        })
+        post_response = enrich_post_with_cached_metadata(post, post_metadata)
+        posts_data.append(post_response.model_dump())
+
+    response = format_paginated_response(posts_data, pagination_meta)
+    
+    # Return with HTTP caching headers
+    json_response = handle_conditional_request(request, response, CacheStrategy.PUBLIC_PROFILE)
+    apply_performance_headers(json_response)
+    return json_response
 
 
 @router.get("/{post_id}", response_model=PostResponse)

@@ -1,9 +1,12 @@
 from typing import Optional
 
 from app.core.security import get_current_user
+from app.core.cache import get_cached, set_cached
+from app.core.cache_headers import CacheStrategy, handle_conditional_request, apply_performance_headers
+from app.core.pagination import paginate_auto, format_paginated_response
 from app.database import get_db
 from app.models import User
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,14 +15,37 @@ router = APIRouter()
 
 @router.get("/available")
 async def get_available_users(
-    skip: int = Query(0, ge=0),
+    request: Request,
+    # Dual pagination support
+    cursor: Optional[str] = Query(None, description="Cursor for cursor-based pagination (mobile)"),
+    skip: Optional[int] = Query(None, ge=0, description="Offset for offset-based pagination (web)"),
+    page: Optional[int] = Query(None, ge=1, description="Page number (alternative to skip)"),
     limit: int = Query(20, ge=1, le=100),
+    direction: str = Query("next", regex="^(next|previous)$"),
     search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get list of users available for hire"""
-    query = select(User).where(
+    """Get list of users available for hire with dual pagination
+    
+    Mobile API Optimization Features:
+    - **Dual Pagination**: Cursor-based (mobile) or offset-based (web)
+    - **HTTP Caching**: ETag validation with stale-while-revalidate
+    - **Performance**: Cached for 3 minutes for fast response times
+    """
+    # Build cache key
+    cache_params = f"{cursor}:{skip}:{page}:{limit}:{direction}:{search}"
+    cache_key = f"hireme:available:{current_user.id}:{cache_params}"
+    
+    # Try cache first
+    cached_response = await get_cached(cache_key)
+    if cached_response is not None:
+        response = handle_conditional_request(request, cached_response, CacheStrategy.PUBLIC_LIST)
+        apply_performance_headers(response)
+        return response
+    
+    # Build query
+    base_query = select(User).where(
         and_(
             User.is_active == True,
             User.is_available_for_hire == True,
@@ -35,16 +61,22 @@ async def get_available_users(
             User.location.ilike(f"%{search}%"),
             User.skills.ilike(f"%{search}%"),
         )
-        query = query.where(search_filter)
+        base_query = base_query.where(search_filter)
 
-    # Get total count
-    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
-    total = count_result.scalar()
-
-    # Apply pagination
-    query = query.offset(skip).limit(limit)
-    result = await db.execute(query)
-    users = result.scalars().all()
+    # Use dual pagination
+    users, pagination_meta = await paginate_auto(
+        db=db,
+        query=base_query,
+        model_class=User,
+        cursor=cursor,
+        skip=skip,
+        page=page,
+        limit=limit,
+        direction=direction,
+        order_by_field="created_at",
+        order_direction="desc",
+        count_total=False,
+    )
 
     # Format users data
     users_data = [
@@ -66,7 +98,15 @@ async def get_available_users(
         for user in users
     ]
 
-    return {"success": True, "users": users_data, "total": total}
+    response = format_paginated_response(users_data, pagination_meta)
+    
+    # Cache for 3 minutes
+    await set_cached(cache_key, response, ttl=180)
+    
+    # Return with HTTP caching headers
+    json_response = handle_conditional_request(request, response, CacheStrategy.PUBLIC_LIST)
+    apply_performance_headers(json_response)
+    return json_response
 
 
 @router.post("/toggle")

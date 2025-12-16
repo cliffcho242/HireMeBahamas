@@ -2,6 +2,8 @@ from typing import List, Optional
 
 from app.core.security import get_current_user
 from app.core.cache import get_cached, set_cached, invalidate_cache
+from app.core.cache_headers import CacheStrategy, handle_conditional_request, apply_performance_headers
+from app.core.pagination import paginate_auto, format_paginated_response
 from app.database import get_db
 from app.models import Job, JobApplication, Notification, NotificationType, Post, User
 from app.schemas.job import (
@@ -12,7 +14,7 @@ from app.schemas.job import (
     JobResponse,
     JobUpdate,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import and_, desc, or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -61,10 +63,16 @@ async def create_job(
     return job_with_employer
 
 
-@router.get("/", response_model=JobListResponse)
+@router.get("/")
 async def get_jobs(
-    skip: int = Query(0, ge=0),
+    request: Request,
+    # Dual pagination support
+    cursor: Optional[str] = Query(None, description="Cursor for cursor-based pagination (mobile)"),
+    skip: Optional[int] = Query(None, ge=0, description="Offset for offset-based pagination (web)"),
+    page: Optional[int] = Query(None, ge=1, description="Page number (alternative to skip)"),
     limit: int = Query(10, ge=1, le=100),
+    direction: str = Query("next", regex="^(next|previous)$"),
+    # Filters
     category: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
     is_remote: Optional[bool] = Query(None),
@@ -74,20 +82,28 @@ async def get_jobs(
     status: Optional[str] = Query("active"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get jobs with filtering and pagination (cached for <100ms response)
+    """Get jobs with dual pagination, HTTP caching, and filtering
     
-    Performance: Cached for 2 minutes for sub-100ms response times.
-    Cache key includes all filter parameters to ensure correct results.
+    Mobile API Optimization Features:
+    - **Dual Pagination**: Cursor-based (mobile) or offset-based (web)
+    - **HTTP Caching**: ETag validation with stale-while-revalidate
+    - **N+1 Prevention**: Eager loading of employer relationship
+    
+    Performance: Cached for 3 minutes (180s) for sub-100ms response times.
     """
     # Build cache key from all parameters
-    cache_key = f"jobs:list:{skip}:{limit}:{category}:{location}:{is_remote}:{budget_min}:{budget_max}:{search}:{status}"
+    cache_params = f"{cursor}:{skip}:{page}:{limit}:{direction}:{category}:{location}:{is_remote}:{budget_min}:{budget_max}:{search}:{status}"
+    cache_key = f"jobs:list:{cache_params}"
     
     # Try to get from cache first (sub-100ms cache hit)
     cached_response = await get_cached(cache_key)
     if cached_response is not None:
-        return JobListResponse(**cached_response)
+        response = handle_conditional_request(request, cached_response, CacheStrategy.JOBS)
+        apply_performance_headers(response)
+        return response
     
-    query = select(Job).options(selectinload(Job.employer))
+    # Build query with eager loading (prevents N+1)
+    base_query = select(Job).options(selectinload(Job.employer))
 
     # Apply filters
     filters = []
@@ -109,27 +125,61 @@ async def get_jobs(
         )
 
     if filters:
-        query = query.where(and_(*filters))
+        base_query = base_query.where(and_(*filters))
 
-    # Get total count
-    count_result = await db.execute(
-        select(Job).where(and_(*filters)) if filters else select(Job)
+    # Use dual pagination system
+    jobs, pagination_meta = await paginate_auto(
+        db=db,
+        query=base_query,
+        model_class=Job,
+        cursor=cursor,
+        skip=skip,
+        page=page,
+        limit=limit,
+        direction=direction,
+        order_by_field="created_at",
+        order_direction="desc",
+        count_total=False,  # Expensive for large datasets
     )
-    total = len(count_result.all())
 
-    # Apply pagination and ordering
-    query = query.order_by(desc(Job.created_at)).offset(skip).limit(limit)
+    # Format jobs data
+    jobs_data = [job.dict() for job in jobs] if hasattr(jobs[0], 'dict') else [
+        {
+            "id": job.id,
+            "title": job.title,
+            "company": job.company,
+            "description": job.description,
+            "location": job.location,
+            "is_remote": job.is_remote,
+            "job_type": job.job_type,
+            "category": job.category,
+            "budget": job.budget,
+            "status": job.status,
+            "employer_id": job.employer_id,
+            "employer": {
+                "id": job.employer.id,
+                "first_name": job.employer.first_name,
+                "last_name": job.employer.last_name,
+                "username": job.employer.username,
+                "avatar_url": job.employer.avatar_url,
+                "company_name": job.employer.company_name,
+            } if job.employer else None,
+            "created_at": job.created_at.isoformat() if job.created_at else None,
+            "updated_at": job.updated_at.isoformat() if job.updated_at else None,
+        }
+        for job in jobs
+    ]
 
-    result = await db.execute(query)
-    jobs = result.scalars().all()
-
-    response = JobListResponse(jobs=jobs, total=total, skip=skip, limit=limit)
+    response = format_paginated_response(jobs_data, pagination_meta)
     
-    # Cache for 2 minutes (balance between freshness and performance)
+    # Cache for 3 minutes (180s)
     # Jobs don't change as frequently as posts, so longer TTL is acceptable
-    await set_cached(cache_key, response.model_dump(), ttl=120)
+    await set_cached(cache_key, response, ttl=180)
     
-    return response
+    # Return with HTTP caching headers
+    json_response = handle_conditional_request(request, response, CacheStrategy.JOBS)
+    apply_performance_headers(json_response)
+    return json_response
 
 
 @router.get("/{job_id}", response_model=JobResponse)
