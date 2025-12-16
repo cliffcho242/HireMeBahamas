@@ -490,45 +490,55 @@ async def log_requests(request: Request, call_next):
 
 
 # =============================================================================
-# STRICT LAZY INITIALIZATION - NO DATABASE CONNECTIONS AT STARTUP
+# AGGRESSIVE NON-BLOCKING STARTUP (RENDER FOREVER FIX)
 # =============================================================================
 @app.on_event("startup")
-async def lazy_import_heavy_stuff():
-    """Lazy import all heavy dependencies after app is started.
+async def startup():
+    """Ultra-fast startup with background initialization.
     
-    This ensures health endpoints respond instantly during cold starts,
-    while heavy database, cache, and API components are loaded after.
+    ✅ AGGRESSIVE FOREVER FIX (DO THIS EXACTLY):
+    - App responds IMMEDIATELY (<5ms)
+    - Health check passes INSTANTLY
+    - ALL heavy operations moved to background
+    - DB initializes safely in background
     
     ✅ STRICT LAZY PATTERN (per requirements):
     - 🚫 NO warm-up pings at startup
     - 🚫 NO background keepalive loops
     - 🚫 NO engine.connect() at import time
+    - 🚫 NO blocking operations in startup event
     - ✅ Database engine created lazily on first actual request
     - ✅ TCP + SSL with pool_pre_ping=True and pool_recycle=300
     
     This prevents ALL database connections until first actual database request.
     """
     startup_start = time.time()
-    logger.info(f"Starting HireMeBahamas API initialization (NO database connections)...")
-    logger.info(f"⚡ Startup timeout protection enabled: {TOTAL_STARTUP_TIMEOUT}s maximum to prevent worker hangs")
+    logger.info(f"🚀 Optimized non-blocking startup for Render deployment")
+    logger.info(f"   Health endpoints ACTIVE immediately")
+    logger.info(f"   Background initialization scheduled")
     
-    async def wrapped_startup():
-        """Inner function with all startup operations."""
+    async def init_background():
+        """Background initialization task - runs AFTER app is ready.
+        
+        ✅ This runs in the background, NOT blocking startup
+        ✅ App responds immediately while this runs
+        ✅ Health check passes while this runs
+        """
+        bg_start = time.time()
+        logger.info("📦 Background initialization started")
+        
         # ==========================================================================
         # STEP 1: Pre-warm bcrypt (non-blocking, no database)
         # ==========================================================================
         try:
             if prewarm_bcrypt_async is not None:
-                # Add timeout protection to prevent worker hanging
                 await asyncio.wait_for(prewarm_bcrypt_async(), timeout=STARTUP_OPERATION_TIMEOUT)
-                logger.info("Bcrypt pre-warmed successfully")
+                logger.info("✅ Bcrypt pre-warmed")
             else:
-                logger.warning("Bcrypt pre-warm function not available")
+                logger.debug("Bcrypt pre-warm function not available")
         except asyncio.TimeoutError:
             logger.warning(f"Bcrypt pre-warm timed out after {STARTUP_OPERATION_TIMEOUT}s (non-critical)")
         except Exception as e:
-            # Pre-warming is optional - if it fails, authentication will still work
-            # but the first login may be slightly slower
             logger.warning(f"Bcrypt pre-warm skipped (non-critical): {type(e).__name__}")
         
         # ==========================================================================
@@ -536,10 +546,9 @@ async def lazy_import_heavy_stuff():
         # ==========================================================================
         try:
             if redis_cache is not None:
-                # Add timeout protection to prevent worker hanging on Redis connection
                 redis_available = await asyncio.wait_for(redis_cache.connect(), timeout=STARTUP_OPERATION_TIMEOUT)
                 if redis_available:
-                    logger.info("✅ Redis cache connected successfully")
+                    logger.info("✅ Redis cache connected")
                 else:
                     logger.info("ℹ️ Using in-memory cache (Redis not configured)")
             else:
@@ -550,11 +559,10 @@ async def lazy_import_heavy_stuff():
             logger.warning(f"Redis connection failed (non-critical): {e}")
         
         # ==========================================================================
-        # STEP 3: Warm up cache and database connections (optional, non-blocking)
+        # STEP 3: Warm up cache (optional, non-blocking, no database required)
         # ==========================================================================
         try:
             from .core.cache import warmup_cache
-            # Add timeout protection to prevent worker hanging on cache warmup
             await asyncio.wait_for(warmup_cache(), timeout=STARTUP_OPERATION_TIMEOUT)
             logger.info("✅ Cache system ready")
         except asyncio.TimeoutError:
@@ -563,36 +571,27 @@ async def lazy_import_heavy_stuff():
             logger.debug(f"Cache warmup skipped: {e}")
         
         # ==========================================================================
-        # STEP 4: Run performance optimizations (background task)
+        # STEP 4: Run performance optimizations (background, non-blocking)
         # ==========================================================================
-        # Run performance optimizations in background to avoid blocking startup
         try:
             from .core.performance import run_all_performance_optimizations
             asyncio.create_task(run_all_performance_optimizations())
-            logger.info("Performance optimizations scheduled")
+            logger.info("✅ Performance optimizations scheduled")
         except Exception as e:
             logger.debug(f"Performance optimizations skipped: {e}")
+        
+        bg_duration = time.time() - bg_start
+        logger.info(f"✅ Background initialization completed in {bg_duration:.2f}s")
     
-    # Wrap entire startup in overall timeout to prevent worker SIGTERM
-    try:
-        await asyncio.wait_for(wrapped_startup(), timeout=TOTAL_STARTUP_TIMEOUT)
-        startup_duration = time.time() - startup_start
-        logger.info(f"✅ Startup completed successfully in {startup_duration:.2f}s")
-    except asyncio.TimeoutError:
-        startup_duration = time.time() - startup_start
-        logger.error(f"""⚠️  CRITICAL: Startup timed out after {TOTAL_STARTUP_TIMEOUT}s!
-   Worker may receive SIGTERM if this happens repeatedly
-   Time elapsed: {startup_duration:.2f}s
-   Individual operation timeout: {STARTUP_OPERATION_TIMEOUT}s each
-   If you see this message, check for:
-   - Slow network connections to Redis/external services
-   - Platform resource constraints (CPU/memory)
-   - Deadlocks or blocking operations in startup code""")
-        # Continue anyway - health endpoint should still work
-    except Exception as e:
-        startup_duration = time.time() - startup_start
-        logger.error(f"⚠️  Startup failed after {startup_duration:.2f}s: {type(e).__name__}: {e}")
-        # Continue anyway - health endpoint should still work
+    # ==========================================================================
+    # CRITICAL: Schedule background initialization as a fire-and-forget task
+    # This returns IMMEDIATELY, allowing startup to complete in <5ms
+    # ==========================================================================
+    asyncio.create_task(init_background())
+    
+    startup_duration = time.time() - startup_start
+    logger.info(f"✅ Startup completed IMMEDIATELY in {startup_duration:.3f}s")
+    logger.info(f"   Background initialization running separately")
     
     # ==========================================================================
     # STRICT LAZY INITIALIZATION: NO DATABASE OPERATIONS AT STARTUP

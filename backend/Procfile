@@ -46,12 +46,18 @@
 # - Supported users: 100K+ concurrent
 # =============================================================================
 
-# Main web process - Poetry-managed Gunicorn (STEP 18)
+# Main web process - Optimized Gunicorn for Render (AGGRESSIVE FOREVER FIX)
 # Note: When using this Procfile, ensure the working directory is 'backend/'
 # Railway/Heroku should have root directory set to 'backend/' in settings
 # If root is the project root, use: cd backend && poetry run gunicorn ...
-# Uses gunicorn.conf.py for complete configuration (workers, threads, timeouts, etc.)
 # 
-# PYTHONPATH should be set to backend directory for proper module resolution when
-# running from project root. This aligns with problem statement Option B: Set PYTHONPATH=backend
-web: poetry run gunicorn app.main:app --config gunicorn.conf.py
+# CRITICAL SETTINGS FOR RENDER:
+# - workers=1: Single worker for small instances (faster + safer)
+# - threads=2: Minimal threading overhead
+# - timeout=120: Prevents worker SIGTERM during slow startup
+# - graceful_timeout=30: Clean shutdown
+# - keepalive=5: Connection persistence
+# - log-level=info: Production logging
+# 
+# Configuration file (gunicorn.conf.py) provides additional settings
+web: poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py

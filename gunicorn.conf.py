@@ -13,46 +13,46 @@ import time
 bind = f"0.0.0.0:{os.environ.get('PORT', '10000')}"
 
 # ============================================================================
-# WORKER CONFIGURATION (Optimized for Cached Traffic - Step 7.6)
+# WORKER CONFIGURATION (Optimized for Render Small Instances)
 # ============================================================================
-# Optimized for Railway, Render, and similar PaaS platforms with Redis caching
-# Typical CPU allocation: Free tier: 0.1-0.5 CPU, Paid: 1+ CPU
+# Optimized for Render and similar PaaS platforms with small instance sizes
+# CRITICAL: Render does NOT like many workers on small instances
 # 
-# With Redis caching infrastructure in place, we can increase workers:
-# - workers=3: Higher concurrency for handling more concurrent requests
-# - threads=4: Each worker handles 4 concurrent requests
-# - Total capacity: 3 × 4 = 12 concurrent requests
+# Configuration for Render (AGGRESSIVE FOREVER FIX):
+# - workers=1: Single worker is faster + safer on small instances
+# - threads=2: Minimal threading for request handling
+# - Total capacity: 1 worker with async event loop (handles many concurrent connections)
 # 
-# This configuration is optimized for scenarios where:
-# - Caching reduces database load significantly
-# - More workers can handle higher traffic volumes
-# - CPU/memory becomes the bottleneck, not DB connections
+# Benefits of single worker:
+# - Lower memory footprint
+# - Faster startup times
+# - More predictable behavior on small instances
+# - Prevents worker timeout issues on constrained resources
 cpu_count = multiprocessing.cpu_count()
 
-# Workers: 4 for optimal performance with Redis caching (Step 10 - 100K+ users scaling)
-# Use WEB_CONCURRENCY env var to override
-workers = int(os.environ.get("WEB_CONCURRENCY", "4"))
+# Workers: 1 for optimal performance on Render small instances (CRITICAL)
+# Use WEB_CONCURRENCY env var to override (but keep it at 1 for Render)
+workers = int(os.environ.get("WEB_CONCURRENCY", "1"))
 
 # Worker class: uvicorn.workers.UvicornWorker for FastAPI async support
 # Uvicorn workers provide ASGI support with excellent async/await performance
 worker_class = "uvicorn.workers.UvicornWorker"
 
-# Note: UvicornWorker does NOT use the threads parameter (async event loop handles concurrency)
-# This parameter is kept ONLY for compatibility when switching worker classes
+# Threads: 2 for minimal threading overhead (Render optimization)
+# Note: UvicornWorker uses async event loop, not threads for concurrency
 # With UvicornWorker:
 # - Each worker runs an async event loop
 # - Concurrency is handled via async/await, not threads
-# - Each worker can handle ~100+ concurrent connections
-# - Total capacity: 4 workers × ~100+ = 400+ concurrent connections
-# If you switch to 'gthread' worker class, threads parameter will be used
-threads = int(os.environ.get("WEB_THREADS", "4"))
+# - Single worker can handle 100+ concurrent connections efficiently
+# - Threads parameter only used if switching to 'gthread' worker class
+threads = int(os.environ.get("WEB_THREADS", "2"))
 
 # ============================================================================
-# TIMEOUT CONFIGURATION (Critical for 502 Prevention)
+# TIMEOUT CONFIGURATION (Optimized for Render)
 # ============================================================================
-# Worker timeout: 60s - optimized for fast responses on always-on Render
-# This is suitable for Standard plan with no cold starts
-timeout = int(os.environ.get("GUNICORN_TIMEOUT", "60"))
+# Worker timeout: 120s - increased for startup and initialization on Render
+# This prevents worker SIGTERM during slow startup on small instances
+timeout = int(os.environ.get("GUNICORN_TIMEOUT", "120"))
 
 # Graceful timeout: 30s for in-flight requests during shutdown
 graceful_timeout = 30
@@ -173,13 +173,13 @@ def on_starting(server):
     """Log startup configuration"""
     global _master_start_time
     _master_start_time = time.time()
-    print(f"🚀 Starting Gunicorn (Step 10 - Scaling to 100K+ Users)")
-    print(f"   Workers: {workers} × {threads} threads = {workers * threads} capacity")
-    print(f"   Timeout: {timeout}s | Keepalive: {keepalive}s")
+    print(f"🚀 Starting Gunicorn (Render Optimized - Single Worker)")
+    print(f"   Workers: {workers} (optimized for Render small instances)")
+    print(f"   Threads: {threads}")
+    print(f"   Timeout: {timeout}s | Graceful: {graceful_timeout}s | Keepalive: {keepalive}s")
     print(f"   Preload: {preload_app} (workers initialize independently)")
-    print(f"   Redis Cache: Enabled (handles most requests)")
-    print(f"   Background Jobs: FastAPI BackgroundTasks for async operations")
-    print(f"   Configuration: Production-ready for 100K+ concurrent users")
+    print(f"   Worker Class: {worker_class} (async event loop)")
+    print(f"   Configuration: Optimized for Render deployment")
 
 
 def when_ready(server):
