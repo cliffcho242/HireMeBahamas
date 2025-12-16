@@ -2,6 +2,23 @@
 # DATABASE ENGINE CONFIGURATION - CORRECT & PORTABLE (Dec 2025)
 # =============================================================================
 #
+# ⚠️  DEPRECATION NOTICE (Dec 2025):
+# This module is DEPRECATED. All database configuration has been consolidated
+# into a single source of truth at app/database.py (in the project root).
+#
+# **NEW CODE MUST IMPORT FROM app.database**
+#
+#     # ✅ CORRECT - Use single source of truth
+#     from app.database import get_engine, get_db, init_db
+#
+#     # ❌ DEPRECATED - Don't use this module
+#     from backend.app.database import get_engine
+#
+# This module is maintained for backward compatibility only.
+# It will be removed in a future version.
+#
+# =============================================================================
+#
 # ✅ RULE: For PostgreSQL + SQLAlchemy with asyncpg, SSL belongs in the URL — NOT in connect_args
 # (This rule applies specifically to asyncpg. Other drivers may differ.)
 #
