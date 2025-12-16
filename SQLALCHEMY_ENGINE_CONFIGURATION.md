@@ -262,4 +262,4 @@ The SQLAlchemy engine configuration in HireMeBahamas is production-ready and opt
 ✅ **Compatibility**: Works with multiple drivers and cloud providers  
 ✅ **Maintainability**: Centralized configuration with environment variables  
 
-All configurations have been tested and verified to work with psycopg2, psycopg3, asyncpg, Neon, and Render.
+The configuration parameters have been verified to be compatible with psycopg2, psycopg3, asyncpg, Neon, and Render. The current implementation actively uses asyncpg for async operations. To use other drivers, follow the migration guide above.

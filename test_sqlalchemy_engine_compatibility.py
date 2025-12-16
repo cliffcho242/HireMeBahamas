@@ -16,7 +16,9 @@ Based on the problem statement:
     pool_size=5,
     max_overflow=10,
     connect_args={
-        "connect_timeout": 5,
+        "connect_timeout": 5,  # For psycopg2/psycopg3
+        # OR
+        "timeout": 5,          # For asyncpg (current implementation)
     },
 )
 """
