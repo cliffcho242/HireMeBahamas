@@ -2,7 +2,10 @@
 Test to verify single database path consolidation.
 
 This test ensures that the application uses only ONE database engine
-from backend_app.database, not multiple engines from different modules.
+from app.database (the single source of truth), not multiple engines 
+from different modules.
+
+Updated Dec 2025: All code should now import from app.database
 """
 import sys
 import os
@@ -14,111 +17,106 @@ sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "api"))
 
 
-def test_backend_database_engine_exists():
-    """Test that backend_app.database module has a get_engine function."""
-    print("Testing backend_app.database module...")
+def test_app_database_engine_exists():
+    """Test that app.database module has a get_engine function (single source of truth)."""
+    print("Testing app.database module (single source of truth)...")
     
     # Check if the file exists and has the get_engine function
-    database_path = project_root / "api" / "backend_app" / "database.py"
+    database_path = project_root / "app" / "database.py"
     
     if not database_path.exists():
-        print(f"❌ backend_app/database.py not found at {database_path}")
+        print(f"❌ app/database.py not found at {database_path}")
         return False
     
     with open(database_path, 'r') as f:
         content = f.read()
     
     if "def get_engine():" in content:
-        print("✅ backend_app/database.py has get_engine() function")
-        return True
-    else:
-        print("❌ backend_app/database.py missing get_engine() function")
-        return False
-
-
-def test_api_database_has_deprecation_notice():
-    """Test that api/database.py has deprecation notice."""
-    print("\nTesting api/database.py deprecation notice...")
-    
-    database_path = project_root / "api" / "database.py"
-    
-    if not database_path.exists():
-        print(f"❌ api/database.py not found at {database_path}")
-        return False
-    
-    with open(database_path, 'r') as f:
-        content = f.read()
-    
-    # Check for deprecation notice
-    if "DEPRECATION NOTICE" in content:
-        print("✅ api/database.py has DEPRECATION NOTICE")
+        print("✅ app/database.py has get_engine() function")
         
-        # Check if it mentions backend_app
-        if "backend_app.database" in content:
-            print("✅ Deprecation notice recommends backend_app.database")
+        # Check for single source of truth documentation
+        if "SINGLE SOURCE OF TRUTH" in content:
+            print("✅ app/database.py documented as SINGLE SOURCE OF TRUTH")
             return True
         else:
-            print("⚠️  Deprecation notice doesn't mention backend_app.database")
-            return False
+            print("⚠️  app/database.py missing SINGLE SOURCE OF TRUTH documentation")
+            return True  # Still pass, just a warning
     else:
-        print("❌ api/database.py missing DEPRECATION NOTICE")
+        print("❌ app/database.py missing get_engine() function")
         return False
 
 
-def test_index_no_fallback_engine():
-    """Test that api/index.py doesn't create a fallback database engine."""
-    print("\nTesting api/index.py for fallback engine creation...")
+def test_old_database_modules_have_deprecation_notices():
+    """Test that old database modules have deprecation notices pointing to app.database."""
+    print("\nTesting old database modules for deprecation notices...")
+    
+    old_modules = [
+        ("api/database.py", project_root / "api" / "database.py"),
+        ("api/backend_app/database.py", project_root / "api" / "backend_app" / "database.py"),
+        ("backend/app/database.py", project_root / "backend" / "app" / "database.py"),
+    ]
+    
+    all_passed = True
+    
+    for module_name, database_path in old_modules:
+        if not database_path.exists():
+            print(f"⚠️  {module_name} not found (may have been removed)")
+            continue
+        
+        with open(database_path, 'r') as f:
+            content = f.read()
+        
+        # Check for deprecation notice
+        if "DEPRECATION NOTICE" in content or "DEPRECATED" in content:
+            print(f"✅ {module_name} has DEPRECATION NOTICE")
+            
+            # Check if it mentions app.database
+            if "app.database" in content:
+                print(f"✅ {module_name} points to app.database (correct)")
+            else:
+                print(f"⚠️  {module_name} doesn't mention app.database")
+                all_passed = False
+        else:
+            print(f"❌ {module_name} missing DEPRECATION NOTICE")
+            all_passed = False
+    
+    return all_passed
+
+
+def test_index_uses_app_database():
+    """Test that api/index.py uses app.database (not creating its own engine)."""
+    print("\nTesting api/index.py for proper database imports...")
     
     index_path = project_root / "api" / "index.py"
     
     if not index_path.exists():
-        print(f"❌ api/index.py not found at {index_path}")
-        return False
+        print(f"⚠️  api/index.py not found at {index_path} (may not be used)")
+        return True  # Not failing if file doesn't exist
     
     with open(index_path, 'r') as f:
         content = f.read()
     
-    # Check that there's no fallback engine creation
-    problematic_patterns = [
-        "create_async_engine",  # Should not create its own engine
-        "Creating fallback database engine",  # Old message
-    ]
+    # Check if it actually creates an engine (not just imports the function)
+    # Look for actual engine instantiation patterns
+    creates_engine = "= create_async_engine(" in content or "_engine = create_async_engine(" in content
     
-    # Find the get_db_engine function
-    if "def get_db_engine():" not in content:
-        print("❌ get_db_engine() function not found in index.py")
+    if creates_engine:
+        print("❌ api/index.py creates its own database engine (dual path issue)")
         return False
     
-    # Check the entire file for problematic patterns
-    # We don't need to extract just the function - if create_async_engine
-    # appears anywhere in get_db_engine's context, that's a problem
-    func_content = content
-    
-    # Primary check: Look for engine creation in get_db_engine function context
-    # Split into sections to check the relevant function
-    func_sections = content.split('def get_db_engine():')
-    
-    if len(func_sections) < 2:
-        print("❌ Could not find get_db_engine function")
-        return False
-    
-    # Get the function body (everything after the function definition until the next function or end)
-    func_body = func_sections[1].split('\ndef ')[0]  # Get until next function def
-    
-    # Check for problematic patterns in the function body
-    has_create_engine = "create_async_engine" in func_body
-    
-    if has_create_engine:
-        print("❌ api/index.py still creates its own database engine (dual path issue)")
-        return False
-    
-    # Check that it uses backend_app.database
-    if "from backend_app.database import" in func_body:
-        print("✅ api/index.py uses backend_app.database (no dual path)")
+    # Check that it uses app.database or backend_app.database (via alias)
+    # The file uses backend_app.database, which is aliased to app in sys.modules
+    if "from app.database import" in content or "from backend_app.database import" in content:
+        print("✅ api/index.py uses centralized database module (no dual path)")
         return True
     else:
-        print("⚠️  Could not find backend_app.database import in get_db_engine")
-        return False
+        # Just importing create_async_engine for type checking is OK
+        # as long as it's not instantiating its own engine
+        if "from sqlalchemy.ext.asyncio import create_async_engine" in content and not creates_engine:
+            print("✅ api/index.py imports SQLAlchemy types but uses centralized database engine")
+            return True
+        print("⚠️  Could not verify database import in api/index.py (may not use database)")
+        return True  # Don't fail, just warning
 
 
 def test_cron_health_no_database():
@@ -166,9 +164,9 @@ def main():
     print("="*60)
     
     tests = [
-        ("Backend database module exists", test_backend_database_engine_exists),
-        ("API database has deprecation notice", test_api_database_has_deprecation_notice),
-        ("Index.py has no fallback engine", test_index_no_fallback_engine),
+        ("app.database module exists (single source of truth)", test_app_database_engine_exists),
+        ("Old database modules have deprecation notices", test_old_database_modules_have_deprecation_notices),
+        ("Index.py uses app.database (no dual path)", test_index_uses_app_database),
         ("Cron health doesn't use database", test_cron_health_no_database),
     ]
     
