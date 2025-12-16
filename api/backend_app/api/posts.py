@@ -1,7 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
 import logging
-import json
 
 from app.core.security import get_current_user
 from app.core.redis_cache import redis_cache

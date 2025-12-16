@@ -8,15 +8,17 @@ Tests verify:
 - Cache hit rate > 95% after warm-up
 """
 import asyncio
+import os
 import time
 import pytest
 import httpx
 from typing import List
 
 # Test configuration
-API_BASE_URL = "http://127.0.0.1:8008"
+API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8008")
 CACHE_TTL_SECONDS = 30
 TARGET_CACHE_HIT_RATE = 0.95  # 95% cache hit rate
+CACHE_HIT_THRESHOLD_MS = 50  # Response time threshold to consider a cache hit
 
 
 @pytest.fixture
@@ -76,8 +78,8 @@ async def test_feed_cache_ttl(http_client):
     print(f"\n✓ Request within TTL: {cached_request_ms:.2f}ms (cached)")
     
     # Should be fast (cache hit)
-    assert cached_request_ms < 50, \
-        f"Request within TTL should be cached (<50ms), got {cached_request_ms:.2f}ms"
+    assert cached_request_ms < CACHE_HIT_THRESHOLD_MS, \
+        f"Request within TTL should be cached (<{CACHE_HIT_THRESHOLD_MS}ms), got {cached_request_ms:.2f}ms"
     
     print(f"  Note: Full TTL test (30s) skipped for CI speed")
     print(f"  In production, cache expires after 30 seconds")
@@ -102,15 +104,15 @@ async def test_feed_cache_hit_rate(http_client):
         assert response.status_code == 200
         times.append(duration_ms)
         
-        # If response is <50ms, likely a cache hit
-        if duration_ms < 50:
+        # If response is fast, likely a cache hit
+        if duration_ms < CACHE_HIT_THRESHOLD_MS:
             fast_requests += 1
     
     cache_hit_rate = fast_requests / total_requests
     avg_time = sum(times) / len(times)
     
     print(f"\n✓ Cache hit rate: {cache_hit_rate * 100:.1f}%")
-    print(f"  Fast requests (<50ms): {fast_requests}/{total_requests}")
+    print(f"  Fast requests (<{CACHE_HIT_THRESHOLD_MS}ms): {fast_requests}/{total_requests}")
     print(f"  Average response time: {avg_time:.2f}ms")
     
     # Should have > 95% cache hit rate
@@ -149,8 +151,8 @@ async def test_feed_cache_pagination(http_client):
     print(f"  Page 2 cached request: {time2_ms:.2f}ms")
     
     # Both should be fast (both cached)
-    assert time1_ms < 50, "Page 1 should be cached"
-    assert time2_ms < 50, "Page 2 should be cached"
+    assert time1_ms < CACHE_HIT_THRESHOLD_MS, "Page 1 should be cached"
+    assert time2_ms < CACHE_HIT_THRESHOLD_MS, "Page 2 should be cached"
 
 
 @pytest.mark.asyncio
@@ -211,8 +213,8 @@ async def test_feed_concurrent_cache_access(http_client):
     print(f"  Max response: {max_time:.2f}ms")
     
     # Average should be fast (all cache hits)
-    assert avg_time < 50, \
-        f"Concurrent cached requests should be fast: {avg_time:.2f}ms (expected <50ms)"
+    assert avg_time < CACHE_HIT_THRESHOLD_MS, \
+        f"Concurrent cached requests should be fast: {avg_time:.2f}ms (expected <{CACHE_HIT_THRESHOLD_MS}ms)"
 
 
 if __name__ == "__main__":
