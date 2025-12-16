@@ -11,8 +11,11 @@
  * Examples:
  * - Vercel serverless (same-origin): Don't set VITE_API_URL
  * - Railway backend: VITE_API_URL=https://your-app.up.railway.app
- * - Local dev: VITE_API_URL=http://localhost:8000
+ * - Production backend: VITE_API_URL=https://api.yourdomain.com
+ * - Local dev only: VITE_API_URL=http://localhost:8000
  * - Strict mode: VITE_REQUIRE_BACKEND_URL=true (will throw error if VITE_API_URL not set)
+ * 
+ * Note: HTTP URLs are only acceptable for local development. Production must use HTTPS.
  */
 
 interface BackendConfig {

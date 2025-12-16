@@ -102,7 +102,9 @@ frontend/
 npm run dev
 ```
 
-The application will be available at `http://localhost:3000`
+The application will be available at `http://localhost:3000` (local development only)
+
+**Note:** HTTP is only used for local development. Production deployments use HTTPS.
 
 ### Building for Production
 
@@ -117,7 +119,11 @@ Production files will be output to the `dist/` directory.
 Create a `.env.local` file in the frontend directory:
 
 ```env
+# For local development only
 VITE_API_URL=http://localhost:8008
+
+# For production, always use HTTPS
+# VITE_API_URL=https://api.yourdomain.com
 
 # Optional: Guard against undefined URLs (prevents silent failures)
 # Set to 'true' to enforce VITE_API_URL is configured
