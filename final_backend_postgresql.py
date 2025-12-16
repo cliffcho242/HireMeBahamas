@@ -7684,6 +7684,20 @@ def follow_user(user_id):
         cursor.close()
         return_db_connection(conn)
 
+        # Send real-time notification to followed user
+        if notification_manager:
+            try:
+                notification_manager.send_notification(
+                    str(user_id),
+                    {
+                        'type': 'follow',
+                        'user_id': current_user_id,
+                        'message': 'Someone started following you'
+                    }
+                )
+            except Exception as ws_error:
+                logger.warning(f"WebSocket notification failed: {ws_error}")
+
         return jsonify({"success": True, "message": "User followed successfully"}), 200
 
     except Exception as e:
