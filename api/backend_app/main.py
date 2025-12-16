@@ -860,6 +860,7 @@ else:
 
 # Root endpoint
 @app.get("/")
+@app.head("/")
 async def root():
     return {
         "message": "Welcome to HireMeBahamas API",
