@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { API } from '../services/api';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import {
@@ -12,9 +13,6 @@ import {
   UserIcon,
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
-
-// Use environment variable or fall back to same-origin for serverless deployments
-const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
 interface UserLoginStats {
   total_users: number;
@@ -75,7 +73,7 @@ const UserAnalytics: React.FC = () => {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/api/analytics/user-logins`, {
+      const response = await axios.get(`${API}/api/analytics/user-logins`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStats(response.data);
@@ -91,7 +89,7 @@ const UserAnalytics: React.FC = () => {
     setLoadingInactive(true);
     try {
       const response = await axios.get(
-        `${API_URL}/api/analytics/inactive-users?days=${inactiveDays}&limit=100`,
+        `${API}/api/analytics/inactive-users?days=${inactiveDays}&limit=100`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setInactiveUsers(response.data.users);
