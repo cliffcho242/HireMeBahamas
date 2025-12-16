@@ -81,6 +81,8 @@ authlib==1.6.5
 
 # Real-time Communication (Socket.IO for real-time features)
 python-socketio==5.15.0
+flask-socketio==5.4.1
+eventlet==0.37.0
 
 # ============================================================================
 # DEPLOYMENT NOTES:

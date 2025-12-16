@@ -494,6 +494,29 @@ CORS(
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 )
 
+# ==========================================
+# WEBSOCKET REAL-TIME FEATURES (FACEBOOK-STYLE)
+# ==========================================
+# Initialize WebSocket for real-time notifications, chat, and live updates
+# Uses Flask-SocketIO with Redis pub/sub for multi-worker scaling
+try:
+    from websocket_notifications import init_websocket_notifications, get_notification_manager
+    
+    # Initialize WebSocket with Redis pub/sub if available
+    notification_manager = init_websocket_notifications(app, redis_url=REDIS_URL)
+    socketio = notification_manager.socketio if notification_manager else None
+    
+    if socketio:
+        print("✅ WebSocket real-time features initialized (notifications, chat, live counts)")
+    else:
+        print("ℹ️  WebSocket features disabled (Flask-SocketIO not installed)")
+        notification_manager = None
+        socketio = None
+except Exception as e:
+    print(f"⚠️  WebSocket initialization failed (non-critical): {e}")
+    notification_manager = None
+    socketio = None
+
 # File upload configuration
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
 STORIES_FOLDER = os.path.join(UPLOAD_FOLDER, "stories")
@@ -6989,6 +7012,42 @@ def like_post(post_id):
         cursor.close()
         return_db_connection(conn)
 
+        # Broadcast real-time like update via WebSocket
+        if notification_manager and liked:
+            try:
+                # Get post author to send notification
+                conn_notify = get_db_connection()
+                cursor_notify = conn_notify.cursor()
+                if USE_POSTGRESQL:
+                    cursor_notify.execute("SELECT user_id FROM posts WHERE id = %s", (post_id,))
+                else:
+                    cursor_notify.execute("SELECT user_id FROM posts WHERE id = ?", (post_id,))
+                post_author_row = cursor_notify.fetchone()
+                cursor_notify.close()
+                return_db_connection(conn_notify)
+                
+                if post_author_row and post_author_row['user_id'] != user_id:
+                    # Send notification to post author (don't notify yourself)
+                    notification_manager.send_notification(
+                        str(post_author_row['user_id']),
+                        {
+                            'type': 'like',
+                            'post_id': post_id,
+                            'user_id': user_id,
+                            'message': 'Someone liked your post'
+                        }
+                    )
+                
+                # Broadcast like count update to all connected clients
+                notification_manager.broadcast_like_update(
+                    str(post_id),
+                    likes_count,
+                    str(user_id)
+                )
+            except Exception as ws_error:
+                # Don't fail the request if WebSocket fails
+                logger.warning(f"WebSocket notification failed: {ws_error}")
+
         return (
             jsonify(
                 {
@@ -7624,6 +7683,20 @@ def follow_user(user_id):
         conn.commit()
         cursor.close()
         return_db_connection(conn)
+
+        # Send real-time notification to followed user
+        if notification_manager:
+            try:
+                notification_manager.send_notification(
+                    str(user_id),
+                    {
+                        'type': 'follow',
+                        'user_id': current_user_id,
+                        'message': 'Someone started following you'
+                    }
+                )
+            except Exception as ws_error:
+                logger.warning(f"WebSocket notification failed: {ws_error}")
 
         return jsonify({"success": True, "message": "User followed successfully"}), 200
 
@@ -10166,6 +10239,103 @@ def get_database_health():
             return_db_connection(conn)
 
 
+# ==========================================
+# WEBSOCKET NOTIFICATION ENDPOINTS
+# ==========================================
+
+@app.route("/api/ws/status", methods=["GET", "OPTIONS"])
+def get_websocket_status():
+    """
+    Get WebSocket connection status and statistics.
+    
+    Returns information about:
+    - WebSocket availability
+    - Active connections count
+    - Online users count
+    - Redis pub/sub status
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+    
+    if not notification_manager:
+        return jsonify({
+            "success": False,
+            "websocket_enabled": False,
+            "message": "WebSocket features not available"
+        }), 200
+    
+    return jsonify({
+        "success": True,
+        "websocket_enabled": True,
+        "active_connections": notification_manager.get_connection_count(),
+        "online_users": len(notification_manager.get_online_users()),
+        "redis_enabled": notification_manager.redis_client is not None
+    }), 200
+
+
+@app.route("/api/ws/test-notification", methods=["POST", "OPTIONS"])
+def test_websocket_notification():
+    """
+    Test endpoint to send a WebSocket notification.
+    Requires authentication.
+    
+    Body:
+    {
+        "message": "Test notification message"
+    }
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+    
+    if not notification_manager:
+        return jsonify({
+            "success": False,
+            "message": "WebSocket features not available"
+        }), 200
+    
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return jsonify({"success": False, "message": "No token provided"}), 401
+        
+        token = auth_header.split(" ")[1]
+        
+        # Decode token to get user_id
+        try:
+            payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
+            user_id = payload.get("user_id")
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Token has expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+        
+        data = request.get_json()
+        message = data.get("message", "Test notification")
+        
+        # Send notification to user
+        notification_manager.send_notification(
+            str(user_id),
+            {
+                "type": "test",
+                "message": message,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        )
+        
+        return jsonify({
+            "success": True,
+            "message": "Test notification sent",
+            "user_id": user_id
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Test notification error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Failed to send test notification: {str(e)}"
+        }), 500
+
 
 # ==========================================
 # GLOBAL API FALLBACK HANDLER
@@ -10211,9 +10381,23 @@ _startup_time_ms = int((_APP_IMPORT_COMPLETE_TIME - _APP_START_TIME) * 1000)
 print(f"✅ Application ready to serve requests (startup time: {_startup_time_ms}ms)")
 
 # Export application for gunicorn
-application = app
+# Use socketio app if WebSocket is enabled, otherwise use Flask app
+if socketio:
+    application = socketio
+    print("✅ Exporting SocketIO application for WSGI server")
+else:
+    application = app
+    print("ℹ️  Exporting Flask application for WSGI server (WebSocket disabled)")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     print(f"🚀 Starting HireMeBahamas backend on port {port}...")
-    app.run(host="0.0.0.0", port=port, debug=False)
+    
+    if socketio:
+        # Run with SocketIO support
+        print("✅ Running with WebSocket support")
+        socketio.run(app, host="0.0.0.0", port=port, debug=False)
+    else:
+        # Run without WebSocket
+        print("ℹ️  Running without WebSocket support")
+        app.run(host="0.0.0.0", port=port, debug=False)
