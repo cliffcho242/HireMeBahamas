@@ -6,16 +6,41 @@ This document explains how database indexes are created in the HireMeBahamas app
 ## How Index Creation Works
 
 ### 1. Model-Level Index Definitions
-Indexes are defined in SQLAlchemy models using the `index=True` parameter:
+
+SQLAlchemy provides two ways to define indexes:
+
+#### A. Column-Level Indexes (`index=True`)
+Creates a single-column index automatically:
 
 ```python
 class User(Base):
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    email = Column(String(255), unique=True, index=True, nullable=False)  # ← Index created automatically
-    username = Column(String(50), unique=True, index=True)  # ← Index created automatically
+    email = Column(String(255), unique=True, index=True, nullable=False)  # ← Single-column index
+    username = Column(String(50), unique=True, index=True)  # ← Single-column index
 ```
+
+#### B. Table-Level Index Objects (`Index()`)
+Creates composite or custom indexes:
+
+```python
+from sqlalchemy import Index
+
+class Post(Base):
+    __tablename__ = "posts"
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, nullable=False)
+    
+    # Composite index for efficient user post queries
+    __table_args__ = (
+        Index('idx_posts_user_created', 'user_id', 'created_at'),
+    )
+```
+
+Both approaches are handled automatically by `Base.metadata.create_all()`.
 
 ### 2. Automatic Index Creation via SQLAlchemy
 When `Base.metadata.create_all(engine)` is called, SQLAlchemy automatically:
@@ -80,8 +105,10 @@ This means:
 1. Models are imported, registering them with `Base.metadata`
 2. `Base.metadata.create_all` is called
 3. SQLAlchemy generates `CREATE TABLE` statements
-4. SQLAlchemy generates `CREATE INDEX` statements for all `index=True` columns
+4. SQLAlchemy generates `CREATE INDEX` statements for all indexes (both `index=True` columns and `Index()` objects)
 5. All tables and indexes are created atomically
+
+**Note**: `init_db()` must be called manually (via migration script or administrative command) or integrated into your deployment process. It is NOT called automatically at startup due to the lazy initialization pattern.
 
 ## Why Index Creation Was Skipped
 
