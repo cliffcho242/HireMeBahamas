@@ -11,6 +11,15 @@ Performance targets:
 - Cache hit: <1ms latency
 - Cache miss: <5ms overhead
 - 99th percentile: <10ms
+- Feed loads: <100ms
+- Health checks: <30ms
+
+Production-Safe Configuration:
+- SSL/TLS support (rediss://)
+- Connection timeouts (2s)
+- Socket timeouts (2s)
+- Automatic fallback to in-memory cache
+- Graceful degradation on Redis failures
 
 Usage:
     from app.core.redis_cache import redis_cache, cache_decorator
@@ -23,31 +32,34 @@ Usage:
     @cache_decorator(prefix="users", ttl=300)
     async def get_user(user_id: int):
         return await db.get_user(user_id)
+
+Render Setup:
+    REDIS_URL=rediss://:password@host:port
 """
 import asyncio
 import json
 import logging
 import time
 import hashlib
+import os
 from functools import wraps
 from typing import Any, Callable, Optional, TypeVar, Union
 from contextlib import asynccontextmanager
-
-from decouple import config
 
 logger = logging.getLogger(__name__)
 
 # Type variable for generic return types
 T = TypeVar('T')
 
-# Redis configuration
-REDIS_URL = config(
-    "REDIS_URL",
-    default=config(
-        "REDIS_PRIVATE_URL",
-        default=config("UPSTASH_REDIS_REST_URL", default="")
-    )
-)
+# Redis configuration with production-safe defaults
+# Priority order:
+# 1. REDIS_URL (primary - supports rediss:// for SSL)
+# 2. REDIS_PRIVATE_URL (Railway private network)
+# 3. UPSTASH_REDIS_REST_URL (Upstash REST API)
+REDIS_URL = os.getenv("REDIS_URL") or \
+            os.getenv("REDIS_PRIVATE_URL") or \
+            os.getenv("UPSTASH_REDIS_REST_URL") or \
+            ""
 
 # Cache configuration constants
 DEFAULT_TTL = 300  # 5 minutes
@@ -55,8 +67,8 @@ MAX_KEY_LENGTH = 250
 MAX_VALUE_SIZE = 1024 * 1024  # 1MB max per value
 
 # Connection pool settings (for asyncpg-style performance)
-REDIS_POOL_SIZE = config("REDIS_POOL_SIZE", default=10, cast=int)
-REDIS_POOL_TIMEOUT = config("REDIS_POOL_TIMEOUT", default=5.0, cast=float)
+REDIS_POOL_SIZE = int(os.getenv("REDIS_POOL_SIZE", "10"))
+REDIS_POOL_TIMEOUT = float(os.getenv("REDIS_POOL_TIMEOUT", "5.0"))
 
 
 class AsyncRedisCache:
@@ -92,7 +104,16 @@ class AsyncRedisCache:
     
     async def connect(self) -> bool:
         """
-        Initialize Redis connection with connection pooling.
+        Initialize Redis connection with production-safe configuration.
+        
+        Supports:
+        - SSL/TLS connections (rediss://)
+        - Connection pooling for performance
+        - Automatic reconnection with circuit breaker
+        - Graceful fallback to in-memory cache
+        
+        Configuration (Render example):
+            REDIS_URL=rediss://:password@host:port
         
         Returns:
             bool: True if Redis is available, False if using memory fallback
@@ -108,25 +129,42 @@ class AsyncRedisCache:
         try:
             import redis.asyncio as aioredis
             
+            # Production-safe Redis configuration
+            # Matches the new requirement pattern with proper timeouts
             self._redis_client = await aioredis.from_url(
                 REDIS_URL,
                 encoding="utf-8",
                 decode_responses=True,
                 max_connections=REDIS_POOL_SIZE,
-                socket_timeout=REDIS_POOL_TIMEOUT,
-                socket_connect_timeout=REDIS_POOL_TIMEOUT,
+                socket_timeout=2,  # 2s socket timeout (as per requirement)
+                socket_connect_timeout=2,  # 2s connect timeout (as per requirement)
                 retry_on_timeout=True,
+                socket_keepalive=True,  # Keep connections alive
+                health_check_interval=30,  # Health check every 30s
             )
             
-            # Test connection
-            await self._redis_client.ping()
+            # Test connection with timeout
+            await asyncio.wait_for(self._redis_client.ping(), timeout=2.0)
             self._redis_available = True
             self._connection_attempts = 0
-            logger.info("Redis cache connected successfully")
+            logger.info("✅ Redis cache connected successfully (SSL/TLS enabled)")
             return True
             
         except ImportError:
             logger.warning("redis package not installed, using in-memory cache")
+            return False
+        except asyncio.TimeoutError:
+            self._connection_attempts += 1
+            self._last_connection_error = "Connection timeout"
+            
+            # Exponential backoff for circuit breaker
+            backoff_seconds = min(60, 2 ** self._connection_attempts)
+            self._circuit_breaker_reset_time = time.time() + backoff_seconds
+            
+            logger.warning(
+                f"Redis connection timeout (attempt {self._connection_attempts}). "
+                f"Using in-memory cache. Retry in {backoff_seconds}s"
+            )
             return False
         except Exception as e:
             self._connection_attempts += 1

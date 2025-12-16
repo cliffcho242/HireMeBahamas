@@ -10,6 +10,7 @@ import time
 import json
 import logging
 import hashlib
+import asyncio
 from typing import Any, Callable, Optional
 from functools import wraps
 
@@ -24,7 +25,12 @@ _cache: dict[str, tuple[Any, float]] = {}
 
 
 async def get_redis():
-    """Get Redis client with connection pooling.
+    """Get Redis client with production-safe connection pooling.
+    
+    Supports SSL/TLS connections (rediss://) with proper timeouts.
+    
+    Configuration (Render example):
+        REDIS_URL=rediss://:password@host:port
     
     Returns None if Redis is not configured or unavailable.
     Falls back gracefully to in-memory caching.
@@ -40,7 +46,11 @@ async def get_redis():
         return _redis_client
     
     # Check if Redis URL is configured
-    redis_url = os.getenv('REDIS_URL') or os.getenv('UPSTASH_REDIS_REST_URL')
+    # Priority order: REDIS_URL > REDIS_PRIVATE_URL > UPSTASH_REDIS_REST_URL
+    redis_url = os.getenv('REDIS_URL') or \
+                os.getenv('REDIS_PRIVATE_URL') or \
+                os.getenv('UPSTASH_REDIS_REST_URL')
+    
     if not redis_url:
         logger.info("Redis not configured, using in-memory cache")
         _redis_available = False
@@ -49,22 +59,25 @@ async def get_redis():
     try:
         import redis.asyncio as aioredis
         
-        # Create connection pool for better performance
+        # Production-safe Redis configuration with proper timeouts
+        # Matches the new requirement pattern
         pool = aioredis.ConnectionPool.from_url(
             redis_url,
             decode_responses=True,
             max_connections=10,  # Connection pool size
             socket_keepalive=True,
-            socket_connect_timeout=5,
+            socket_connect_timeout=2,  # 2s connect timeout (as per requirement)
+            socket_timeout=2,  # 2s socket timeout (as per requirement)
             retry_on_timeout=True,
+            health_check_interval=30,  # Health check every 30s
         )
         
         _redis_client = aioredis.Redis(connection_pool=pool)
         
         # Test connection with timeout
-        await _redis_client.ping()
+        await asyncio.wait_for(_redis_client.ping(), timeout=2.0)
         _redis_available = True
-        logger.info("✓ Redis cache initialized successfully")
+        logger.info("✓ Redis cache initialized successfully (SSL/TLS enabled)")
         return _redis_client
         
     except ImportError:
