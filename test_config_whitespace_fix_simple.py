@@ -64,6 +64,7 @@ def test_config_method_logic_simulation():
                 raise ValueError("DATABASE_URL must be set in production")
             else:
                 # Use local development default only in development mode
+                # Note: These are the default development credentials, not production secrets
                 database_url = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
         
         return database_url

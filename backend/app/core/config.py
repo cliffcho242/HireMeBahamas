@@ -84,7 +84,7 @@ class Settings:
                 raise ValueError("DATABASE_URL must be set in production")
             else:
                 # Use local development default only in development mode
-                logger.warning("DATABASE_URL not set or empty (whitespace-only), using default local development database URL")
+                logger.warning("DATABASE_URL not provided, using default development database URL")
                 database_url = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
         
         # Fix common typos in DATABASE_URL
