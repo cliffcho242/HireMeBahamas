@@ -514,6 +514,7 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     # Run bcrypt pre-warming in background to avoid blocking startup
     async def prewarm_bcrypt_background():
+        """Background task to pre-warm bcrypt (non-critical)."""
         try:
             if prewarm_bcrypt_async is not None:
                 await asyncio.wait_for(prewarm_bcrypt_async(), timeout=STARTUP_OPERATION_TIMEOUT)
@@ -524,6 +525,8 @@ async def lazy_import_heavy_stuff():
             logger.warning(f"Bcrypt pre-warm skipped (non-critical): {type(e).__name__}")
     
     # Launch as background task - doesn't block startup
+    # Note: No need to store reference as this is a fire-and-forget non-critical task
+    # Errors are caught and logged within the task itself
     asyncio.create_task(prewarm_bcrypt_background())
     
     # ==========================================================================
@@ -531,6 +534,7 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     # Run Redis connection in background to avoid blocking startup
     async def connect_redis_background():
+        """Background task to connect to Redis cache (non-critical)."""
         try:
             if redis_cache is not None:
                 redis_available = await asyncio.wait_for(redis_cache.connect(), timeout=STARTUP_OPERATION_TIMEOUT)
@@ -544,6 +548,8 @@ async def lazy_import_heavy_stuff():
             logger.warning(f"Redis connection failed (non-critical): {e}")
     
     # Launch as background task - doesn't block startup
+    # Note: No need to store reference as this is a fire-and-forget non-critical task
+    # Errors are caught and logged within the task itself
     asyncio.create_task(connect_redis_background())
     
     # ==========================================================================
@@ -551,6 +557,7 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     # Run cache warmup in background to avoid blocking startup
     async def warmup_cache_background():
+        """Background task to warm up cache (non-critical)."""
         try:
             from .core.cache import warmup_cache
             await asyncio.wait_for(warmup_cache(), timeout=STARTUP_OPERATION_TIMEOUT)
@@ -561,6 +568,8 @@ async def lazy_import_heavy_stuff():
             logger.debug(f"Cache warmup skipped: {e}")
     
     # Launch as background task - doesn't block startup
+    # Note: No need to store reference as this is a fire-and-forget non-critical task
+    # Errors are caught and logged within the task itself
     asyncio.create_task(warmup_cache_background())
     
     # ==========================================================================

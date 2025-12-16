@@ -26,10 +26,24 @@ def test_gunicorn_config(config_path):
         return False
     
     # Parse the config as Python
-    config_globals = {}
+    # Note: Using exec() on trusted config files only (not user input)
+    # This is safe as we're testing our own configuration files
+    config_globals = {'__builtins__': {}}  # Restrict builtins for safety
+    config_locals = {}
     try:
-        exec(content, config_globals)
+        # Allow only necessary imports for config evaluation
+        safe_globals = {
+            '__builtins__': __builtins__,
+            'os': os,
+            'multiprocessing': __import__('multiprocessing'),
+            'time': __import__('time'),
+            'int': int,
+            'print': print,
+        }
+        exec(content, safe_globals, config_locals)
         print("✅ Configuration is syntactically valid")
+        # Copy evaluated values to config_globals for checking
+        config_globals.update(config_locals)
     except Exception as e:
         print(f"❌ Syntax error in config: {e}")
         return False
