@@ -91,11 +91,13 @@ def test_production_connection_settings():
         )
         print("✓ Test 10 passed: pool_recycle=300")
         
-        # Test 11: Verify SSL require is set (NUCLEAR FIX)
-        assert connect_args.get("ssl") == "require", (
-            f"Expected connect_args['ssl']='require', got {connect_args.get('ssl')}"
+        # Test 11: Verify SSL is NOT in connect_args (should be in DATABASE_URL only)
+        # FINAL LAW: DATABASE_URL with sslmode=require = ZERO ssl parameters elsewhere
+        assert "ssl" not in connect_args and "sslmode" not in connect_args, (
+            f"Expected NO ssl in connect_args (should be in DATABASE_URL), "
+            f"got: {[k for k in connect_args.keys() if 'ssl' in k.lower()]}"
         )
-        print("✓ Test 11 passed: connect_args['ssl']='require' (NUCLEAR FIX)")
+        print("✓ Test 11 passed: SSL correctly NOT in connect_args (configured via DATABASE_URL)")
         
         # Test 12: Verify pool_size is 3 for production (NUCLEAR FIX)
         assert database.POOL_SIZE == 3, (
@@ -110,7 +112,8 @@ def test_production_connection_settings():
         print("✓ Test 13 passed: POOL_MAX_OVERFLOW=5 (NUCLEAR FIX)")
         
         print("\n✅ All Railway/Render Postgres timeout fix settings verified!")
-        print("✅ NUCLEAR FIX applied: pool_size=3, max_overflow=5, connect_timeout=30, ssl=require, jit=off")
+        print("✅ NUCLEAR FIX applied: pool_size=3, max_overflow=5, connect_timeout=30, jit=off")
+        print("✅ SSL configured via DATABASE_URL (sslmode=require), NOT in connect_args")
         print("✅ Configuration ready for Render → Railway PostgreSQL connections")
         
     finally:

@@ -20,11 +20,12 @@ def init_db():
         if not url.username or not url.password or not url.host:
             raise ValueError("DATABASE_URL missing credentials or host")
 
+        # SSL is configured via DATABASE_URL query string (?sslmode=require), NOT in connect_args
+        # This is the correct and portable way for PostgreSQL connections
         engine = create_engine(
             url,
             pool_pre_ping=True,
             pool_recycle=300,
-            connect_args={"sslmode": "require"},
         )
 
         logging.info("Database engine initialized successfully")
