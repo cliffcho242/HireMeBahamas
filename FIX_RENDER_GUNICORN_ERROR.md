@@ -23,8 +23,10 @@ gunicorn: error: unrecognized arguments:
 4. **Copy and paste this EXACT single line** (no line breaks):
 
 ```
-cd backend && gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info
+cd backend && gunicorn app.main:app --workers ${WEB_CONCURRENCY:-3} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info
 ```
+
+   Note: This uses `${WEB_CONCURRENCY:-3}` to default to 3 workers, which can be overridden via the WEB_CONCURRENCY environment variable.
 
 5. Click **"Save Changes"** button
 
@@ -89,7 +91,7 @@ This will check all your deployment configuration files for common issues.
 
 If you need more detailed help:
 
-1. **[START_HERE_GUNICORN_ERROR.md](./START_HERE_GUNICORN_ERROR.md)**
+1. **[GUNICORN_ARGS_ERROR_FIX.md](./GUNICORN_ARGS_ERROR_FIX.md)**
    - Comprehensive troubleshooting guide
    - Platform-specific instructions (Render, Railway, Heroku)
    - Common issues and fixes

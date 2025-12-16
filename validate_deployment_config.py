@@ -199,7 +199,6 @@ def check_entry_points():
     fastapi_paths = [
         Path("backend/app/main.py"),
         Path("app/main.py"),
-        Path("api/backend_app/main.py"),
     ]
     
     fastapi_found = False
@@ -279,7 +278,10 @@ def check_environment_example():
         
         required_vars = ['DATABASE_URL', 'SECRET_KEY', 'JWT_SECRET_KEY']
         for var in required_vars:
-            if var in content:
+            # Use regex to match actual variable definitions, not just mentions in comments
+            import re
+            pattern = rf'^{re.escape(var)}\s*='
+            if re.search(pattern, content, re.MULTILINE):
                 print_success(f"{var} documented in .env.example")
             else:
                 print_warning(f"{var} not found in .env.example")
@@ -329,7 +331,7 @@ def main():
         print_warning("Some checks failed or have warnings.")
         print_info("Review the warnings above before deploying.")
         print_info("\nFor help with common issues:")
-        print_info("  • START_HERE_GUNICORN_ERROR.md - Fix gunicorn errors")
+        print_info("  • FIX_RENDER_GUNICORN_ERROR.md - Fix gunicorn errors")
         print_info("  • DEPLOYMENT_COMMANDS_QUICK_REF.md - All deployment commands")
         print_info("  • GUNICORN_ENTRY_POINTS.md - Entry point documentation")
     
