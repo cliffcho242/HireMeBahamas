@@ -352,15 +352,16 @@ async def add_cache_headers(request: Request, call_next):
         if "cache-control" not in response.headers:
             cache_control = None
             
-            # Check if this path matches any specific cache rules
+            # Check if this path matches any specific cache rules (excluding wildcard)
             for pattern, methods in CACHE_CONTROL_RULES.items():
-                if pattern == "*":
-                    # Default rule, apply if no other matches
-                    if request.method in methods and cache_control is None:
-                        cache_control = methods[request.method]
-                elif path.startswith(pattern) and request.method in methods:
+                if pattern != "*" and path.startswith(pattern) and request.method in methods:
                     cache_control = methods[request.method]
                     break
+            
+            # Apply wildcard default if no specific pattern matched
+            if cache_control is None and "*" in CACHE_CONTROL_RULES:
+                if request.method in CACHE_CONTROL_RULES["*"]:
+                    cache_control = CACHE_CONTROL_RULES["*"][request.method]
             
             # Apply the cache control header
             if cache_control:
