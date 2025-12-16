@@ -31,14 +31,14 @@ const getBackendUrl = (): string => {
   throw new Error('VITE_API_URL environment variable is required. Frontend URLs must be absolute, public, and start with https://');
 };
 
-// AI Error Prevention: Multiple backend endpoints for redundancy
+// AI Error Prevention: Single primary backend endpoint
 const BACKEND_ENDPOINTS = (() => {
   const primary = getBackendUrl();
   const endpoints = [primary];
   
-  // ✅ SECURITY: No localhost fallbacks - use VITE_API_URL env var for local development
-  // This prevents production deployments from trying to connect to localhost
-  // Frontend URLs must be absolute, public, and start with https://
+  // ✅ SECURITY: Use VITE_API_URL env var for explicit backend URLs
+  // For production: Frontend URLs must be absolute, public, and start with https://
+  // For development: Set VITE_API_URL=http://localhost:8000 in .env file
   
   return endpoints;
 })();

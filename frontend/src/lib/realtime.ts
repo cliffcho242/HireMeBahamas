@@ -26,8 +26,8 @@ if (ENV_API) {
   SOCKET_URL = window.location.origin;
 } else {
   // ❌ SECURITY: No HTTP fallback allowed in production
-  // SSR/build environments must use VITE_SOCKET_URL or VITE_API_URL environment variable
-  throw new Error('VITE_SOCKET_URL or VITE_API_URL environment variable is required. Frontend URLs must be absolute, public, and start with https://');
+  // SSR/build environments must use VITE_API_URL environment variable
+  throw new Error('VITE_API_URL environment variable is required. Frontend URLs must be absolute, public, and start with https://');
 }
 const RECONNECT_DELAY_BASE = 1000;
 const MAX_RECONNECT_DELAY = 30000;
