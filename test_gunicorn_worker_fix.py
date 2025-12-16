@@ -24,6 +24,20 @@ def load_module_from_file(file_path: Path, module_name: str):
     return module
 
 
+def check_logconfig_dict(config, config_name: str) -> None:
+    """Check if logconfig_dict is configured in the module.
+    
+    Args:
+        config: The loaded configuration module
+        config_name: Name of the config file (for display)
+    """
+    logconfig_dict = getattr(config, 'logconfig_dict', None)
+    if logconfig_dict:
+        print(f"✅ logconfig_dict configured (enhanced logging)")
+    else:
+        print(f"ℹ️  logconfig_dict not found (using default logging)")
+
+
 def test_backend_gunicorn_config():
     """Test backend/gunicorn.conf.py has proper worker_abort hook."""
     print("Testing backend/gunicorn.conf.py...")
@@ -93,7 +107,10 @@ def test_backend_gunicorn_config():
         elif preload_app is False:
             print("✅ preload_app=False (safe for databases)")
         
-        print("✅ backend/gunicorn.conf.py is valid and has worker_abort hook\n")
+        # Check for enhanced logging configuration using helper
+        check_logconfig_dict(config, "backend/gunicorn.conf.py")
+        
+        print("✅ backend/gunicorn.conf.py is valid and has enhanced worker hooks\n")
         return True
         
     except Exception as e:
@@ -133,7 +150,10 @@ def test_root_gunicorn_config():
             print("❌ worker_int is not callable in gunicorn.conf.py")
             return False
         
-        print("✅ gunicorn.conf.py is valid and has worker_abort and worker_int hooks\n")
+        # Check for enhanced logging configuration using helper
+        check_logconfig_dict(config, "gunicorn.conf.py")
+        
+        print("✅ gunicorn.conf.py is valid and has enhanced worker hooks\n")
         return True
         
     except Exception as e:
