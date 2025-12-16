@@ -103,6 +103,10 @@ async def create_performance_indexes():
     - Like checks: 100ms → 5ms (20x faster)
     
     Safe to run multiple times (uses IF NOT EXISTS).
+    
+    ⚠️  PRODUCTION SAFETY: This function gracefully handles DB unavailability.
+    The app will start successfully even if index creation fails.
+    Indexes will be created on first successful database connection.
     """
     try:
         engine = get_engine()
@@ -128,7 +132,7 @@ async def create_performance_indexes():
         return True
         
     except Exception as e:
-        logger.error(f"Failed to create indexes: {e}")
+        logger.warning(f"DB init skipped - Failed to create indexes: {e}")
         return False
 
 
@@ -177,6 +181,10 @@ async def warmup_database_connections():
     
     This ensures the first API request doesn't experience cold start penalty.
     Executes a simple query to establish connections.
+    
+    ⚠️  PRODUCTION SAFETY: This function gracefully handles DB unavailability.
+    The app will start successfully even if the database is temporarily down.
+    Database connections will be established on first actual request.
     """
     try:
         engine = get_engine()
@@ -190,7 +198,7 @@ async def warmup_database_connections():
         return True
         
     except Exception as e:
-        logger.warning(f"Database warmup failed: {e}")
+        logger.warning(f"DB init skipped - Database warmup failed: {e}")
         return False
 
 
