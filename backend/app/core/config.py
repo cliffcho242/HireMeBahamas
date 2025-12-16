@@ -73,6 +73,7 @@ class Settings:
         """
         database_url = cls.DATABASE_URL
         
+        # Check if DATABASE_URL is None or empty string before processing
         # For local development only - require explicit configuration in production
         if not database_url:
             if cls.ENVIRONMENT == "production":
@@ -81,11 +82,12 @@ class Settings:
                 # Use local development default only in development mode
                 database_url = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
         
-        # Strip whitespace to prevent connection errors
+        # Strip whitespace to prevent connection errors from misconfigured environment variables
         database_url = database_url.strip()
         
-        # Check if DATABASE_URL is empty after stripping whitespace
-        # This catches whitespace-only strings that would cause SQLAlchemy parsing errors
+        # Check if DATABASE_URL is empty AFTER stripping whitespace
+        # This catches whitespace-only strings (e.g., "   ") that would cause SQLAlchemy parsing errors
+        # Note: This is a separate check from above because whitespace strings are truthy in Python
         if not database_url:
             if cls.ENVIRONMENT == "production":
                 raise ValueError("DATABASE_URL is empty or contains only whitespace")
