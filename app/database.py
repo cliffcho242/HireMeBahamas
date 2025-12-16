@@ -35,7 +35,7 @@ def init_db() -> Optional[object]:
         return None
 
 
-def warmup_db(engine) -> bool:
+async def warmup_db(engine) -> bool:
     """Warm up database connection pool.
     
     Performs a simple connection test to ensure the database is accessible
@@ -52,9 +52,13 @@ def warmup_db(engine) -> bool:
         return False
         
     try:
-        # Perform a simple query to test connectivity
-        # Note: This is intentionally synchronous to match the problem statement pattern
-        # In production, the actual engine will be async and handle this properly
+        # Import sqlalchemy to test connectivity
+        from sqlalchemy import text
+        
+        # Perform a simple query to test connectivity and warm up the pool
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        
         logger.info("Database warmup: Connection pool ready")
         return True
         
