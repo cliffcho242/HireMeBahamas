@@ -22,6 +22,21 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = config("ACCESS_TOKEN_EXPIRE_MINUTES", default=15, cast=int)  # 15 minutes
 REFRESH_TOKEN_EXPIRE_DAYS = config("REFRESH_TOKEN_EXPIRE_DAYS", default=7, cast=int)  # 7 days
 
+# Validate token expiration configuration
+if ACCESS_TOKEN_EXPIRE_MINUTES < 1:
+    logger.warning(f"ACCESS_TOKEN_EXPIRE_MINUTES ({ACCESS_TOKEN_EXPIRE_MINUTES}) is too low, using 15 minutes")
+    ACCESS_TOKEN_EXPIRE_MINUTES = 15
+elif ACCESS_TOKEN_EXPIRE_MINUTES > 120:
+    logger.warning(f"ACCESS_TOKEN_EXPIRE_MINUTES ({ACCESS_TOKEN_EXPIRE_MINUTES}) is too high for security, using 60 minutes")
+    ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+if REFRESH_TOKEN_EXPIRE_DAYS < 1:
+    logger.warning(f"REFRESH_TOKEN_EXPIRE_DAYS ({REFRESH_TOKEN_EXPIRE_DAYS}) is too low, using 7 days")
+    REFRESH_TOKEN_EXPIRE_DAYS = 7
+elif REFRESH_TOKEN_EXPIRE_DAYS > 90:
+    logger.warning(f"REFRESH_TOKEN_EXPIRE_DAYS ({REFRESH_TOKEN_EXPIRE_DAYS}) is too high for security, using 30 days")
+    REFRESH_TOKEN_EXPIRE_DAYS = 30
+
 # Cookie configuration for secure token storage
 # Determines if we're in production mode
 def is_production() -> bool:

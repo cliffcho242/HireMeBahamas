@@ -67,14 +67,14 @@ async def test_token_generation():
     
     # Test token expiration
     exp_timestamp = access_payload.get("exp")
-    exp_datetime = datetime.fromtimestamp(exp_timestamp)
+    exp_datetime = datetime.utcfromtimestamp(exp_timestamp)
     expected_exp = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     time_diff = abs((exp_datetime - expected_exp).total_seconds())
     assert time_diff < 5, "Access token expiration time incorrect"
     print(f"✓ Access token expires in {ACCESS_TOKEN_EXPIRE_MINUTES} minutes")
     
     refresh_exp_timestamp = refresh_payload.get("exp")
-    refresh_exp_datetime = datetime.fromtimestamp(refresh_exp_timestamp)
+    refresh_exp_datetime = datetime.utcfromtimestamp(refresh_exp_timestamp)
     expected_refresh_exp = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     refresh_time_diff = abs((refresh_exp_datetime - expected_refresh_exp).total_seconds())
     assert refresh_time_diff < 5, "Refresh token expiration time incorrect"
