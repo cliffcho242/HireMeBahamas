@@ -7,18 +7,35 @@ Provides blazing-fast response times with proper timeout configuration.
 Usage:
     from app.redis import redis_client
     
-    # Set cache
-    redis_client.set("user:123", "John Doe", ex=300)
+    # Set cache (only if Redis is available)
+    if redis_client:
+        redis_client.set("user:123", "John Doe", ex=300)
     
-    # Get cache
-    user = redis_client.get("user:123")
+    # Get cache (only if Redis is available)
+    if redis_client:
+        user = redis_client.get("user:123")
+
+Note: If REDIS_URL is not configured, redis_client will be None.
+      Application should check for None before using.
 """
 import redis
 from app.config import REDIS_URL
 
-redis_client = redis.from_url(
-    REDIS_URL,
-    decode_responses=True,
-    socket_connect_timeout=2,
-    socket_timeout=2,
-)
+# Initialize Redis client only if REDIS_URL is configured
+# This allows the application to run without Redis (graceful degradation)
+redis_client = None
+
+if REDIS_URL:
+    try:
+        redis_client = redis.from_url(
+            REDIS_URL,
+            decode_responses=True,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
+    except Exception as e:
+        # Log error but don't crash on import
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to initialize Redis client: {e}. Caching will be disabled.")
+        redis_client = None

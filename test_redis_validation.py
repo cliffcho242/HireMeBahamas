@@ -10,7 +10,8 @@ def test_redis_file_structure():
     """Validate that app/redis.py has the correct structure."""
     print("Testing app/redis.py structure...")
     
-    redis_file_path = "/home/runner/work/HireMeBahamas/HireMeBahamas/app/redis.py"
+    import os
+    redis_file_path = os.path.join(os.path.dirname(__file__), "app", "redis.py")
     
     with open(redis_file_path, 'r') as f:
         content = f.read()
@@ -56,7 +57,8 @@ def test_config_has_redis_url():
     """Validate that app/config.py exports REDIS_URL."""
     print("Testing app/config.py for REDIS_URL...")
     
-    config_file_path = "/home/runner/work/HireMeBahamas/HireMeBahamas/app/config.py"
+    import os
+    config_file_path = os.path.join(os.path.dirname(__file__), "app", "config.py")
     
     with open(config_file_path, 'r') as f:
         content = f.read()
