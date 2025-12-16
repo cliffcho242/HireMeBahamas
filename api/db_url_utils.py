@@ -21,6 +21,10 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
     4. Must not contain whitespace (leading, trailing, or embedded)
     5. Must not contain quotes (single or double)
     
+    Note: SSL mode (sslmode parameter) is handled separately by the ensure_sslmode()
+    function, which automatically adds ?sslmode=require if it's missing. This
+    validation function does not check for sslmode to avoid redundancy.
+    
     Args:
         db_url: Database connection URL to validate
         
@@ -44,14 +48,16 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
         - 'postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require'
         - postgresql://"user":pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require
         
-        ✅ CORRECT (Neon example):
+        ✅ CORRECT (Neon example - before ensure_sslmode):
         postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname
         ✔ Real hostname (ep-xxxx.us-east-1.aws.neon.tech)
         ✔ Port present (:5432)
         ✔ TCP enforced
         ✔ No spaces
         ✔ No quotes
-        Note: sslmode is added automatically by ensure_sslmode() if needed
+        
+        After ensure_sslmode() is called, it becomes:
+        postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require
     """
     if not db_url:
         return False, "DATABASE_URL is empty or None"
