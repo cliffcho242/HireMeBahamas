@@ -29,28 +29,34 @@ Pattern from problem statement:
 
     Organized by tags automatically.
 
-This module re-exports the fully configured backend application which already
-implements this exact pattern. The actual implementation is in api/backend_app/main.py
-which has:
-- FastAPI app with docs_url="/docs" and redoc_url="/redoc"
-- All API routers included with proper tags (analytics, auth, jobs, users, etc.)
-- Error handlers registered
-- Logging configured
+This module provides a clean entry point to the backend application.
+
+The actual FastAPI application is implemented in api/backend_app/main.py which:
+- Creates FastAPI app instance
+- Configures docs_url="/docs" and redoc_url="/redoc" (after initial startup)
+- Includes all API routers with proper tags (analytics, auth, jobs, users, etc.)
+- Has production-ready middleware and error handling
+
+This wrapper module ensures:
+- Clean import path: from app.main import app
+- Proper logging configuration
+- Additional error handler registration
+- Follows the pattern specified in the problem statement
 """
 from app.errors import register_error_handlers
 from app.logging import setup_logging
 
-# Set up logging
+# Set up logging first
 setup_logging()
 
 # Import the fully configured backend app
-# api/backend_app/main.py already implements the pattern from the problem statement:
-# - FastAPI app with docs_url="/docs" and redoc_url="/redoc"  
-# - All routers included with tags (analytics, auth, debug, feed, health, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users)
-# - Documentation automatically organized by tags
+# The backend app (api/backend_app/main.py) implements the OpenAPI docs pattern:
+# - FastAPI app with docs_url="/docs" and redoc_url="/redoc"
+# - All routers included with tags for automatic organization
+# - 14 tags organizing 89 endpoints
 from api.backend_app.main import app
 
-# Register error handlers
+# Register additional error handlers for consistency
 register_error_handlers(app)
 
 # Export the app
