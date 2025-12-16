@@ -16,7 +16,7 @@
 
 ### Files Modified
 
-1. **docker-compose.local.yml** (Line 163)
+1. **docker-compose.local.yml** (backend-flask service command)
    - **Before**: `command: gunicorn ... --reload ...`
    - **After**: `command: gunicorn ... [no --reload]`
    - **Impact**: Local Docker environment now runs in production-like mode
