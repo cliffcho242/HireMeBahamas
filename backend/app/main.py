@@ -533,7 +533,7 @@ async def lazy_import_heavy_stuff():
             if redis_available:
                 logger.info("✅ Redis cache connected successfully")
             else:
-                logger.info("ℹ️  Using in-memory cache (Redis not configured)")
+                logger.info("ℹ️ Using in-memory cache (Redis not configured)")
         else:
             logger.debug("Redis cache module not available")
     except asyncio.TimeoutError:

@@ -21,7 +21,7 @@ def test_main_py_logging():
         },
         {
             'name': 'In-memory cache message',
-            'pattern': r'logger\.info\("ℹ️  Using in-memory cache \(Redis not configured\)"\)',
+            'pattern': r'logger\.info\("ℹ️ Using in-memory cache \(Redis not configured\)"\)',
             'expected': True
         },
         {
