@@ -29,9 +29,11 @@ bind = f"0.0.0.0:{os.environ.get('PORT', '10000')}"
 # - CPU/memory becomes the bottleneck, not DB connections
 cpu_count = multiprocessing.cpu_count()
 
-# Workers: 4 for optimal performance with Redis caching (Step 10 - 100K+ users scaling)
+# Workers: 2 for stability (prevents SIGTERM issues during startup)
+# Reduced from 4 to prevent thundering herd problem during worker initialization
+# Can scale up once stability is confirmed
 # Use WEB_CONCURRENCY env var to override
-workers = int(os.environ.get("WEB_CONCURRENCY", "4"))
+workers = int(os.environ.get("WEB_CONCURRENCY", "2"))
 
 # Worker class: uvicorn.workers.UvicornWorker for FastAPI async support
 # Uvicorn workers provide ASGI support with excellent async/await performance
@@ -50,9 +52,10 @@ threads = int(os.environ.get("WEB_THREADS", "4"))
 # ============================================================================
 # TIMEOUT CONFIGURATION (Critical for 502 Prevention)
 # ============================================================================
-# Worker timeout: 60s - optimized for fast responses on always-on Render
-# This is suitable for Standard plan with no cold starts
-timeout = int(os.environ.get("GUNICORN_TIMEOUT", "60"))
+# Worker timeout: 120s - increased to prevent SIGTERM during startup
+# Workers need time to initialize async operations without blocking
+# Once stable, can be reduced to 60s
+timeout = int(os.environ.get("GUNICORN_TIMEOUT", "120"))
 
 # Graceful timeout: 30s for in-flight requests during shutdown
 graceful_timeout = 30
@@ -120,13 +123,16 @@ def on_starting(server):
     """Log startup configuration"""
     global _master_start_time
     _master_start_time = time.time()
-    print(f"🚀 Starting Gunicorn (Step 10 - Scaling to 100K+ Users)")
-    print(f"   Workers: {workers} × {threads} threads = {workers * threads} capacity")
-    print(f"   Timeout: {timeout}s | Keepalive: {keepalive}s")
+    print(f"🚀 Starting Gunicorn (SIGTERM Fix Applied)")
+    print(f"   Workers: {workers} (reduced to prevent startup timeouts)")
+    print(f"   Timeout: {timeout}s (increased to prevent SIGTERM during initialization)")
+    print(f"   Keepalive: {keepalive}s")
     print(f"   Preload: {preload_app} (workers initialize independently)")
+    print(f"   Worker Class: {worker_class} (async event loop)")
+    print(f"   Total Capacity: {workers} workers × ~100+ async connections = 200+ concurrent")
     print(f"   Redis Cache: Enabled (handles most requests)")
     print(f"   Background Jobs: FastAPI BackgroundTasks for async operations")
-    print(f"   Configuration: Production-ready for 100K+ concurrent users")
+    print(f"   ⚡ All startup operations are non-blocking to prevent worker hangs")
 
 
 def when_ready(server):
