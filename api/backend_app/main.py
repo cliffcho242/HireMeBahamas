@@ -226,7 +226,7 @@ except ImportError:
     # Logger not available yet, will log later
 
 # Import APIs
-from app.api import analytics, auth, debug, feed, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
+from app.api import analytics, auth, debug, feed, health, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
 from app.database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
 from app.core.metrics import get_metrics_response, set_app_info
 from app.core.security import prewarm_bcrypt_async
@@ -637,21 +637,7 @@ async def db_readiness_check(db: AsyncSession = Depends(get_db)):
         )
 
 
-# Quick health check endpoint (no database dependency - faster for cold starts)
-@app.get("/health/ping")
-def health_ping():
-    """Ultra-fast health ping endpoint
-    
-    ✅ PRODUCTION-GRADE: Database-free, instant response.
-    Returns immediately without database check.
-    Use this for load balancer health checks and quick availability tests.
-    
-    ❌ No DB access
-    ❌ No external calls
-    ❌ No disk access
-    Target latency: < 30ms
-    """
-    return {"status": "ok"}
+# Note: /health/ping endpoint is now provided by the health router (api/health.py)
 
 
 # Cache warming endpoint for cron jobs
@@ -751,6 +737,7 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"]
 app.include_router(auth.router)  # Router prefix and tags defined in auth.py
 app.include_router(debug.router, prefix="/api/debug", tags=["debug"])
 app.include_router(feed.router, prefix="/api/feed", tags=["feed"])
+app.include_router(health.router, tags=["health"])
 app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
 app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
