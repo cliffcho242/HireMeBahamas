@@ -904,13 +904,14 @@ async def metrics():
 if __name__ == "__main__":
     import uvicorn
 
-    # Production mode - no reload, multiple workers for better performance
+    # Production mode - single worker (ABSOLUTE REQUIREMENT)
+    # Multiple Gunicorn workers are PROHIBITED
     port = int(os.getenv('PORT', 10000))
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
         port=port,
         reload=False,
-        workers=2,  # Use 2 workers for production mode
+        workers=1,
         log_level="info"
     )

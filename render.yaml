@@ -1,28 +1,26 @@
 # =============================================================================
 # HireMeBahamas Backend - Render Deployment Configuration
-# ✅ CORRECT STACK (2025)
+# ABSOLUTE REQUIREMENTS (PRODUCTION CONFIG)
 # =============================================================================
 # 
-# ⚡ CORRECT STACK - INDUSTRY STANDARD:
+# ⚡ SINGLE BACKEND PLATFORM - RENDER ONLY:
 # - Frontend: Vercel (CDN, Edge, static & dynamic UI)
-# - Backend API: Render (Always-on Gunicorn service)
+# - Backend API: Render (ONLY backend platform, NO Railway, NO others)
 # - Database: Neon PostgreSQL (managed, scalable)
 # 
-# This architecture provides:
-# - ⚡ Fast: Global CDN + Always-On backend
-# - 🔒 Stable: No cold starts, no downtime
-# - 🌍 Global: Edge network worldwide
-# - 💰 Scales well: Efficient pricing
-# - 🧠 Industry-standard: Proven tech stack used by Facebook/Twitter scale apps
+# ABSOLUTE PROHIBITIONS:
+# ❌ Multiple Gunicorn workers (MUST be 1)
+# ❌ DB calls at import time
+# ❌ psycopg.connect(... sslmode=...) with URL
+# ❌ Health endpoint touching DB
+# ❌ Backend on more than one platform
+# ❌ Railway + Render together
 #
 # Configuration:
 # - Standard plan ($25/mo) with 1GB RAM for Always On
-# - FastAPI with Gunicorn (production WSGI server with Uvicorn workers)
+# - FastAPI with Gunicorn (SINGLE worker only)
 # - Neon PostgreSQL with connection pooling
-# - Health check at /health with optimized settings
-# 
-# Optional Phase 2:
-# - Redis (sessions, feeds, caching) - Industry standard for scale
+# - Health check at /health (NO database access)
 # =============================================================================
 
 services:
