@@ -107,6 +107,13 @@ services:
       - key: PYTHON_VERSION
         value: "3.12.0"
       # ==========================================================================
+      # PYTHONPATH - Set to backend directory for proper module resolution
+      # ==========================================================================
+      # This ensures Python can find the app module when working directory is root
+      # Aligns with problem statement Option B: Set PYTHONPATH=backend
+      - key: PYTHONPATH
+        value: backend
+      # ==========================================================================
       # NEON POSTGRESQL CONNECTION SETTINGS
       # ==========================================================================
       # Neon provides serverless PostgreSQL with connection pooling
