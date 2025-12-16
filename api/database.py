@@ -226,6 +226,7 @@ def get_engine():
                 },
                 echo=False,                    # Disable SQL logging in production
             )
+            logger.info("✅ Database engine initialized successfully")
         except ArgumentError as e:
             # Catch SQLAlchemy ArgumentError specifically (URL parsing errors)
             logger.warning(

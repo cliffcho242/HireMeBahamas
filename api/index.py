@@ -368,6 +368,7 @@ def get_db_engine():
                         _async_session_maker = sessionmaker(
                             _db_engine, class_=AsyncSession, expire_on_commit=False
                         )
+                        logger.info("✅ Database engine initialized successfully")
                         logger.info("✅ Fallback database engine created successfully")
                     except ValueError as ve:
                         # ValueError indicates configuration issue - log helpful message
