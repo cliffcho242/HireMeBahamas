@@ -36,9 +36,9 @@ watchPatterns = [
 # - Capacity: 4 workers × ~100+ async connections = 400+ concurrent connections
 # - Configuration: All settings centralized in gunicorn.conf.py
 # 
-# PYTHONPATH is set to backend directory for proper module resolution
+# PYTHONPATH is set to current directory (.) after cd to backend
 # This aligns with problem statement Option B: Set PYTHONPATH=backend
-startCommand = "cd backend && PYTHONPATH=backend poetry run gunicorn app.main:app --config gunicorn.conf.py"
+startCommand = "cd backend && PYTHONPATH=. poetry run gunicorn app.main:app --config gunicorn.conf.py"
 healthcheckPath = "/health"
 healthcheckTimeout = 180
 restartPolicyType = "ON_FAILURE"

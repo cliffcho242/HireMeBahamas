@@ -44,9 +44,9 @@
 # For Railway/Heroku with root directory set to 'backend/', use backend/Procfile instead
 # Uses gunicorn.conf.py for complete configuration (workers, threads, timeouts, etc.)
 # 
-# PYTHONPATH is set to backend directory for proper module resolution
+# PYTHONPATH is set to current directory (.) after cd to backend
 # This aligns with problem statement Option B: Set PYTHONPATH=backend
-web: cd backend && PYTHONPATH=backend poetry run gunicorn app.main:app --config gunicorn.conf.py
+web: cd backend && PYTHONPATH=. poetry run gunicorn app.main:app --config gunicorn.conf.py
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh
