@@ -2,10 +2,10 @@
 Tests for app/database.py module.
 
 Validates that the database module follows the requirements:
-- No psycopg direct calls (uses SQLAlchemy only)
-- No sslmode in connect_args
-- No blocking imports
-- Proper lazy initialization
+* No psycopg direct calls (uses SQLAlchemy only)
+* No sslmode in connect_args
+* No blocking imports
+* Proper lazy initialization
 """
 import os
 import sys

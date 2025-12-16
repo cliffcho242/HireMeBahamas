@@ -38,7 +38,7 @@ def init_db():
 
     db_url = os.environ.get("DATABASE_URL")
     if not db_url:
-        logging.warning("DATABASE_URL missing — DB disabled")
+        logging.warning("DATABASE_URL missing -- DB disabled")
         return None
 
     try:
