@@ -80,6 +80,7 @@ else:
     # Check if DATABASE_URL is empty after stripping (whitespace-only string)
     if not DATABASE_URL:
         logger.error("DATABASE_URL is empty (whitespace-only). Please set a valid DATABASE_URL.")
+        DATABASE_URL = None  # Set to None to prevent undefined variable errors
 
 # Only process DATABASE_URL if it is set
 if DATABASE_URL:

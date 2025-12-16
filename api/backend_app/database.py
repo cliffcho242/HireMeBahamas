@@ -89,7 +89,7 @@ if (ENV == "production" or ENVIRONMENT == "production") and not DATABASE_URL:
         "Format: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require"
     )
 elif not DATABASE_URL:
-    # No fallback in development - DATABASE_URL must be explicitly set
+    # DATABASE_URL must be explicitly set in all environments
     logger.error("DATABASE_URL is not set. Please set DATABASE_URL environment variable.")
 # =============================================================================
 
