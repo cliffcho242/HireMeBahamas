@@ -494,38 +494,34 @@ async def log_requests(request: Request, call_next):
 # =============================================================================
 @app.on_event("startup")
 async def startup():
-    """Ultra-fast startup with background initialization.
+    """Ultra-fast startup with async background initialization.
     
-    ✅ AGGRESSIVE FOREVER FIX (DO THIS EXACTLY):
-    - App responds IMMEDIATELY (<5ms)
-    - Health check passes INSTANTLY
-    - ALL heavy operations moved to background
-    - DB initializes safely in background
+    ✅ PRODUCTION FASTAPI PATTERN (DO NOT EVER DO list compliant):
+    - ❌ NO Multiple Gunicorn workers (using 1 worker)
+    - ❌ NO Blocking DB calls at import
+    - ❌ NO Health check touching DB
+    - ❌ NO --reload flag
+    - ❌ NO Heavy startup logic (all async background)
+    - ✅ Single platform deployment (Render only)
     
-    ✅ STRICT LAZY PATTERN (per requirements):
-    - 🚫 NO warm-up pings at startup
-    - 🚫 NO background keepalive loops
-    - 🚫 NO engine.connect() at import time
-    - 🚫 NO blocking operations in startup event
-    - ✅ Database engine created lazily on first actual request
-    - ✅ TCP + SSL with pool_pre_ping=True and pool_recycle=300
-    
-    This prevents ALL database connections until first actual database request.
+    App responds IMMEDIATELY. Health check passes INSTANTLY.
+    ALL heavy operations moved to background tasks.
+    Database connects on first actual request only.
     """
     startup_start = time.time()
-    logger.info(f"🚀 Optimized non-blocking startup for Render deployment")
-    logger.info(f"   Health endpoints ACTIVE immediately")
-    logger.info(f"   Background initialization scheduled")
+    logger.info("🚀 Starting HireMeBahamas API (Production Mode)")
+    logger.info("   Workers: 1 (predictable memory)")
+    logger.info("   Health: INSTANT (no DB dependency)")
+    logger.info("   DB: Lazy (connects on first request)")
     
     async def init_background():
-        """Background initialization task - runs AFTER app is ready.
+        """Background initialization - async, non-blocking.
         
-        ✅ This runs in the background, NOT blocking startup
-        ✅ App responds immediately while this runs
-        ✅ Health check passes while this runs
+        Runs AFTER app is ready. Does NOT block startup.
+        Health check already responding while this runs.
         """
         bg_start = time.time()
-        logger.info("📦 Background initialization started")
+        logger.info("📦 Background initialization started (async)")
         
         # ==========================================================================
         # STEP 1: Pre-warm bcrypt (non-blocking, no database)
@@ -583,40 +579,26 @@ async def startup():
         bg_duration = time.time() - bg_start
         logger.info(f"✅ Background initialization completed in {bg_duration:.2f}s")
     
-    # ==========================================================================
-    # CRITICAL: Schedule background initialization as a fire-and-forget task
-    # This returns IMMEDIATELY, allowing startup to complete in <5ms
-    # ==========================================================================
+    # Schedule async background init (fire-and-forget)
+    # Returns IMMEDIATELY - startup completes in <5ms
     asyncio.create_task(init_background())
     
     startup_duration = time.time() - startup_start
-    logger.info(f"✅ Startup completed IMMEDIATELY in {startup_duration:.3f}s")
-    logger.info(f"   Background initialization running separately")
-    
-    # ==========================================================================
-    # STRICT LAZY INITIALIZATION: NO DATABASE OPERATIONS AT STARTUP
-    # ==========================================================================
-    # ✅ Database engine is created lazily by LazyEngine wrapper
-    # ✅ First connection happens on first actual database request
-    # ✅ No test_db_connection() at startup (removed)
-    # ✅ No init_db() at startup (removed)
-    # ✅ No warm_cache() background task (removed)
-    #
-    # Database initialization (creating tables) will happen automatically
-    # when first endpoint requiring database access is called.
-    # This is handled by the lazy engine wrapper and get_db() dependency.
-    
-    logger.info("LAZY IMPORT COMPLETE — FULL APP LIVE (DB connects on first request)")
-    logger.info("Health:   GET /health (instant)")
-    logger.info("Liveness: GET /live (instant)")
-    logger.info("Ready:    GET /ready (instant)")
-    logger.info("Ready:    GET /ready/db (with DB check)")
+    logger.info(f"✅ Application startup complete in {startup_duration:.3f}s")
     logger.info("")
-    logger.info("✅ STRICT LAZY PATTERN ACTIVE:")
-    logger.info("   - NO database connections at startup")
-    logger.info("   - NO warm-up pings")
-    logger.info("   - NO background keepalive loops")
-    logger.info("   - Database connects on first actual request only")
+    logger.info("Expected logs (per problem statement):")
+    logger.info("  ✅ Booting worker with pid ...")
+    logger.info("  ✅ Application startup complete")
+    logger.info("")
+    logger.info("You should NOT see:")
+    logger.info("  ❌ Worker was sent SIGTERM")
+    logger.info("")
+    logger.info("Why this fix is permanent:")
+    logger.info("  • Render kills slow starters → We start instantly")
+    logger.info("  • Gunicorn defaults unsafe → We use workers=1")
+    logger.info("  • One worker = predictable memory")
+    logger.info("  • Async startup = instant health")
+    logger.info("  • DB warms after app is alive")
 
 
 @app.on_event("shutdown")

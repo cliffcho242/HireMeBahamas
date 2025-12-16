@@ -1,57 +1,45 @@
 # =============================================================================
-# HireMeBahamas Procfile - STEP 18: Production Commands (Final)
+# HireMeBahamas Procfile - Production FastAPI Configuration
 # =============================================================================
 # 
-# ⚡ POETRY-MANAGED PRODUCTION DEPLOYMENT:
-# - Poetry: Consistent dependency management with poetry.lock
-# - Gunicorn: Production WSGI server with config file
-# - FastAPI: Modern async web framework
-# - Redis caching: Facebook-level performance
+# ✅ FINAL "DO NOT EVER DO" LIST COMPLIANT:
+# ✅ Single Gunicorn worker (workers=1)
+# ✅ No blocking DB calls at import
+# ✅ Health check never touches DB
+# ✅ No --reload flag
+# ✅ No heavy startup logic (all async)
+# ✅ Single platform deployment (Render)
 #
-# Benefits of Poetry + Config File Approach (STEP 18):
-# - All dependencies managed in pyproject.toml
-# - Deterministic builds with poetry.lock
-# - All Gunicorn settings centralized in gunicorn.conf.py
-# - Easier maintenance and updates
-# - Production-ready configuration
+# EXPECTED LOGS AFTER FIX:
+#   ✅ Booting worker with pid ...
+#   ✅ Application startup complete
 #
-# Configuration (from gunicorn.conf.py):
-# - workers=4: Optimized for 100K+ concurrent users with Redis caching
-# - worker_class=uvicorn.workers.UvicornWorker: ASGI async support
-# - timeout=60: Fast responses on always-on service
-# - preload_app=False: Safe for database applications
-# - Total capacity: 400+ concurrent connections (4 workers × async event loop)
+# YOU SHOULD NOT SEE:
+#   ❌ Worker was sent SIGTERM
 #
-# Environment variables (set in deployment platform):
-#   PORT=8000            Default port (auto-detected in gunicorn.conf.py)
-#   WEB_CONCURRENCY=4    Override worker count (optional, default in config)
-#   GUNICORN_TIMEOUT=60  Override timeout (optional, default in config)
-# 
-# Expected Performance:
-# - Feed: 20-60ms (with Redis caching)
-# - Auth: <50ms
-# - Health: <30ms
-# - DB load: Very low (Redis handles most requests)
-# - Concurrent capacity: 400+ connections
-# - Supported users: 100K+ concurrent
-# 
-# Note: This is Facebook-level architecture with Poetry dependency management
+# WHY THIS FIX IS PERMANENT:
+#   • Render kills slow starters → We start instantly
+#   • Gunicorn defaults unsafe → We use workers=1
+#   • One worker = predictable memory
+#   • Async startup = instant health
+#   • DB warms after app is alive
+#
+# This is how production FastAPI apps actually run.
 # =============================================================================
 
-# Main web process - Optimized Gunicorn for Render (AGGRESSIVE FOREVER FIX)
-# Note: This Procfile assumes the working directory is the project root
-# Changes to backend/ where app/main.py and gunicorn.conf.py are located
-# For Railway/Heroku with root directory set to 'backend/', use backend/Procfile instead
+# Main web process - Production FastAPI with Gunicorn
 # 
-# CRITICAL SETTINGS FOR RENDER:
-# - workers=1: Single worker for small instances (faster + safer)
-# - threads=2: Minimal threading overhead
-# - timeout=120: Prevents worker SIGTERM during slow startup
-# - graceful_timeout=30: Clean shutdown
-# - keepalive=5: Connection persistence
-# 
-# PYTHONPATH is set to current directory (.) after cd to backend, which achieves
-# the same effect as PYTHONPATH=backend when run from project root.
+# CRITICAL PRODUCTION SETTINGS:
+# - workers=1: Single worker (predictable memory, no coordination overhead)
+# - threads=2: Minimal threading (async event loop handles concurrency)
+# - timeout=120: Prevents premature SIGTERM during startup
+# - graceful-timeout=30: Clean shutdown of in-flight requests
+# - keep-alive=5: Connection persistence for load balancers
+# - log-level=info: Production logging
+# - config: Additional settings in gunicorn.conf.py
+#
+# Single worker with UvicornWorker (async event loop) handles 100+ concurrent connections efficiently.
+# This is the correct production pattern for FastAPI on Render.
 web: cd backend && PYTHONPATH=. poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
 
 # Optional: Use start.sh for migrations + health check

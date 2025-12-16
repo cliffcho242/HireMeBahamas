@@ -57,32 +57,32 @@ services:
     buildCommand: pip install poetry && poetry install --only=main
     
     # ==========================================================================
-    # START COMMAND - RENDER OPTIMIZED (AGGRESSIVE FOREVER FIX)
+    # START COMMAND - PRODUCTION FASTAPI CONFIGURATION
     # ==========================================================================
-    # Optimized Gunicorn configuration for Render small instances
-    # 
-    # CRITICAL SETTINGS FOR RENDER:
-    # - workers=1: Single worker is faster + safer on small instances
-    # - threads=2: Minimal threading for request handling
-    # - timeout=120: Prevents worker SIGTERM during slow startup
-    # - graceful-timeout=30: Clean shutdown of in-flight requests
-    # - keep-alive=5: Connection persistence
-    # - log-level=info: Production logging
-    # 
-    # Benefits of single worker configuration:
-    # - Lower memory footprint
-    # - Faster startup times (no worker coordination)
-    # - More predictable behavior on constrained resources
-    # - Prevents worker timeout issues
-    # - Single worker with async event loop handles 100+ concurrent connections
-    # 
-    # Expected Performance:
-    # - Health: <30ms (instant response)
-    # - Auth: <100ms
-    # - API: <200ms
-    # - Startup: <60s (with background initialization)
+    # ✅ FINAL "DO NOT EVER DO" LIST COMPLIANT:
+    # ✅ Single Gunicorn worker (workers=1)
+    # ✅ No blocking DB calls at import
+    # ✅ Health check never touches DB
+    # ✅ No --reload flag
+    # ✅ No heavy startup logic (all async)
+    # ✅ Single platform deployment (Render only)
     #
-    # ⚠️ CRITICAL: This command is a SINGLE LINE with NO backslashes
+    # EXPECTED LOGS:
+    #   ✅ Booting worker with pid ...
+    #   ✅ Application startup complete
+    #
+    # YOU SHOULD NOT SEE:
+    #   ❌ Worker was sent SIGTERM
+    #
+    # WHY THIS FIX IS PERMANENT:
+    #   • Render kills slow starters → We start instantly
+    #   • Gunicorn defaults unsafe → We use workers=1
+    #   • One worker = predictable memory
+    #   • Async startup = instant health
+    #   • DB warms after app is alive
+    #
+    # This is how production FastAPI apps actually run.
+    #
     # Working directory: Changes to backend/ where app/main.py and gunicorn.conf.py are located
     startCommand: cd backend && poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
     

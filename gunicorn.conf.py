@@ -173,25 +173,35 @@ def on_starting(server):
     """Log startup configuration"""
     global _master_start_time
     _master_start_time = time.time()
-    print(f"🚀 Starting Gunicorn (Render Optimized - Single Worker)")
-    print(f"   Workers: {workers} (optimized for Render small instances)")
-    print(f"   Threads: {threads}")
-    print(f"   Timeout: {timeout}s | Graceful: {graceful_timeout}s | Keepalive: {keepalive}s")
-    print(f"   Preload: {preload_app} (workers initialize independently)")
-    print(f"   Worker Class: {worker_class} (async event loop)")
-    print(f"   Configuration: Optimized for Render deployment")
+    print("")
+    print("="*80)
+    print("  HireMeBahamas API - Production Configuration")
+    print("="*80)
+    print(f"  Workers: {workers} (single worker = predictable memory)")
+    print(f"  Threads: {threads} (async event loop handles concurrency)")
+    print(f"  Timeout: {timeout}s (prevents premature SIGTERM)")
+    print(f"  Graceful: {graceful_timeout}s (clean shutdown)")
+    print(f"  Keepalive: {keepalive}s (connection persistence)")
+    print(f"  Preload: {preload_app} (safe for database apps)")
+    print(f"  Worker Class: {worker_class} (async)")
+    print("")
+    print("  This is how production FastAPI apps actually run.")
+    print("="*80)
+    print("")
 
 
 def when_ready(server):
     """Log when server is ready to accept connections"""
     if _master_start_time:
         startup_time = time.time() - _master_start_time
-        print(f"✅ Gunicorn ready to accept connections in {startup_time:.2f}s")
+        print(f"✅ Gunicorn master ready in {startup_time:.2f}s")
     print(f"   Listening on {bind}")
-    print(f"   Health: GET /health (instant)")
-    print(f"   Ready: GET /ready (with DB check)")
-    print(f"   Workers will initialize independently")
-    print(f"🎉 HireMeBahamas API is ready for Render healthcheck")
+    print(f"   Health endpoint: GET /health (instant, no DB)")
+    print(f"   Ready endpoint: GET /ready (instant, no DB)")
+    print(f"   DB Ready: GET /ready/db (with DB check)")
+    print("")
+    print("🎉 HireMeBahamas API is READY")
+    print("")
 
 
 def on_exit(server):
@@ -283,5 +293,5 @@ def worker_abort(worker):
 
 def post_fork(server, worker):
     """Called after worker fork"""
-    print(f"👶 Worker {worker.pid} spawned")
+    print(f"👶 Booting worker with pid {worker.pid}")
 

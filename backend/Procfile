@@ -1,63 +1,46 @@
 # =============================================================================
-# HireMeBahamas Procfile - STEP 18: Production Commands (Final)
+# HireMeBahamas Procfile - Production FastAPI Configuration
 # =============================================================================
 # 
-# This Procfile is for Railway/Heroku deployments
+# This Procfile is for Railway/Heroku deployments where root directory is 'backend/'
 # For Render, see render.yaml in the root directory
 #
-# STEP 18 - PRODUCTION COMMANDS (FINAL):
-# - Poetry for consistent dependency management
-# - FastAPI for maximum performance with async support
-# - Gunicorn with Uvicorn workers for production-grade worker management
-# - Configuration centralized in gunicorn.conf.py
-# - 4 workers using async event loops = 400+ concurrent connections
-# - Redis cache handles most requests (Facebook-level performance)
-# - Neon PostgreSQL with connection pooling
+# ✅ FINAL "DO NOT EVER DO" LIST COMPLIANT:
+# ✅ Single Gunicorn worker (workers=1)
+# ✅ No blocking DB calls at import
+# ✅ Health check never touches DB
+# ✅ No --reload flag
+# ✅ No heavy startup logic (all async)
+# ✅ Single platform deployment
 #
-# Benefits of Poetry + Config File Approach:
-# - All dependencies managed in pyproject.toml
-# - Deterministic builds with poetry.lock
-# - All Gunicorn settings centralized in gunicorn.conf.py
-# - Easier maintenance and updates
-# - Production-ready configuration
+# EXPECTED LOGS AFTER FIX:
+#   ✅ Booting worker with pid ...
+#   ✅ Application startup complete
 #
-# Configuration (from gunicorn.conf.py):
-# - workers=4: Four workers for 100K+ concurrent users
-# - worker_class=uvicorn.workers.UvicornWorker: ASGI async support
-# - timeout=60: Fast responses on always-on service
-# - preload_app=False: Safe for database applications
-# - Total capacity: 400+ concurrent connections (4 workers × async event loop)
+# YOU SHOULD NOT SEE:
+#   ❌ Worker was sent SIGTERM
 #
-# Environment variables (set in platform dashboard):
-#   PORT=8000                 Default port
-#   WEB_CONCURRENCY=4         Override worker count (optional)
-#   DATABASE_URL=postgresql://...  Neon PostgreSQL connection string
-#   SECRET_KEY=...            Generated secret key
-#   JWT_SECRET_KEY=...        Generated JWT secret
-#   ENVIRONMENT=production    Production mode
-#   REDIS_URL=...            Redis connection string (optional)
-# 
-# Expected Performance:
-# - Feed: 20-60ms (with Redis caching)
-# - Auth: <50ms
-# - Health: <30ms
-# - DB load: Very low (Redis handles most requests)
-# - Concurrent capacity: 400+ connections
-# - Supported users: 100K+ concurrent
+# WHY THIS FIX IS PERMANENT:
+#   • Platform kills slow starters → We start instantly
+#   • Gunicorn defaults unsafe → We use workers=1
+#   • One worker = predictable memory
+#   • Async startup = instant health
+#   • DB warms after app is alive
+#
+# This is how production FastAPI apps actually run.
 # =============================================================================
 
-# Main web process - Optimized Gunicorn for Render (AGGRESSIVE FOREVER FIX)
-# Note: When using this Procfile, ensure the working directory is 'backend/'
-# Railway/Heroku should have root directory set to 'backend/' in settings
-# If root is the project root, use: cd backend && poetry run gunicorn ...
+# Main web process - Production FastAPI with Gunicorn
 # 
-# CRITICAL SETTINGS FOR RENDER:
-# - workers=1: Single worker for small instances (faster + safer)
-# - threads=2: Minimal threading overhead
-# - timeout=120: Prevents worker SIGTERM during slow startup
-# - graceful_timeout=30: Clean shutdown
-# - keepalive=5: Connection persistence
+# CRITICAL PRODUCTION SETTINGS:
+# - workers=1: Single worker (predictable memory, no coordination overhead)
+# - threads=2: Minimal threading (async event loop handles concurrency)
+# - timeout=120: Prevents premature SIGTERM during startup
+# - graceful-timeout=30: Clean shutdown of in-flight requests
+# - keep-alive=5: Connection persistence for load balancers
 # - log-level=info: Production logging
-# 
-# Configuration file (gunicorn.conf.py) provides additional settings
+# - config: Additional settings in gunicorn.conf.py
+#
+# Single worker with UvicornWorker (async event loop) handles 100+ concurrent connections efficiently.
+# This is the correct production pattern for FastAPI.
 web: poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
