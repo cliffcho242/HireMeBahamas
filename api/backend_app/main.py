@@ -54,7 +54,7 @@ if 'app' not in sys.modules:
     
     # Dynamically alias all core submodules to handle all "from app.core.X" imports
     _core_modules = ['security', 'upload', 'concurrent', 'metrics', 'redis_cache', 
-                     'socket_manager', 'cache', 'db_health', 'timeout_middleware']
+                     'socket_manager', 'cache', 'db_health', 'timeout_middleware', 'rate_limiter']
     for _module_name in _core_modules:
         try:
             _module = __import__(f'backend_app.core.{_module_name}', fromlist=[''])
@@ -233,6 +233,7 @@ from app.core.security import prewarm_bcrypt_async
 from app.core.redis_cache import redis_cache, warm_cache
 from app.core.db_health import check_database_health, get_database_stats
 from app.core.timeout_middleware import add_timeout_middleware
+from app.core.rate_limiter import add_rate_limiting_middleware, get_rate_limiter_stats
 
 # Configuration constants
 AUTH_ENDPOINTS_PREFIX = '/api/auth/'
@@ -287,6 +288,21 @@ app.openapi_url = "/openapi.json"
 # - REQUEST_TIMEOUT_EXCLUDE_PATHS=/health,/live,/ready,/health/ping,/metrics
 # =============================================================================
 add_timeout_middleware(app, timeout=60)
+
+# =============================================================================
+# CRITICAL: Rate Limiting Middleware (DDoS Protection)
+# =============================================================================
+# Protects the database and API from abuse and DDoS attacks
+# - Limits requests per IP address (default: 100 requests per 60 seconds)
+# - Uses Redis for distributed rate limiting with in-memory fallback
+# - Returns HTTP 429 (Too Many Requests) when limit exceeded
+# - Health check endpoints are excluded from rate limiting
+#
+# Configuration via environment variables:
+# - RATE_LIMIT_REQUESTS=100 (default: 100)
+# - RATE_LIMIT_WINDOW=60 (default: 60 seconds)
+# =============================================================================
+add_rate_limiting_middleware(app)
 
 # Configure CORS - Allow all origins for browser compatibility
 # NOTE: allow_credentials must be False when using wildcard origins per CORS spec
@@ -719,6 +735,9 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
     
     # Add cache stats
     health_response["cache"] = await redis_cache.health_check()
+    
+    # Add rate limiter stats
+    health_response["rate_limiter"] = get_rate_limiter_stats()
     
     return health_response
 
