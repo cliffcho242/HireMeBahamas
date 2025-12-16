@@ -611,7 +611,7 @@ async def close_db():
                 except OSError as e:
                     # Handle "Bad file descriptor" errors (errno 9) gracefully
                     # This occurs when connections are already closed
-                    if e.errno == 9:
+                    if getattr(e, 'errno', None) == 9:
                         logger.debug("Database connections already closed (file descriptor error)")
                     else:
                         logger.warning(f"OSError while closing database connections: {e}")
