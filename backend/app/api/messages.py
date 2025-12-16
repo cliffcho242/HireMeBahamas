@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from app.core.security import get_current_user
+from app.core.background_tasks import notify_new_message_task
 from app.database import get_db
 from app.models import Conversation, Message, Notification, NotificationType, User
 from app.schemas.message import (
@@ -9,7 +10,7 @@ from app.schemas.message import (
     MessageCreate,
     MessageResponse,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import and_, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -150,10 +151,15 @@ async def get_conversation_messages(
 async def send_message(
     conversation_id: int,
     message: MessageCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Send a message in a conversation"""
+    """Send a message in a conversation
+    
+    Mobile Optimization: Returns immediately while push notifications
+    are sent asynchronously in the background (DO NOT BLOCK REQUEST).
+    """
     # Check if user is participant in conversation
     conversation_result = await db.execute(
         select(Conversation).where(
@@ -221,6 +227,16 @@ async def send_message(
     )
 
     message_with_relations = result.scalar_one()
+    
+    # ✅ BACKGROUND TASK: Send push notification to receiver (DO NOT BLOCK REQUEST)
+    background_tasks.add_task(
+        notify_new_message_task,
+        sender_id=current_user.id,
+        sender_name=sender_display_name,
+        receiver_id=receiver_id,
+        message_preview=message.content
+    )
+    
     return message_with_relations
 
 

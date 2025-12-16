@@ -6,6 +6,12 @@ from app.core.security import get_current_user
 from app.core.cache import get_cached, set_cached, invalidate_cache
 from app.core.cache_headers import CacheStrategy, handle_conditional_request, apply_performance_headers
 from app.core.pagination import paginate_auto, format_paginated_response
+from app.core.background_tasks import (
+    add_push_notification,
+    notify_new_like_task,
+    notify_new_comment_task,
+    add_fanout_task,
+)
 from app.database import get_db
 from app.models import Post, PostLike, PostComment, User
 from app.schemas.post import (
@@ -17,7 +23,7 @@ from app.schemas.post import (
     PostUser,
     CommentUser,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -170,10 +176,16 @@ def enrich_post_with_cached_metadata(
 @router.post("/", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_post(
     post: PostCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new post"""
+    """Create a new post
+    
+    Mobile Optimization: Uses background tasks for feed fan-out to prevent
+    blocking the API response. Post creation returns immediately while
+    notification and feed updates happen asynchronously.
+    """
     db_post = Post(**post.model_dump(), user_id=current_user.id)
     db.add(db_post)
     await db.commit()
@@ -190,6 +202,15 @@ async def create_post(
     
     # Invalidate posts cache
     await invalidate_cache("posts:list:")
+    
+    # ✅ BACKGROUND TASK: Fan out post to followers' feeds (DO NOT BLOCK REQUEST)
+    # This runs asynchronously after the response is sent
+    add_fanout_task(
+        background_tasks=background_tasks,
+        post_id=db_post.id,
+        author_id=current_user.id,
+        db=db
+    )
 
     return {"success": True, "post": post_data.model_dump()}
 
@@ -499,12 +520,19 @@ async def delete_post(
 @router.post("/{post_id}/like", response_model=dict)
 async def like_post(
     post_id: int,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Toggle like on a post"""
-    # Check if post exists
-    result = await db.execute(select(Post).where(Post.id == post_id))
+    """Toggle like on a post
+    
+    Mobile Optimization: Returns immediately while push notifications
+    are sent asynchronously in the background (DO NOT BLOCK REQUEST).
+    """
+    # Check if post exists and get owner info
+    result = await db.execute(
+        select(Post).options(selectinload(Post.user)).where(Post.id == post_id)
+    )
     post = result.scalar_one_or_none()
 
     if not post:
@@ -531,6 +559,17 @@ async def like_post(
         db.add(new_like)
         await db.commit()
         action = "like"
+        
+        # ✅ BACKGROUND TASK: Send push notification to post owner (DO NOT BLOCK REQUEST)
+        # Only notify if liking (not unliking) and not liking own post
+        if post.user_id != current_user.id:
+            background_tasks.add_task(
+                notify_new_like_task,
+                liker_id=current_user.id,
+                liker_name=f"{current_user.first_name} {current_user.last_name}",
+                post_owner_id=post.user_id,
+                post_id=post_id
+            )
 
     # Get updated likes count
     likes_result = await db.execute(
@@ -600,12 +639,19 @@ async def get_comments(
 async def create_comment(
     post_id: int,
     comment: CommentCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a comment on a post"""
-    # Check if post exists
-    result = await db.execute(select(Post).where(Post.id == post_id))
+    """Create a comment on a post
+    
+    Mobile Optimization: Returns immediately while push notifications
+    are sent asynchronously in the background (DO NOT BLOCK REQUEST).
+    """
+    # Check if post exists and get owner info
+    result = await db.execute(
+        select(Post).options(selectinload(Post.user)).where(Post.id == post_id)
+    )
     post = result.scalar_one_or_none()
 
     if not post:
@@ -638,6 +684,18 @@ async def create_comment(
         created_at=comment_with_user.created_at,
         updated_at=comment_with_user.updated_at,
     )
+    
+    # ✅ BACKGROUND TASK: Send push notification to post owner (DO NOT BLOCK REQUEST)
+    # Only notify if not commenting on own post
+    if post.user_id != current_user.id:
+        background_tasks.add_task(
+            notify_new_comment_task,
+            commenter_id=current_user.id,
+            commenter_name=f"{current_user.first_name} {current_user.last_name}",
+            post_owner_id=post.user_id,
+            post_id=post_id,
+            comment_preview=comment.content
+        )
 
     return {"success": True, "comment": comment_data.model_dump()}
 

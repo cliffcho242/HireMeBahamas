@@ -4,9 +4,10 @@ import re
 
 from app.api.auth import get_current_user
 from app.core.cache import get_cached, set_cached, invalidate_cache
+from app.core.background_tasks import notify_new_follower_task
 from app.database import get_db
 from app.models import Follow, Notification, NotificationType, User, Post
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -482,10 +483,15 @@ async def get_user(
 @router.post("/follow/{user_id}")
 async def follow_user(
     user_id: int,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Follow a user"""
+    """Follow a user
+    
+    Mobile Optimization: Returns immediately while push notifications
+    are sent asynchronously in the background (DO NOT BLOCK REQUEST).
+    """
     # Check if user exists and is active
     user_result = await db.execute(select(User).where(User.id == user_id))
     target_user = user_result.scalar_one_or_none()
@@ -539,6 +545,14 @@ async def follow_user(
     
     # Invalidate users cache after follow action
     await invalidate_cache("users:list:")
+    
+    # ✅ BACKGROUND TASK: Send push notification to followed user (DO NOT BLOCK REQUEST)
+    background_tasks.add_task(
+        notify_new_follower_task,
+        follower_id=current_user.id,
+        follower_name=f"{current_user.first_name} {current_user.last_name}",
+        followed_user_id=user_id
+    )
 
     return {"success": True, "message": "User followed successfully"}
 
