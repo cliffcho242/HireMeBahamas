@@ -154,6 +154,8 @@
 
     <script>
         // Detect environment and use appropriate URLs
+        // Note: In production (Vercel), backend API is on same domain via serverless functions (/api/*)
+        // In local dev, backend runs on separate port (8008)
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         const protocol = isLocalhost ? 'http:' : 'https:';
         const backendURL = isLocalhost ? 'http://127.0.0.1:8008' : `${protocol}//${window.location.hostname}`;
