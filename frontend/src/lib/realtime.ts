@@ -13,6 +13,8 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
 // Configuration - Use same logic as api.ts for consistency
+// Note: This uses VITE_API_URL (not VITE_SOCKET_URL) to ensure WebSocket and API use the same backend
+// SocketContext.tsx supports VITE_SOCKET_URL for advanced use cases where socket server differs from API
 const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
 
 // Determine socket URL

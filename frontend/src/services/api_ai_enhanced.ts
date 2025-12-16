@@ -31,7 +31,9 @@ const getBackendUrl = (): string => {
   throw new Error('VITE_API_URL environment variable is required. Frontend URLs must be absolute, public, and start with https://');
 };
 
-// AI Error Prevention: Single primary backend endpoint
+// Backend endpoint configuration
+// Currently uses a single endpoint, but structured as an array for future extensibility
+// (e.g., fallback endpoints, load balancing, A/B testing)
 const BACKEND_ENDPOINTS = (() => {
   const primary = getBackendUrl();
   const endpoints = [primary];
