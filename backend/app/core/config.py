@@ -50,6 +50,13 @@ class Settings:
     # Runtime Logging
     RUNTIME_LOG_DIR: str = os.getenv('RUNTIME_LOG_DIR', '/tmp/runtime-logs')
     
+    # Redis Configuration
+    REDIS_URL: Optional[str] = (
+        os.getenv('REDIS_URL') or 
+        os.getenv('REDIS_PRIVATE_URL') or 
+        os.getenv('UPSTASH_REDIS_REST_URL')
+    )
+    
     # CORS Origins
     CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
