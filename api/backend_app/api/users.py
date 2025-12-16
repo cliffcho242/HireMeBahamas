@@ -3,9 +3,10 @@ import logging
 import re
 
 from app.api.auth import get_current_user
+from app.core.pagination import PaginationParams, get_pagination_metadata
 from app.database import get_db
 from app.models import Follow, Notification, NotificationType, User, Post
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -102,13 +103,20 @@ async def resolve_user_by_identifier(
 
 @router.get("/list")
 async def get_users(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    response: Response,
+    pagination: PaginationParams = Depends(),
     search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get list of users with optional search"""
+    """Get list of users with optional search
+    
+    Mobile Optimization:
+    - Supports both ?page=1&limit=20 and ?skip=0&limit=20 pagination
+    - HTTP caching with Cache-Control: public, max-age=30
+    - Small JSON payloads (max 100 items per page)
+    - Optimized N+1 query prevention with bulk counts
+    """
     query = select(User).where(User.is_active == True, User.id != current_user.id)
 
     if search:
@@ -121,41 +129,68 @@ async def get_users(
         )
         query = query.where(search_filter)
 
-    # Get total count
-    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
-    total = count_result.scalar()
+    # Get total count efficiently
+    count_query = select(func.count()).select_from(User).where(
+        User.is_active == True, User.id != current_user.id
+    )
+    if search:
+        count_query = count_query.where(search_filter)
+    count_result = await db.execute(count_query)
+    total = count_result.scalar() or 0
 
     # Apply pagination
-    query = query.offset(skip).limit(limit)
+    query = query.offset(pagination.skip).limit(pagination.limit)
     result = await db.execute(query)
     users = result.scalars().all()
 
-    # Get follow status for each user
+    if not users:
+        # Add HTTP cache headers for mobile optimization
+        response.headers["Cache-Control"] = "public, max-age=30"
+        return {
+            "success": True,
+            "users": [],
+            "pagination": get_pagination_metadata(
+                total=total,
+                page=pagination.page,
+                skip=pagination.skip,
+                limit=pagination.limit
+            )
+        }
+
+    user_ids = [u.id for u in users]
+
+    # Get follow status for each user (bulk query to prevent N+1)
     follow_result = await db.execute(
         select(Follow).where(
             and_(
                 Follow.follower_id == current_user.id,
-                Follow.followed_id.in_([u.id for u in users]),
+                Follow.followed_id.in_(user_ids),
             )
         )
     )
     following_ids = {f.followed_id for f in follow_result.scalars().all()}
 
-    # Get follower/following counts for each user
+    # Get follower counts for all users in one query (prevent N+1)
+    followers_count_query = (
+        select(Follow.followed_id, func.count().label('count'))
+        .where(Follow.followed_id.in_(user_ids))
+        .group_by(Follow.followed_id)
+    )
+    followers_result = await db.execute(followers_count_query)
+    followers_counts = {row[0]: row[1] for row in followers_result.all()}
+
+    # Get following counts for all users in one query (prevent N+1)
+    following_count_query = (
+        select(Follow.follower_id, func.count().label('count'))
+        .where(Follow.follower_id.in_(user_ids))
+        .group_by(Follow.follower_id)
+    )
+    following_result = await db.execute(following_count_query)
+    following_counts = {row[0]: row[1] for row in following_result.all()}
+
+    # Build response
     users_data = []
     for user in users:
-        # Count followers
-        followers_result = await db.execute(
-            select(func.count()).select_from(Follow).where(Follow.followed_id == user.id)
-        )
-        followers_count = followers_result.scalar() or 0
-
-        # Count following
-        following_result = await db.execute(
-            select(func.count()).select_from(Follow).where(Follow.follower_id == user.id)
-        )
-        following_count = following_result.scalar() or 0
-
         users_data.append(
             {
                 "id": user.id,
@@ -168,12 +203,24 @@ async def get_users(
                 "occupation": user.occupation,
                 "location": user.location,
                 "is_following": user.id in following_ids,
-                "followers_count": followers_count,
-                "following_count": following_count,
+                "followers_count": followers_counts.get(user.id, 0),
+                "following_count": following_counts.get(user.id, 0),
             }
         )
 
-    return {"success": True, "users": users_data, "total": total}
+    # Add HTTP cache headers for mobile optimization
+    response.headers["Cache-Control"] = "public, max-age=30"
+
+    return {
+        "success": True,
+        "users": users_data,
+        "pagination": get_pagination_metadata(
+            total=total,
+            page=pagination.page,
+            skip=pagination.skip,
+            limit=pagination.limit
+        )
+    }
 
 
 # NOTE: Static routes must be defined BEFORE dynamic routes like /{identifier}
@@ -300,13 +347,19 @@ async def get_followers(
 @router.get("/{identifier}")
 async def get_user(
     identifier: str,
+    response: Response,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Get a specific user by ID or username
     
+    Mobile Optimization:
+    - HTTP caching with Cache-Control: public, max-age=30
+    - Small JSON payload with only necessary user data
+    
     Args:
         identifier: User ID (integer) or username (string)
+        response: FastAPI Response object for adding headers
         db: Database session
         current_user: Currently authenticated user
         
@@ -431,6 +484,9 @@ async def get_user(
         select(func.count()).select_from(Post).where(Post.user_id == user.id)
     )
     posts_count = posts_result.scalar() or 0
+
+    # Add HTTP cache headers for mobile optimization
+    response.headers["Cache-Control"] = "public, max-age=30"
 
     return {
         "success": True,

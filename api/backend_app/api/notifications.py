@@ -1,9 +1,10 @@
 from typing import Optional
 
 from app.core.security import get_current_user
+from app.core.pagination import PaginationParams, get_pagination_metadata
 from app.database import get_db
 from app.models import Notification, NotificationType, User
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -13,13 +14,20 @@ router = APIRouter()
 
 @router.get("/list")
 async def get_notifications(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    response: Response,
+    pagination: PaginationParams = Depends(),
     unread_only: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get list of notifications for current user"""
+    """Get list of notifications for current user
+    
+    Mobile Optimization:
+    - Supports both ?page=1&limit=20 and ?skip=0&limit=20 pagination
+    - HTTP caching with Cache-Control: public, max-age=30
+    - Small JSON payloads (max 100 items per page)
+    - Optimized actor data loading with selectinload
+    """
     query = select(Notification).options(
         selectinload(Notification.actor)
     ).where(Notification.user_id == current_user.id)
@@ -30,14 +38,17 @@ async def get_notifications(
     # Order by created_at descending (newest first)
     query = query.order_by(Notification.created_at.desc())
 
-    # Get total count
-    count_result = await db.execute(
-        select(func.count(Notification.id)).where(Notification.user_id == current_user.id)
+    # Get total count efficiently
+    count_query = select(func.count(Notification.id)).where(
+        Notification.user_id == current_user.id
     )
-    total = count_result.scalar()
+    if unread_only:
+        count_query = count_query.where(Notification.is_read == False)
+    count_result = await db.execute(count_query)
+    total = count_result.scalar() or 0
 
     # Apply pagination
-    query = query.offset(skip).limit(limit)
+    query = query.offset(pagination.skip).limit(pagination.limit)
     result = await db.execute(query)
     notifications = result.scalars().all()
 
@@ -66,10 +77,18 @@ async def get_notifications(
             }
         )
 
+    # Add HTTP cache headers for mobile optimization
+    response.headers["Cache-Control"] = "public, max-age=30"
+
     return {
         "success": True,
         "notifications": notifications_data,
-        "total": total,
+        "pagination": get_pagination_metadata(
+            total=total,
+            page=pagination.page,
+            skip=pagination.skip,
+            limit=pagination.limit
+        )
     }
 
 

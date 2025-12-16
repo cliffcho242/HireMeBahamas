@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from app.core.security import get_current_user
+from app.core.pagination import PaginationParams, get_pagination_metadata
 from app.database import get_db
 from app.models import Conversation, Message, Notification, NotificationType, User
 from app.schemas.message import (
@@ -9,8 +10,8 @@ from app.schemas.message import (
     MessageCreate,
     MessageResponse,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, desc, or_, select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import and_, desc, or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -100,16 +101,23 @@ async def get_conversations(
 
 
 @router.get(
-    "/conversations/{conversation_id}/messages", response_model=List[MessageResponse]
+    "/conversations/{conversation_id}/messages", response_model=dict
 )
 async def get_conversation_messages(
     conversation_id: int,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    response: Response,
+    pagination: PaginationParams = Depends(),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get messages in a conversation"""
+    """Get messages in a conversation with pagination
+    
+    Mobile Optimization:
+    - Supports both ?page=1&limit=20 and ?skip=0&limit=50 pagination
+    - HTTP caching with Cache-Control: public, max-age=30
+    - Small JSON payloads (max 100 items per page)
+    - Optimized sender/receiver data loading with selectinload
+    """
     # Check if user is participant in conversation
     conversation_result = await db.execute(
         select(Conversation).where(
@@ -130,18 +138,39 @@ async def get_conversation_messages(
             detail="Conversation not found or access denied",
         )
 
-    # Get messages
+    # Get total count for pagination metadata
+    count_result = await db.execute(
+        select(func.count()).select_from(Message).where(
+            Message.conversation_id == conversation_id
+        )
+    )
+    total = count_result.scalar() or 0
+
+    # Get messages with pagination
     result = await db.execute(
         select(Message)
         .options(selectinload(Message.sender), selectinload(Message.receiver))
         .where(Message.conversation_id == conversation_id)
         .order_by(desc(Message.created_at))
-        .offset(skip)
-        .limit(limit)
+        .offset(pagination.skip)
+        .limit(pagination.limit)
     )
 
     messages = result.scalars().all()
-    return messages
+    
+    # Add HTTP cache headers for mobile optimization
+    response.headers["Cache-Control"] = "public, max-age=30"
+    
+    return {
+        "success": True,
+        "messages": [MessageResponse.model_validate(msg).model_dump() for msg in messages],
+        "pagination": get_pagination_metadata(
+            total=total,
+            page=pagination.page,
+            skip=pagination.skip,
+            limit=pagination.limit
+        )
+    }
 
 
 @router.post(

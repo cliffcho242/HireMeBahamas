@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from app.core.security import get_current_user
+from app.core.pagination import PaginationParams, get_pagination_metadata
 from app.database import get_db
 from app.models import Job, JobApplication, Notification, NotificationType, Post, User
 from app.schemas.job import (
@@ -11,7 +12,7 @@ from app.schemas.job import (
     JobResponse,
     JobUpdate,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import and_, desc, or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -56,10 +57,10 @@ async def create_job(
     return job_with_employer
 
 
-@router.get("/", response_model=JobListResponse)
+@router.get("/", response_model=dict)
 async def get_jobs(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
+    response: Response,
+    pagination: PaginationParams = Depends(),
     category: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
     is_remote: Optional[bool] = Query(None),
@@ -69,7 +70,14 @@ async def get_jobs(
     status: Optional[str] = Query("active"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get jobs with filtering and pagination"""
+    """Get jobs with filtering and pagination
+    
+    Mobile Optimization:
+    - Supports both ?page=1&limit=20 and ?skip=0&limit=20 pagination
+    - HTTP caching with Cache-Control: public, max-age=30
+    - Small JSON payloads (max 100 items per page)
+    - Optimized filtering for mobile search
+    """
     query = select(Job).options(selectinload(Job.employer))
 
     # Apply filters
@@ -94,24 +102,46 @@ async def get_jobs(
     if filters:
         query = query.where(and_(*filters))
 
-    # Get total count
-    count_result = await db.execute(
-        select(Job).where(and_(*filters)) if filters else select(Job)
-    )
-    total = len(count_result.all())
+    # Get total count efficiently
+    count_query = select(func.count()).select_from(Job)
+    if filters:
+        count_query = count_query.where(and_(*filters))
+    count_result = await db.execute(count_query)
+    total = count_result.scalar() or 0
 
     # Apply pagination and ordering
-    query = query.order_by(desc(Job.created_at)).offset(skip).limit(limit)
+    query = query.order_by(desc(Job.created_at)).offset(pagination.skip).limit(pagination.limit)
 
     result = await db.execute(query)
     jobs = result.scalars().all()
 
-    return JobListResponse(jobs=jobs, total=total, skip=skip, limit=limit)
+    # Add HTTP cache headers for mobile optimization
+    response.headers["Cache-Control"] = "public, max-age=30"
+
+    return {
+        "success": True,
+        "jobs": [JobResponse.model_validate(job).model_dump() for job in jobs],
+        "pagination": get_pagination_metadata(
+            total=total,
+            page=pagination.page,
+            skip=pagination.skip,
+            limit=pagination.limit
+        )
+    }
 
 
 @router.get("/{job_id}", response_model=JobResponse)
-async def get_job(job_id: int, db: AsyncSession = Depends(get_db)):
-    """Get a specific job by ID"""
+async def get_job(
+    job_id: int,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get a specific job by ID
+    
+    Mobile Optimization:
+    - HTTP caching with Cache-Control: public, max-age=30
+    - Optimized N+1 prevention with selectinload
+    """
     result = await db.execute(
         select(Job)
         .options(
@@ -126,6 +156,9 @@ async def get_job(job_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Job not found"
         )
+
+    # Add HTTP cache headers for mobile optimization
+    response.headers["Cache-Control"] = "public, max-age=30"
 
     return job
 

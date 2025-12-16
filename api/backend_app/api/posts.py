@@ -4,6 +4,7 @@ import logging
 
 from app.core.security import get_current_user
 from app.core.redis_cache import redis_cache
+from app.core.pagination import PaginationParams, get_pagination_metadata
 from app.database import get_db
 from app.models import Post, PostLike, PostComment, User
 from app.schemas.post import (
@@ -15,7 +16,7 @@ from app.schemas.post import (
     PostUser,
     CommentUser,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -106,17 +107,22 @@ async def create_post(
 
 @router.get("/", response_model=dict)
 async def get_posts(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    response: Response,
+    pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
     """Get posts with pagination (Facebook-style caching)
     
+    Mobile Optimization:
+    - Supports both ?page=1&limit=20 and ?skip=0&limit=20 pagination
+    - HTTP caching with Cache-Control: public, max-age=30
+    - Small JSON payloads (max 100 items per page)
+    
     Performance optimization:
     - 95% of requests served from Redis cache
     - DB hit once every 30 seconds
-    - Cache key includes pagination params (skip, limit)
+    - Cache key includes pagination params
     
     Note: This endpoint returns posts from ALL users regardless of their account status.
     Posts remain visible even if the author's account becomes inactive (is_active=False).
@@ -124,16 +130,22 @@ async def get_posts(
     Posts are only removed when explicitly deleted via the delete endpoint.
     """
     # Build cache key for feed with pagination parameters
-    cache_key = f"feed:global:skip={skip}:limit={limit}"
+    cache_key = f"feed:global:skip={pagination.skip}:limit={pagination.limit}"
     
     # Try to get from cache first
     cached = await redis_cache.get(cache_key)
     if cached:
         logger.debug(f"Cache hit for feed: {cache_key}")
+        # Add HTTP cache headers for mobile optimization
+        response.headers["Cache-Control"] = "public, max-age=30"
         # Return cached data (already in dict format)
         return cached
     
     logger.debug(f"Cache miss for feed: {cache_key}, fetching from DB")
+    
+    # Get total count for pagination metadata
+    count_result = await db.execute(select(func.count()).select_from(Post))
+    total = count_result.scalar() or 0
     
     # Cache miss - fetch from database
     # Build query with user relationship
@@ -142,7 +154,7 @@ async def get_posts(
     query = select(Post).options(selectinload(Post.user)).order_by(desc(Post.created_at))
 
     # Apply pagination
-    query = query.offset(skip).limit(limit)
+    query = query.offset(pagination.skip).limit(pagination.limit)
 
     result = await db.execute(query)
     posts = result.scalars().all()
@@ -169,8 +181,17 @@ async def get_posts(
         post_data = await enrich_post_with_metadata(post, db, current_user)
         posts_data.append(post_data.model_dump())
 
-    # Prepare response
-    response_data = {"success": True, "posts": posts_data}
+    # Prepare response with pagination metadata
+    response_data = {
+        "success": True,
+        "posts": posts_data,
+        "pagination": get_pagination_metadata(
+            total=total,
+            page=pagination.page,
+            skip=pagination.skip,
+            limit=pagination.limit
+        )
+    }
     
     # Cache the response for 30 seconds (Facebook-style caching)
     await redis_cache.set(
@@ -180,18 +201,26 @@ async def get_posts(
     )
     logger.debug(f"Cached feed data: {cache_key} with TTL=30s")
     
+    # Add HTTP cache headers for mobile optimization
+    response.headers["Cache-Control"] = "public, max-age=30"
+    
     return response_data
 
 
 @router.get("/user/{user_id}", response_model=dict)
 async def get_user_posts(
     user_id: int,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    response: Response,
+    pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user),
 ):
     """Get posts for a specific user with pagination
+    
+    Mobile Optimization:
+    - Supports both ?page=1&limit=20 and ?skip=0&limit=20 pagination
+    - HTTP caching with Cache-Control: public, max-age=30
+    - Small JSON payloads (max 100 items per page)
     
     Note: This endpoint returns posts from the specified user regardless of their account status.
     Posts remain visible even if the author's account becomes inactive (is_active=False).
@@ -200,13 +229,13 @@ async def get_user_posts(
     
     Args:
         user_id: The ID of the user whose posts to fetch
-        skip: Number of posts to skip (for pagination)
-        limit: Maximum number of posts to return (default 20, max 100)
+        response: FastAPI Response object for adding headers
+        pagination: Pagination parameters (page/skip and limit)
         db: Database session
         current_user: Currently authenticated user (optional)
         
     Returns:
-        List of posts for the specified user
+        List of posts for the specified user with pagination metadata
     """
     # Verify user exists
     user_result = await db.execute(select(User).where(User.id == user_id))
@@ -217,6 +246,12 @@ async def get_user_posts(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
+    
+    # Get total count for pagination metadata
+    count_result = await db.execute(
+        select(func.count()).select_from(Post).where(Post.user_id == user_id)
+    )
+    total = count_result.scalar() or 0
     
     # Build query for user's posts with user relationship
     # IMPORTANT: We intentionally do NOT filter by User.is_active here
@@ -229,7 +264,7 @@ async def get_user_posts(
     )
 
     # Apply pagination
-    query = query.offset(skip).limit(limit)
+    query = query.offset(pagination.skip).limit(pagination.limit)
 
     result = await db.execute(query)
     posts = result.scalars().all()
@@ -256,7 +291,19 @@ async def get_user_posts(
         post_data = await enrich_post_with_metadata(post, db, current_user)
         posts_data.append(post_data.model_dump())
 
-    return {"success": True, "posts": posts_data}
+    # Add HTTP cache headers for mobile optimization
+    response.headers["Cache-Control"] = "public, max-age=30"
+
+    return {
+        "success": True,
+        "posts": posts_data,
+        "pagination": get_pagination_metadata(
+            total=total,
+            page=pagination.page,
+            skip=pagination.skip,
+            limit=pagination.limit
+        )
+    }
 
 
 @router.get("/{post_id}", response_model=PostResponse)
@@ -421,9 +468,17 @@ async def like_post(
 @router.get("/{post_id}/comments", response_model=dict)
 async def get_comments(
     post_id: int,
+    response: Response,
+    pagination: PaginationParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get comments for a post"""
+    """Get comments for a post with pagination
+    
+    Mobile Optimization:
+    - Supports both ?page=1&limit=20 and ?skip=0&limit=20 pagination
+    - HTTP caching with Cache-Control: public, max-age=30
+    - Small JSON payloads (max 100 items per page)
+    """
     # Check if post exists
     result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
@@ -433,12 +488,20 @@ async def get_comments(
             status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
         )
 
-    # Get comments
+    # Get total count for pagination metadata
+    count_result = await db.execute(
+        select(func.count()).select_from(PostComment).where(PostComment.post_id == post_id)
+    )
+    total = count_result.scalar() or 0
+
+    # Get comments with pagination
     result = await db.execute(
         select(PostComment)
         .options(selectinload(PostComment.user))
         .where(PostComment.post_id == post_id)
         .order_by(PostComment.created_at)
+        .offset(pagination.skip)
+        .limit(pagination.limit)
     )
     comments = result.scalars().all()
 
@@ -465,7 +528,19 @@ async def get_comments(
             ).model_dump()
         )
 
-    return {"success": True, "comments": comments_data}
+    # Add HTTP cache headers for mobile optimization
+    response.headers["Cache-Control"] = "public, max-age=30"
+
+    return {
+        "success": True,
+        "comments": comments_data,
+        "pagination": get_pagination_metadata(
+            total=total,
+            page=pagination.page,
+            skip=pagination.skip,
+            limit=pagination.limit
+        )
+    }
 
 
 @router.post("/{post_id}/comments", response_model=dict, status_code=status.HTTP_201_CREATED)
