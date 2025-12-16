@@ -7,8 +7,9 @@ all routers and creates the versioned API structure.
 import sys
 import os
 
-# Add the repository root to the path
-repo_root = os.path.dirname(os.path.abspath(__file__))
+# Add the backend path to the path (handle both root and tests directory execution)
+test_dir = os.path.dirname(os.path.abspath(__file__))
+repo_root = os.path.dirname(test_dir) if os.path.basename(test_dir) == 'tests' else test_dir
 backend_path = os.path.join(repo_root, 'backend')
 sys.path.insert(0, backend_path)
 
