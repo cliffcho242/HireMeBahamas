@@ -151,6 +151,26 @@ def worker_exit(server, worker):
     print(f"👷 Worker {worker.pid} exiting...")
 
 
+def worker_abort(worker):
+    """Called when a worker is forcibly terminated (SIGABRT).
+    
+    This hook is triggered when Gunicorn sends SIGABRT to a worker because:
+    - Worker exceeded the timeout (didn't respond within timeout seconds)
+    - Worker became unresponsive or hung
+    - Master process needs to forcibly terminate the worker
+    
+    Args:
+        worker: The worker instance being aborted
+    """
+    print(f"⚠️  Worker {worker.pid} ABORTED (likely timeout or hung)")
+    print(f"   This usually means the worker exceeded {timeout}s timeout")
+    print(f"   Check for:")
+    print(f"   - Blocking database operations")
+    print(f"   - Slow API calls")
+    print(f"   - Deadlocks or infinite loops")
+    print(f"   - Database connection pool exhaustion")
+
+
 def post_fork(server, worker):
     """Called after worker fork"""
     print(f"👶 Worker {worker.pid} spawned")
