@@ -39,7 +39,7 @@ def test_config_module_whitespace_handling():
             del sys.modules['backend.app.core.config']
         
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
-        from app.core.config import settings
+        from app.core.config import settings, Settings
         
         db_url = settings.get_database_url()
         
@@ -55,8 +55,8 @@ def test_config_module_whitespace_handling():
         # Test Case 2: Empty string DATABASE_URL in development
         os.environ['DATABASE_URL'] = ''
         
-        # Force settings to re-read
-        settings.DATABASE_URL = None
+        # Force settings to re-read (update class attribute, not instance attribute)
+        Settings.DATABASE_URL = None
         db_url = settings.get_database_url()
         
         assert db_url, "DATABASE_URL should not be empty after processing empty string"
@@ -69,8 +69,9 @@ def test_config_module_whitespace_handling():
         os.environ['ENVIRONMENT'] = 'production'
         os.environ['DATABASE_URL'] = '   '
         
-        settings.ENVIRONMENT = 'production'
-        settings.DATABASE_URL = '   '
+        # Update class attributes, not instance attributes (since get_database_url is a classmethod)
+        Settings.ENVIRONMENT = 'production'
+        Settings.DATABASE_URL = '   '
         
         try:
             db_url = settings.get_database_url()
