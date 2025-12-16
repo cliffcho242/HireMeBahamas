@@ -133,11 +133,12 @@ services:
       # GUNICORN PERFORMANCE SETTINGS (Lightning Fast Configuration)
       # ==========================================================================
       # Optimized for Render Standard plan (always-on, 1GB RAM)
-      # Workers: 2 for parallel request handling
-      # Threads: 4 per worker = 8 total concurrent requests
+      # STEP 10 - SCALING TO 100K+ USERS:
+      # Workers: 4 with UvicornWorker (async event loop, not threads)
+      # Capacity: 4 workers × ~100+ async connections = 400+ concurrent
       # Timeout: 60s for fast responses without cold start delays
       - key: WEB_CONCURRENCY
-        value: "2"
+        value: "4"
       - key: WEB_THREADS
         value: "4"
       - key: GUNICORN_TIMEOUT

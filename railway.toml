@@ -30,8 +30,9 @@ watchPatterns = [
 
 [deploy]
 # STEP 10 - SCALING TO 100K+ USERS
-# Gunicorn with 4 workers × 4 threads = 16 concurrent requests
-# Uses gunicorn.conf.py for complete configuration (workers, threads, timeouts)
+# Gunicorn with 4 workers using UvicornWorker (async event loop)
+# Capacity: 4 workers × ~100+ async connections = 400+ concurrent connections
+# Uses gunicorn.conf.py for complete configuration (workers, worker_class, timeouts)
 startCommand = "cd backend && gunicorn app.main:app --config gunicorn.conf.py"
 healthcheckPath = "/health"
 healthcheckTimeout = 180
