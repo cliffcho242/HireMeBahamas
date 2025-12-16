@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
@@ -17,7 +18,40 @@ logging.getLogger('passlib').setLevel(logging.ERROR)
 # Security configuration
 SECRET_KEY = config("SECRET_KEY", default="your-secret-key-change-in-production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
+# Production-grade token expiration settings
+ACCESS_TOKEN_EXPIRE_MINUTES = config("ACCESS_TOKEN_EXPIRE_MINUTES", default=15, cast=int)  # 15 minutes
+REFRESH_TOKEN_EXPIRE_DAYS = config("REFRESH_TOKEN_EXPIRE_DAYS", default=7, cast=int)  # 7 days
+
+# Validate token expiration configuration
+if ACCESS_TOKEN_EXPIRE_MINUTES < 1:
+    logger.warning(f"ACCESS_TOKEN_EXPIRE_MINUTES ({ACCESS_TOKEN_EXPIRE_MINUTES}) is too low, using 15 minutes")
+    ACCESS_TOKEN_EXPIRE_MINUTES = 15
+elif ACCESS_TOKEN_EXPIRE_MINUTES > 120:
+    logger.warning(f"ACCESS_TOKEN_EXPIRE_MINUTES ({ACCESS_TOKEN_EXPIRE_MINUTES}) is too high for security, using 60 minutes")
+    ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+if REFRESH_TOKEN_EXPIRE_DAYS < 1:
+    logger.warning(f"REFRESH_TOKEN_EXPIRE_DAYS ({REFRESH_TOKEN_EXPIRE_DAYS}) is too low, using 7 days")
+    REFRESH_TOKEN_EXPIRE_DAYS = 7
+elif REFRESH_TOKEN_EXPIRE_DAYS > 90:
+    logger.warning(f"REFRESH_TOKEN_EXPIRE_DAYS ({REFRESH_TOKEN_EXPIRE_DAYS}) is too high for security, using 30 days")
+    REFRESH_TOKEN_EXPIRE_DAYS = 30
+
+# Cookie configuration for secure token storage
+# Determines if we're in production mode
+def is_production() -> bool:
+    """Check if running in production environment"""
+    env = os.getenv("ENVIRONMENT", "").lower()
+    vercel_env = os.getenv("VERCEL_ENV", "").lower()
+    return env == "production" or vercel_env == "production"
+
+# Cookie settings - PRODUCTION-GRADE SECURITY
+COOKIE_NAME_ACCESS = "access_token"
+COOKIE_NAME_REFRESH = "refresh_token"
+COOKIE_SECURE = is_production()  # True in production, False in development
+COOKIE_HTTPONLY = True  # Always True - prevents JavaScript access
+COOKIE_SAMESITE = "none" if is_production() else "lax"  # "none" for cross-origin in production
+COOKIE_DOMAIN = None  # Let browser determine domain for better compatibility
 
 # Bcrypt configuration
 # Default of 12 rounds can be slow (200-300ms per operation)
@@ -153,6 +187,64 @@ def verify_reset_token(token: str) -> Optional[str]:
         return None
 
 
+def create_refresh_token(user_id: int) -> str:
+    """Create a refresh token for long-lived authentication
+    
+    Args:
+        user_id: User ID to encode in the token
+        
+    Returns:
+        JWT refresh token string
+    """
+    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode = {
+        "sub": str(user_id),
+        "type": "refresh",
+        "exp": expire
+    }
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+def decode_refresh_token(token: str) -> Optional[Dict[str, Any]]:
+    """Decode and verify a refresh token
+    
+    Args:
+        token: Refresh token string to decode
+        
+    Returns:
+        Payload dict if valid, None if invalid
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        token_type = payload.get("type")
+        
+        # Verify this is a refresh token
+        if token_type != "refresh":
+            return None
+            
+        return payload
+    except JWTError:
+        return None
+
+
+def hash_token(token: str) -> str:
+    """Hash a token for secure storage in database
+    
+    Uses SHA-256 to create a one-way hash of the token.
+    This ensures tokens stored in the database cannot be used
+    even if the database is compromised.
+    
+    Args:
+        token: Token string to hash
+        
+    Returns:
+        SHA-256 hex digest of the token
+    """
+    import hashlib
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
 def verify_token(token: str) -> Dict[str, Any]:
     """Verify a JWT token and return payload"""
     try:
@@ -160,6 +252,290 @@ def verify_token(token: str) -> Dict[str, Any]:
         return payload
     except JWTError:
         raise ValueError("Invalid token")
+
+
+# Refresh token database operations
+async def store_refresh_token(
+    db,  # AsyncSession
+    user_id: int,
+    token: str,
+    ip_address: Optional[str] = None,
+    user_agent: Optional[str] = None
+) -> None:
+    """Store a refresh token in the database
+    
+    Args:
+        db: Database session
+        user_id: User ID this token belongs to
+        token: The refresh token string
+        ip_address: Optional IP address of the client
+        user_agent: Optional user agent string
+    """
+    from app.models import RefreshToken
+    
+    token_hash_value = hash_token(token)
+    expires_at = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    
+    db_token = RefreshToken(
+        user_id=user_id,
+        token_hash=token_hash_value,
+        expires_at=expires_at,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
+    
+    db.add(db_token)
+    await db.commit()
+    
+    logger.info(f"Stored refresh token for user_id={user_id}")
+
+
+async def verify_refresh_token_in_db(db, token: str) -> Optional[int]:
+    """Verify a refresh token exists in database and is valid
+    
+    Args:
+        db: Database session
+        token: The refresh token string to verify
+        
+    Returns:
+        User ID if token is valid, None otherwise
+    """
+    from app.models import RefreshToken
+    from sqlalchemy import select
+    
+    # First decode the JWT to check expiration
+    payload = decode_refresh_token(token)
+    if not payload:
+        logger.warning("Invalid refresh token JWT")
+        return None
+    
+    user_id = payload.get("sub")
+    if not user_id:
+        logger.warning("Refresh token missing user ID")
+        return None
+    
+    # Check if token exists in database and is not revoked
+    token_hash_value = hash_token(token)
+    result = await db.execute(
+        select(RefreshToken).where(
+            RefreshToken.token_hash == token_hash_value,
+            RefreshToken.revoked == False,
+            RefreshToken.expires_at > datetime.utcnow()
+        )
+    )
+    db_token = result.scalar_one_or_none()
+    
+    if not db_token:
+        logger.warning(f"Refresh token not found or invalid for user_id={user_id}")
+        return None
+    
+    return int(user_id)
+
+
+async def revoke_refresh_token(db, token: str) -> bool:
+    """Revoke a refresh token
+    
+    Args:
+        db: Database session
+        token: The refresh token to revoke
+        
+    Returns:
+        True if token was revoked, False if not found
+    """
+    from app.models import RefreshToken
+    from sqlalchemy import select
+    
+    token_hash_value = hash_token(token)
+    result = await db.execute(
+        select(RefreshToken).where(RefreshToken.token_hash == token_hash_value)
+    )
+    db_token = result.scalar_one_or_none()
+    
+    if not db_token:
+        logger.warning("Attempted to revoke non-existent refresh token")
+        return False
+    
+    db_token.revoked = True
+    db_token.revoked_at = datetime.utcnow()
+    await db.commit()
+    
+    logger.info(f"Revoked refresh token for user_id={db_token.user_id}")
+    return True
+
+
+async def revoke_all_user_tokens(db, user_id: int) -> int:
+    """Revoke all refresh tokens for a user
+    
+    Useful for logout from all devices or security incidents.
+    
+    Args:
+        db: Database session
+        user_id: User ID whose tokens to revoke
+        
+    Returns:
+        Number of tokens revoked
+    """
+    from app.models import RefreshToken
+    from sqlalchemy import select, update
+    
+    result = await db.execute(
+        update(RefreshToken)
+        .where(
+            RefreshToken.user_id == user_id,
+            RefreshToken.revoked == False
+        )
+        .values(revoked=True, revoked_at=datetime.utcnow())
+    )
+    await db.commit()
+    
+    count = result.rowcount
+    logger.info(f"Revoked {count} refresh tokens for user_id={user_id}")
+    return count
+
+
+async def cleanup_expired_tokens(db) -> int:
+    """Clean up expired and revoked tokens from database
+    
+    Should be called periodically (e.g., daily cron job).
+    
+    Args:
+        db: Database session
+        
+    Returns:
+        Number of tokens deleted
+    """
+    from app.models import RefreshToken
+    from sqlalchemy import delete
+    
+    # Delete tokens that are either:
+    # 1. Expired for more than 30 days
+    # 2. Revoked for more than 7 days
+    cutoff_expired = datetime.utcnow() - timedelta(days=30)
+    cutoff_revoked = datetime.utcnow() - timedelta(days=7)
+    
+    result = await db.execute(
+        delete(RefreshToken).where(
+            (RefreshToken.expires_at < cutoff_expired) |
+            ((RefreshToken.revoked == True) & (RefreshToken.revoked_at < cutoff_revoked))
+        )
+    )
+    await db.commit()
+    
+    count = result.rowcount
+    logger.info(f"Cleaned up {count} expired/revoked refresh tokens")
+    return count
+
+
+# Cookie helper functions for secure token storage
+def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
+    """Set secure authentication cookies on the response
+    
+    This implements production-grade cookie security:
+    - httpOnly=True: Prevents JavaScript access (XSS protection)
+    - secure=True: Only sent over HTTPS in production
+    - samesite="none": Allows cross-origin requests in production
+    - Appropriate max_age for each token type
+    
+    Args:
+        response: FastAPI Response object
+        access_token: JWT access token
+        refresh_token: JWT refresh token
+    """
+    from fastapi import Response
+    
+    # Access token cookie - short-lived (15 minutes)
+    access_max_age = ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    response.set_cookie(
+        key=COOKIE_NAME_ACCESS,
+        value=access_token,
+        max_age=access_max_age,
+        httponly=COOKIE_HTTPONLY,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        domain=COOKIE_DOMAIN,
+    )
+    
+    # Refresh token cookie - long-lived (7-30 days)
+    refresh_max_age = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+    response.set_cookie(
+        key=COOKIE_NAME_REFRESH,
+        value=refresh_token,
+        max_age=refresh_max_age,
+        httponly=COOKIE_HTTPONLY,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        domain=COOKIE_DOMAIN,
+    )
+    
+    logger.info("Set secure auth cookies (httpOnly=True, secure={}, samesite={})".format(
+        COOKIE_SECURE, COOKIE_SAMESITE
+    ))
+
+
+def clear_auth_cookies(response) -> None:
+    """Clear authentication cookies on logout
+    
+    Sets cookies to empty with immediate expiration.
+    
+    Args:
+        response: FastAPI Response object
+    """
+    from fastapi import Response
+    
+    # Clear access token cookie
+    response.set_cookie(
+        key=COOKIE_NAME_ACCESS,
+        value="",
+        max_age=0,
+        httponly=COOKIE_HTTPONLY,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        domain=COOKIE_DOMAIN,
+    )
+    
+    # Clear refresh token cookie
+    response.set_cookie(
+        key=COOKIE_NAME_REFRESH,
+        value="",
+        max_age=0,
+        httponly=COOKIE_HTTPONLY,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        domain=COOKIE_DOMAIN,
+    )
+    
+    logger.info("Cleared auth cookies")
+
+
+def get_token_from_cookie_or_header(request, cookie_name: str, header_prefix: str = "Bearer ") -> Optional[str]:
+    """Get token from cookie or Authorization header
+    
+    Tries to get token from cookie first (preferred), falls back to header.
+    This supports both cookie-based and header-based authentication.
+    
+    Args:
+        request: FastAPI Request object
+        cookie_name: Name of the cookie to check
+        header_prefix: Prefix to strip from Authorization header
+        
+    Returns:
+        Token string if found, None otherwise
+    """
+    # Try cookie first (preferred for security)
+    token = request.cookies.get(cookie_name)
+    if token:
+        logger.debug(f"Token found in cookie: {cookie_name}")
+        return token
+    
+    # Fall back to Authorization header for API clients
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith(header_prefix):
+        token = auth_header[len(header_prefix):]
+        logger.debug("Token found in Authorization header")
+        return token
+    
+    logger.debug("No token found in cookies or headers")
+    return None
 
 
 # FastAPI dependencies

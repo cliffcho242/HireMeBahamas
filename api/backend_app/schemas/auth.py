@@ -45,8 +45,13 @@ class UserResponse(BaseModel):
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: Optional[str] = None  # Included for token refresh flow
     token_type: str
     user: UserResponse
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
 
 class UserUpdate(BaseModel):
