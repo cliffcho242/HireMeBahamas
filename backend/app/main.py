@@ -504,11 +504,10 @@ async def lazy_import_heavy_stuff():
     - ✅ TCP + SSL with pool_pre_ping=True and pool_recycle=300
     
     This prevents ALL database connections until first actual database request.
-    
-    ⚡ SIGTERM FIX: Entire startup wrapped in 20s timeout to prevent worker hangs
     """
     startup_start = time.time()
-    logger.info("Starting HireMeBahamas API initialization (NO database connections)...")
+    logger.info(f"Starting HireMeBahamas API initialization (NO database connections)...")
+    logger.info(f"⚡ SIGTERM FIX: Entire startup wrapped in {TOTAL_STARTUP_TIMEOUT}s timeout to prevent worker hangs")
     
     async def wrapped_startup():
         """Inner function with all startup operations."""
@@ -578,14 +577,16 @@ async def lazy_import_heavy_stuff():
         logger.info(f"✅ Startup completed successfully in {startup_duration:.2f}s")
     except asyncio.TimeoutError:
         startup_duration = time.time() - startup_start
-        logger.error(f"⚠️  CRITICAL: Startup timed out after {TOTAL_STARTUP_TIMEOUT}s!")
-        logger.error(f"   Worker may receive SIGTERM if this happens repeatedly")
-        logger.error(f"   Time elapsed: {startup_duration:.2f}s")
-        logger.error(f"   Individual operation timeout: {STARTUP_OPERATION_TIMEOUT}s each")
-        logger.error(f"   If you see this message, check for:")
-        logger.error(f"   - Slow network connections to Redis/external services")
-        logger.error(f"   - Platform resource constraints (CPU/memory)")
-        logger.error(f"   - Deadlocks or blocking operations in startup code")
+        logger.error(
+            f"⚠️  CRITICAL: Startup timed out after {TOTAL_STARTUP_TIMEOUT}s!\n"
+            f"   Worker may receive SIGTERM if this happens repeatedly\n"
+            f"   Time elapsed: {startup_duration:.2f}s\n"
+            f"   Individual operation timeout: {STARTUP_OPERATION_TIMEOUT}s each\n"
+            f"   If you see this message, check for:\n"
+            f"   - Slow network connections to Redis/external services\n"
+            f"   - Platform resource constraints (CPU/memory)\n"
+            f"   - Deadlocks or blocking operations in startup code"
+        )
         # Continue anyway - health endpoint should still work
     except Exception as e:
         startup_duration = time.time() - startup_start
