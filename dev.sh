@@ -1,6 +1,9 @@
 #!/bin/bash
 
 # Simple development server startup script
+# ⚠️ WARNING: This script is for LOCAL DEVELOPMENT ONLY
+# NEVER use --reload in production (Render, Railway, etc.)
+# Auto-reload doubles memory usage and causes SIGTERM errors
 echo "Starting HireBahamas Development Servers..."
 
 # Function to handle cleanup
@@ -13,8 +16,8 @@ cleanup() {
 # Set up signal handlers
 trap cleanup SIGINT SIGTERM
 
-# Start backend server
-echo "Starting backend server..."
+# Start backend server (with --reload for LOCAL DEVELOPMENT ONLY)
+echo "Starting backend server (local development with auto-reload)..."
 cd backend
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!

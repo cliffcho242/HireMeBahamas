@@ -138,6 +138,8 @@ services:
     restart: unless-stopped
 
   # Flask Backend API (Development - Single Instance)
+  # ⚠️ NOTE: This service uses production-like settings without --reload
+  # DO NOT use --reload in production - it doubles memory usage and causes SIGTERM
   backend-flask:
     build:
       context: .
@@ -160,7 +162,7 @@ services:
       - ./uploads:/app/uploads
     stop_signal: SIGTERM
     stop_grace_period: 30s
-    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 4 --timeout 60 --reload --access-logfile - --error-logfile -
+    command: gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 2 --threads 4 --timeout 60 --access-logfile - --error-logfile -
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       interval: 30s
