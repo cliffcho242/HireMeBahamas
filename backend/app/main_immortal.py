@@ -97,17 +97,24 @@ async def ready():
 # IMPORT API ROUTERS (WITH NUCLEAR SAFETY NET)
 # =============================================================================
 # Wrap risky imports in try-except to prevent cold-start death
+# Use explicit imports to avoid circular dependencies
 try:
-    from app.api import (
-        auth, hireme, jobs, messages, notifications, 
-        posts, profile_pictures, reviews, upload, users
-    )
+    from app.api.auth import router as auth_router
+    from app.api.hireme import router as hireme_router
+    from app.api.jobs import router as jobs_router
+    from app.api.messages import router as messages_router
+    from app.api.notifications import router as notifications_router
+    from app.api.posts import router as posts_router
+    from app.api.profile_pictures import router as profile_pictures_router
+    from app.api.reviews import router as reviews_router
+    from app.api.upload import router as upload_router
+    from app.api.users import router as users_router
     logger.info("✅ API routers imported successfully")
 except Exception as e:
     logger.error(f"❌ API router import failed: {e}")
     # Create fallback routers to prevent app crash
-    auth = hireme = jobs = messages = notifications = None
-    posts = profile_pictures = reviews = upload = users = None
+    auth_router = hireme_router = jobs_router = messages_router = notifications_router = None
+    posts_router = profile_pictures_router = reviews_router = upload_router = users_router = None
 
 try:
     from app.database import init_db, close_db, get_db, test_db_connection, get_db_status
@@ -390,26 +397,26 @@ async def root():
 # INCLUDE API ROUTERS (WITH SAFETY CHECKS)
 # =============================================================================
 
-if auth is not None:
-    app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
-if hireme is not None:
-    app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
-if jobs is not None:
-    app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
-if messages is not None:
-    app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
-if notifications is not None:
-    app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
-if posts is not None:
-    app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
-if profile_pictures is not None:
-    app.include_router(profile_pictures.router, prefix="/api/profile-pictures", tags=["profile-pictures"])
-if reviews is not None:
-    app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
-if upload is not None:
-    app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
-if users is not None:
-    app.include_router(users.router, prefix="/api/users", tags=["users"])
+if auth_router is not None:
+    app.include_router(auth_router, prefix="/api/auth", tags=["authentication"])
+if hireme_router is not None:
+    app.include_router(hireme_router, prefix="/api/hireme", tags=["hireme"])
+if jobs_router is not None:
+    app.include_router(jobs_router, prefix="/api/jobs", tags=["jobs"])
+if messages_router is not None:
+    app.include_router(messages_router, prefix="/api/messages", tags=["messages"])
+if notifications_router is not None:
+    app.include_router(notifications_router, prefix="/api/notifications", tags=["notifications"])
+if posts_router is not None:
+    app.include_router(posts_router, prefix="/api/posts", tags=["posts"])
+if profile_pictures_router is not None:
+    app.include_router(profile_pictures_router, prefix="/api/profile-pictures", tags=["profile-pictures"])
+if reviews_router is not None:
+    app.include_router(reviews_router, prefix="/api/reviews", tags=["reviews"])
+if upload_router is not None:
+    app.include_router(upload_router, prefix="/api/upload", tags=["uploads"])
+if users_router is not None:
+    app.include_router(users_router, prefix="/api/users", tags=["users"])
 
 # Include GraphQL if available
 if graphql_available:
