@@ -94,14 +94,16 @@ except ImportError as e:
     
     @app.get("/api/health", include_in_schema=False)
     @app.get("/health", include_in_schema=False)
-    async def health():
-        """Fast health check endpoint - no database dependency.
+    def health():
+        """Instant health check - no database dependency.
         
-        🚫 NO database queries
-        🚫 NO external service calls
-        🚫 NO authentication checks
+        ✅ NO DATABASE - instant response
+        ✅ NO IO - instant response
+        ✅ NO async/await - synchronous function
+        
+        Render kills apps that fail health checks, so this must be instant.
         """
-        return JSONResponse({"status": "ok"}, status_code=200)
+        return JSONResponse({"ok": True}, status_code=200)
     
     @app.get("/health/ping", include_in_schema=False)
     def health_ping():
