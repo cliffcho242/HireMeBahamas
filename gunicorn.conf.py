@@ -159,6 +159,16 @@ forwarded_allow_ips = "*"
 _master_start_time = None
 
 
+def _get_worker_timeout():
+    """Get the worker timeout value from environment or config default.
+    
+    Returns:
+        int: Worker timeout in seconds
+    """
+    import os
+    return int(os.environ.get("GUNICORN_TIMEOUT", str(timeout)))
+
+
 def on_starting(server):
     """Log startup configuration"""
     global _master_start_time
@@ -209,6 +219,9 @@ def worker_int(worker):
         worker: The worker instance being interrupted
     """
     import sys
+    # Get timeout from helper function
+    worker_timeout = _get_worker_timeout()
+    
     # Use stderr to ensure this appears near Gunicorn's ERROR log
     print(f"\n{'='*80}", file=sys.stderr)
     print(f"ℹ️  WORKER INTERRUPT SIGNAL RECEIVED - PID {worker.pid}", file=sys.stderr)
@@ -221,7 +234,7 @@ def worker_int(worker):
     print(f"  ✓ Manual service restarts", file=sys.stderr)
     print(f"  ✓ Platform maintenance windows", file=sys.stderr)
     print(f"\n⚠️  Only investigate if this happens frequently OUTSIDE of deployments:", file=sys.stderr)
-    print(f"  • Check if workers are timing out during requests (>{timeout}s)", file=sys.stderr)
+    print(f"  • Check if workers are timing out during requests (>{worker_timeout}s)", file=sys.stderr)
     print(f"  • Review application logs for errors before SIGTERM", file=sys.stderr)
     print(f"  • Monitor memory usage (workers may be OOM killed)", file=sys.stderr)
     print(f"  • Check for slow database queries or API calls", file=sys.stderr)
@@ -241,10 +254,9 @@ def worker_abort(worker):
     Args:
         worker: The worker instance being aborted
     """
-    import os
     import sys
-    # Access timeout from module globals or environment
-    worker_timeout = int(os.environ.get("GUNICORN_TIMEOUT", "60"))
+    # Get timeout from helper function
+    worker_timeout = _get_worker_timeout()
     
     print(f"\n{'='*80}", file=sys.stderr)
     print(f"❌ CRITICAL: WORKER ABORTED - PID {worker.pid}", file=sys.stderr)
