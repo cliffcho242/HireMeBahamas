@@ -334,7 +334,7 @@ _background_executor = ThreadPoolExecutor(
 
 If CPU usage is consistently high:
 1. Check if workers are too high for available cores
-2. Reduce `WEB_CONCURRENCY` to match CPU cores
+2. Reduce `WEB_CONCURRENCY` to match CPU cores (e.g., 2 for 1 CPU core)
 3. Profile slow endpoints with APM
 
 ### Background Jobs Not Running
@@ -342,7 +342,7 @@ If CPU usage is consistently high:
 If background jobs seem stuck:
 1. Check logs for errors
 2. Verify thread pool isn't exhausted
-3. Consider increasing `max_workers` in background_jobs.py
+3. Increase `BACKGROUND_WORKERS` environment variable (default: 4)
 
 ### Database Connection Exhaustion
 
@@ -359,18 +359,40 @@ If queries are slow despite indexes:
 3. Run `ANALYZE` on tables: `python backend/create_database_indexes.py`
 4. Consult [DATABASE_SCALING_STRATEGY.md](DATABASE_SCALING_STRATEGY.md)
 
-## ✅ Checklist
+### Memory Issues
 
-Before deploying to production:
+If experiencing out-of-memory errors:
+1. Reduce `WEB_CONCURRENCY` (fewer workers = less memory)
+2. Reduce `BACKGROUND_WORKERS` (fewer background threads)
+3. Check for memory leaks in application code
+4. Upgrade to higher memory tier
 
-- [x] Gunicorn workers set to 4
-- [x] Background jobs infrastructure implemented
-- [x] Database indexes created
-- [x] Tests passing
+Recommended configurations:
+- 1GB RAM: `WEB_CONCURRENCY=2`, `BACKGROUND_WORKERS=2`
+- 2GB RAM: `WEB_CONCURRENCY=4`, `BACKGROUND_WORKERS=4` (default)
+- 4GB RAM: `WEB_CONCURRENCY=8`, `BACKGROUND_WORKERS=8`
+
+## ✅ Implementation Checklist
+
+### Completed ✅
+- [x] Gunicorn workers set to 4 (configurable via WEB_CONCURRENCY)
+- [x] Background jobs infrastructure implemented (ThreadPoolExecutor)
+- [x] Database indexes already exist (create_database_indexes.py)
+- [x] Background jobs tests passing (9/9)
+- [x] Code review feedback addressed
+- [x] Security checks passing (CodeQL: 0 alerts)
+- [x] Configuration consistency across deployments (Procfile, render.yaml, gunicorn.conf.py)
+- [x] Documentation complete (SCALING_TO_100K_USERS.md, DATABASE_SCALING_STRATEGY.md)
+
+### Production Deployment Checklist
+- [ ] Environment variables configured (WEB_CONCURRENCY=4, BACKGROUND_WORKERS=4)
+- [ ] Database indexes applied (run create_database_indexes.py)
 - [ ] Load testing completed
-- [ ] Monitoring configured
-- [ ] Error tracking (Sentry) configured
-- [ ] Backup strategy in place
+- [ ] Monitoring configured (response times, CPU, memory)
+- [ ] Error tracking configured (Sentry recommended)
+- [ ] Backup strategy verified
+- [ ] Scaling thresholds defined (when to add more workers)
+- [ ] Incident response plan documented
 
 ## 🎉 Summary
 
