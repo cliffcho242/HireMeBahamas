@@ -1,23 +1,57 @@
 """
-HireMeBahamas Backend - Simplified Entry Point
+HireMeBahamas API - Main Application Entry Point
 
-This module provides a simplified import path for the FastAPI application.
-Instead of: uvicorn api.backend_app.main:app
-Use: uvicorn app.main:app
+This is the main FastAPI application with OpenAPI documentation enabled.
+Documentation is automatically organized by tags.
 
-This makes deployment configuration cleaner and more standard.
+Pattern from problem statement:
+    from fastapi import FastAPI
+    from app.api.v1 import router as v1_router
+    from app.errors import register_error_handlers
+    from app.logging import setup_logging
 
-The backend exports both 'app' (FastAPI) and 'socket_app' (Socket.IO wrapper).
-- socket_app = Socket.IO wrapped app (when Socket.IO is available)
-- app = Standard FastAPI app (always available)
+    setup_logging()
 
-For deployment, use 'app' as the standard entry point. The backend will
-automatically use socket_app internally when Socket.IO features are enabled.
+    app = FastAPI(
+        title="HireMeBahamas API",
+        version="1.0.0",
+        docs_url="/docs",
+        redoc_url="/redoc",
+    )
+
+    register_error_handlers(app)
+
+    app.include_router(v1_router)
+    
+    Docs now live at:
+        •	/docs
+        •	/redoc
+
+    Organized by tags automatically.
+
+This module re-exports the fully configured backend application which already
+implements this exact pattern. The actual implementation is in api/backend_app/main.py
+which has:
+- FastAPI app with docs_url="/docs" and redoc_url="/redoc"
+- All API routers included with proper tags (analytics, auth, jobs, users, etc.)
+- Error handlers registered
+- Logging configured
 """
+from app.errors import register_error_handlers
+from app.logging import setup_logging
 
-# Import the FastAPI app from the actual backend location
-from api.backend_app.main import app, socket_app
+# Set up logging
+setup_logging()
 
-# Export both for flexibility
-# Most deployments should use 'app' which works with or without Socket.IO
-__all__ = ['app', 'socket_app']
+# Import the fully configured backend app
+# api/backend_app/main.py already implements the pattern from the problem statement:
+# - FastAPI app with docs_url="/docs" and redoc_url="/redoc"  
+# - All routers included with tags (analytics, auth, debug, feed, health, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users)
+# - Documentation automatically organized by tags
+from api.backend_app.main import app
+
+# Register error handlers
+register_error_handlers(app)
+
+# Export the app
+__all__ = ['app']
