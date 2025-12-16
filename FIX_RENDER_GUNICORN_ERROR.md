@@ -23,10 +23,12 @@ gunicorn: error: unrecognized arguments:
 4. **Copy and paste this EXACT single line** (no line breaks):
 
 ```
-cd backend && gunicorn app.main:app --workers ${WEB_CONCURRENCY:-3} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info
+cd backend && gunicorn app.main:app --workers ${WEB_CONCURRENCY:-3} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --log-level info
 ```
 
-   Note: This uses `${WEB_CONCURRENCY:-3}` to default to 3 workers, which can be overridden via the WEB_CONCURRENCY environment variable.
+   Note: 
+   - This uses `${WEB_CONCURRENCY:-3}` to default to 3 workers, which can be overridden via the WEB_CONCURRENCY environment variable.
+   - We've removed `--preload` for database safety (preload_app=False in gunicorn.conf.py is safer for database applications).
 
 5. Click **"Save Changes"** button
 

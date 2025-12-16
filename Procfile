@@ -17,6 +17,7 @@
 # - timeout=120: Allows for database cold starts
 # - Uvicorn workers: ASGI support for FastAPI async operations
 # - Gunicorn: Production-grade worker management
+# - NO --preload: Safer for database applications (see gunicorn.conf.py)
 #
 # Environment variables:
 #   PORT=8000            Default port
@@ -32,7 +33,7 @@
 # Note: This is Facebook-level architecture with Redis caching
 # =============================================================================
 
-web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-3} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --preload --log-level info
+web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-3} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --log-level info
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh
