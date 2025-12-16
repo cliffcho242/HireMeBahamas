@@ -503,10 +503,13 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     try:
         if prewarm_bcrypt_async is not None:
-            await prewarm_bcrypt_async()
+            # Add timeout protection to prevent worker hanging
+            await asyncio.wait_for(prewarm_bcrypt_async(), timeout=5.0)
             logger.info("Bcrypt pre-warmed successfully")
         else:
             logger.warning("Bcrypt pre-warm function not available")
+    except asyncio.TimeoutError:
+        logger.warning("Bcrypt pre-warm timed out after 5s (non-critical)")
     except Exception as e:
         # Pre-warming is optional - if it fails, authentication will still work
         # but the first login may be slightly slower
@@ -517,13 +520,16 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     try:
         if redis_cache is not None:
-            redis_available = await redis_cache.connect()
+            # Add timeout protection to prevent worker hanging on Redis connection
+            redis_available = await asyncio.wait_for(redis_cache.connect(), timeout=5.0)
             if redis_available:
                 logger.info("Redis cache connected successfully")
             else:
                 logger.info("Using in-memory cache fallback")
         else:
             logger.info("Redis cache not available")
+    except asyncio.TimeoutError:
+        logger.warning("Redis connection timed out after 5s (falling back to in-memory cache)")
     except Exception as e:
         logger.warning(f"Redis connection failed (non-critical): {e}")
     
@@ -532,8 +538,11 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     try:
         from .core.cache import warmup_cache
-        await warmup_cache()
+        # Add timeout protection to prevent worker hanging on cache warmup
+        await asyncio.wait_for(warmup_cache(), timeout=5.0)
         logger.info("Cache warmup completed")
+    except asyncio.TimeoutError:
+        logger.warning("Cache warmup timed out after 5s (non-critical)")
     except Exception as e:
         logger.debug(f"Cache warmup skipped: {e}")
     
