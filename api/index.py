@@ -326,72 +326,14 @@ def get_db_engine():
                         logger.warning(f"⚠️  Could not import backend database modules: {e}")
                         # Fall through to fallback creation
                 
-                # Fallback: Create minimal database engine only if backend isn't available
-                if HAS_DB and DATABASE_URL:
-                    try:
-                        logger.info("Backend database not available, creating fallback database connection...")
-                        
-                        # Use centralized database module for validation and URL processing
-                        try:
-                            from database import get_database_url as get_validated_db_url
-                            db_url = get_validated_db_url()
-                            logger.info("✅ DATABASE_URL validated successfully")
-                        except ImportError:
-                            # Fallback if database module import fails - use manual processing
-                            logger.warning("Could not import database module, using manual URL processing")
-                            db_url = DATABASE_URL.strip()
-                            
-                            # Fix common typos
-                            if "ostgresql" in db_url and "postgresql" not in db_url:
-                                db_url = db_url.replace("ostgresql", "postgresql")
-                                logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
-                            
-                            # Convert to asyncpg format
-                            if db_url.startswith("postgres://"):
-                                db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
-                            elif db_url.startswith("postgresql://") and "asyncpg" not in db_url:
-                                db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-                            
-                            # Add SSL mode
-                            db_url = ensure_sslmode(db_url)
-                        
-                        logger.info("Creating fallback database engine with asyncpg...")
-                        _db_engine = create_async_engine(
-                            db_url,
-                            pool_pre_ping=True,            # Validate connections before use
-                            pool_recycle=300,              # Recycle connections every 5 minutes (serverless-friendly)
-                            pool_size=1,
-                            max_overflow=0,
-                            connect_args={"timeout": 5, "command_timeout": 5}
-                        )
-                        
-                        _async_session_maker = sessionmaker(
-                            _db_engine, class_=AsyncSession, expire_on_commit=False
-                        )
-                        logger.info("✅ Database engine initialized successfully")
-                        logger.info("✅ Fallback database engine created successfully")
-                    except ValueError as ve:
-                        # ValueError indicates configuration issue - log helpful message
-                        logger.error(f"❌ DATABASE_URL configuration error: {ve}")
-                        logger.error("Invalid DATABASE_URL format. Please check your environment variables.")
-                        logger.error("DATABASE_URL validation failed. See SECURITY.md for proper format.")
-                    except Exception as e:
-                        # Check for asyncpg "pattern" error specifically
-                        error_msg = str(e).lower()
-                        if "did not match" in error_msg and "pattern" in error_msg:
-                            logger.error(f"❌ DATABASE_URL format error: The connection string doesn't match PostgreSQL format")
-                            logger.error(f"Error details: {e}")
-                            logger.error("Invalid DATABASE_URL format. Please check your environment variables.")
-                            logger.error("DATABASE_URL validation failed. See SECURITY.md for proper format.")
-                            logger.error("Common issues:")
-                            logger.error("  1. Missing hostname")
-                            logger.error("  2. Invalid characters in connection string")
-                            logger.error("  3. Extra whitespace or newlines in the URL")
-                            logger.error("  4. Missing required connection string components")
-                        else:
-                            logger.error(f"❌ Database initialization failed: {e}")
-                            if is_debug_mode():
-                                logger.error(f"Traceback: {traceback.format_exc()}")
+                # NO FALLBACK: Only use backend's database engine
+                # This prevents the "dual database path" issue where two separate
+                # engines with potentially different configurations were created
+                logger.warning(
+                    "⚠️  Backend database modules not available. "
+                    "Database functionality will be unavailable. "
+                    "This is expected in serverless environments where backend modules fail to load."
+                )
     
     return _db_engine, _async_session_maker
 
