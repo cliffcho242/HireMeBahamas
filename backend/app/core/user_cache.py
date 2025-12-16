@@ -199,16 +199,17 @@ async def get_users_batch(user_ids: list[int], db: AsyncSession) -> dict[int, Op
     # Build cache keys
     cache_keys = [f"user:{uid}" for uid in user_ids]
     
-    # Batch get from cache
+    # Batch get from cache (returns dict with original keys as specified in mget)
     cached_data = await redis_cache.mget(cache_keys)
     
     result = {}
     uncached_ids = []
     
-    # Process cached results
-    for user_id, cache_key in zip(user_ids, cache_keys):
+    # Process cached results - iterate over user_ids and check corresponding cache keys
+    for user_id in user_ids:
+        cache_key = f"user:{user_id}"
         cached = cached_data.get(cache_key)
-        if cached:
+        if cached is not None:
             try:
                 user = _deserialize_user(cached, db)
                 result[user_id] = user
