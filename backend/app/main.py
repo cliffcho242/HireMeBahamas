@@ -507,7 +507,7 @@ async def lazy_import_heavy_stuff():
     """
     startup_start = time.time()
     logger.info(f"Starting HireMeBahamas API initialization (NO database connections)...")
-    logger.info(f"⚡ SIGTERM FIX: Entire startup wrapped in {TOTAL_STARTUP_TIMEOUT}s timeout to prevent worker hangs")
+    logger.info(f"⚡ Startup timeout protection enabled: {TOTAL_STARTUP_TIMEOUT}s maximum to prevent worker hangs")
     
     async def wrapped_startup():
         """Inner function with all startup operations."""
@@ -577,16 +577,14 @@ async def lazy_import_heavy_stuff():
         logger.info(f"✅ Startup completed successfully in {startup_duration:.2f}s")
     except asyncio.TimeoutError:
         startup_duration = time.time() - startup_start
-        logger.error(
-            f"⚠️  CRITICAL: Startup timed out after {TOTAL_STARTUP_TIMEOUT}s!\n"
-            f"   Worker may receive SIGTERM if this happens repeatedly\n"
-            f"   Time elapsed: {startup_duration:.2f}s\n"
-            f"   Individual operation timeout: {STARTUP_OPERATION_TIMEOUT}s each\n"
-            f"   If you see this message, check for:\n"
-            f"   - Slow network connections to Redis/external services\n"
-            f"   - Platform resource constraints (CPU/memory)\n"
-            f"   - Deadlocks or blocking operations in startup code"
-        )
+        logger.error(f"""⚠️  CRITICAL: Startup timed out after {TOTAL_STARTUP_TIMEOUT}s!
+   Worker may receive SIGTERM if this happens repeatedly
+   Time elapsed: {startup_duration:.2f}s
+   Individual operation timeout: {STARTUP_OPERATION_TIMEOUT}s each
+   If you see this message, check for:
+   - Slow network connections to Redis/external services
+   - Platform resource constraints (CPU/memory)
+   - Deadlocks or blocking operations in startup code""")
         # Continue anyway - health endpoint should still work
     except Exception as e:
         startup_duration = time.time() - startup_start
