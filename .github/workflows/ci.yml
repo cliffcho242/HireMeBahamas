@@ -124,9 +124,19 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Validate Vercel configuration
+      - name: Install test dependencies
         run: |
+          pip install pytest==8.3.5 -q
+
+      - name: Run Vercel schema validation script
+        run: |
+          echo "Running validation script..."
           python3 scripts/validate_vercel_config.py
+          
+      - name: Run Vercel schema tests
+        run: |
+          echo "Running pytest schema validation tests..."
+          python -m pytest tests/test_vercel_schema.py -v --tb=short
           
       - name: Validation summary
         if: always()
@@ -135,6 +145,11 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" == "success" ]; then
             echo "✅ All vercel.json files are valid" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Checks performed:**" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ No 'regions' property in functions configuration" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ No underscore-prefixed properties" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ All properties follow Vercel schema" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Vercel configuration validation failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
