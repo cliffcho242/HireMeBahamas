@@ -10,19 +10,30 @@ The "regions" property, if used, should ONLY be at the top level of vercel.json,
 never inside the "functions" section.
 """
 import json
-import pytest
 from pathlib import Path
+import pytest
 
 
 # Get repository root
 REPO_ROOT = Path(__file__).parent.parent
-VERCEL_FILES = [
-    REPO_ROOT / "vercel.json",
-    REPO_ROOT / "vercel_backend.json",
-    REPO_ROOT / "vercel_immortal.json",
-    REPO_ROOT / "next-app" / "vercel.json",
-    REPO_ROOT / "frontend" / "vercel.json",
-]
+
+# Automatically discover all vercel*.json files in the repository
+# This makes the tests maintainable if new Vercel configuration files are added
+def discover_vercel_files():
+    """Find all vercel configuration files in the repository."""
+    vercel_files = []
+    
+    # Find all vercel*.json files (including vercel.json, vercel_*.json, etc.)
+    vercel_files.extend(REPO_ROOT.glob("vercel*.json"))
+    
+    # Also search in subdirectories (but not in node_modules, .git, etc.)
+    for subdir in REPO_ROOT.iterdir():
+        if subdir.is_dir() and not subdir.name.startswith('.') and subdir.name != 'node_modules':
+            vercel_files.extend(subdir.glob("vercel*.json"))
+    
+    return sorted(vercel_files)  # Sort for consistent test order
+
+VERCEL_FILES = discover_vercel_files()
 
 # Valid properties for function configuration (per Vercel documentation)
 VALID_FUNCTION_PROPERTIES = {
@@ -218,5 +229,8 @@ class TestVercelSchema:
 
 
 if __name__ == "__main__":
-    # Run tests with pytest
-    pytest.main([__file__, "-v", "--tb=short"])
+    # This file should be run using: python -m pytest tests/test_vercel_schema.py
+    print("Please run this test file using pytest:")
+    print("  python -m pytest tests/test_vercel_schema.py -v")
+    print("\nOr run all tests:")
+    print("  python -m pytest tests/ -v")
