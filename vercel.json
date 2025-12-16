@@ -9,12 +9,6 @@
       "use": "@vercel/python"
     }
   ],
-  "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "0 10 * * *"
-    }
-  ],
   "functions": {
     "api/index.py": {
       "maxDuration": 30,
