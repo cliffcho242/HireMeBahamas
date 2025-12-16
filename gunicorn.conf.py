@@ -138,7 +138,7 @@ def when_ready(server):
     print(f"   Health: GET /health (instant)")
     print(f"   Ready: GET /ready (with DB check)")
     print(f"   Workers will initialize independently")
-    print(f"🎉 HireMeBahamas API is ready for Railway healthcheck")
+    print(f"🎉 HireMeBahamas API is ready for Render healthcheck")
 
 
 def on_exit(server):
