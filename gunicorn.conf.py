@@ -283,5 +283,6 @@ def worker_abort(worker):
 
 def post_fork(server, worker):
     """Called after worker fork"""
+    print(f"⚙️  Booting worker with pid: {worker.pid}")
     print(f"👶 Worker {worker.pid} spawned")
 

@@ -617,6 +617,9 @@ async def startup():
     logger.info("   - NO warm-up pings")
     logger.info("   - NO background keepalive loops")
     logger.info("   - Database connects on first actual request only")
+    logger.info("")
+    logger.info("🎉 Application startup complete")
+    logger.info("✅ Database warmup successful (lazy initialization pattern)")
 
 
 @app.on_event("shutdown")
