@@ -524,10 +524,12 @@ async def lazy_import_heavy_stuff():
         except Exception as e:
             logger.warning(f"Bcrypt pre-warm skipped (non-critical): {type(e).__name__}")
     
+    # Store task references to prevent garbage collection before completion
+    # While these are fire-and-forget tasks, storing references ensures they complete
+    _startup_tasks = []
+    
     # Launch as background task - doesn't block startup
-    # Note: No need to store reference as this is a fire-and-forget non-critical task
-    # Errors are caught and logged within the task itself
-    asyncio.create_task(prewarm_bcrypt_background())
+    _startup_tasks.append(asyncio.create_task(prewarm_bcrypt_background()))
     
     # ==========================================================================
     # STEP 2: Initialize Redis cache (fully async, non-blocking background task)
@@ -548,9 +550,7 @@ async def lazy_import_heavy_stuff():
             logger.warning(f"Redis connection failed (non-critical): {e}")
     
     # Launch as background task - doesn't block startup
-    # Note: No need to store reference as this is a fire-and-forget non-critical task
-    # Errors are caught and logged within the task itself
-    asyncio.create_task(connect_redis_background())
+    _startup_tasks.append(asyncio.create_task(connect_redis_background()))
     
     # ==========================================================================
     # STEP 3: Warm up cache (fully async, non-blocking background task)
@@ -568,9 +568,10 @@ async def lazy_import_heavy_stuff():
             logger.debug(f"Cache warmup skipped: {e}")
     
     # Launch as background task - doesn't block startup
-    # Note: No need to store reference as this is a fire-and-forget non-critical task
-    # Errors are caught and logged within the task itself
-    asyncio.create_task(warmup_cache_background())
+    _startup_tasks.append(asyncio.create_task(warmup_cache_background()))
+    
+    # Note: Task references are stored in _startup_tasks to prevent garbage collection
+    # before completion. Tasks are fire-and-forget with internal error handling.
     
     # ==========================================================================
     # STEP 4: Run performance optimizations (background task)
