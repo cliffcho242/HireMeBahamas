@@ -1,11 +1,13 @@
 """
-Test DATABASE_URL validation for hostname, port, TCP, and SSL requirements.
+Test DATABASE_URL validation for hostname, port, and TCP requirements.
 
 This test validates the strict requirements for DATABASE_URL:
 1. Must contain a hostname (not localhost, 127.0.0.1, or empty)
 2. Must contain a port number
 3. Must use TCP connection (no Unix sockets)
-4. Must have SSL mode configured
+
+Note: SSL mode (sslmode parameter) is handled separately by ensure_sslmode()
+and is not validated here to avoid redundancy.
 """
 import pytest
 import sys
