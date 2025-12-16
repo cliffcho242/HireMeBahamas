@@ -10,6 +10,7 @@ import time
 import json
 import logging
 import hashlib
+import asyncio
 from typing import Any, Callable, Optional
 from functools import wraps
 
@@ -74,7 +75,6 @@ async def get_redis():
         _redis_client = aioredis.Redis(connection_pool=pool)
         
         # Test connection with timeout
-        import asyncio
         await asyncio.wait_for(_redis_client.ping(), timeout=2.0)
         _redis_available = True
         logger.info("✓ Redis cache initialized successfully (SSL/TLS enabled)")

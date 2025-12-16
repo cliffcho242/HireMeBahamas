@@ -67,8 +67,8 @@ MAX_KEY_LENGTH = 250
 MAX_VALUE_SIZE = 1024 * 1024  # 1MB max per value
 
 # Connection pool settings (for asyncpg-style performance)
-REDIS_POOL_SIZE = config("REDIS_POOL_SIZE", default=10, cast=int)
-REDIS_POOL_TIMEOUT = config("REDIS_POOL_TIMEOUT", default=5.0, cast=float)
+REDIS_POOL_SIZE = int(os.getenv("REDIS_POOL_SIZE", "10"))
+REDIS_POOL_TIMEOUT = float(os.getenv("REDIS_POOL_TIMEOUT", "5.0"))
 
 
 class AsyncRedisCache:
