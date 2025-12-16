@@ -197,9 +197,9 @@ async def startup():
             if redis_available:
                 logger.info("✓ Redis cache connected")
             else:
-                logger.info("ℹ Using in-memory cache fallback")
+                logger.debug("Using in-memory cache (Redis not configured - this is expected)")
         else:
-            logger.info("ℹ Redis cache not available")
+            logger.debug("Redis cache module not available")
     except Exception as e:
         logger.warning(f"⚠ Redis connection failed: {e}")
     

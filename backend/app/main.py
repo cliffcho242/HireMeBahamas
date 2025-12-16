@@ -546,7 +546,7 @@ async def startup():
                 if redis_available:
                     logger.info("✅ Redis cache connected")
                 else:
-                    logger.info("ℹ️ Using in-memory cache (Redis not configured)")
+                    logger.debug("Using in-memory cache (Redis not configured - this is expected)")
             else:
                 logger.debug("Redis cache module not available")
         except asyncio.TimeoutError:

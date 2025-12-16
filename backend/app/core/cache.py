@@ -52,7 +52,7 @@ async def get_redis():
                 os.getenv('UPSTASH_REDIS_REST_URL')
     
     if not redis_url:
-        logger.debug("Redis not configured, using in-memory cache")
+        logger.debug("Redis URL not configured, using in-memory cache (this is expected)")
         _redis_available = False
         return None
     
@@ -81,7 +81,7 @@ async def get_redis():
         return _redis_client
         
     except ImportError:
-        logger.info("redis package not installed, using in-memory cache")
+        logger.debug("redis package not installed, using in-memory cache (this is expected)")
         _redis_available = False
         return None
     except Exception as e:
