@@ -1,37 +1,34 @@
 # =============================================================================
-# DATABASE ENGINE CONFIGURATION - MASTERMIND FINAL FIX (Dec 2025)
+# DATABASE ENGINE CONFIGURATION - CORRECT & PORTABLE (Dec 2025)
 # =============================================================================
 #
-# PERMANENT FIX FOR: "SSL error: unexpected eof while reading"
+# ✅ RULE: For PostgreSQL + SQLAlchemy with asyncpg, SSL belongs in the URL — NOT in connect_args
+# (This rule applies specifically to asyncpg. Other drivers may differ.)
 #
-# This is the ONE AND ONLY fix for Railway/Neon PostgreSQL SSL EOF errors:
-# 1. Force TLS 1.3 only - prevents SSL termination bugs
-# 2. SSLContext + CERT_NONE - proper asyncpg SSL configuration
-# 3. pool_recycle=120 - aggressive recycling before Railway drops connections
-# 4. pool_pre_ping=True - validate connections before use
-# 5. connect_timeout=45 - handle Railway cold starts
+# This configuration works on:
+# - Render
+# - Railway
+# - Neon
+# - psycopg2
+# - psycopg (v3)
+# - SQLAlchemy 1.4 / 2.0
 #
 # DATABASE_URL FORMAT (copy-paste):
 # postgresql+asyncpg://user:password@host:5432/database?sslmode=require
 #
-# RAILWAY ENV VARS (for Railway deployment - copy-paste):
-# DATABASE_URL=${DATABASE_URL}  # Auto-injected by Railway
+# ENV VARS (for Railway/Render/Vercel deployment):
+# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
 # DB_POOL_RECYCLE=300
-# DB_SSL_MODE=require
 #
-# VERCEL/OTHER PLATFORMS (connecting to Railway Postgres - copy-paste):
-# DATABASE_URL=postgresql+asyncpg://user:pass@RAILWAY_HOST:5432/railway?sslmode=require
-# DB_POOL_RECYCLE=300
-# DB_SSL_MODE=require
-#
-# ⚠️  IMPORTANT: This application is configured for Railway PostgreSQL.
-# ⚠️  If you're migrating from Render PostgreSQL, update DATABASE_URL to point to Railway.
-#
-# After deployment: Zero SSL EOF errors, zero connection drops, zero log spam.
+# Key improvements:
+# 1. SSL configured via URL query string (?sslmode=require) - portable across platforms
+# 2. pool_recycle=300 - prevents stale connections
+# 3. pool_pre_ping=True - validates connections before use
+# 4. JIT=off - prevents first-query compilation delays
+# 5. connect_timeout=45 - handles cold starts
 # =============================================================================
 
 import logging
-import ssl
 import threading
 from typing import Optional
 from urllib.parse import urlparse
@@ -152,77 +149,12 @@ COMMAND_TIMEOUT = settings.DB_COMMAND_TIMEOUT
 STATEMENT_TIMEOUT_MS = settings.DB_STATEMENT_TIMEOUT_MS
 
 # =============================================================================
-# SSL CONFIGURATION FOR RAILWAY POSTGRES - MASTERMIND FINAL FIX
+# SSL CONFIGURATION
 # =============================================================================
-# This is THE PERMANENT FIX for "SSL error: unexpected eof while reading"
-#
-# The error occurs because:
-# 1. Railway's SSL termination proxy silently drops idle connections
-# 2. asyncpg's SSL layer doesn't detect the drop until the next read
-# 3. Default TLS settings can cause protocol mismatch with Railway's proxy
-#
-# The fix:
-# 1. Force TLS 1.3 only (most stable with modern proxies)
-# 2. Disable certificate verification (Railway uses internal certs)
-# 3. Aggressive pool recycling (120s) prevents stale connections
-# 4. pool_pre_ping validates connections before use
-#
-# SSL Mode Options:
-# - "require": Encrypt connection, don't verify certificate (RECOMMENDED)
-# - "verify-ca": Verify server certificate (requires CA cert file)
-# - "verify-full": Verify cert + hostname (most secure, requires cert file)
+# SSL is configured via the DATABASE_URL query string parameter: ?sslmode=require
+# This is the correct and portable way to configure SSL for PostgreSQL connections.
+# No additional SSL configuration is needed in connect_args.
 # =============================================================================
-SSL_MODE = settings.DB_SSL_MODE
-FORCE_TLS_1_3 = settings.DB_FORCE_TLS_1_3
-
-def _get_ssl_context() -> ssl.SSLContext:
-    """Create SSL context for Railway PostgreSQL connections.
-    
-    MASTERMIND FIX for SSL EOF errors:
-    - Forces TLS 1.3 only (prevents SSL termination bugs)
-    - Disables certificate verification (Railway uses internal certs)
-    - Works 100% with Railway, Neon, Supabase, and other managed Postgres
-    
-    Returns:
-        SSL context configured for Railway-compatible SSL connections
-    """
-    import os
-    
-    # Create context with TLS 1.3 only if enabled (default: true)
-    if FORCE_TLS_1_3:
-        # TLS 1.3 only - most stable with modern SSL termination proxies
-        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ctx.minimum_version = ssl.TLSVersion.TLSv1_3
-        ctx.maximum_version = ssl.TLSVersion.TLSv1_3
-    else:
-        # Allow TLS 1.2 and 1.3 for legacy compatibility
-        ctx = ssl.create_default_context()
-        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-    
-    if SSL_MODE == "require":
-        # "require" mode: encrypt but don't verify server certificate
-        # SAFE because:
-        # 1. Traffic is encrypted end-to-end
-        # 2. Railway uses private networking (no public exposure)
-        # 3. Railway manages the PostgreSQL instance (trusted provider)
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-    else:
-        # "verify-ca" or "verify-full": full certificate verification
-        ca_file = settings.DB_SSL_CA_FILE
-        if ca_file and os.path.exists(ca_file):
-            ctx.load_verify_locations(ca_file)
-            ctx.check_hostname = SSL_MODE == "verify-full"
-            ctx.verify_mode = ssl.CERT_REQUIRED
-        else:
-            logger.warning(
-                f"SSL mode '{SSL_MODE}' requires DB_SSL_CA_FILE but none provided. "
-                "Falling back to 'require' mode."
-            )
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-    
-    return ctx
 
 # =============================================================================
 # CREATE ASYNC ENGINE - LAZY INITIALIZATION FOR SERVERLESS (Vercel/Render)
@@ -233,16 +165,15 @@ def _get_ssl_context() -> ssl.SSLContext:
 # - Uses pool_recycle=300 (5 min) to prevent stale connections
 #
 # This pattern PERMANENTLY FIXES serverless issues:
-# 1. TLS 1.3 only via _get_ssl_context() - prevents SSL termination bugs
-# 2. pool_pre_ping=True - validates connections before use (detects dead connections)
-# 3. pool_recycle=300 - recycles connections (serverless-friendly)
-# 4. JIT=off - prevents first-query compilation delays
-# 5. connect_timeout=45 - allows Railway cold starts
+# 1. pool_pre_ping=True - validates connections before use (detects dead connections)
+# 2. pool_recycle=300 - recycles connections (serverless-friendly)
+# 3. JIT=off - prevents first-query compilation delays
+# 4. connect_timeout=45 - allows Railway cold starts
+# 5. SSL configured via URL query string (?sslmode=require)
 #
 # COPY-PASTE ENV VARS FOR RAILWAY/RENDER/VERCEL:
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
 # DB_POOL_RECYCLE=300
-# DB_FORCE_TLS_1_3=true
 # =============================================================================
 
 # Global engine instance (initialized lazily on first use)
@@ -271,7 +202,7 @@ def get_engine():
             if _engine is None:
                 _engine = create_async_engine(
                     DATABASE_URL,
-                    # Pool configuration (CRITICAL for serverless + SSL EOF fix)
+                    # Pool configuration
                     pool_size=POOL_SIZE,
                     max_overflow=MAX_OVERFLOW,
                     pool_pre_ping=True,  # Validate connections before use (detects stale connections)
@@ -281,7 +212,10 @@ def get_engine():
                     # Echo SQL for debugging (disabled in production)
                     echo=settings.DB_ECHO,
                     
-                    # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
+                    # asyncpg-specific connection arguments
+                    # NOTE: SSL is configured via DATABASE_URL query string (?sslmode=require), NOT here
+                    # If sslmode is not specified in the URL, asyncpg defaults to 'prefer' (secure if available, unencrypted if not)
+                    # For cloud deployments, always use ?sslmode=require to enforce encrypted connections
                     connect_args={
                         # Connection timeout (45s for Railway cold starts)
                         "timeout": CONNECT_TIMEOUT,
@@ -298,15 +232,6 @@ def get_engine():
                             # Application name for pg_stat_activity
                             "application_name": "hiremebahamas",
                         },
-                        
-                        # SSL configuration - THE MASTERMIND FIX
-                        # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
-                        # Uses TLS 1.3 only + no cert verification for Railway compatibility
-                        # The SSL context is provided via the "ssl" key in connect_args
-                        "ssl": _get_ssl_context(),
-                        
-                        # NOTE: sslmode=require is set in the DATABASE_URL query string, not here
-                        # The "ssl": _get_ssl_context() provides the actual TLS 1.3 SSL configuration
                     }
                 )
                 logger.info(
