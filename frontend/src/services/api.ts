@@ -2,11 +2,10 @@ import axios from 'axios';
 import { User } from '../types/user';
 import { Job } from '../types/job';
 import { debugLog } from '../utils/debugLogger';
-import { getApiUrl, logBackendConfiguration, validateBackendUrl } from '../utils/backendRouter';
+import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
 
-// Guard: Prevent silent failures when backend URL is required but not configured
-// This check happens when VITE_REQUIRE_BACKEND_URL is set to 'true'
-validateBackendUrl();
+// Note: Backend URL validation happens automatically when backendRouter is imported
+// The validateBackendUrl() function is called at module load in backendRouter.ts
 
 // API Response Types
 interface UserResponse {
