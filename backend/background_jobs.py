@@ -16,6 +16,7 @@ For scaling beyond 100K+ users, consider migrating to:
 - FastAPI BackgroundTasks (if using FastAPI)
 """
 import logging
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
@@ -24,12 +25,16 @@ from typing import Callable, Any
 logger = logging.getLogger(__name__)
 
 # Thread pool for background jobs
-# Size: 4 workers to handle background tasks without blocking request threads
+# Size: Configurable via BACKGROUND_WORKERS environment variable (default: 4)
 # This provides enough concurrency for typical background operations
+# Increase for high-volume deployments (e.g., BACKGROUND_WORKERS=8)
+_background_workers = int(os.getenv("BACKGROUND_WORKERS", "4"))
 _background_executor = ThreadPoolExecutor(
-    max_workers=4,
+    max_workers=_background_workers,
     thread_name_prefix="background_job"
 )
+
+logger.info(f"Background job executor initialized with {_background_workers} workers")
 
 
 def run_in_background(func: Callable) -> Callable:
@@ -258,10 +263,18 @@ def shutdown_background_jobs(wait: bool = True, timeout: float = 30.0):
     
     Args:
         wait: If True, wait for jobs to complete before shutting down
-        timeout: Maximum time to wait for jobs in seconds
+        timeout: Maximum time to wait for jobs in seconds (Python 3.9+ only)
     """
     logger.info("Shutting down background job executor...")
-    _background_executor.shutdown(wait=wait, timeout=timeout)
+    
+    # Python 3.9+ supports timeout parameter
+    import sys
+    if sys.version_info >= (3, 9):
+        _background_executor.shutdown(wait=wait, timeout=timeout)
+    else:
+        # Python 3.8 and earlier don't support timeout
+        _background_executor.shutdown(wait=wait)
+    
     logger.info("Background job executor shut down")
 
 

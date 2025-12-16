@@ -18,7 +18,7 @@ def test_gunicorn_config():
     
     # Set minimal environment for testing
     os.environ.setdefault("PORT", "10000")
-    os.environ.setdefault("WEB_CONCURRENCY", "2")
+    os.environ.setdefault("WEB_CONCURRENCY", "4")  # Updated for 100K+ user scaling
     os.environ.setdefault("WEB_THREADS", "4")
     os.environ.setdefault("GUNICORN_TIMEOUT", "60")
     
@@ -34,8 +34,8 @@ def test_gunicorn_config():
         
         # Test workers
         print(f"Workers (default): {gunicorn_conf.workers}")
-        assert gunicorn_conf.workers == 2, f"Expected workers=2, got {gunicorn_conf.workers}"
-        print("✅ Workers configuration: PASS (2)")
+        assert gunicorn_conf.workers == 4, f"Expected workers=4, got {gunicorn_conf.workers}"
+        print("✅ Workers configuration: PASS (4 - scaled for 100K+ users)")
         print()
         
         # Test threads

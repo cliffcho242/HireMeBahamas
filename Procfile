@@ -13,20 +13,20 @@
 # - Modern async/await patterns via Uvicorn workers
 #
 # Configuration:
-# - workers=2: Optimal for 1GB RAM (can handle concurrent requests)
+# - workers=4: Scaled for 100K+ users (optimized for production)
 # - timeout=120: Allows for database cold starts
 # - Uvicorn workers: ASGI support for FastAPI async operations
 # - Gunicorn: Production-grade worker management
 #
 # Environment variables:
 #   PORT=8000            Default port
-#   WEB_CONCURRENCY=2    Two workers for better concurrency
+#   WEB_CONCURRENCY=4    Four workers for 100K+ user scaling
 #   GUNICORN_TIMEOUT=120 Worker timeout in seconds
 # 
 # Note: This is industry-standard configuration used by apps at Facebook/Twitter scale
 # =============================================================================
 
-web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --preload --log-level info
+web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-4} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --preload --log-level info
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh

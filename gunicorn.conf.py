@@ -22,6 +22,12 @@ cpu_count = multiprocessing.cpu_count()
 # Workers: 4 for scaling to 100K+ users (optimized for production deployment)
 # Use WEB_CONCURRENCY env var to override
 # Each worker handles concurrent requests via threads
+#
+# Resource Requirements for 4 workers:
+# - Recommended: 2+ CPU cores (0.5 CPU per worker minimum)
+# - Recommended: 2GB+ RAM (500MB per worker)
+# - Lower environments: Set WEB_CONCURRENCY=2 for 1GB RAM / 1 CPU
+# - Higher load: Set WEB_CONCURRENCY=8 for 4+ CPU cores / 4GB+ RAM
 workers = int(os.environ.get("WEB_CONCURRENCY", "4"))
 
 # Worker class: gthread for I/O-bound operations (database queries)
