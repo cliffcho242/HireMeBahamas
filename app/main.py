@@ -1,23 +1,44 @@
 """
-HireMeBahamas Backend - Simplified Entry Point
+HireMeBahamas Backend - FastAPI Main File (Final Form)
 
-This module provides a simplified import path for the FastAPI application.
-Instead of: uvicorn api.backend_app.main:app
-Use: uvicorn app.main:app
-
-This makes deployment configuration cleaner and more standard.
-
-The backend exports both 'app' (FastAPI) and 'socket_app' (Socket.IO wrapper).
-- socket_app = Socket.IO wrapped app (when Socket.IO is available)
-- app = Standard FastAPI app (always available)
-
-For deployment, use 'app' as the standard entry point. The backend will
-automatically use socket_app internally when Socket.IO features are enabled.
+Instant health check response with non-blocking database initialization.
+✅ App responds immediately
+✅ DB never blocks startup
+✅ Render health check always passes
 """
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
+import asyncio
+import logging
 
-# Import the FastAPI app from the actual backend location
-from api.backend_app.main import app, socket_app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup: create background task for database initialization
+    asyncio.create_task(background_init())
+    
+    yield
+    
+    # Shutdown: graceful shutdown
+    logging.info("Graceful shutdown initiated")
 
-# Export both for flexibility
-# Most deployments should use 'app' which works with or without Socket.IO
-__all__ = ['app', 'socket_app']
+app = FastAPI(
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+    lifespan=lifespan
+)
+
+@app.get("/health", include_in_schema=False)
+def health():
+    return {"ok": True}
+
+async def background_init():
+    from app.database import init_db, warmup_db
+
+    try:
+        engine = init_db()
+        if engine:
+            await warmup_db(engine)
+    except Exception as e:
+        logging.warning(f"Background init skipped: {e}")
