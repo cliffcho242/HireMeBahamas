@@ -104,18 +104,18 @@ class Job(Base):
     description = Column(Text, nullable=False)
     requirements = Column(Text)
     benefits = Column(Text)
-    category = Column(String(100), nullable=False)
+    category = Column(String(100), nullable=False, index=True)  # Index for filtering by category
     job_type = Column(String(50), nullable=False, default="full-time")
-    location = Column(String(200), nullable=False)
+    location = Column(String(200), nullable=False, index=True)  # Index for location-based searches
     salary_min = Column(Integer)
     salary_max = Column(Integer)
     budget = Column(Float)  # Budget amount for the job
     budget_type = Column(String(20), default="fixed")  # fixed or hourly
     is_remote = Column(Boolean, default=False)  # Whether job is remote
     skills = Column(Text)  # Required skills as comma-separated text
-    status = Column(String(20), default="active")
-    employer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    status = Column(String(20), default="active", index=True)  # Index for filtering active jobs
+    employer_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Index for employer queries
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)  # Index for sorting by date
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
@@ -130,12 +130,12 @@ class JobApplication(Base):
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
-    applicant_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False, index=True)  # Index for job queries
+    applicant_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Index for applicant queries
     cover_letter = Column(Text)
     proposed_budget = Column(Float)  # Proposed budget amount by applicant
-    status = Column(String(20), default="pending")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    status = Column(String(20), default="pending", index=True)  # Index for filtering by status
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)  # Index for sorting
 
     # Relationships
     job = relationship("Job", back_populates="applications")
@@ -169,12 +169,12 @@ class Message(Base):
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
-    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)  # Index for conversation queries
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Index for sender queries
+    receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Index for receiver queries
     content = Column(Text, nullable=False)
-    is_read = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    is_read = Column(Boolean, default=False, index=True)  # Index for filtering unread messages
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)  # Index for sorting
 
     # Relationships
     conversation = relationship("Conversation", back_populates="messages")
@@ -227,9 +227,9 @@ class Follow(Base):
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    follower_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    followed_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    follower_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Index for follower queries
+    followed_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Index for followed queries
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)  # Index for sorting
 
     # Relationships
     follower = relationship("User", back_populates="following", foreign_keys=[follower_id])
@@ -241,13 +241,13 @@ class Notification(Base):
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    notification_type = Column(SQLEnum(NotificationType), nullable=False)  # Type from NotificationType enum
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Index for user queries
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # Index for actor queries
+    notification_type = Column(SQLEnum(NotificationType), nullable=False, index=True)  # Index for filtering by type
     content = Column(Text, nullable=False)
-    related_id = Column(Integer, nullable=True)  # ID of related job, post, etc.
-    is_read = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    related_id = Column(Integer, nullable=True, index=True)  # Index for related entity queries
+    is_read = Column(Boolean, default=False, index=True)  # Index for filtering unread notifications
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)  # Index for sorting
 
     # Relationships
     user = relationship("User", foreign_keys=[user_id])
@@ -275,13 +275,13 @@ class Post(Base):
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Index for user queries
     content = Column(Text, nullable=False)
     image_url = Column(String(500))
     video_url = Column(String(500))
-    post_type = Column(String(50), default="text")  # text, job, image, video
-    related_job_id = Column(Integer, ForeignKey("jobs.id"), nullable=True)  # Link to job if this is a job post
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    post_type = Column(String(50), default="text", index=True)  # Index for filtering by type
+    related_job_id = Column(Integer, ForeignKey("jobs.id"), nullable=True, index=True)  # Index for job-related posts
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)  # Index for sorting by date
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
@@ -296,9 +296,9 @@ class PostLike(Base):
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Index for user queries
+    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False, index=True)  # Index for post queries
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)  # Index for sorting
 
     # Relationships
     user = relationship("User")
@@ -310,10 +310,10 @@ class PostComment(Base):
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False, index=True)  # Index for post queries
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Index for user queries
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)  # Index for sorting
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
