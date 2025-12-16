@@ -537,7 +537,94 @@ async def lazy_import_heavy_stuff():
     
     This prevents ALL database connections until first actual database request.
     """
-    logger.info("Starting HireMeBahamas API initialization (NO database connections)...")
+    # Import environment utilities here to keep them in the lazy initialization
+    # section (only imported when app starts, not at module load time)
+    from app.core.environment import is_production, is_development
+    from urllib.parse import urlparse
+    
+    logger.info("=" * 80)
+    logger.info("🚀 Starting HireMeBahamas API")
+    logger.info("=" * 80)
+    
+    # ==========================================================================
+    # DEPLOYMENT ENVIRONMENT INFORMATION
+    # ==========================================================================
+    
+    environment = os.getenv("ENVIRONMENT", "development")
+    vercel_env = os.getenv("VERCEL_ENV", "not set")
+    is_prod = is_production()
+    
+    logger.info(f"📍 Environment: {environment}")
+    logger.info(f"📍 Vercel Environment: {vercel_env}")
+    logger.info(f"📍 Production Mode: {is_prod}")
+    logger.info(f"📍 Development Mode: {is_development()}")
+    
+    # ==========================================================================
+    # DATABASE CONFIGURATION (without credentials)
+    # ==========================================================================
+    database_url = os.getenv("DATABASE_URL", "not set")
+    if database_url and database_url != "not set":
+        # Parse URL to show connection info without credentials
+        try:
+            parsed = urlparse(database_url)
+            db_host = parsed.hostname or "unknown"
+            db_port = parsed.port or "unknown"
+            db_name = parsed.path.lstrip('/').split('?')[0] if parsed.path else "unknown"
+            db_driver = parsed.scheme or "unknown"
+            db_ssl = "sslmode=require" in database_url
+            
+            logger.info(f"💾 Database Driver: {db_driver}")
+            logger.info(f"💾 Database Host: {db_host}")
+            logger.info(f"💾 Database Port: {db_port}")
+            logger.info(f"💾 Database Name: {db_name}")
+            logger.info(f"💾 Database SSL: {'✅ enabled' if db_ssl else '⚠️  disabled'}")
+        except Exception as e:
+            logger.warning(f"💾 Database URL configured but could not parse: {e}")
+    else:
+        logger.warning("💾 Database URL: ⚠️  NOT CONFIGURED")
+    
+    # ==========================================================================
+    # CORS CONFIGURATION
+    # ==========================================================================
+    logger.info(f"🌐 CORS Origins: {len(cors_origins)} allowed origins")
+    for origin in cors_origins:
+        logger.info(f"   - {origin}")
+    logger.info(f"🌐 CORS Credentials: ✅ enabled (for secure cookies)")
+    
+    # ==========================================================================
+    # SERVER CONFIGURATION
+    # ==========================================================================
+    port = os.getenv("PORT", "8000")
+    logger.info(f"🖥️  Server Port: {port}")
+    logger.info(f"🖥️  Host: 0.0.0.0 (all interfaces)")
+    
+    # ==========================================================================
+    # HEALTH ENDPOINTS
+    # ==========================================================================
+    logger.info("🏥 Health Endpoints:")
+    logger.info("   - GET /health (instant, no DB)")
+    logger.info("   - GET /live (instant, no DB)")
+    logger.info("   - GET /ready (instant, no DB)")
+    logger.info("   - GET /ready/db (with DB check)")
+    logger.info("   - GET /health/detailed (comprehensive)")
+    
+    # ==========================================================================
+    # CRITICAL ENVIRONMENT VARIABLES CHECK
+    # ==========================================================================
+    logger.info("🔑 Environment Variables Check:")
+    env_vars = {
+        "DATABASE_URL": "✅ set" if os.getenv("DATABASE_URL") else "❌ not set",
+        "REDIS_URL": "✅ set" if os.getenv("REDIS_URL") else "ℹ️  not set (optional)",
+        "JWT_SECRET_KEY": "✅ set" if os.getenv("JWT_SECRET_KEY") else "⚠️  not set (using default)",
+        "ENVIRONMENT": os.getenv("ENVIRONMENT", "❌ not set"),
+        "VERCEL_ENV": os.getenv("VERCEL_ENV", "ℹ️  not set"),
+    }
+    for var, status in env_vars.items():
+        logger.info(f"   - {var}: {status}")
+    
+    logger.info("=" * 80)
+    logger.info("Starting component initialization (NO database connections)...")
+    logger.info("=" * 80)
     
     # ==========================================================================
     # STEP 1: Pre-warm bcrypt (non-blocking, no database)
@@ -575,17 +662,25 @@ async def lazy_import_heavy_stuff():
     # when first endpoint requiring database access is called.
     # This is handled by the lazy engine wrapper and get_db() dependency.
     
-    logger.info("LAZY IMPORT COMPLETE — FULL APP LIVE (DB connects on first request)")
-    logger.info("Health:   GET /health (instant)")
-    logger.info("Liveness: GET /live (instant)")
-    logger.info("Ready:    GET /ready (instant)")
-    logger.info("Ready:    GET /ready/db (with DB check)")
+    logger.info("=" * 80)
+    logger.info("✅ HireMeBahamas API Initialization Complete")
+    logger.info("=" * 80)
     logger.info("")
-    logger.info("✅ STRICT LAZY PATTERN ACTIVE:")
+    logger.info("📊 INITIALIZATION SUMMARY:")
+    logger.info("   ✅ Health endpoints ready (instant response)")
+    logger.info("   ✅ CORS configured for production")
+    logger.info("   ✅ Request logging middleware active")
+    logger.info("   ✅ Timeout middleware configured (60s)")
+    logger.info("   ✅ Rate limiting middleware active")
+    logger.info("")
+    logger.info("🔄 LAZY INITIALIZATION PATTERN:")
+    logger.info("   - Database engine will initialize on first request")
     logger.info("   - NO database connections at startup")
     logger.info("   - NO warm-up pings")
     logger.info("   - NO background keepalive loops")
-    logger.info("   - Database connects on first actual request only")
+    logger.info("")
+    logger.info("🚦 READY TO ACCEPT TRAFFIC")
+    logger.info("=" * 80)
 
 
 @app.on_event("shutdown")
