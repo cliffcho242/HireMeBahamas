@@ -20,14 +20,22 @@ interface BackendConfig {
   available: boolean;
 }
 
-// Guard: Prevent silent failures when backend URL is required but not configured
-if (import.meta.env.VITE_REQUIRE_BACKEND_URL === 'true' && !import.meta.env.VITE_API_URL) {
-  throw new Error(
-    "VITE_API_URL is not set. " +
-    "Either set VITE_API_URL environment variable or disable VITE_REQUIRE_BACKEND_URL. " +
-    "This prevents silent failures when an explicit backend URL is required."
-  );
+/**
+ * Validates that backend URL is configured when required.
+ * Throws an error if VITE_REQUIRE_BACKEND_URL is 'true' but VITE_API_URL is not set.
+ */
+export function validateBackendUrl(): void {
+  if (import.meta.env.VITE_REQUIRE_BACKEND_URL === 'true' && !import.meta.env.VITE_API_URL) {
+    throw new Error(
+      "VITE_API_URL is not set. " +
+      "Either set VITE_API_URL environment variable or disable VITE_REQUIRE_BACKEND_URL. " +
+      "This prevents silent failures when an explicit backend URL is required."
+    );
+  }
 }
+
+// Guard: Prevent silent failures when backend URL is required but not configured
+validateBackendUrl();
 
 // Detect backend URL
 function getBackendConfig(): BackendConfig {
