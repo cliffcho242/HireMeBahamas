@@ -30,7 +30,7 @@ def test_no_connection_at_import():
     logger.info("TEST 1: Importing database module...")
     
     # Import database module - this should NOT create any connections
-    from backend.app.core.database import engine, get_engine, LazyEngine
+    from backend.app.database import engine, get_engine, LazyEngine
     
     # Verify LazyEngine wrapper exists (public API)
     assert isinstance(engine, LazyEngine), "❌ FAILED: engine is not a LazyEngine wrapper!"
@@ -61,7 +61,7 @@ async def test_connection_on_first_request():
     logger.info("\nTEST 3: Testing first database request...")
     
     # Import after test 1 to ensure clean state
-    from backend.app.core.database import get_engine
+    from backend.app.database import get_engine
     
     # Note: We can't easily test actual connection without a real database
     # but we can verify the lazy initialization mechanism by calling get_engine()
@@ -113,7 +113,7 @@ def test_database_config():
     """Test 5: Verify database configuration has required parameters"""
     logger.info("\nTEST 5: Verifying database configuration...")
     
-    from backend.app.core.database import POOL_RECYCLE, CONNECT_TIMEOUT
+    from backend.app.database import POOL_RECYCLE, CONNECT_TIMEOUT
     
     # Verify pool_recycle is set (should be 300 by default)
     assert POOL_RECYCLE > 0, "❌ FAILED: POOL_RECYCLE not set"
@@ -126,7 +126,7 @@ def test_database_config():
     # Verify engine creation includes pool_pre_ping
     # This is harder to test directly, but we can check the code
     import inspect
-    from backend.app.core.database import get_engine
+    from backend.app.database import get_engine
     source = inspect.getsource(get_engine)
     
     assert 'pool_pre_ping=True' in source, "❌ FAILED: pool_pre_ping=True not in engine config"

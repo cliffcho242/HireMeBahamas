@@ -45,10 +45,18 @@ def test_backend_app_database():
 
 
 def test_backend_app_core_database():
-    """Test backend/app/core/database.py configuration."""
+    """Test backend/app/core/database.py configuration (DEPRECATED - file removed)."""
     print("Testing backend/app/core/database.py...")
     
     filepath = project_root / "backend" / "app" / "core" / "database.py"
+    
+    # This file was removed as part of consolidation to use only backend/app/database.py
+    if not filepath.exists():
+        print("✅ PASS: backend/app/core/database.py removed (duplicate eliminated)")
+        print("   Using single database module: backend/app/database.py\n")
+        return
+    
+    # If file still exists (shouldn't happen), run old checks
     source = read_file(filepath)
     
     # Check that ssl import was removed
