@@ -151,6 +151,28 @@ def worker_exit(server, worker):
     print(f"👷 Worker {worker.pid} exiting...")
 
 
+def worker_int(worker):
+    """Called when a worker receives SIGINT or SIGQUIT signal.
+    
+    This hook is triggered when Gunicorn sends SIGTERM/SIGINT/SIGQUIT to a worker:
+    - During graceful shutdown (deployment, restart)
+    - When worker needs to be terminated cleanly
+    - Before escalating to SIGABRT for unresponsive workers
+    
+    Args:
+        worker: The worker instance being interrupted
+    """
+    print(f"⚠️  Worker {worker.pid} received interrupt signal (SIGTERM/SIGINT/SIGQUIT)")
+    print(f"   This is normal during:")
+    print(f"   - Deployments and restarts")
+    print(f"   - Configuration changes")
+    print(f"   - Manual service restarts")
+    print(f"   If this happens frequently outside of deployments:")
+    print(f"   - Check if workers are timing out during requests")
+    print(f"   - Review application logs for errors")
+    print(f"   - Monitor memory usage (workers may be OOM killed)")
+
+
 def worker_abort(worker):
     """Called when a worker is forcibly terminated (SIGABRT).
     

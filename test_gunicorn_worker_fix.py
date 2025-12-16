@@ -46,6 +46,16 @@ def test_backend_gunicorn_config():
             print("❌ worker_abort is not callable in backend/gunicorn.conf.py")
             return False
         
+        # Check worker_int hook exists
+        if not hasattr(config, 'worker_int'):
+            print("❌ worker_int hook not found in backend/gunicorn.conf.py")
+            return False
+        
+        # Check it's callable
+        if not callable(config.worker_int):
+            print("❌ worker_int is not callable in backend/gunicorn.conf.py")
+            return False
+        
         # Check timeout is reasonable (not too short, not too long)
         timeout = getattr(config, 'timeout', None)
         if timeout is None:
@@ -113,7 +123,17 @@ def test_root_gunicorn_config():
             print("❌ worker_abort is not callable in gunicorn.conf.py")
             return False
         
-        print("✅ gunicorn.conf.py is valid and has worker_abort hook\n")
+        # Check worker_int hook exists
+        if not hasattr(config, 'worker_int'):
+            print("❌ worker_int hook not found in gunicorn.conf.py")
+            return False
+        
+        # Check it's callable
+        if not callable(config.worker_int):
+            print("❌ worker_int is not callable in gunicorn.conf.py")
+            return False
+        
+        print("✅ gunicorn.conf.py is valid and has worker_abort and worker_int hooks\n")
         return True
         
     except Exception as e:
@@ -177,9 +197,10 @@ def main():
         print("✅ All tests passed!")
         print()
         print("The Gunicorn worker SIGTERM fix is properly implemented:")
-        print("1. worker_abort hook logs detailed diagnostics when workers timeout")
-        print("2. Timeout settings are reasonable")
-        print("3. Startup operations have timeout protection")
+        print("1. worker_int hook logs diagnostics for SIGTERM/SIGINT signals")
+        print("2. worker_abort hook logs detailed diagnostics when workers timeout")
+        print("3. Timeout settings are reasonable")
+        print("4. Startup operations have timeout protection")
         print()
         print("Next steps:")
         print("- Deploy to your platform (Railway/Render)")
