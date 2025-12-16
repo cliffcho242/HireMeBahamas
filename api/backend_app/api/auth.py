@@ -242,7 +242,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     await db.refresh(db_user)
     
     # Pre-populate cache with new user for immediate subsequent requests
-    await user_cache._cache_user(db_user)
+    await user_cache.cache_user(db_user)
 
     # Create access token
     access_token = create_access_token(data={"sub": str(db_user.id)})

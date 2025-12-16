@@ -161,7 +161,7 @@ class UserCache:
         
         return user_data
     
-    async def _cache_user(self, user: User, ttl: int = USER_CACHE_TTL):
+    async def cache_user(self, user: User, ttl: int = USER_CACHE_TTL):
         """
         Cache a user object with multiple lookup keys.
         
@@ -249,8 +249,14 @@ class UserCache:
             # Note: This is a detached object (not bound to session)
             # For auth purposes this is fine - we only need to read user data
             # The hashed_password field will be None (excluded for security)
-            user = User(**user_data)
-            return user
+            try:
+                user = User(**user_data)
+                return user
+            except (TypeError, ValueError) as e:
+                # Cached data incompatible with User model - invalidate and query DB
+                logger.warning(f"Failed to reconstruct User from cached data: {e}")
+                await redis_cache.delete(cache_key)
+                # Fall through to database query below
         
         # Cache miss - query database
         self._stats["misses"] += 1
@@ -262,7 +268,7 @@ class UserCache:
             
             if user:
                 # Cache the user for next time
-                await self._cache_user(user, ttl=ttl)
+                await self.cache_user(user, ttl=ttl)
             
             return user
             
@@ -297,8 +303,13 @@ class UserCache:
         cached_user_id = await redis_cache.get(email_cache_key)
         
         if cached_user_id:
-            # Got user_id, now get the user object
-            return await self.get_user_by_id(db, int(cached_user_id), ttl=ttl)
+            try:
+                # Got user_id, now get the user object
+                return await self.get_user_by_id(db, int(cached_user_id), ttl=ttl)
+            except (ValueError, TypeError) as e:
+                # Invalid cached user_id - remove from cache and fall through to DB query
+                logger.warning(f"Invalid cached user_id for email {email}: {e}")
+                await redis_cache.delete(email_cache_key)
         
         # Cache miss - query database
         self._stats["misses"] += 1
@@ -310,7 +321,7 @@ class UserCache:
             
             if user:
                 # Cache the user with all lookup keys
-                await self._cache_user(user, ttl=ttl)
+                await self.cache_user(user, ttl=ttl)
             
             return user
             
@@ -345,8 +356,13 @@ class UserCache:
         cached_user_id = await redis_cache.get(username_cache_key)
         
         if cached_user_id:
-            # Got user_id, now get the user object
-            return await self.get_user_by_id(db, int(cached_user_id), ttl=ttl)
+            try:
+                # Got user_id, now get the user object
+                return await self.get_user_by_id(db, int(cached_user_id), ttl=ttl)
+            except (ValueError, TypeError) as e:
+                # Invalid cached user_id - remove from cache and fall through to DB query
+                logger.warning(f"Invalid cached user_id for username {username}: {e}")
+                await redis_cache.delete(username_cache_key)
         
         # Cache miss - query database
         self._stats["misses"] += 1
@@ -358,7 +374,7 @@ class UserCache:
             
             if user:
                 # Cache the user with all lookup keys
-                await self._cache_user(user, ttl=ttl)
+                await self.cache_user(user, ttl=ttl)
             
             return user
             
@@ -393,8 +409,13 @@ class UserCache:
         cached_user_id = await redis_cache.get(phone_cache_key)
         
         if cached_user_id:
-            # Got user_id, now get the user object
-            return await self.get_user_by_id(db, int(cached_user_id), ttl=ttl)
+            try:
+                # Got user_id, now get the user object
+                return await self.get_user_by_id(db, int(cached_user_id), ttl=ttl)
+            except (ValueError, TypeError) as e:
+                # Invalid cached user_id - remove from cache and fall through to DB query
+                logger.warning(f"Invalid cached user_id for phone {phone}: {e}")
+                await redis_cache.delete(phone_cache_key)
         
         # Cache miss - query database
         self._stats["misses"] += 1
@@ -406,7 +427,7 @@ class UserCache:
             
             if user:
                 # Cache the user with all lookup keys
-                await self._cache_user(user, ttl=ttl)
+                await self.cache_user(user, ttl=ttl)
             
             return user
             
