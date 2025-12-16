@@ -289,15 +289,25 @@ async def db_readiness_check(db = None):
 
 
 @app.get("/health/ping")
-async def health_ping():
-    """Ultra-fast health ping"""
-    return {"status": "ok", "message": "pong"}
+def health_ping():
+    """Instant health ping - no database dependency.
+    
+    ✅ NO DATABASE - instant response
+    ✅ NO IO - instant response
+    ✅ NO async/await - synchronous function
+    """
+    return {"ok": True}
 
 
 @app.get("/api/health")
-async def api_health():
-    """Simple API health check"""
-    return {"status": "ok"}
+def api_health():
+    """Instant health check - no database dependency.
+    
+    ✅ NO DATABASE - instant response
+    ✅ NO IO - instant response
+    ✅ NO async/await - synchronous function
+    """
+    return {"ok": True}
 
 
 @app.get("/health/detailed")
