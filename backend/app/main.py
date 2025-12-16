@@ -531,11 +531,11 @@ async def lazy_import_heavy_stuff():
             # Add timeout protection to prevent worker hanging on Redis connection
             redis_available = await asyncio.wait_for(redis_cache.connect(), timeout=STARTUP_OPERATION_TIMEOUT)
             if redis_available:
-                logger.info("Redis cache connected successfully")
+                logger.info("✅ Redis cache connected successfully")
             else:
-                logger.info("Using in-memory cache fallback")
+                logger.info("ℹ️ Using in-memory cache (Redis not configured)")
         else:
-            logger.info("Redis cache not available")
+            logger.debug("Redis cache module not available")
     except asyncio.TimeoutError:
         logger.warning(f"Redis connection timed out after {STARTUP_OPERATION_TIMEOUT}s (falling back to in-memory cache)")
     except Exception as e:
@@ -548,7 +548,7 @@ async def lazy_import_heavy_stuff():
         from .core.cache import warmup_cache
         # Add timeout protection to prevent worker hanging on cache warmup
         await asyncio.wait_for(warmup_cache(), timeout=STARTUP_OPERATION_TIMEOUT)
-        logger.info("Cache warmup completed")
+        logger.info("✅ Cache system ready")
     except asyncio.TimeoutError:
         logger.warning(f"Cache warmup timed out after {STARTUP_OPERATION_TIMEOUT}s (non-critical)")
     except Exception as e:

@@ -556,9 +556,9 @@ async def lazy_import_heavy_stuff():
     try:
         redis_available = await redis_cache.connect()
         if redis_available:
-            logger.info("Redis cache connected successfully")
+            logger.info("✅ Redis cache connected successfully")
         else:
-            logger.info("Using in-memory cache fallback")
+            logger.info("ℹ️ Using in-memory cache (Redis not configured)")
     except Exception as e:
         logger.warning(f"Redis connection failed (non-critical): {e}")
     

@@ -119,7 +119,7 @@ class AsyncRedisCache:
             bool: True if Redis is available, False if using memory fallback
         """
         if not REDIS_URL:
-            logger.info("No Redis URL configured, using in-memory cache")
+            logger.debug("No Redis URL configured, using in-memory cache")
             return False
         
         # Circuit breaker: Don't retry too frequently
