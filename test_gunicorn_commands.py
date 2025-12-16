@@ -8,6 +8,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Constants for validation
+PRELOAD_WARNING_MSG = "WARNING: --preload flag conflicts with gunicorn.conf.py (preload_app=False)"
+GUNICORN_FLAGS_WITH_ARGS = [
+    '--workers', '--worker-class', '--bind', '--timeout', '--log-level',
+    '--config', '-w', '-k', '-b', '-t', '--chdir', '-c'
+]
+VALID_LOG_LEVELS = ['info', 'debug', 'warning', 'error', 'critical']
+
 
 def parse_procfile(file_path):
     """Extract gunicorn commands from Procfile"""
@@ -42,6 +50,14 @@ def parse_yaml_startcommand(file_path):
     return commands
 
 
+def _has_only_warnings_or_no_issues(issues):
+    """
+    Helper function to determine if issues list contains only warnings or is empty
+    Returns True if all issues are warnings or if there are no issues
+    """
+    return len(issues) == 0 or all('WARNING' in issue for issue in issues)
+
+
 def check_gunicorn_args(cmd_str):
     """
     Check if gunicorn command has valid syntax
@@ -51,7 +67,7 @@ def check_gunicorn_args(cmd_str):
     
     # Check for common problematic patterns
     if '--preload' in cmd_str:
-        issues.append("WARNING: --preload flag conflicts with gunicorn.conf.py (preload_app=False)")
+        issues.append(PRELOAD_WARNING_MSG)
     
     # Check for unrecognized text patterns (non-flag words after flags)
     # This is a heuristic check for accidentally added text
@@ -87,17 +103,16 @@ def check_gunicorn_args(cmd_str):
         if part.startswith('--') or part.startswith('-'):
             i += 1
             # Some flags take arguments, skip the next part
-            if part in ['--workers', '--worker-class', '--bind', '--timeout', '--log-level', 
-                       '--config', '-w', '-k', '-b', '-t', '--chdir', '-c']:
+            if part in GUNICORN_FLAGS_WITH_ARGS:
                 i += 1  # Skip the argument
             continue
         # If we get here and it's not a number (worker count, etc), it might be problematic
-        if not part.isdigit() and part not in ['info', 'debug', 'warning', 'error', 'critical']:
+        if not part.isdigit() and part not in VALID_LOG_LEVELS:
             # This might be accidentally added text
             issues.append(f"POTENTIAL ISSUE: Unexpected text '{part}' in command")
         i += 1
     
-    return len(issues) == 0 or (len(issues) == 1 and 'WARNING' in issues[0]), issues
+    return _has_only_warnings_or_no_issues(issues), issues
 
 
 def main():
