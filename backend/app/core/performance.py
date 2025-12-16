@@ -106,6 +106,9 @@ async def create_performance_indexes():
     """
     try:
         engine = get_engine()
+        if engine is None:
+            logger.debug("Cannot create performance indexes: database engine not available")
+            return False
         async with engine.begin() as conn:
             for idx in DATABASE_INDEXES:
                 # Build CREATE INDEX statement
@@ -136,6 +139,9 @@ async def analyze_query_performance():
     """
     try:
         engine = get_engine()
+        if engine is None:
+            logger.debug("Cannot analyze query performance: database engine not available")
+            return
         async with engine.begin() as conn:
             # Get slow queries from pg_stat_statements if available
             result = await conn.execute(text("""
@@ -174,6 +180,9 @@ async def warmup_database_connections():
     """
     try:
         engine = get_engine()
+        if engine is None:
+            logger.debug("Cannot warm up database connections: database engine not available")
+            return False
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
         
@@ -195,6 +204,9 @@ async def optimize_postgres_settings():
     """
     try:
         engine = get_engine()
+        if engine is None:
+            logger.debug("Cannot optimize PostgreSQL settings: database engine not available")
+            return False
         async with engine.begin() as conn:
             # Disable JIT for simple queries (reduces latency)
             await conn.execute(text("SET jit = off"))
