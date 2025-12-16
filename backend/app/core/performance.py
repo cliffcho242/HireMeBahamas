@@ -104,9 +104,8 @@ async def create_performance_indexes():
     
     Safe to run multiple times (uses IF NOT EXISTS).
     """
-    engine = get_engine()
-    
     try:
+        engine = get_engine()
         async with engine.begin() as conn:
             for idx in DATABASE_INDEXES:
                 # Build CREATE INDEX statement
@@ -172,9 +171,8 @@ async def warmup_database_connections():
     This ensures the first API request doesn't experience cold start penalty.
     Executes a simple query to establish connections.
     """
-    engine = get_engine()
-    
     try:
+        engine = get_engine()
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
         
@@ -194,9 +192,8 @@ async def optimize_postgres_settings():
     - Increase work_mem for better sort/hash performance
     - Enable parallel queries for complex operations
     """
-    engine = get_engine()
-    
     try:
+        engine = get_engine()
         async with engine.begin() as conn:
             # Disable JIT for simple queries (reduces latency)
             await conn.execute(text("SET jit = off"))
@@ -220,16 +217,24 @@ async def run_all_performance_optimizations():
     
     This should be called during application startup to ensure
     optimal performance from the first request.
+    
+    Gracefully handles database unavailability to prevent startup failures.
     """
-    logger.info("Running performance optimizations...")
-    
-    # Warm up database connections (critical for cold starts)
-    await warmup_database_connections()
-    
-    # Create indexes (improves query performance)
-    await create_performance_indexes()
-    
-    # Optimize PostgreSQL settings
-    await optimize_postgres_settings()
-    
-    logger.info("✓ Performance optimizations complete")
+    try:
+        logger.info("Running performance optimizations...")
+        
+        # Warm up database connections (critical for cold starts)
+        await warmup_database_connections()
+        
+        # Create indexes (improves query performance)
+        await create_performance_indexes()
+        
+        # Optimize PostgreSQL settings
+        await optimize_postgres_settings()
+        
+        logger.info("✓ Performance optimizations complete")
+    except Exception as e:
+        # Log error but don't crash the application
+        # Performance optimizations are important but not critical for startup
+        logger.warning(f"Performance optimizations failed (non-critical): {e}")
+        logger.debug(f"Full traceback:", exc_info=True)

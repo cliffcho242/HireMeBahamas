@@ -85,6 +85,20 @@ if not DATABASE_URL:
 # Strip whitespace to prevent connection errors from misconfigured environment variables
 DATABASE_URL = DATABASE_URL.strip()
 
+# Check if DATABASE_URL is empty after stripping (whitespace-only string)
+# If so, treat it as if it wasn't set at all
+if not DATABASE_URL:
+    if ENVIRONMENT == "production":
+        # Production-safe: log warning instead of raising exception
+        # This allows the app to start for health checks and diagnostics
+        logger.warning("DATABASE_URL is empty (whitespace-only), using placeholder")
+        # Use a placeholder to prevent crashes, connections will fail gracefully
+        DATABASE_URL = DB_PLACEHOLDER_URL
+    else:
+        # Use local development default only in development mode
+        DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+        logger.warning("DATABASE_URL is empty (whitespace-only), using default local development database URL")
+
 # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
 # This handles cases where the 'p' is missing from "postgresql"
 if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
