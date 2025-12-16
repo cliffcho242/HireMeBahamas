@@ -6,6 +6,7 @@ from sqlalchemy.engine.url import make_url
 DATABASE_URL = os.environ.get("DATABASE_URL")
 engine = None
 
+
 def init_db():
     global engine
 
