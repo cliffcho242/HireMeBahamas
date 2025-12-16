@@ -6,11 +6,19 @@ This script verifies that Redis cache is properly configured and working.
 It tests the connection and basic operations.
 
 Usage:
+    # Run from project root directory:
     python test_redis_configuration.py
+    
+    # Or with explicit Redis URL:
+    REDIS_URL=redis://localhost:6379 python test_redis_configuration.py
 
 Expected outcomes:
     - With REDIS_URL set: "✅ Redis is configured and working"
     - Without REDIS_URL: "⚠️ Redis not configured, using in-memory cache"
+
+Requirements:
+    - Must be run from the project root directory
+    - Requires backend/app/core/cache.py module
 """
 
 import os
@@ -62,8 +70,19 @@ async def test_redis_configuration():
     print(f"\n3. Connection Test:")
     try:
         # Import the cache module
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
-        from app.core.cache import get_redis
+        # Add backend to path if needed (supports running from project root)
+        backend_path = os.path.join(os.path.dirname(__file__), 'backend')
+        if os.path.exists(backend_path) and backend_path not in sys.path:
+            sys.path.insert(0, backend_path)
+        
+        # Try to import from backend directory structure
+        try:
+            from app.core.cache import get_redis
+        except ImportError:
+            # If that fails, try adding the backend directory explicitly
+            print("   ⚠️  Please run this script from the project root directory")
+            print("   Example: cd /path/to/HireMeBahamas && python test_redis_configuration.py")
+            return False
         
         # Try to connect
         redis_client = await get_redis()
