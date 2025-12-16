@@ -10,11 +10,17 @@ from threading import Lock
 
 from app.core.security import (
     create_access_token,
+    create_refresh_token,
     decode_access_token,
+    decode_refresh_token,
     get_password_hash,
     get_password_hash_async,
     verify_password,
     verify_password_async,
+    store_refresh_token,
+    verify_refresh_token_in_db,
+    revoke_refresh_token,
+    revoke_all_user_tokens,
     BCRYPT_ROUNDS,
 )
 from app.core.upload import upload_image
@@ -23,6 +29,7 @@ from app.models import User, LoginAttempt
 from app.schemas.auth import (
     OAuthLogin,
     PasswordChange,
+    RefreshTokenRequest,
     Token,
     UserCreate,
     UserLogin,
@@ -208,7 +215,7 @@ async def get_current_user(
 
 
 @router.post("/register", response_model=Token)
-async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register(user_data: UserCreate, request: Request, db: AsyncSession = Depends(get_db)):
     """Register a new user"""
     
     logger.info(f"Registration attempt for email: {user_data.email}")
@@ -240,13 +247,20 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(db_user)
 
-    # Create access token
+    # Create access token and refresh token
     access_token = create_access_token(data={"sub": str(db_user.id)})
+    refresh_token = create_refresh_token(db_user.id)
+    
+    # Store refresh token in database
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    await store_refresh_token(db, db_user.id, refresh_token, client_ip, user_agent)
     
     logger.info(f"Registration successful for: {user_data.email} (user_id={db_user.id})")
 
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": UserResponse.from_orm(db_user),
     }
@@ -421,14 +435,19 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
             status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated"
         )
 
-    # Create access token
+    # Create access token and refresh token
     token_create_start = time.time()
     access_token = create_access_token(data={"sub": str(user.id)})
+    refresh_token = create_refresh_token(user.id)
     token_create_ms = int((time.time() - token_create_start) * 1000)
     
     logger.info(
         f"[{request_id}] Token creation completed in {token_create_ms}ms"
     )
+    
+    # Store refresh token in database
+    user_agent = request.headers.get("user-agent")
+    await store_refresh_token(db, user.id, refresh_token, client_ip, user_agent)
     
     # Reset rate limit counters on successful login
     record_login_attempt(client_ip, True)
@@ -465,30 +484,77 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
 
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": UserResponse.from_orm(user),
     }
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(current_user: User = Depends(get_current_user)):
-    """Refresh access token
+async def refresh_token(
+    refresh_data: RefreshTokenRequest, 
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """Refresh access token using refresh token
     
-    Generates a new access token for the authenticated user.
-    This extends the user's session without requiring re-authentication.
+    This implements the refresh token rotation pattern:
+    1. Validates the provided refresh token
+    2. Revokes the old refresh token
+    3. Issues a new access token and refresh token
+    
+    This provides better security by ensuring refresh tokens are single-use.
     
     Returns:
-        New access token and user data
+        New access token, new refresh token, and user data
     """
-    # Create new access token
-    access_token = create_access_token(data={"sub": str(current_user.id)})
+    # Verify refresh token in database
+    user_id = await verify_refresh_token_in_db(db, refresh_data.refresh_token)
     
-    logger.info(f"Token refreshed for user: {current_user.email} (user_id={current_user.id})")
+    if not user_id:
+        logger.warning("Invalid or expired refresh token used")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
+    
+    # Get user from database
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        logger.warning(f"User not found for refresh token: user_id={user_id}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+    
+    if not user.is_active:
+        logger.warning(f"Inactive user attempted token refresh: user_id={user_id}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated"
+        )
+    
+    # Revoke the old refresh token (rotation pattern)
+    await revoke_refresh_token(db, refresh_data.refresh_token)
+    
+    # Create new access token and refresh token
+    access_token = create_access_token(data={"sub": str(user.id)})
+    new_refresh_token = create_refresh_token(user.id)
+    
+    # Store new refresh token in database
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    await store_refresh_token(db, user.id, new_refresh_token, client_ip, user_agent)
+    
+    logger.info(f"Token refreshed for user: {user.email} (user_id={user.id})")
     
     return {
         "access_token": access_token,
+        "refresh_token": new_refresh_token,
         "token_type": "bearer",
-        "user": UserResponse.from_orm(current_user),
+        "user": UserResponse.from_orm(user),
     }
 
 
@@ -510,6 +576,57 @@ async def verify_session(current_user: User = Depends(get_current_user)):
     return {
         "valid": True,
         "user": UserResponse.from_orm(current_user),
+    }
+
+
+@router.post("/logout")
+async def logout(
+    refresh_data: RefreshTokenRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Logout user by revoking refresh token
+    
+    This invalidates the provided refresh token, preventing it from being used
+    to obtain new access tokens. The current access token will remain valid
+    until it expires (15 minutes), but cannot be refreshed.
+    
+    For maximum security, clients should also clear the access token from memory.
+    
+    Returns:
+        Success message
+    """
+    # Revoke the refresh token
+    revoked = await revoke_refresh_token(db, refresh_data.refresh_token)
+    
+    if revoked:
+        logger.info(f"User logged out: {current_user.email} (user_id={current_user.id})")
+    else:
+        logger.warning(f"Logout attempted with invalid token: user_id={current_user.id}")
+    
+    return {"message": "Logged out successfully"}
+
+
+@router.post("/logout-all")
+async def logout_all_devices(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Logout from all devices by revoking all refresh tokens
+    
+    This is useful for security purposes when a user suspects their account
+    has been compromised or they want to force logout from all devices.
+    
+    Returns:
+        Number of tokens revoked
+    """
+    count = await revoke_all_user_tokens(db, current_user.id)
+    
+    logger.info(f"User logged out from all devices: {current_user.email} (user_id={current_user.id}, tokens_revoked={count})")
+    
+    return {
+        "message": f"Logged out from all devices successfully",
+        "tokens_revoked": count
     }
 
 
@@ -656,7 +773,7 @@ async def get_login_stats(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/oauth/google", response_model=Token)
-async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)):
+async def google_oauth(oauth_data: OAuthLogin, request: Request, db: AsyncSession = Depends(get_db)):
     """Authenticate or register user via Google OAuth"""
     from google.oauth2 import id_token
     from google.auth.transport import requests
@@ -738,13 +855,20 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
         await db.commit()
         await db.refresh(user)
         
-        # Create access token
+        # Create access token and refresh token
         access_token = create_access_token(data={"sub": str(user.id)})
+        refresh_token = create_refresh_token(user.id)
+        
+        # Store refresh token in database
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        await store_refresh_token(db, user.id, refresh_token, client_ip, user_agent)
         
         logger.info(f"Google OAuth login successful for: {email} (user_id={user.id})")
         
         return {
             "access_token": access_token,
+            "refresh_token": refresh_token,
             "token_type": "bearer",
             "user": UserResponse.from_orm(user),
         }
@@ -766,7 +890,7 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
 
 
 @router.post("/oauth/apple", response_model=Token)
-async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)):
+async def apple_oauth(oauth_data: OAuthLogin, request: Request, db: AsyncSession = Depends(get_db)):
     """Authenticate or register user via Apple OAuth"""
     import jwt
     from jwt import PyJWKClient
@@ -840,13 +964,20 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
         await db.commit()
         await db.refresh(user)
         
-        # Create access token
+        # Create access token and refresh token
         access_token = create_access_token(data={"sub": str(user.id)})
+        refresh_token = create_refresh_token(user.id)
+        
+        # Store refresh token in database
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        await store_refresh_token(db, user.id, refresh_token, client_ip, user_agent)
         
         logger.info(f"Apple OAuth login successful for: {email} (user_id={user.id})")
         
         return {
             "access_token": access_token,
+            "refresh_token": refresh_token,
             "token_type": "bearer",
             "user": UserResponse.from_orm(user),
         }
