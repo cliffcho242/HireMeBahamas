@@ -33,7 +33,8 @@ def inject_typing_exports(module):
 # CRITICAL: Set up module path aliases BEFORE any backend_app imports
 # This allows imports like "from app.core.security" to work correctly
 # when running directly (not through api/index.py)
-if 'app' not in sys.modules:
+# Check if we need to set up the alias (don't override if backend_app alias already exists)
+if 'app' not in sys.modules or not hasattr(sys.modules.get('app', None), '__path__') or 'backend_app' not in str(getattr(sys.modules.get('app', None), '__file__', '')):
     backend_app_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(backend_app_dir)
     
@@ -90,7 +91,7 @@ if 'app' not in sys.modules:
     inject_typing_exports(backend_app.api)
     
     # Dynamically alias all api submodules to handle all "from app.api.X" imports
-    _api_modules = ['analytics', 'auth', 'debug', 'feed', 'hireme', 'jobs', 'messages', 
+    _api_modules = ['analytics', 'auth', 'debug', 'feed', 'health', 'hireme', 'jobs', 'messages', 
                     'notifications', 'posts', 'profile_pictures', 'reviews', 'upload', 'users']
     for _module_name in _api_modules:
         try:
@@ -225,8 +226,21 @@ except ImportError:
     socketio = None
     # Logger not available yet, will log later
 
-# Import APIs
-from app.api import analytics, auth, debug, feed, health, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
+# Import APIs - Use explicit imports to avoid circular dependencies
+from app.api.analytics import router as analytics_router
+from app.api.auth import router as auth_router
+from app.api.debug import router as debug_router
+from app.api.feed import router as feed_router
+from app.api.health import router as health_router
+from app.api.hireme import router as hireme_router
+from app.api.jobs import router as jobs_router
+from app.api.messages import router as messages_router
+from app.api.notifications import router as notifications_router
+from app.api.posts import router as posts_router
+from app.api.profile_pictures import router as profile_pictures_router
+from app.api.reviews import router as reviews_router
+from app.api.upload import router as upload_router
+from app.api.users import router as users_router
 from app.database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
 from app.core.metrics import get_metrics_response, set_app_info
 from app.core.security import prewarm_bcrypt_async
@@ -757,21 +771,21 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
 
 
 # Include routers with /api prefix to match frontend expectations
-# Note: auth.router already has prefix="/api/auth" and tags defined in the router itself
-app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
-app.include_router(auth.router)  # Router prefix and tags defined in auth.py
-app.include_router(debug.router, prefix="/api/debug", tags=["debug"])
-app.include_router(feed.router, prefix="/api/feed", tags=["feed"])
-app.include_router(health.router, tags=["health"])
-app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
-app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
-app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
-app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
-app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
-app.include_router(profile_pictures.router, prefix="/api/profile-pictures", tags=["profile-pictures"])
-app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
-app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
-app.include_router(users.router, prefix="/api/users", tags=["users"])
+# Note: auth_router already has prefix="/api/auth" and tags defined in the router itself
+app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"])
+app.include_router(auth_router)  # Router prefix and tags defined in auth.py
+app.include_router(debug_router, prefix="/api/debug", tags=["debug"])
+app.include_router(feed_router, prefix="/api/feed", tags=["feed"])
+app.include_router(health_router, tags=["health"])
+app.include_router(hireme_router, prefix="/api/hireme", tags=["hireme"])
+app.include_router(jobs_router, prefix="/api/jobs", tags=["jobs"])
+app.include_router(messages_router, prefix="/api/messages", tags=["messages"])
+app.include_router(notifications_router, prefix="/api/notifications", tags=["notifications"])
+app.include_router(posts_router, prefix="/api/posts", tags=["posts"])
+app.include_router(profile_pictures_router, prefix="/api/profile-pictures", tags=["profile-pictures"])
+app.include_router(reviews_router, prefix="/api/reviews", tags=["reviews"])
+app.include_router(upload_router, prefix="/api/upload", tags=["uploads"])
+app.include_router(users_router, prefix="/api/users", tags=["users"])
 
 # Include GraphQL router (if available)
 if HAS_GRAPHQL:
