@@ -3,6 +3,7 @@ import logging
 import re
 
 from app.api.auth import get_current_user
+from app.core.user_cache import get_user as get_cached_user, invalidate_user_cache
 from app.database import get_db
 from app.models import Follow, Notification, NotificationType, User, Post
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -368,8 +369,8 @@ async def get_user(
                     detail="Invalid user ID: value too large"
                 )
             
-            result = await db.execute(select(User).where(User.id == user_id))
-            user = result.scalar_one_or_none()
+            # Use cached user lookup for better performance
+            user = await get_cached_user(user_id, db)
             lookup_method = "ID"
             logger.debug(f"Lookup by ID {user_id}: {'found' if user else 'not found'}")
         except HTTPException:

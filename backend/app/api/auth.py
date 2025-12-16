@@ -17,6 +17,7 @@ from app.core.security import (
     BCRYPT_ROUNDS,
 )
 from app.core.upload import upload_image
+from app.core.user_cache import get_user, invalidate_user_cache
 from app.database import get_db
 from app.models import User
 from app.schemas.auth import (
@@ -142,8 +143,8 @@ async def get_current_user(
                 detail="Invalid user ID in token",
             )
         
-        result = await db.execute(select(User).where(User.id == user_id_int))
-        user = result.scalar_one_or_none()
+        # Use cached user lookup for better performance
+        user = await get_user(user_id_int, db)
 
         if user is None:
             logger.warning(f"User not found for authenticated token: user_id={user_id_int}")
@@ -453,6 +454,9 @@ async def update_profile(
 
     await db.commit()
     await db.refresh(current_user)
+    
+    # Invalidate user cache after profile update
+    await invalidate_user_cache(current_user.id)
 
     return UserResponse.from_orm(current_user)
 
@@ -478,6 +482,9 @@ async def upload_avatar(
     current_user.updated_at = datetime.utcnow()
 
     await db.commit()
+    
+    # Invalidate user cache after avatar update
+    await invalidate_user_cache(current_user.id)
 
     return {"image_url": image_url}
 
@@ -503,6 +510,9 @@ async def change_password(
     current_user.updated_at = datetime.utcnow()
 
     await db.commit()
+    
+    # Invalidate user cache after password change
+    await invalidate_user_cache(current_user.id)
 
     return {"message": "Password changed successfully"}
 
@@ -517,6 +527,9 @@ async def delete_account(
     current_user.updated_at = datetime.utcnow()
 
     await db.commit()
+    
+    # Invalidate user cache after account deactivation
+    await invalidate_user_cache(current_user.id)
 
     return {"message": "Account deactivated successfully"}
 
@@ -632,6 +645,8 @@ async def google_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db
                 user.updated_at = datetime.utcnow()
                 await db.commit()
                 await db.refresh(user)
+                # Invalidate cache after OAuth update
+                await invalidate_user_cache(user.id)
         else:
             logger.info(f"Creating new user via Google OAuth: {email}")
             # Create new user
@@ -729,6 +744,8 @@ async def apple_oauth(oauth_data: OAuthLogin, db: AsyncSession = Depends(get_db)
                 user.updated_at = datetime.utcnow()
                 await db.commit()
                 await db.refresh(user)
+                # Invalidate cache after OAuth update
+                await invalidate_user_cache(user.id)
         else:
             logger.info(f"Creating new user via Apple OAuth: {email}")
             # Create new user - Apple doesn't always provide name
