@@ -14,9 +14,6 @@ import {
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 
-// Use centralized API constant
-const API_URL = API;
-
 interface UserLoginStats {
   total_users: number;
   active_users: {
@@ -76,7 +73,7 @@ const UserAnalytics: React.FC = () => {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/api/analytics/user-logins`, {
+      const response = await axios.get(`${API}/api/analytics/user-logins`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStats(response.data);
@@ -92,7 +89,7 @@ const UserAnalytics: React.FC = () => {
     setLoadingInactive(true);
     try {
       const response = await axios.get(
-        `${API_URL}/api/analytics/inactive-users?days=${inactiveDays}&limit=100`,
+        `${API}/api/analytics/inactive-users?days=${inactiveDays}&limit=100`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setInactiveUsers(response.data.users);
