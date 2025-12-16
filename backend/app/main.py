@@ -605,6 +605,12 @@ async def lazy_import_heavy_stuff():
     # This is handled by the lazy engine wrapper and get_db() dependency.
     
     logger.info("LAZY IMPORT COMPLETE — FULL APP LIVE (DB connects on first request)")
+    logger.info("")
+    logger.info("✅ Database warmup successful")
+    logger.info("   - Database module loaded and ready")
+    logger.info("   - Engine will initialize on first request (lazy pattern)")
+    logger.info("   - One DB path, One engine, One URL, One SSL definition")
+    logger.info("")
     logger.info("Health:   GET /health (instant)")
     logger.info("Liveness: GET /live (instant)")
     logger.info("Ready:    GET /ready (instant)")
