@@ -112,12 +112,13 @@ export async function testConnection(apiUrl: string): Promise<ConnectionTestResu
 
 /**
  * Get the current API URL being used by the application
+ * ✅ CORRECT: Use VITE_API_URL environment variable (properly exposed to browser by Vite)
  */
 export function getCurrentApiUrl(): string {
-  // Check environment variable first
-  const envApiUrl = import.meta.env.VITE_API_URL;
-  if (envApiUrl) {
-    return envApiUrl;
+  // ✅ CORRECT: Check VITE_API_URL environment variable first
+  const BACKEND_URL = import.meta.env.VITE_API_URL;
+  if (BACKEND_URL) {
+    return BACKEND_URL;
   }
   
   // Otherwise, check if we're in production
@@ -126,8 +127,9 @@ export function getCurrentApiUrl(): string {
     return window.location.origin;
   }
   
-  // Fallback for non-browser environments (should not be reached)
-  return 'http://localhost:8000';
+  // ❌ WRONG: Never hardcode localhost in production fallback
+  // This should fail gracefully instead
+  throw new Error('API URL could not be determined. Set VITE_API_URL environment variable or ensure running in browser context.');
 }
 
 /**

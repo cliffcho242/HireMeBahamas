@@ -13,20 +13,22 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
 // Configuration - Use same logic as api.ts for consistency
-const ENV_API = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
+// ✅ CORRECT: Use VITE_API_URL environment variable (properly exposed to browser by Vite)
+const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 // Determine socket URL
 let SOCKET_URL: string;
 
-if (ENV_API) {
-  // Use explicit environment variable if provided
-  SOCKET_URL = ENV_API;
+if (BACKEND_URL) {
+  // ✅ CORRECT: Use explicit environment variable if provided
+  SOCKET_URL = BACKEND_URL;
 } else if (typeof window !== 'undefined') {
   // If running in browser and no explicit env override, use same-origin (for Vercel serverless)
   SOCKET_URL = window.location.origin;
 } else {
-  // Fallback for SSR or build-time (should not be reached in normal operation)
-  SOCKET_URL = 'http://localhost:8000';
+  // ❌ WRONG: Never hardcode localhost in production fallback
+  // This should fail gracefully instead
+  throw new Error('Socket URL could not be determined. Set VITE_API_URL environment variable or ensure running in browser context.');
 }
 const RECONNECT_DELAY_BASE = 1000;
 const MAX_RECONNECT_DELAY = 30000;
