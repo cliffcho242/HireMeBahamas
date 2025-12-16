@@ -188,6 +188,7 @@ AUTH_ENDPOINTS_PREFIX = '/api/auth/'
 SLOW_REQUEST_THRESHOLD_MS = 3000  # 3 seconds
 MAX_ERROR_BODY_SIZE = 10240  # 10KB - prevent reading large response bodies
 STARTUP_OPERATION_TIMEOUT = 5.0  # 5 seconds - timeout for non-critical startup operations
+TOTAL_STARTUP_TIMEOUT = 20.0  # 20 seconds - maximum time for entire startup event
 
 # Configure logging with more detail
 # Check if runtime logs directory exists (e.g., in CI/test environment)
@@ -504,66 +505,91 @@ async def lazy_import_heavy_stuff():
     
     This prevents ALL database connections until first actual database request.
     """
-    logger.info("Starting HireMeBahamas API initialization (NO database connections)...")
+    startup_start = time.time()
+    logger.info(f"Starting HireMeBahamas API initialization (NO database connections)...")
+    logger.info(f"⚡ Startup timeout protection enabled: {TOTAL_STARTUP_TIMEOUT}s maximum to prevent worker hangs")
     
-    # ==========================================================================
-    # STEP 1: Pre-warm bcrypt (non-blocking, no database)
-    # ==========================================================================
-    try:
-        if prewarm_bcrypt_async is not None:
-            # Add timeout protection to prevent worker hanging
-            await asyncio.wait_for(prewarm_bcrypt_async(), timeout=STARTUP_OPERATION_TIMEOUT)
-            logger.info("Bcrypt pre-warmed successfully")
-        else:
-            logger.warning("Bcrypt pre-warm function not available")
-    except asyncio.TimeoutError:
-        logger.warning(f"Bcrypt pre-warm timed out after {STARTUP_OPERATION_TIMEOUT}s (non-critical)")
-    except Exception as e:
-        # Pre-warming is optional - if it fails, authentication will still work
-        # but the first login may be slightly slower
-        logger.warning(f"Bcrypt pre-warm skipped (non-critical): {type(e).__name__}")
-    
-    # ==========================================================================
-    # STEP 2: Initialize Redis cache (non-blocking, no database)
-    # ==========================================================================
-    try:
-        if redis_cache is not None:
-            # Add timeout protection to prevent worker hanging on Redis connection
-            redis_available = await asyncio.wait_for(redis_cache.connect(), timeout=STARTUP_OPERATION_TIMEOUT)
-            if redis_available:
-                logger.info("✅ Redis cache connected successfully")
+    async def wrapped_startup():
+        """Inner function with all startup operations."""
+        # ==========================================================================
+        # STEP 1: Pre-warm bcrypt (non-blocking, no database)
+        # ==========================================================================
+        try:
+            if prewarm_bcrypt_async is not None:
+                # Add timeout protection to prevent worker hanging
+                await asyncio.wait_for(prewarm_bcrypt_async(), timeout=STARTUP_OPERATION_TIMEOUT)
+                logger.info("Bcrypt pre-warmed successfully")
             else:
-                logger.info("ℹ️ Using in-memory cache (Redis not configured)")
-        else:
-            logger.debug("Redis cache module not available")
-    except asyncio.TimeoutError:
-        logger.warning(f"Redis connection timed out after {STARTUP_OPERATION_TIMEOUT}s (falling back to in-memory cache)")
-    except Exception as e:
-        logger.warning(f"Redis connection failed (non-critical): {e}")
+                logger.warning("Bcrypt pre-warm function not available")
+        except asyncio.TimeoutError:
+            logger.warning(f"Bcrypt pre-warm timed out after {STARTUP_OPERATION_TIMEOUT}s (non-critical)")
+        except Exception as e:
+            # Pre-warming is optional - if it fails, authentication will still work
+            # but the first login may be slightly slower
+            logger.warning(f"Bcrypt pre-warm skipped (non-critical): {type(e).__name__}")
+        
+        # ==========================================================================
+        # STEP 2: Initialize Redis cache (non-blocking, no database)
+        # ==========================================================================
+        try:
+            if redis_cache is not None:
+                # Add timeout protection to prevent worker hanging on Redis connection
+                redis_available = await asyncio.wait_for(redis_cache.connect(), timeout=STARTUP_OPERATION_TIMEOUT)
+                if redis_available:
+                    logger.info("✅ Redis cache connected successfully")
+                else:
+                    logger.info("ℹ️ Using in-memory cache (Redis not configured)")
+            else:
+                logger.debug("Redis cache module not available")
+        except asyncio.TimeoutError:
+            logger.warning(f"Redis connection timed out after {STARTUP_OPERATION_TIMEOUT}s (falling back to in-memory cache)")
+        except Exception as e:
+            logger.warning(f"Redis connection failed (non-critical): {e}")
+        
+        # ==========================================================================
+        # STEP 3: Warm up cache and database connections (optional, non-blocking)
+        # ==========================================================================
+        try:
+            from .core.cache import warmup_cache
+            # Add timeout protection to prevent worker hanging on cache warmup
+            await asyncio.wait_for(warmup_cache(), timeout=STARTUP_OPERATION_TIMEOUT)
+            logger.info("✅ Cache system ready")
+        except asyncio.TimeoutError:
+            logger.warning(f"Cache warmup timed out after {STARTUP_OPERATION_TIMEOUT}s (non-critical)")
+        except Exception as e:
+            logger.debug(f"Cache warmup skipped: {e}")
+        
+        # ==========================================================================
+        # STEP 4: Run performance optimizations (background task)
+        # ==========================================================================
+        # Run performance optimizations in background to avoid blocking startup
+        try:
+            from .core.performance import run_all_performance_optimizations
+            asyncio.create_task(run_all_performance_optimizations())
+            logger.info("Performance optimizations scheduled")
+        except Exception as e:
+            logger.debug(f"Performance optimizations skipped: {e}")
     
-    # ==========================================================================
-    # STEP 3: Warm up cache and database connections (optional, non-blocking)
-    # ==========================================================================
+    # Wrap entire startup in overall timeout to prevent worker SIGTERM
     try:
-        from .core.cache import warmup_cache
-        # Add timeout protection to prevent worker hanging on cache warmup
-        await asyncio.wait_for(warmup_cache(), timeout=STARTUP_OPERATION_TIMEOUT)
-        logger.info("✅ Cache system ready")
+        await asyncio.wait_for(wrapped_startup(), timeout=TOTAL_STARTUP_TIMEOUT)
+        startup_duration = time.time() - startup_start
+        logger.info(f"✅ Startup completed successfully in {startup_duration:.2f}s")
     except asyncio.TimeoutError:
-        logger.warning(f"Cache warmup timed out after {STARTUP_OPERATION_TIMEOUT}s (non-critical)")
+        startup_duration = time.time() - startup_start
+        logger.error(f"""⚠️  CRITICAL: Startup timed out after {TOTAL_STARTUP_TIMEOUT}s!
+   Worker may receive SIGTERM if this happens repeatedly
+   Time elapsed: {startup_duration:.2f}s
+   Individual operation timeout: {STARTUP_OPERATION_TIMEOUT}s each
+   If you see this message, check for:
+   - Slow network connections to Redis/external services
+   - Platform resource constraints (CPU/memory)
+   - Deadlocks or blocking operations in startup code""")
+        # Continue anyway - health endpoint should still work
     except Exception as e:
-        logger.debug(f"Cache warmup skipped: {e}")
-    
-    # ==========================================================================
-    # STEP 4: Run performance optimizations (background task)
-    # ==========================================================================
-    # Run performance optimizations in background to avoid blocking startup
-    try:
-        from .core.performance import run_all_performance_optimizations
-        asyncio.create_task(run_all_performance_optimizations())
-        logger.info("Performance optimizations scheduled")
-    except Exception as e:
-        logger.debug(f"Performance optimizations skipped: {e}")
+        startup_duration = time.time() - startup_start
+        logger.error(f"⚠️  Startup failed after {startup_duration:.2f}s: {type(e).__name__}: {e}")
+        # Continue anyway - health endpoint should still work
     
     # ==========================================================================
     # STRICT LAZY INITIALIZATION: NO DATABASE OPERATIONS AT STARTUP
