@@ -41,7 +41,7 @@ from app.schemas.auth import (
     UserResponse,
     UserUpdate,
 )
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -220,7 +220,13 @@ async def get_current_user(
 
 
 @router.post("/register", response_model=Token)
-async def register(user_data: UserCreate, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+async def register(
+    user_data: UserCreate, 
+    request: Request, 
+    response: Response, 
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
     """Register a new user"""
     
     logger.info(f"Registration attempt for email: {user_data.email}")
@@ -266,6 +272,14 @@ async def register(user_data: UserCreate, request: Request, response: Response, 
     
     # Set secure cookies
     set_auth_cookies(response, access_token, refresh_token)
+    
+    # STEP 10: Send welcome email in background (non-blocking)
+    from app.core.background_tasks import send_welcome_email
+    background_tasks.add_task(
+        send_welcome_email,
+        user_email=db_user.email,
+        user_name=db_user.first_name
+    )
     
     logger.info(f"Registration successful for: {user_data.email} (user_id={db_user.id})")
 
