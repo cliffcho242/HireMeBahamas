@@ -164,7 +164,7 @@ try:
     # Dynamically alias all core submodules to handle all "from app.core.X" imports
     # This ensures any module under backend_app.core can be accessed as app.core.X
     _core_modules = ['security', 'upload', 'concurrent', 'metrics', 'redis_cache', 
-                     'socket_manager', 'cache', 'db_health', 'timeout_middleware']
+                     'socket_manager', 'cache', 'db_health', 'timeout_middleware', 'rate_limiter']
     for _module_name in _core_modules:
         try:
             _module = __import__(f'backend_app.core.{_module_name}', fromlist=[''])
