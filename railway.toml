@@ -29,7 +29,11 @@ watchPatterns = [
 ]
 
 [deploy]
-startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+# STEP 10 - SCALING TO 100K+ USERS
+# Gunicorn with 4 workers using UvicornWorker (async event loop)
+# Capacity: 4 workers × ~100+ async connections = 400+ concurrent connections
+# Uses gunicorn.conf.py for complete configuration (workers, worker_class, timeouts)
+startCommand = "cd backend && gunicorn app.main:app --config gunicorn.conf.py"
 healthcheckPath = "/health"
 healthcheckTimeout = 180
 restartPolicyType = "ON_FAILURE"

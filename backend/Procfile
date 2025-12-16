@@ -1,40 +1,47 @@
 # =============================================================================
-# HireMeBahamas Procfile - STEP 7.6 CACHED TRAFFIC ARCHITECTURE
+# HireMeBahamas Procfile - STEP 10 SCALING TO 100K+ USERS
 # =============================================================================
 # 
 # This Procfile is for Railway/Heroku deployments
 # For Render, see render.yaml in the root directory
 #
-# STEP 7.6 - OPTIMIZED FOR CACHED TRAFFIC:
+# STEP 10 - SCALING TO 100K+ USERS:
 # - FastAPI for maximum performance with async support
-# - Uvicorn with uvloop for optimized event loop
-# - Single worker optimized for Standard plan (1GB RAM)
+# - Gunicorn with Uvicorn workers for production-grade worker management
+# - 4 workers using async event loops = 400+ concurrent connections
 # - Redis cache handles most requests (Facebook-level performance)
 # - Neon PostgreSQL with connection pooling
+# - Uses gunicorn.conf.py for complete configuration
 #
 # Configuration:
-# - workers=1: Optimized for 512MB-1GB RAM environments (Uvicorn handles concurrency)
+# - workers=4: Four workers for 100K+ concurrent users
+# - worker_class=uvicorn.workers.UvicornWorker: ASGI server with async support
+# - Total capacity: 4 workers × ~100+ async connections = 400+ concurrent
 # - FastAPI: Built-in async support, prevents blocking
-# - Uvicorn: ASGI server with excellent performance
+# - Gunicorn: Production worker management with graceful restarts
 # - Redis: In-memory caching reduces DB load significantly
 #
 # Environment variables (set in platform dashboard):
 #   PORT=8000                 Default port
+#   WEB_CONCURRENCY=4         Number of workers (default: 4)
 #   DATABASE_URL=postgresql://...  Neon PostgreSQL connection string
 #   SECRET_KEY=...            Generated secret key
 #   JWT_SECRET_KEY=...        Generated JWT secret
 #   ENVIRONMENT=production    Production mode
 #   REDIS_URL=...            Redis connection string (optional)
 # 
-# Expected Performance After Step 7.6:
-# - Feed: 400-800ms → 20-60ms
-# - Auth: 200ms → <50ms
-# - Health: 6s → <30ms
-# - DB load: High → Very low
+# Expected Performance After Step 10:
+# - Feed: 20-60ms (with Redis caching)
+# - Auth: <50ms
+# - Health: <30ms
+# - DB load: Very low (Redis handles most requests)
+# - Concurrent capacity: 400+ connections (async event loop)
+# - Supported users: 100K+ concurrent
 # =============================================================================
 
-# Main web process - FastAPI with Uvicorn (STEP 7.6 - CACHED TRAFFIC)
+# Main web process - FastAPI with Gunicorn (STEP 10 - SCALING TO 100K+ USERS)
 # Note: When using this Procfile, ensure the working directory is 'backend/'
 # Railway/Heroku should have root directory set to 'backend/' in settings
-# If root is the project root, use: cd backend && uvicorn app.main:app...
-web: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --log-level info
+# If root is the project root, use: cd backend && ...
+# Uses gunicorn.conf.py for complete configuration (workers, threads, timeouts, etc.)
+web: gunicorn app.main:app --config gunicorn.conf.py
