@@ -4,14 +4,14 @@ Central Error Handling for HireMeBahamas API
 This module provides centralized error handling for the FastAPI application.
 It registers global exception handlers to catch and log all unhandled exceptions.
 """
-from fastapi import Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import logging
 
 log = logging.getLogger("app")
 
 
-def register_error_handlers(app):
+def register_error_handlers(app: FastAPI):
     """Register global error handlers for the FastAPI application.
     
     This function registers exception handlers that catch all unhandled exceptions

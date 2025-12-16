@@ -4,14 +4,7 @@ Test script to demonstrate and validate the central error handling and logging m
 This script creates a minimal FastAPI application using the new error handling
 and logging modules to ensure they work correctly.
 """
-import sys
-import os
-
-# Add the project root to the path
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, project_root)
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.errors import register_error_handlers
 from app.logging import setup_logging
