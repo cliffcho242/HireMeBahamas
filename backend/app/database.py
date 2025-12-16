@@ -559,16 +559,36 @@ async def close_db():
     """Close database connections gracefully.
     
     Called during application shutdown to release all connections.
+    Handles race conditions and already-closed connections defensively.
     """
     global _db_initialized, _engine
     try:
         if _engine is not None:
-            await _engine.dispose()
+            # Check if engine was actually initialized (not just the wrapper)
+            # The LazyEngine wrapper may exist without an actual engine
+            actual_engine = get_engine()
+            if actual_engine is not None:
+                try:
+                    await actual_engine.dispose()
+                except OSError as e:
+                    # Handle "Bad file descriptor" errors (errno 9) gracefully
+                    # This occurs when connections are already closed
+                    if getattr(e, 'errno', None) == 9:
+                        logger.debug("Database connections already closed (file descriptor error)")
+                    else:
+                        logger.warning(f"OSError while closing database connections: {e}")
+                except Exception as e:
+                    # Handle other disposal errors (e.g., network issues)
+                    logger.warning(f"Error disposing database engine: {e}")
+                else:
+                    # Only log success if no exception occurred
+                    logger.info("Database connections closed")
+            else:
+                logger.debug("Database engine was never initialized, nothing to close")
             _engine = None
         _db_initialized = False
-        logger.info("Database connections closed")
     except Exception as e:
-        logger.error(f"Error closing database connections: {e}")
+        logger.error(f"Unexpected error in close_db: {e}")
 
 
 async def test_db_connection() -> tuple[bool, Optional[str]]:
