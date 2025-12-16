@@ -6,8 +6,8 @@ This test validates the strict requirements for DATABASE_URL:
 2. Must contain a port number
 3. Must use TCP connection (no Unix sockets)
 
-Note: SSL mode (sslmode parameter) is handled separately by ensure_sslmode()
-and is not validated here to avoid redundancy.
+Note: SSL mode configuration is handled automatically by the ensure_sslmode()
+function and is not tested in this module to avoid redundancy.
 """
 import pytest
 import sys
