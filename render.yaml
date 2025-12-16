@@ -81,7 +81,8 @@ services:
     # - Supported users: 100K+ concurrent
     #
     # ⚠️ CRITICAL: This command is a SINGLE LINE with NO backslashes
-    startCommand: poetry run gunicorn app.main:app --config gunicorn.conf.py
+    # Working directory: Changes to backend/ where app/main.py and gunicorn.conf.py are located
+    startCommand: cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py
     
     envVars:
       - key: ENVIRONMENT

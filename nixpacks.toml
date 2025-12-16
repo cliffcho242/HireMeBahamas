@@ -109,4 +109,5 @@ cmds = [
 # STEP 18 - PRODUCTION COMMANDS (FINAL)
 # Use Poetry-managed Gunicorn with configuration file
 # Railway/Render will inject PORT environment variable
-cmd = "poetry run gunicorn app.main:app --config gunicorn.conf.py"
+# Working directory: backend/ where app/main.py and gunicorn.conf.py are located
+cmd = "cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py"

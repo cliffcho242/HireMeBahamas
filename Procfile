@@ -38,7 +38,12 @@
 # Note: This is Facebook-level architecture with Poetry dependency management
 # =============================================================================
 
-web: poetry run gunicorn app.main:app --config gunicorn.conf.py
+# Main web process - Poetry-managed Gunicorn (STEP 18)
+# Note: This Procfile assumes the working directory is the project root
+# Changes to backend/ where app/main.py and gunicorn.conf.py are located
+# For Railway/Heroku with root directory set to 'backend/', use backend/Procfile instead
+# Uses gunicorn.conf.py for complete configuration (workers, threads, timeouts, etc.)
+web: cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh
