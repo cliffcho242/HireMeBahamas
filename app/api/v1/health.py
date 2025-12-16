@@ -7,4 +7,4 @@ router = APIRouter(
 
 @router.get("/")
 def get_health():
-    return {"health": []}
+    return {"status": "healthy"}
