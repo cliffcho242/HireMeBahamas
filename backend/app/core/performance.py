@@ -104,9 +104,8 @@ async def create_performance_indexes():
     
     Safe to run multiple times (uses IF NOT EXISTS).
     """
-    engine = get_engine()
-    
     try:
+        engine = get_engine()
         async with engine.begin() as conn:
             for idx in DATABASE_INDEXES:
                 # Build CREATE INDEX statement
@@ -135,9 +134,8 @@ async def analyze_query_performance():
     
     This helps identify slow queries that need optimization.
     """
-    engine = get_engine()
-    
     try:
+        engine = get_engine()
         async with engine.begin() as conn:
             # Get slow queries from pg_stat_statements if available
             result = await conn.execute(text("""
@@ -157,13 +155,15 @@ async def analyze_query_performance():
                 logger.info("Top 10 slowest queries:")
                 for row in rows:
                     logger.info(
-                        f"  {row[3]}ms avg - {row[1]} calls - {row[0][:100]}"
+                        "  %sms avg - %s calls - %s",
+                        row[3], row[1], row[0][:100]
                     )
             else:
                 logger.info("pg_stat_statements not available or no queries logged")
                 
     except Exception as e:
-        logger.debug(f"Could not analyze query performance: {e}")
+        logger.debug("Could not analyze query performance: %s", e)
+
 
 
 async def warmup_database_connections():
@@ -172,9 +172,8 @@ async def warmup_database_connections():
     This ensures the first API request doesn't experience cold start penalty.
     Executes a simple query to establish connections.
     """
-    engine = get_engine()
-    
     try:
+        engine = get_engine()
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
         
@@ -194,9 +193,8 @@ async def optimize_postgres_settings():
     - Increase work_mem for better sort/hash performance
     - Enable parallel queries for complex operations
     """
-    engine = get_engine()
-    
     try:
+        engine = get_engine()
         async with engine.begin() as conn:
             # Disable JIT for simple queries (reduces latency)
             await conn.execute(text("SET jit = off"))
@@ -220,16 +218,24 @@ async def run_all_performance_optimizations():
     
     This should be called during application startup to ensure
     optimal performance from the first request.
+    
+    Gracefully handles database unavailability to prevent startup failures.
     """
-    logger.info("Running performance optimizations...")
-    
-    # Warm up database connections (critical for cold starts)
-    await warmup_database_connections()
-    
-    # Create indexes (improves query performance)
-    await create_performance_indexes()
-    
-    # Optimize PostgreSQL settings
-    await optimize_postgres_settings()
-    
-    logger.info("✓ Performance optimizations complete")
+    try:
+        logger.info("Running performance optimizations...")
+        
+        # Warm up database connections (critical for cold starts)
+        await warmup_database_connections()
+        
+        # Create indexes (improves query performance)
+        await create_performance_indexes()
+        
+        # Optimize PostgreSQL settings
+        await optimize_postgres_settings()
+        
+        logger.info("✓ Performance optimizations complete")
+    except Exception as e:
+        # Log error but don't crash the application
+        # Performance optimizations are important but not critical for startup
+        logger.warning("Performance optimizations failed (non-critical): %s", e)
+        logger.debug('Full traceback:', exc_info=True)
