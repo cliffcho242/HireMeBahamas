@@ -18,15 +18,15 @@ bind = f"0.0.0.0:{os.environ.get('PORT', '10000')}"
 # Optimized for Railway, Render, and similar PaaS platforms with Redis caching
 # Typical CPU allocation: Free tier: 0.1-0.5 CPU, Paid: 1+ CPU
 # 
-# Now that Redis handles most requests, we can increase workers:
-# - workers=3: Higher concurrency for cached responses (minimal DB load)
+# With Redis caching infrastructure in place, we can increase workers:
+# - workers=3: Higher concurrency for handling more concurrent requests
 # - threads=4: Each worker handles 4 concurrent requests
 # - Total capacity: 3 × 4 = 12 concurrent requests
 # 
-# This configuration is optimized for cached traffic where:
-# - Most requests hit Redis cache (< 5ms latency)
-# - Database queries are minimal (pre-warmed cache)
-# - CPU becomes the bottleneck, not DB connections
+# This configuration is optimized for scenarios where:
+# - Caching reduces database load significantly
+# - More workers can handle higher traffic volumes
+# - CPU/memory becomes the bottleneck, not DB connections
 cpu_count = multiprocessing.cpu_count()
 
 # Workers: 3 for optimal performance with Redis caching (Facebook-level architecture)

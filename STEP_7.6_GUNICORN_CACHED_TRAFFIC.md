@@ -70,9 +70,11 @@ Updated test expectations:
 
 ## Redis Cache Architecture
 
-The application uses a sophisticated Redis caching layer (`backend/app/core/redis_cache.py`):
+The application has a sophisticated Redis caching layer (`backend/app/core/redis_cache.py`) that is initialized on startup. This step (7.6) optimizes Gunicorn configuration to handle cached traffic efficiently.
 
-### Features
+**Note:** The Redis cache infrastructure is available and initialized, but applying it to individual API endpoints is beyond the scope of Step 7.6. This step focuses solely on tuning Gunicorn worker/thread configuration for optimal performance when caching is active.
+
+### Redis Cache Features
 - **Async Redis with connection pooling** for low-latency operations
 - **TTL-based caching** with configurable expiration
 - **Fallback to in-memory cache** if Redis unavailable
@@ -99,7 +101,9 @@ The application uses a sophisticated Redis caching layer (`backend/app/core/redi
 "notifications": 30,  # 30 seconds
 ```
 
-### Usage Example
+### Usage Example (For Reference)
+The Redis cache can be used in endpoints like this:
+
 ```python
 from app.core.redis_cache import redis_cache, cache_decorator
 
@@ -112,6 +116,8 @@ user = await redis_cache.get("user:123")
 async def get_user(user_id: int):
     return await db.get_user(user_id)
 ```
+
+**Note:** Applying caching decorators to API endpoints is a separate optimization step. Step 7.6 focuses on Gunicorn configuration tuning.
 
 ## Configuration Override
 
