@@ -304,15 +304,18 @@ add_timeout_middleware(app, timeout=60)
 # =============================================================================
 add_rate_limiting_middleware(app)
 
-# Configure CORS - Allow all origins for browser compatibility
-# NOTE: allow_credentials must be False when using wildcard origins per CORS spec
-# If you need credentials, specify explicit allowed origins instead
+# Configure CORS with credentials support for secure cookie-based authentication
+# Production-grade CORS: explicit origins for cookies (required by CORS spec)
+from app.core.environment import get_cors_origins
+cors_origins = get_cors_origins()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=cors_origins,
+    allow_credentials=True,  # Required for HttpOnly cookies
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Set-Cookie"],  # Allow clients to access Set-Cookie header
 )
 
 # Cache control configuration for different endpoint patterns

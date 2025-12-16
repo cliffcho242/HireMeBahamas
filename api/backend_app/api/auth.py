@@ -21,6 +21,10 @@ from app.core.security import (
     verify_refresh_token_in_db,
     revoke_refresh_token,
     revoke_all_user_tokens,
+    set_auth_cookies,
+    clear_auth_cookies,
+    get_token_from_cookie_or_header,
+    COOKIE_NAME_REFRESH,
     BCRYPT_ROUNDS,
 )
 from app.core.upload import upload_image
@@ -36,7 +40,7 @@ from app.schemas.auth import (
     UserResponse,
     UserUpdate,
 )
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -215,7 +219,7 @@ async def get_current_user(
 
 
 @router.post("/register", response_model=Token)
-async def register(user_data: UserCreate, request: Request, db: AsyncSession = Depends(get_db)):
+async def register(user_data: UserCreate, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     """Register a new user"""
     
     logger.info(f"Registration attempt for email: {user_data.email}")
@@ -256,6 +260,9 @@ async def register(user_data: UserCreate, request: Request, db: AsyncSession = D
     user_agent = request.headers.get("user-agent")
     await store_refresh_token(db, db_user.id, refresh_token, client_ip, user_agent)
     
+    # Set secure cookies
+    set_auth_cookies(response, access_token, refresh_token)
+    
     logger.info(f"Registration successful for: {user_data.email} (user_id={db_user.id})")
 
     return {
@@ -267,7 +274,7 @@ async def register(user_data: UserCreate, request: Request, db: AsyncSession = D
 
 
 @router.post("/login", response_model=Token)
-async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depends(get_db)):
+async def login(user_data: UserLogin, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     """Authenticate user and return token
     
     Supports login with email address or phone number.
@@ -482,6 +489,9 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
             f"or database performance."
         )
 
+    # Set secure cookies
+    set_auth_cookies(response, access_token, refresh_token)
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -492,9 +502,10 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
-    refresh_data: RefreshTokenRequest, 
     request: Request,
-    db: AsyncSession = Depends(get_db)
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    refresh_data: Optional[RefreshTokenRequest] = None
 ):
     """Refresh access token using refresh token
     
@@ -503,13 +514,29 @@ async def refresh_token(
     2. Revokes the old refresh token
     3. Issues a new access token and refresh token
     
+    Supports both cookie-based and header-based authentication.
+    
     This provides better security by ensuring refresh tokens are single-use.
     
     Returns:
         New access token, new refresh token, and user data
     """
+    # Get refresh token from cookie or request body
+    refresh_token_value = get_token_from_cookie_or_header(request, COOKIE_NAME_REFRESH, "")
+    
+    # If not in cookie, try request body
+    if not refresh_token_value and refresh_data:
+        refresh_token_value = refresh_data.refresh_token
+    
+    if not refresh_token_value:
+        logger.warning("No refresh token provided in cookie or body")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token required"
+        )
+    
     # Verify refresh token in database
-    user_id = await verify_refresh_token_in_db(db, refresh_data.refresh_token)
+    user_id = await verify_refresh_token_in_db(db, refresh_token_value)
     
     if not user_id:
         logger.warning("Invalid or expired refresh token used")
@@ -537,7 +564,7 @@ async def refresh_token(
         )
     
     # Revoke the old refresh token (rotation pattern)
-    await revoke_refresh_token(db, refresh_data.refresh_token)
+    await revoke_refresh_token(db, refresh_token_value)
     
     # Create new access token and refresh token
     access_token = create_access_token(data={"sub": str(user.id)})
@@ -547,6 +574,9 @@ async def refresh_token(
     client_ip = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent")
     await store_refresh_token(db, user.id, new_refresh_token, client_ip, user_agent)
+    
+    # Set secure cookies
+    set_auth_cookies(response, access_token, new_refresh_token)
     
     logger.info(f"Token refreshed for user: {user.email} (user_id={user.id})")
     
@@ -581,9 +611,11 @@ async def verify_session(current_user: User = Depends(get_current_user)):
 
 @router.post("/logout")
 async def logout(
-    refresh_data: RefreshTokenRequest,
+    request: Request,
+    response: Response,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    refresh_data: Optional[RefreshTokenRequest] = None
 ):
     """Logout user by revoking refresh token
     
@@ -591,24 +623,38 @@ async def logout(
     to obtain new access tokens. The current access token will remain valid
     until it expires (15 minutes), but cannot be refreshed.
     
-    For maximum security, clients should also clear the access token from memory.
+    Supports both cookie-based and header-based authentication.
     
     Returns:
         Success message
     """
-    # Revoke the refresh token
-    revoked = await revoke_refresh_token(db, refresh_data.refresh_token)
+    # Get refresh token from cookie or request body
+    refresh_token_value = get_token_from_cookie_or_header(request, COOKIE_NAME_REFRESH, "")
     
-    if revoked:
-        logger.info(f"User logged out: {current_user.email} (user_id={current_user.id})")
+    # If not in cookie, try request body
+    if not refresh_token_value and refresh_data:
+        refresh_token_value = refresh_data.refresh_token
+    
+    # Revoke the refresh token if provided
+    if refresh_token_value:
+        revoked = await revoke_refresh_token(db, refresh_token_value)
+        
+        if revoked:
+            logger.info(f"User logged out: {current_user.email} (user_id={current_user.id})")
+        else:
+            logger.warning(f"Logout attempted with invalid token: user_id={current_user.id}")
     else:
-        logger.warning(f"Logout attempted with invalid token: user_id={current_user.id}")
+        logger.info(f"User logged out without refresh token: {current_user.email} (user_id={current_user.id})")
+    
+    # Clear auth cookies
+    clear_auth_cookies(response)
     
     return {"message": "Logged out successfully"}
 
 
 @router.post("/logout-all")
 async def logout_all_devices(
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -621,6 +667,9 @@ async def logout_all_devices(
         Number of tokens revoked
     """
     count = await revoke_all_user_tokens(db, current_user.id)
+    
+    # Clear auth cookies for this device
+    clear_auth_cookies(response)
     
     logger.info(f"User logged out from all devices: {current_user.email} (user_id={current_user.id}, tokens_revoked={count})")
     
@@ -773,7 +822,7 @@ async def get_login_stats(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/oauth/google", response_model=Token)
-async def google_oauth(oauth_data: OAuthLogin, request: Request, db: AsyncSession = Depends(get_db)):
+async def google_oauth(oauth_data: OAuthLogin, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     """Authenticate or register user via Google OAuth"""
     from google.oauth2 import id_token
     from google.auth.transport import requests
@@ -864,6 +913,9 @@ async def google_oauth(oauth_data: OAuthLogin, request: Request, db: AsyncSessio
         user_agent = request.headers.get("user-agent")
         await store_refresh_token(db, user.id, refresh_token, client_ip, user_agent)
         
+        # Set secure cookies
+        set_auth_cookies(response, access_token, refresh_token)
+        
         logger.info(f"Google OAuth login successful for: {email} (user_id={user.id})")
         
         return {
@@ -890,7 +942,7 @@ async def google_oauth(oauth_data: OAuthLogin, request: Request, db: AsyncSessio
 
 
 @router.post("/oauth/apple", response_model=Token)
-async def apple_oauth(oauth_data: OAuthLogin, request: Request, db: AsyncSession = Depends(get_db)):
+async def apple_oauth(oauth_data: OAuthLogin, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     """Authenticate or register user via Apple OAuth"""
     import jwt
     from jwt import PyJWKClient
@@ -972,6 +1024,9 @@ async def apple_oauth(oauth_data: OAuthLogin, request: Request, db: AsyncSession
         client_ip = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
         await store_refresh_token(db, user.id, refresh_token, client_ip, user_agent)
+        
+        # Set secure cookies
+        set_auth_cookies(response, access_token, refresh_token)
         
         logger.info(f"Apple OAuth login successful for: {email} (user_id={user.id})")
         

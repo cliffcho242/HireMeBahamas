@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
@@ -20,6 +21,22 @@ ALGORITHM = "HS256"
 # Production-grade token expiration settings
 ACCESS_TOKEN_EXPIRE_MINUTES = config("ACCESS_TOKEN_EXPIRE_MINUTES", default=15, cast=int)  # 15 minutes
 REFRESH_TOKEN_EXPIRE_DAYS = config("REFRESH_TOKEN_EXPIRE_DAYS", default=7, cast=int)  # 7 days
+
+# Cookie configuration for secure token storage
+# Determines if we're in production mode
+def is_production() -> bool:
+    """Check if running in production environment"""
+    env = os.getenv("ENVIRONMENT", "").lower()
+    vercel_env = os.getenv("VERCEL_ENV", "").lower()
+    return env == "production" or vercel_env == "production"
+
+# Cookie settings - PRODUCTION-GRADE SECURITY
+COOKIE_NAME_ACCESS = "access_token"
+COOKIE_NAME_REFRESH = "refresh_token"
+COOKIE_SECURE = is_production()  # True in production, False in development
+COOKIE_HTTPONLY = True  # Always True - prevents JavaScript access
+COOKIE_SAMESITE = "none" if is_production() else "lax"  # "none" for cross-origin in production
+COOKIE_DOMAIN = None  # Let browser determine domain for better compatibility
 
 # Bcrypt configuration
 # Default of 12 rounds can be slow (200-300ms per operation)
@@ -392,6 +409,118 @@ async def cleanup_expired_tokens(db) -> int:
     count = result.rowcount
     logger.info(f"Cleaned up {count} expired/revoked refresh tokens")
     return count
+
+
+# Cookie helper functions for secure token storage
+def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
+    """Set secure authentication cookies on the response
+    
+    This implements production-grade cookie security:
+    - httpOnly=True: Prevents JavaScript access (XSS protection)
+    - secure=True: Only sent over HTTPS in production
+    - samesite="none": Allows cross-origin requests in production
+    - Appropriate max_age for each token type
+    
+    Args:
+        response: FastAPI Response object
+        access_token: JWT access token
+        refresh_token: JWT refresh token
+    """
+    from fastapi import Response
+    
+    # Access token cookie - short-lived (15 minutes)
+    access_max_age = ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    response.set_cookie(
+        key=COOKIE_NAME_ACCESS,
+        value=access_token,
+        max_age=access_max_age,
+        httponly=COOKIE_HTTPONLY,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        domain=COOKIE_DOMAIN,
+    )
+    
+    # Refresh token cookie - long-lived (7-30 days)
+    refresh_max_age = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+    response.set_cookie(
+        key=COOKIE_NAME_REFRESH,
+        value=refresh_token,
+        max_age=refresh_max_age,
+        httponly=COOKIE_HTTPONLY,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        domain=COOKIE_DOMAIN,
+    )
+    
+    logger.info("Set secure auth cookies (httpOnly=True, secure={}, samesite={})".format(
+        COOKIE_SECURE, COOKIE_SAMESITE
+    ))
+
+
+def clear_auth_cookies(response) -> None:
+    """Clear authentication cookies on logout
+    
+    Sets cookies to empty with immediate expiration.
+    
+    Args:
+        response: FastAPI Response object
+    """
+    from fastapi import Response
+    
+    # Clear access token cookie
+    response.set_cookie(
+        key=COOKIE_NAME_ACCESS,
+        value="",
+        max_age=0,
+        httponly=COOKIE_HTTPONLY,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        domain=COOKIE_DOMAIN,
+    )
+    
+    # Clear refresh token cookie
+    response.set_cookie(
+        key=COOKIE_NAME_REFRESH,
+        value="",
+        max_age=0,
+        httponly=COOKIE_HTTPONLY,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        domain=COOKIE_DOMAIN,
+    )
+    
+    logger.info("Cleared auth cookies")
+
+
+def get_token_from_cookie_or_header(request, cookie_name: str, header_prefix: str = "Bearer ") -> Optional[str]:
+    """Get token from cookie or Authorization header
+    
+    Tries to get token from cookie first (preferred), falls back to header.
+    This supports both cookie-based and header-based authentication.
+    
+    Args:
+        request: FastAPI Request object
+        cookie_name: Name of the cookie to check
+        header_prefix: Prefix to strip from Authorization header
+        
+    Returns:
+        Token string if found, None otherwise
+    """
+    # Try cookie first (preferred for security)
+    token = request.cookies.get(cookie_name)
+    if token:
+        logger.debug(f"Token found in cookie: {cookie_name}")
+        return token
+    
+    # Fall back to Authorization header for API clients
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith(header_prefix):
+        token = auth_header[len(header_prefix):]
+        logger.debug("Token found in Authorization header")
+        return token
+    
+    logger.debug("No token found in cookies or headers")
+    return None
 
 
 # FastAPI dependencies
