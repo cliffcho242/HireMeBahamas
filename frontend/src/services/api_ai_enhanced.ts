@@ -10,14 +10,14 @@ if (import.meta.env.DEV) {
   console.log("API URL:", import.meta.env.VITE_API_URL);
 }
 
-// ❌ ABSOLUTE BAN: Never use localhost in production
-// Get backend URL from environment or use same-origin (for Vercel deployments)
+// ✅ CORRECT: Get backend URL from environment variable (VITE_API_URL)
+// ❌ WRONG: Never hardcode localhost:8000 in production code
 const getBackendUrl = (): string => {
-  // Check for explicit backend URL from environment
-  const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL;
+  // ✅ CORRECT: Use VITE_API_URL environment variable (properly exposed to browser by Vite)
+  const BACKEND_URL = import.meta.env.VITE_API_URL;
   
-  if (envUrl) {
-    return envUrl;
+  if (BACKEND_URL) {
+    return BACKEND_URL;
   }
   
   // If no explicit env var is set, use same-origin (for Vercel serverless)
@@ -26,8 +26,9 @@ const getBackendUrl = (): string => {
     return window.location.origin;
   }
   
-  // Fallback for SSR or build-time (should not be reached in normal operation)
-  return 'http://localhost:8000';
+  // ❌ WRONG: Never hardcode localhost in production fallback
+  // This should fail gracefully instead
+  throw new Error('Backend URL could not be determined. Set VITE_API_URL environment variable or ensure running in browser context.');
 };
 
 // AI Error Prevention: Multiple backend endpoints for redundancy
