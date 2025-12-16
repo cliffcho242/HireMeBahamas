@@ -508,10 +508,19 @@ async def add_cache_headers(request: Request, call_next):
             cache_control = None
             
             # Check if this path matches any specific cache rules (excluding wildcard)
+            # Note: Using startswith() for hierarchical path matching is intentional
+            # (e.g., "/health" matches both "/health" and "/health/ping")
+            # Patterns are ordered so more specific patterns should be checked first
             for pattern, methods in CACHE_CONTROL_RULES.items():
-                if pattern != "*" and path.startswith(pattern) and request.method in methods:
-                    cache_control = methods[request.method]
-                    break
+                if pattern != "*":
+                    # Exact match for root path to avoid matching everything
+                    if pattern == "/" and path == "/" and request.method in methods:
+                        cache_control = methods[request.method]
+                        break
+                    # Hierarchical matching for other paths
+                    elif pattern != "/" and path.startswith(pattern) and request.method in methods:
+                        cache_control = methods[request.method]
+                        break
             
             # Apply wildcard default if no specific pattern matched
             if cache_control is None and "*" in CACHE_CONTROL_RULES:
