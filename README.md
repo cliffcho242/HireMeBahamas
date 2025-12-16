@@ -32,6 +32,8 @@ Neon PostgreSQL (managed, scalable)
 
 ### Optional Phase 2
 - **Redis**: Sessions, feeds, caching (industry standard for scale)
+  - **[📖 REDIS_CONFIGURATION.md](./REDIS_CONFIGURATION.md)** - Quick start guide to configure Redis caching
+  - **[📖 REDIS_SETUP_GUIDE.md](./REDIS_SETUP_GUIDE.md)** - Comprehensive Redis setup instructions
 
 ### 📖 Documentation
 - **[✅ CORRECT_STACK.md](./CORRECT_STACK.md)** - **START HERE**: Official stack definition and rationale
