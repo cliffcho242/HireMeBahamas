@@ -162,8 +162,12 @@ def worker_abort(worker):
     Args:
         worker: The worker instance being aborted
     """
+    import os
+    # Access timeout from module globals or environment
+    worker_timeout = int(os.environ.get("GUNICORN_TIMEOUT", "60"))
+    
     print(f"⚠️  Worker {worker.pid} ABORTED (likely timeout or hung)")
-    print(f"   This usually means the worker exceeded {timeout}s timeout")
+    print(f"   This usually means the worker exceeded {worker_timeout}s timeout")
     print(f"   Check for:")
     print(f"   - Blocking database operations")
     print(f"   - Slow API calls")
