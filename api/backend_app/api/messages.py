@@ -105,11 +105,11 @@ async def get_conversations(
 async def get_conversation_messages(
     conversation_id: int,
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=50),  # Max 50 for mobile optimization
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get messages in a conversation"""
+    """Get messages in a conversation (optimized for mobile)"""
     # Check if user is participant in conversation
     conversation_result = await db.execute(
         select(Conversation).where(

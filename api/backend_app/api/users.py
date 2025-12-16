@@ -104,12 +104,12 @@ async def resolve_user_by_identifier(
 @router.get("/list")
 async def get_users(
     skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=50),  # Max 50 for mobile optimization
     search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get list of users with optional search"""
+    """Get list of users with optional search (optimized for mobile - no N+1 queries)"""
     query = select(User).where(User.is_active == True, User.id != current_user.id)
 
     if search:
@@ -131,32 +131,43 @@ async def get_users(
     result = await db.execute(query)
     users = result.scalars().all()
 
-    # Get follow status for each user
+    if not users:
+        return {"success": True, "users": [], "total": 0}
+
+    user_ids = [u.id for u in users]
+
+    # Bulk load follow status (single query)
     follow_result = await db.execute(
         select(Follow).where(
             and_(
                 Follow.follower_id == current_user.id,
-                Follow.followed_id.in_([u.id for u in users]),
+                Follow.followed_id.in_(user_ids),
             )
         )
     )
     following_ids = {f.followed_id for f in follow_result.scalars().all()}
 
-    # Get follower/following counts for each user
+    # Bulk load followers counts (single query)
+    followers_count_query = (
+        select(Follow.followed_id, func.count().label('count'))
+        .where(Follow.followed_id.in_(user_ids))
+        .group_by(Follow.followed_id)
+    )
+    followers_result = await db.execute(followers_count_query)
+    followers_counts = {row[0]: row[1] for row in followers_result.all()}
+
+    # Bulk load following counts (single query)
+    following_count_query = (
+        select(Follow.follower_id, func.count().label('count'))
+        .where(Follow.follower_id.in_(user_ids))
+        .group_by(Follow.follower_id)
+    )
+    following_result = await db.execute(following_count_query)
+    following_counts = {row[0]: row[1] for row in following_result.all()}
+
+    # Build response with pre-loaded data
     users_data = []
     for user in users:
-        # Count followers
-        followers_result = await db.execute(
-            select(func.count()).select_from(Follow).where(Follow.followed_id == user.id)
-        )
-        followers_count = followers_result.scalar() or 0
-
-        # Count following
-        following_result = await db.execute(
-            select(func.count()).select_from(Follow).where(Follow.follower_id == user.id)
-        )
-        following_count = following_result.scalar() or 0
-
         users_data.append(
             {
                 "id": user.id,
@@ -169,8 +180,8 @@ async def get_users(
                 "occupation": user.occupation,
                 "location": user.location,
                 "is_following": user.id in following_ids,
-                "followers_count": followers_count,
-                "following_count": following_count,
+                "followers_count": followers_counts.get(user.id, 0),
+                "following_count": following_counts.get(user.id, 0),
             }
         )
 

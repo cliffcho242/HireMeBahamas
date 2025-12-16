@@ -14,12 +14,12 @@ router = APIRouter()
 @router.get("/list")
 async def get_notifications(
     skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=50),  # Max 50 for mobile optimization
     unread_only: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get list of notifications for current user"""
+    """Get list of notifications for current user (optimized for mobile)"""
     query = select(Notification).options(
         selectinload(Notification.actor)
     ).where(Notification.user_id == current_user.id)
