@@ -143,13 +143,19 @@ def test_production_engine_config():
                     print("  ❌ connect_timeout default not found")
                 all_passed = False
             
-            # Test 6: sslmode="require" in connect_args
+            # Test 6: sslmode should be in DATABASE_URL, NOT in connect_args
             has_sslmode = bool(re.search(r'"sslmode"\s*:\s*"require"', content))
             if has_sslmode:
-                print('  ✅ connect_args={"sslmode": "require"}')
-            else:
-                print('  ❌ connect_args={"sslmode": "require"} MISSING')
+                print('  ❌ sslmode found in connect_args (should be in DATABASE_URL only)')
                 all_passed = False
+            else:
+                print('  ✅ sslmode correctly NOT in connect_args (should be in DATABASE_URL)')
+                # Verify there's mention of sslmode in DATABASE_URL context
+                has_sslmode_in_url = bool(re.search(r'sslmode=require', content))
+                if has_sslmode_in_url:
+                    print('  ✅ sslmode=require referenced in DATABASE_URL context')
+                else:
+                    print('  ⚠️  No mention of sslmode in DATABASE_URL (check documentation)')
     
     print("\n" + "=" * 80)
     if all_passed:

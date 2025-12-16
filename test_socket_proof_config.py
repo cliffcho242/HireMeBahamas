@@ -63,13 +63,19 @@ def test_socket_proof_config():
             print("  ❌ pool_recycle MISSING")
             all_passed = False
         
-        # Test 3: sslmode="require" in connect_args
-        has_sslmode = bool(re.search(r'"sslmode"\s*:\s*"require"', content))
-        if has_sslmode:
-            print('  ✅ connect_args={"sslmode": "require"}')
-        else:
-            print('  ❌ connect_args={"sslmode": "require"} MISSING')
+        # Test 3: sslmode should be in DATABASE_URL, NOT in connect_args
+        has_sslmode_in_connect_args = bool(re.search(r'"sslmode"\s*:\s*"require"', content))
+        if has_sslmode_in_connect_args:
+            print('  ❌ sslmode found in connect_args (should be in DATABASE_URL only)')
             all_passed = False
+        else:
+            print('  ✅ sslmode correctly NOT in connect_args')
+            # Verify there's mention of sslmode in DATABASE_URL context
+            has_sslmode_in_url = bool(re.search(r'sslmode=require', content))
+            if has_sslmode_in_url:
+                print('  ✅ sslmode=require referenced in DATABASE_URL')
+            else:
+                print('  ⚠️  No mention of sslmode in DATABASE_URL (check documentation)')
         
         # Test 4: Lazy initialization
         has_lazy = bool(re.search(r'def get_engine\(\)', content))

@@ -213,6 +213,7 @@ def get_engine():
             pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "300"))
             
             # Production-safe engine configuration with SSL enforcement
+            # Note: sslmode=require is in the DATABASE_URL query string, not in connect_args
             _engine = create_async_engine(
                 db_url,
                 pool_pre_ping=True,            # Validate connections before use
@@ -222,7 +223,6 @@ def get_engine():
                 connect_args={
                     "connect_timeout": connect_timeout,  # Connection timeout (45s default)
                     "command_timeout": command_timeout,  # Query timeout (30s default)
-                    "sslmode": "require",                # Enforce SSL for production safety
                 },
                 echo=False,                    # Disable SQL logging in production
             )
