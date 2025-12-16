@@ -4,6 +4,9 @@ import { Job } from '../types/job';
 import { debugLog } from '../utils/debugLogger';
 import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
 
+// Note: Backend URL validation happens automatically when backendRouter is imported
+// The validateBackendUrl() function is called at module load in backendRouter.ts
+
 // API Response Types
 interface UserResponse {
   success: boolean;
