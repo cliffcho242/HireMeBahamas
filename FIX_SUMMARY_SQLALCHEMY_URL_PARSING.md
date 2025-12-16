@@ -181,6 +181,40 @@ No environment variable changes required. The fix is backward compatible and han
 ✅ No security vulnerabilities introduced
 
 ---
+
+## Additional Fix: backend/app/core/config.py (December 16, 2025)
+
+### Problem
+The fix in `backend/app/database.py` was complete, but `backend/app/core/config.py` (used by other modules) still had the same whitespace-only DATABASE_URL issue.
+
+### Solution
+Added the same whitespace detection to `backend/app/core/config.py`:
+
+```python
+# Check if DATABASE_URL is empty AFTER stripping whitespace
+# This catches whitespace-only strings (e.g., "   ") that would cause SQLAlchemy parsing errors
+# Note: This is a separate check from above because whitespace strings are truthy in Python
+if not database_url:
+    if cls.ENVIRONMENT == "production":
+        raise ValueError("DATABASE_URL is empty or contains only whitespace")
+    else:
+        database_url = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+```
+
+### Testing
+Created `test_sqlalchemy_url_fix.py` with 4 test cases:
+- ✅ Empty DATABASE_URL in production → raises ValueError
+- ✅ Whitespace-only DATABASE_URL in production → raises ValueError
+- ✅ Valid DATABASE_URL with whitespace → properly stripped
+- ✅ Empty DATABASE_URL in development → uses fallback
+
+### Impact
+- **Files Changed**: `backend/app/core/config.py` (6 lines added)
+- **Tests Added**: `test_sqlalchemy_url_fix.py` (220 lines)
+- **Security**: CodeQL scan - 0 vulnerabilities
+- **Compatibility**: Backward compatible, no breaking changes
+
+---
 **Status**: COMPLETE ✅
 **Date**: 2025-12-16
 **Author**: GitHub Copilot Agent
