@@ -99,6 +99,49 @@ accesslog = "-"
 errorlog = "-"
 access_log_format = '%(h)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)sµs'
 
+# Custom logger class to provide better context for worker signals
+logconfig_dict = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'generic': {
+            'format': '%(asctime)s [%(process)d] [%(levelname)s] %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S %z',
+            'class': 'logging.Formatter'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'generic',
+            'stream': 'ext://sys.stdout'
+        },
+        'error_console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'generic',
+            'stream': 'ext://sys.stderr'
+        }
+    },
+    'root': {
+        'level': 'INFO',
+        'handlers': ['console']
+    },
+    'loggers': {
+        'gunicorn.error': {
+            'level': 'INFO',
+            'handlers': ['error_console'],
+            'propagate': False,
+            'qualname': 'gunicorn.error'
+        },
+        'gunicorn.access': {
+            'level': 'INFO',
+            'handlers': ['console'],
+            'propagate': False,
+            'qualname': 'gunicorn.access'
+        }
+    }
+}
+
 # ============================================================================
 # PROCESS NAMING
 # ============================================================================
@@ -159,18 +202,30 @@ def worker_int(worker):
     - When worker needs to be terminated cleanly
     - Before escalating to SIGABRT for unresponsive workers
     
+    IMPORTANT: Gunicorn master process will also log "Worker (pid:X) was sent SIGTERM!"
+    at ERROR level. This is normal behavior and doesn't indicate a problem.
+    
     Args:
         worker: The worker instance being interrupted
     """
-    print(f"⚠️  Worker {worker.pid} received interrupt signal (SIGTERM/SIGINT/SIGQUIT)")
-    print(f"   This is normal during:")
-    print(f"   - Deployments and restarts")
-    print(f"   - Configuration changes")
-    print(f"   - Manual service restarts")
-    print(f"   If this happens frequently outside of deployments:")
-    print(f"   - Check if workers are timing out during requests")
-    print(f"   - Review application logs for errors")
-    print(f"   - Monitor memory usage (workers may be OOM killed)")
+    import sys
+    # Use stderr to ensure this appears near Gunicorn's ERROR log
+    print(f"\n{'='*80}", file=sys.stderr)
+    print(f"ℹ️  WORKER INTERRUPT SIGNAL RECEIVED - PID {worker.pid}", file=sys.stderr)
+    print(f"{'='*80}", file=sys.stderr)
+    print(f"Signal: SIGTERM/SIGINT/SIGQUIT (graceful shutdown)", file=sys.stderr)
+    print(f"Worker: {worker.pid}", file=sys.stderr)
+    print(f"Status: This is NORMAL during:", file=sys.stderr)
+    print(f"  ✓ Deployments and service restarts", file=sys.stderr)
+    print(f"  ✓ Configuration reloads", file=sys.stderr)
+    print(f"  ✓ Manual service restarts", file=sys.stderr)
+    print(f"  ✓ Platform maintenance windows", file=sys.stderr)
+    print(f"\n⚠️  Only investigate if this happens frequently OUTSIDE of deployments:", file=sys.stderr)
+    print(f"  • Check if workers are timing out during requests (>{timeout}s)", file=sys.stderr)
+    print(f"  • Review application logs for errors before SIGTERM", file=sys.stderr)
+    print(f"  • Monitor memory usage (workers may be OOM killed)", file=sys.stderr)
+    print(f"  • Check for slow database queries or API calls", file=sys.stderr)
+    print(f"{'='*80}\n", file=sys.stderr)
 
 
 def worker_abort(worker):
@@ -181,20 +236,37 @@ def worker_abort(worker):
     - Worker became unresponsive or hung
     - Master process needs to forcibly terminate the worker
     
+    ⚠️  THIS IS A CRITICAL ERROR - Unlike SIGTERM, SIGABRT indicates a real problem.
+    
     Args:
         worker: The worker instance being aborted
     """
     import os
+    import sys
     # Access timeout from module globals or environment
     worker_timeout = int(os.environ.get("GUNICORN_TIMEOUT", "60"))
     
-    print(f"⚠️  Worker {worker.pid} ABORTED (likely timeout or hung)")
-    print(f"   This usually means the worker exceeded {worker_timeout}s timeout")
-    print(f"   Check for:")
-    print(f"   - Blocking database operations")
-    print(f"   - Slow API calls")
-    print(f"   - Deadlocks or infinite loops")
-    print(f"   - Database connection pool exhaustion")
+    print(f"\n{'='*80}", file=sys.stderr)
+    print(f"❌ CRITICAL: WORKER ABORTED - PID {worker.pid}", file=sys.stderr)
+    print(f"{'='*80}", file=sys.stderr)
+    print(f"Signal: SIGABRT (forceful termination)", file=sys.stderr)
+    print(f"Worker: {worker.pid}", file=sys.stderr)
+    print(f"Timeout: {worker_timeout}s (exceeded)", file=sys.stderr)
+    print(f"\n⚠️  This worker was forcibly killed because it exceeded the timeout.", file=sys.stderr)
+    print(f"This indicates a serious problem that MUST be investigated:\n", file=sys.stderr)
+    print(f"Common causes:", file=sys.stderr)
+    print(f"  1. Blocking database operations (long queries, connection issues)", file=sys.stderr)
+    print(f"  2. Slow external API calls without timeout", file=sys.stderr)
+    print(f"  3. Deadlocks or infinite loops in application code", file=sys.stderr)
+    print(f"  4. Database connection pool exhaustion", file=sys.stderr)
+    print(f"  5. CPU-intensive operations blocking the event loop", file=sys.stderr)
+    print(f"\nNext steps:", file=sys.stderr)
+    print(f"  • Check application logs immediately before this abort", file=sys.stderr)
+    print(f"  • Review recent endpoint requests and their duration", file=sys.stderr)
+    print(f"  • Monitor database connection pool status", file=sys.stderr)
+    print(f"  • Use APM tools to identify slow operations", file=sys.stderr)
+    print(f"  • Consider increasing timeout only if operations legitimately need more time", file=sys.stderr)
+    print(f"{'='*80}\n", file=sys.stderr)
 
 
 def post_fork(server, worker):

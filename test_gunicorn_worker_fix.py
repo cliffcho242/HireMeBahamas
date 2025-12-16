@@ -93,7 +93,14 @@ def test_backend_gunicorn_config():
         elif preload_app is False:
             print("✅ preload_app=False (safe for databases)")
         
-        print("✅ backend/gunicorn.conf.py is valid and has worker_abort hook\n")
+        # Check for enhanced logging configuration
+        logconfig_dict = getattr(config, 'logconfig_dict', None)
+        if logconfig_dict:
+            print("✅ logconfig_dict configured (enhanced logging)")
+        else:
+            print("ℹ️  logconfig_dict not found (using default logging)")
+        
+        print("✅ backend/gunicorn.conf.py is valid and has enhanced worker hooks\n")
         return True
         
     except Exception as e:
@@ -133,7 +140,14 @@ def test_root_gunicorn_config():
             print("❌ worker_int is not callable in gunicorn.conf.py")
             return False
         
-        print("✅ gunicorn.conf.py is valid and has worker_abort and worker_int hooks\n")
+        # Check for enhanced logging configuration
+        logconfig_dict = getattr(config, 'logconfig_dict', None)
+        if logconfig_dict:
+            print("✅ logconfig_dict configured (enhanced logging)")
+        else:
+            print("ℹ️  logconfig_dict not found (using default logging)")
+        
+        print("✅ gunicorn.conf.py is valid and has enhanced worker hooks\n")
         return True
         
     except Exception as e:
