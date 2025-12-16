@@ -84,6 +84,15 @@ class Settings:
         # Strip whitespace to prevent connection errors
         database_url = database_url.strip()
         
+        # Check if DATABASE_URL is empty after stripping whitespace
+        # This catches whitespace-only strings that would cause SQLAlchemy parsing errors
+        if not database_url:
+            if cls.ENVIRONMENT == "production":
+                raise ValueError("DATABASE_URL is empty or contains only whitespace")
+            else:
+                # Use local development default only in development mode
+                database_url = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+        
         # Fix common typos in DATABASE_URL
         if "ostgresql" in database_url and "postgresql" not in database_url:
             database_url = database_url.replace("ostgresql", "postgresql")
