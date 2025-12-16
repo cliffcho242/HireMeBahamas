@@ -4,6 +4,16 @@ import { Job } from '../types/job';
 import { debugLog } from '../utils/debugLogger';
 import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
 
+// Guard: Prevent silent failures when backend URL is required but not configured
+// This check happens when VITE_REQUIRE_BACKEND_URL is set to 'true'
+if (import.meta.env.VITE_REQUIRE_BACKEND_URL === 'true' && !import.meta.env.VITE_API_URL) {
+  throw new Error(
+    "VITE_API_URL is not set. " +
+    "Either set VITE_API_URL environment variable or disable VITE_REQUIRE_BACKEND_URL. " +
+    "This prevents silent failures when an explicit backend URL is required."
+  );
+}
+
 // API Response Types
 interface UserResponse {
   success: boolean;
