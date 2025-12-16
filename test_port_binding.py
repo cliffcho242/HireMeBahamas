@@ -105,6 +105,58 @@ def test_procfile_uses_port_variable():
     print("✅ Procfile port binding is correct")
 
 
+def test_port_5432_validation():
+    """Test that port 5432 is explicitly rejected in configuration files."""
+    
+    # Test backend/app/main.py validates port 5432
+    file_path = REPO_ROOT / 'backend' / 'app' / 'main.py'
+    with open(file_path, 'r') as f:
+        content = f.read()
+    
+    assert 'port == 5432' in content, "backend/app/main.py should validate port 5432"
+    assert 'PostgreSQL' in content or 'postgres' in content.lower(), \
+        "Should mention PostgreSQL in error message"
+    assert 'sys.exit(1)' in content, "Should exit with error code 1 when port is 5432"
+    
+    print("✅ backend/app/main.py validates port 5432 correctly")
+    
+    # Test gunicorn.conf.py validates port 5432
+    gunicorn_files = [
+        REPO_ROOT / 'gunicorn.conf.py',
+        REPO_ROOT / 'backend' / 'gunicorn.conf.py'
+    ]
+    
+    for file_path in gunicorn_files:
+        with open(file_path, 'r') as f:
+            content = f.read()
+        
+        assert '_port_int == 5432' in content or 'port == 5432' in content, \
+            f"{file_path} should validate port 5432"
+        assert 'PostgreSQL' in content or 'postgres' in content.lower(), \
+            f"{file_path} should mention PostgreSQL in error message"
+        assert 'sys.exit(1)' in content, \
+            f"{file_path} should exit with error code 1 when port is 5432"
+        
+        print(f"✅ {file_path.name} validates port 5432 correctly")
+
+
+def test_port_5432_rejection_message():
+    """Test that rejection messages are clear and helpful."""
+    
+    # Check backend/app/main.py error message
+    file_path = REPO_ROOT / 'backend' / 'app' / 'main.py'
+    with open(file_path, 'r') as f:
+        content = f.read()
+    
+    # Should have clear error messages
+    assert 'DO NOT BIND' in content or 'Cannot bind' in content, \
+        "Should have clear error message about binding"
+    assert 'reserved for PostgreSQL' in content or 'PostgreSQL database' in content, \
+        "Should explain that 5432 is for PostgreSQL"
+    
+    print("✅ Error messages are clear and helpful")
+
+
 if __name__ == "__main__":
     print("🧪 Running port binding configuration tests...\n")
     
@@ -113,6 +165,8 @@ if __name__ == "__main__":
         test_backend_app_main_port_binding()
         test_gunicorn_config_port_binding()
         test_procfile_uses_port_variable()
+        test_port_5432_validation()
+        test_port_5432_rejection_message()
         
         print("\n✅ All port binding tests passed!")
         print("📋 Summary:")
@@ -121,6 +175,8 @@ if __name__ == "__main__":
         print("   - All apps bind to host='0.0.0.0'")
         print("   - Gunicorn config uses environment variable")
         print("   - Procfile uses $PORT variable")
+        print("   - Port 5432 (PostgreSQL) is explicitly rejected")
+        print("   - Error messages are clear and helpful")
         
     except AssertionError as e:
         print(f"\n❌ Test failed: {e}")

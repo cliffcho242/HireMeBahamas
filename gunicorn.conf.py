@@ -10,7 +10,34 @@ import time
 # ============================================================================
 # BIND CONFIGURATION
 # ============================================================================
-bind = f"0.0.0.0:{os.environ.get('PORT', '10000')}"
+# ⚠️ CRITICAL: Validate port before binding
+_port = os.environ.get('PORT', '10000')
+_port_int = int(_port)
+
+# DO NOT BIND TO PORT 5432 - This is a PostgreSQL port, not for HTTP backends
+if _port_int == 5432:
+    import sys
+    print("=" * 80, file=sys.stderr)
+    print("❌ CRITICAL ERROR: Cannot bind to port 5432", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    print("", file=sys.stderr)
+    print("Port 5432 is reserved for PostgreSQL database servers.", file=sys.stderr)
+    print("Your HTTP backend (gunicorn) should use a different port.", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("Common HTTP ports:", file=sys.stderr)
+    print("  • 8000, 8080, 8888: Common development ports", file=sys.stderr)
+    print("  • 10000: Railway/Render default", file=sys.stderr)
+    print("  • Use $PORT environment variable for cloud deployments", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("To fix this:", file=sys.stderr)
+    print("  1. Check your PORT environment variable: echo $PORT", file=sys.stderr)
+    print("  2. Unset PORT if it's 5432: unset PORT", file=sys.stderr)
+    print("  3. Use correct port for HTTP: export PORT=8000", file=sys.stderr)
+    print("  4. Never set PORT=5432 for web services", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    sys.exit(1)
+
+bind = f"0.0.0.0:{_port}"
 
 # ============================================================================
 # WORKER CONFIGURATION (Optimized for Render Small Instances)
