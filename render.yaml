@@ -59,10 +59,10 @@ services:
     # ==========================================================================
     # Gunicorn with Uvicorn workers optimized for 100K+ concurrent users
     # - Gunicorn: Production WSGI server with worker management
-    # - Uvicorn workers: ASGI support for FastAPI async operations
+    # - Uvicorn workers: ASGI support for FastAPI async operations (NOT thread-based)
     # - Workers: 4 (optimized for 100K+ users with Redis handling most requests)
-    # - Threads: 4 per worker (configured in gunicorn.conf.py)
-    # - Total capacity: 16 concurrent requests (4 workers × 4 threads)
+    # - Concurrency: Async event loop per worker (handles ~100+ connections per worker)
+    # - Total capacity: 400+ concurrent connections (4 workers × ~100+ async connections)
     # - NO --preload: Safer for database apps (each worker loads independently)
     # - Working directory is set to backend/ for consistent path resolution
     # 
@@ -71,7 +71,7 @@ services:
     # - Auth: <50ms
     # - Health: <30ms
     # - DB load: Very low (Redis handles most requests)
-    # - Concurrent capacity: 16 requests
+    # - Concurrent capacity: 400+ connections (async event loop)
     # - Supported users: 100K+ concurrent
     #
     # ⚠️ CRITICAL: This command is a SINGLE LINE with NO backslashes

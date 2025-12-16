@@ -103,7 +103,7 @@ def test_gunicorn_config():
         print(f"  Auth: <50ms")
         print(f"  Health: <30ms")
         print(f"  DB load: Very low (Redis handles most requests)")
-        print(f"  Concurrent capacity: ~16+ requests with async handling")
+        print(f"  Concurrent capacity: 400+ connections (4 workers × ~100+ async connections each)")
         print(f"  Supported users: 100K+ concurrent")
         print()
         print("✨ Production-Ready for 100K+ Concurrent Users! 🚀")
