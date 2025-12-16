@@ -74,9 +74,9 @@ def validate_database_url(url: str) -> tuple[bool, list[str]]:
     except Exception as e:
         errors.append(f"❌ FAILED: Invalid URL format - {str(e)}")
     
-    # Check 5: Must include sslmode=require
-    if 'sslmode=require' not in url:
-        errors.append("❌ FAILED: DATABASE_URL must include '?sslmode=require' at the end")
+    # Note: sslmode=require check removed as redundant
+    # The ensure_sslmode() function automatically adds sslmode=require if missing
+    # This validation is no longer necessary
     
     # Check 6: Validate it looks like a real database domain
     try:

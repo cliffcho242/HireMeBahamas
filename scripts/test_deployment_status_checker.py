@@ -96,8 +96,8 @@ def test_valid_database_url():
 
 
 def test_missing_sslmode():
-    """Test detection of missing SSL mode"""
-    print("\n🧪 Test 3: Missing SSL mode detection")
+    """Test that missing SSL mode is handled automatically (no longer causes warning)"""
+    print("\n🧪 Test 3: Missing SSL mode is handled automatically")
     
     result = run_checker(
         env_vars={"DATABASE_URL": "postgresql://user:pass@host:5432/mydb"},
@@ -107,12 +107,14 @@ def test_missing_sslmode():
     try:
         data = json.loads(result.stdout)
         
-        # Check for DATABASE_URL warning
+        # Check for DATABASE_URL check
         db_checks = [c for c in data["checks"] if c["name"] == "DATABASE_URL" and c["category"] == "database"]
         assert len(db_checks) > 0, "Should have DATABASE_URL check"
-        assert db_checks[0]["status"] in ["warning", "ok"], "Should warn about missing SSL mode"
+        # After removing redundant validation, missing sslmode should not cause warnings
+        # The ensure_sslmode() function adds it automatically
+        assert db_checks[0]["status"] in ["ok", "info"], "Missing sslmode should be OK (added automatically)"
         
-        print("   ✅ Correctly detected missing SSL mode")
+        print("   ✅ Missing SSL mode is handled automatically (no warning needed)")
         print(f"   ✅ Status: {db_checks[0]['status']}")
         return True
     except Exception as e:

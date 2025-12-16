@@ -95,14 +95,9 @@ if settings.ENVIRONMENT == "production" and ('/var/run/' in DATABASE_URL or 'uni
         "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
     )
 
-# Check for SSL mode requirement
-query_params = parsed.query.lower() if parsed.query else ""
-if 'sslmode=' not in query_params:
-    logger.warning(
-        "⚠️  DATABASE_URL missing sslmode parameter. "
-        "SSL is required for secure cloud database connections. "
-        "Add ?sslmode=require to your DATABASE_URL."
-    )
+# Note: sslmode parameter check removed as redundant
+# SSL mode is configured via the DATABASE_URL query string (?sslmode=require)
+# and is added automatically by the ensure_sslmode() function if needed
 
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:
