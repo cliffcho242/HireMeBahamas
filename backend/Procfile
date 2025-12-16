@@ -8,7 +8,7 @@
 # STEP 10 - SCALING TO 100K+ USERS:
 # - FastAPI for maximum performance with async support
 # - Gunicorn with Uvicorn workers for production-grade worker management
-# - 4 workers with 4 threads each = 16 concurrent requests
+# - 4 workers using async event loops = 400+ concurrent connections
 # - Redis cache handles most requests (Facebook-level performance)
 # - Neon PostgreSQL with connection pooling
 # - Uses gunicorn.conf.py for complete configuration
