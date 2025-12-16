@@ -66,14 +66,9 @@ def validate_database_url(url: str | None) -> bool:
             )
             return False
     
-    # Check for SSL mode
-    query_params = parsed.query.lower()
-    if 'sslmode=' not in query_params:
-        logging.warning(
-            "DATABASE_URL missing sslmode parameter. "
-            "Add ?sslmode=require to enforce SSL."
-        )
-        return False
+    # Note: sslmode parameter check removed as redundant
+    # SSL mode is added automatically by the ensure_sslmode() function if needed
+    # This validation is no longer necessary
 
     return True
 

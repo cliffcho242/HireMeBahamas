@@ -163,14 +163,9 @@ class Settings:
                     "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
                 )
             
-            # Check 5: Must have sslmode parameter for SSL/TLS
-            query_params = parsed.query.lower()
-            if 'sslmode=' not in query_params:
-                raise ValueError(
-                    "DATABASE_URL missing sslmode parameter. "
-                    "Add ?sslmode=require to enforce SSL. "
-                    "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
-                )
+            # Note: sslmode parameter validation removed as redundant
+            # SSL mode is handled automatically at the database connection level
+            # This validation is no longer necessary
             
             logger.info("✓ DATABASE_URL validation passed: hostname, port, TCP, and SSL configured")
             

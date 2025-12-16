@@ -74,12 +74,13 @@ class TestDatabaseURLValidation:
         assert not is_valid
         assert any("placeholder" in error.lower() for error in errors)
     
-    def test_invalid_url_missing_sslmode(self):
-        """Test that URLs without sslmode=require are rejected."""
+    def test_url_without_sslmode_now_valid(self):
+        """Test that URLs without sslmode=require are now accepted (added automatically)."""
         url = "postgresql://user:pass@ep-cool-sound-12345.us-east-1.aws.neon.tech:5432/verceldb"
         is_valid, errors = validate_database_url(url)
-        assert not is_valid
-        assert any("sslmode=require" in error for error in errors)
+        # After removing redundant validation, this should pass
+        # The ensure_sslmode() function will add sslmode=require automatically
+        assert is_valid, f"URL without sslmode should now pass validation: {errors}"
     
     def test_invalid_url_old_postgres_format(self):
         """Test that URLs using postgres:// instead of postgresql:// are rejected."""

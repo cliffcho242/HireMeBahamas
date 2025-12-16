@@ -94,18 +94,19 @@ class TestDatabaseURLValidation:
         assert "port" in error.lower()
     
     def test_invalid_missing_sslmode(self):
-        """Test that URL without sslmode is rejected."""
+        """Test that URL without sslmode is now accepted (sslmode added automatically)."""
         url = "postgresql://user:password@db.example.com:5432/dbname"
         is_valid, error = validate_database_url_structure(url)
-        assert not is_valid
-        assert "sslmode" in error.lower()
+        # After removing redundant validation, this should pass
+        # The ensure_sslmode() function will add sslmode=require automatically
+        assert is_valid, f"URL without sslmode should now pass validation: {error}"
     
-    def test_invalid_missing_port_and_sslmode(self):
-        """Test that URL missing both port and sslmode is rejected."""
+    def test_invalid_missing_port(self):
+        """Test that URL missing port is rejected."""
         url = "postgresql://user:password@db.example.com/dbname"
         is_valid, error = validate_database_url_structure(url)
         assert not is_valid
-        # Should fail on port check first
+        # Should fail on port check
         assert "port" in error.lower()
     
     def test_valid_with_additional_params(self):

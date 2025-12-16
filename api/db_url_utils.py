@@ -18,9 +18,8 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
     1. Must contain a hostname (not localhost, 127.0.0.1, or empty)
     2. Must contain a port number
     3. Must use TCP connection (no Unix sockets)
-    4. Must have SSL mode configured
-    5. Must not contain whitespace (leading, trailing, or embedded)
-    6. Must not contain quotes (single or double)
+    4. Must not contain whitespace (leading, trailing, or embedded)
+    5. Must not contain quotes (single or double)
     
     Args:
         db_url: Database connection URL to validate
@@ -46,13 +45,13 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
         - postgresql://"user":pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require
         
         ✅ CORRECT (Neon example):
-        postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require
+        postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname
         ✔ Real hostname (ep-xxxx.us-east-1.aws.neon.tech)
         ✔ Port present (:5432)
         ✔ TCP enforced
-        ✔ SSL required (?sslmode=require)
         ✔ No spaces
         ✔ No quotes
+        Note: sslmode is added automatically by ensure_sslmode() if needed
     """
     if not db_url:
         return False, "DATABASE_URL is empty or None"
@@ -113,14 +112,9 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
                 "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
             )
         
-        # Check 4: Must have sslmode parameter for SSL/TLS
-        query_params = parsed.query.lower()
-        if 'sslmode=' not in query_params:
-            return False, (
-                "DATABASE_URL missing sslmode parameter. "
-                "Add ?sslmode=require to enforce SSL. "
-                "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
-            )
+        # Note: sslmode parameter validation removed as redundant
+        # The ensure_sslmode() function automatically adds sslmode=require if missing
+        # This validation would always pass after ensure_sslmode() is called
         
         # All checks passed
         return True, ""

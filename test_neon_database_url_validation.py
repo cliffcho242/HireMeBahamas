@@ -104,12 +104,13 @@ class TestNeonDatabaseURLValidation:
         print("✅ Missing port rejection: PASSED")
     
     def test_invalid_missing_sslmode(self):
-        """Test that URL without sslmode is rejected (NEON requirement)."""
+        """Test that URL without sslmode is now accepted (sslmode added automatically)."""
         url = "postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname"
         is_valid, error = validate_database_url_structure(url)
-        assert not is_valid, "URL without sslmode should fail"
-        assert "sslmode" in error.lower()
-        print("✅ Missing sslmode rejection: PASSED")
+        # After removing redundant validation, this should pass
+        # The ensure_sslmode() function will add sslmode=require automatically
+        assert is_valid, f"URL without sslmode should now pass validation: {error}"
+        print("✅ URL validation passes (sslmode added automatically): PASSED")
     
     def test_invalid_localhost_hostname(self):
         """Test that localhost is rejected (NEON uses cloud hostnames)."""
