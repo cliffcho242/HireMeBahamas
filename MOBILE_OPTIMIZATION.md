@@ -249,14 +249,76 @@ async def get_items(response: Response):
     return {"items": [...]}
 ```
 
+## Breaking Changes
+
+⚠️ **Note on Response Models**:
+
+Some endpoints have updated response formats to include standardized pagination metadata:
+
+### Before (Jobs endpoint)
+```json
+{
+  "jobs": [...],
+  "total": 150,
+  "skip": 0,
+  "limit": 20
+}
+```
+
+### After (Jobs endpoint)
+```json
+{
+  "success": true,
+  "jobs": [...],
+  "pagination": {
+    "page": 1,
+    "skip": 0,
+    "limit": 20,
+    "total": 150,
+    "total_pages": 8,
+    "has_next": true,
+    "has_prev": false
+  }
+}
+```
+
+**Impact**: Clients using `JobListResponse` Pydantic model will need to update to the new response format. The new format provides richer pagination metadata and is more consistent across endpoints.
+
+**Migration**: Update client code to parse `pagination` object instead of top-level fields.
+
+### Before (Messages endpoint)
+```json
+[
+  {"id": 1, "content": "..."},
+  {"id": 2, "content": "..."}
+]
+```
+
+### After (Messages endpoint)
+```json
+{
+  "success": true,
+  "messages": [...],
+  "pagination": {
+    "page": 1,
+    "total": 50,
+    ...
+  }
+}
+```
+
+**Impact**: Messages endpoint changed from returning a list to returning an object with `messages` array and pagination metadata.
+
+**Migration**: Update client code to access `response.messages` instead of using response directly as array.
+
 ## Testing
 
-All optimizations maintain backward compatibility:
+All optimizations maintain pagination backward compatibility:
 
 - ✅ Old `skip`/`limit` pagination still works
 - ✅ New `page`/`limit` pagination works
 - ✅ Responses include both formats in metadata
-- ✅ No breaking changes to existing API contracts
+- ⚠️ Response structure updated for consistency (see Breaking Changes above)
 
 ## Benefits for Mobile Apps
 

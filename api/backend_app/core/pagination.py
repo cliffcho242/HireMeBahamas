@@ -89,8 +89,9 @@ class PaginatedResponse(BaseModel, Generic[T]):
         Returns:
             PaginatedResponse with items and pagination metadata
         """
+        # Protect against division by zero
         total_pages = (total + limit - 1) // limit if limit > 0 else 0
-        has_next = page < total_pages
+        has_next = page < total_pages if limit > 0 else False
         has_prev = page > 1
         
         pagination_meta = {
@@ -139,10 +140,11 @@ def get_pagination_metadata(
     
     # Calculate skip if not provided
     if skip is None:
-        skip = (page - 1) * limit
+        skip = (page - 1) * limit if limit > 0 else 0
     
+    # Protect against division by zero
     total_pages = (total + limit - 1) // limit if limit > 0 else 0
-    has_next = page < total_pages
+    has_next = page < total_pages if limit > 0 else False
     has_prev = page > 1
     
     return {

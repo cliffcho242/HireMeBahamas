@@ -143,7 +143,7 @@ async def get_posts(
     
     logger.debug(f"Cache miss for feed: {cache_key}, fetching from DB")
     
-    # Get total count for pagination metadata
+    # Get total count for pagination metadata (only when cache miss)
     count_result = await db.execute(select(func.count()).select_from(Post))
     total = count_result.scalar() or 0
     
