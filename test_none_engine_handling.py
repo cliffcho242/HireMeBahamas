@@ -11,11 +11,7 @@ import os
 import sys
 from unittest.mock import patch
 
-# Set up test environment with invalid DATABASE_URL that will cause get_engine() to return None
-os.environ['ENVIRONMENT'] = 'production'  # Use production to get placeholder URL
-os.environ['DATABASE_URL'] = 'invalid://url'  # Invalid URL to trigger None return
-
-# Import after setting environment
+# Import path setup
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
 
@@ -26,7 +22,7 @@ async def test_none_engine_handling():
     
     from app.core import performance
     
-    # Mock get_engine to return None
+    # Mock get_engine to return None (simulates invalid DATABASE_URL scenario)
     with patch('app.core.performance.get_engine', return_value=None):
         print("\n1. Testing create_performance_indexes()...")
         try:
