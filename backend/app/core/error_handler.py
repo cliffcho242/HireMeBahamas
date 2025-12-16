@@ -8,6 +8,7 @@ This module provides:
 - Integration with logging system
 """
 
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Union
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -381,7 +382,7 @@ class ErrorTracker:
             "error_code": error_code,
             "message": message,
             "request_id": request_id,
-            "timestamp": None,  # Would use datetime.utcnow() if needed
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             **context,
         }
         
