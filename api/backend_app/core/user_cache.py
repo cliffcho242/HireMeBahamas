@@ -31,6 +31,7 @@ Usage:
 """
 import logging
 from typing import Optional
+from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -83,6 +84,11 @@ class UserCache:
         
         Only cache essential fields to minimize memory usage.
         Excludes sensitive data like hashed_password.
+        
+        Note: hashed_password is intentionally excluded. Cached user objects 
+        are read-only and used for display/validation purposes only. 
+        Password verification always requires a fresh database query to get 
+        the hashed_password field.
         """
         return {
             "id": user.id,
@@ -110,6 +116,31 @@ class UserCache:
             "last_login": user.last_login.isoformat() if user.last_login else None,
             # Note: hashed_password is intentionally excluded for security
         }
+    
+    def _deserialize_user_data(self, cached_data: dict) -> dict:
+        """
+        Deserialize cached user data, converting ISO datetime strings back to datetime objects.
+        
+        Args:
+            cached_data: Dictionary from cache with ISO datetime strings
+            
+        Returns:
+            Dictionary with datetime objects suitable for User model
+        """
+        # Create a copy to avoid modifying the cached data
+        user_data = cached_data.copy()
+        
+        # Convert ISO datetime strings back to datetime objects
+        datetime_fields = ['created_at', 'updated_at', 'last_login']
+        for field in datetime_fields:
+            if field in user_data and user_data[field]:
+                try:
+                    user_data[field] = datetime.fromisoformat(user_data[field])
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to parse datetime field '{field}': {e}")
+                    user_data[field] = None
+        
+        return user_data
     
     async def _cache_user(self, user: User, ttl: int = USER_CACHE_TTL):
         """
@@ -192,10 +223,14 @@ class UserCache:
             self._stats["hits"] += 1
             logger.debug(f"Cache hit: user {user_id}")
             
+            # Deserialize cached data (converts ISO strings to datetime objects)
+            user_data = self._deserialize_user_data(cached_data)
+            
             # Reconstruct User object from cached data
             # Note: This is a detached object (not bound to session)
             # For auth purposes this is fine - we only need to read user data
-            user = User(**cached_data)
+            # The hashed_password field will be None (excluded for security)
+            user = User(**user_data)
             return user
         
         # Cache miss - query database
