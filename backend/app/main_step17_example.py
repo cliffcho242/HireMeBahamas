@@ -11,6 +11,14 @@ Key principles:
 - ONLY router imports and inclusion
 
 This structure makes the application modular, testable, and easy to maintain.
+
+Note: This is a minimal reference example. In production (see app/main.py), you would
+typically add:
+- Router prefixes (e.g., prefix="/api/auth")
+- Tags for API documentation
+- CORS middleware
+- Error handlers
+- Additional configuration
 """
 from fastapi import FastAPI
 from app.auth.routes import router as auth_router
