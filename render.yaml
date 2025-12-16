@@ -2,6 +2,23 @@
 # HireMeBahamas Backend - Render Deployment Configuration
 # ABSOLUTE REQUIREMENTS (PRODUCTION CONFIG)
 # =============================================================================
+#
+# 🚨 CRITICAL REQUIREMENT #1 (MOST IMPORTANT):
+# ============================================
+# In Render Dashboard, your service MUST be:
+#   ✅ Type: Web Service
+#   ✅ Runtime: Python
+#
+# ❌ NOT:
+#   - Background Worker
+#   - Private Service
+#   - Database
+#   - TCP Service
+#
+# ⚠️  You CANNOT change service type after creation!
+# If wrong type → DELETE and create NEW Web Service
+# See: RENDER_SERVICE_TYPE_VERIFICATION.md for detailed instructions
+# =============================================================================
 # 
 # ⚡ SINGLE BACKEND PLATFORM - RENDER ONLY:
 # - Frontend: Vercel (CDN, Edge, static & dynamic UI)
@@ -24,9 +41,15 @@
 # =============================================================================
 
 services:
-  - type: web
+  # ============================================================================
+  # SERVICE TYPE: WEB SERVICE (CRITICAL - DO NOT CHANGE)
+  # ============================================================================
+  # This MUST be "web" for the backend API to work correctly.
+  # If you see any other type in Render Dashboard, delete and recreate.
+  # ============================================================================
+  - type: web              # ✅ CONFIRMED: Web Service (REQUIRED)
     name: hiremebahamas-backend
-    runtime: python
+    runtime: python        # ✅ CONFIRMED: Python Runtime (REQUIRED)
     region: oregon
     
     # ==========================================================================

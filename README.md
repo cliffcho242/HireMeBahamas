@@ -37,11 +37,18 @@ Neon PostgreSQL (managed, scalable)
 
 ### 📖 Documentation
 - **[✅ CORRECT_STACK.md](./CORRECT_STACK.md)** - **START HERE**: Official stack definition and rationale
+- **[🚨 RENDER_SERVICE_TYPE_VERIFICATION.md](./RENDER_SERVICE_TYPE_VERIFICATION.md)** - **CRITICAL**: Verify your Render service is configured as Web Service
 - **[FINAL_SPEED_ARCHITECTURE.md](./FINAL_SPEED_ARCHITECTURE.md)** - Complete setup guide and deployment instructions
 - **[RENDER_DEPLOYMENT_CHECKLIST.md](./RENDER_DEPLOYMENT_CHECKLIST.md)** - Production deployment verification checklist
 - **[📖 ERROR_HANDLING_LOGGING_GUIDE.md](./ERROR_HANDLING_LOGGING_GUIDE.md)** - Central error handling and logging guide
 
 ⚠️ **Note**: Railway backend documentation in this repository is deprecated. Use **Render** for all new deployments.
+
+### 🔧 Validation Tools
+```bash
+# Verify Render configuration is correct
+python validate_render_service_type.py
+```
 
 ---
 
