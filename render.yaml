@@ -50,37 +50,39 @@ services:
       targetMemoryPercent: 85
     
     # ============================================================================
-    # BUILD COMMAND - Install dependencies
+    # BUILD COMMAND - Install dependencies with Poetry (STEP 18)
     # ============================================================================
-    buildCommand: pip install -r backend/requirements.txt
+    # Poetry provides deterministic builds with poetry.lock file
+    # Install production dependencies only (no dev dependencies)
+    buildCommand: pip install poetry && poetry install --only=main
     
     # ==========================================================================
-    # START COMMAND - FastAPI with Gunicorn (STEP 10 - SCALING TO 100K+ USERS)
+    # START COMMAND - STEP 18: Production Commands (Final)
     # ==========================================================================
-    # Gunicorn with Uvicorn workers optimized for 100K+ concurrent users
+    # Poetry-managed Gunicorn with configuration file
+    # - Poetry: Manages all Python dependencies consistently
     # - Gunicorn: Production WSGI server with worker management
-    # - Uvicorn workers: ASGI support for FastAPI async operations (NOT thread-based)
-    # - Workers: 4 (optimized for 100K+ users with Redis handling most requests)
+    # - Config file: gunicorn.conf.py contains all worker/timeout settings
+    # - Uvicorn workers: ASGI support for FastAPI async operations
+    # - Workers: 4 (defined in gunicorn.conf.py)
     # - Concurrency: Async event loop per worker (handles ~100+ connections per worker)
-    # - Total capacity: 400+ concurrent connections (4 workers × ~100+ async connections)
-    # - NO --preload: Safer for database apps (each worker loads independently)
-    # - Working directory is set to backend/ for consistent path resolution
     # 
-    # Expected Performance After Step 10:
+    # Benefits of using Poetry + config file:
+    # - Consistent dependency management across environments
+    # - Centralized configuration in gunicorn.conf.py
+    # - Easier to maintain and update settings
+    # - All worker, timeout, and performance settings in one place
+    # 
+    # Expected Performance:
     # - Feed: 20-60ms (with Redis caching)
     # - Auth: <50ms
     # - Health: <30ms
-    # - DB load: Very low (Redis handles most requests)
-    # - Concurrent capacity: 400+ connections (async event loop)
+    # - Concurrent capacity: 400+ connections (4 workers × async event loop)
     # - Supported users: 100K+ concurrent
     #
     # ⚠️ CRITICAL: This command is a SINGLE LINE with NO backslashes
-    # If you see "unrecognized arguments" error, check:
-    #   1. Command is on ONE line (no line breaks)
-    #   2. No backslashes (\) in the command
-    #   3. No extra text after the command
-    #   4. See FIX_RENDER_GUNICORN_ERROR.md for help
-    startCommand: cd backend && gunicorn app.main:app --workers ${WEB_CONCURRENCY:-4} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --log-level info
+    # Working directory: Changes to backend/ where app/main.py and gunicorn.conf.py are located
+    startCommand: cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py
     
     envVars:
       - key: ENVIRONMENT
