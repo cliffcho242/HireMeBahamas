@@ -100,7 +100,7 @@ def test_local_connection():
             print("Testing PostgreSQL connection...")
             import psycopg2
 
-            conn = psycopg2.connect(os.getenv("DATABASE_URL"), sslmode="require")
+            conn = psycopg2.connect(os.getenv("DATABASE_URL"))
             cursor = conn.cursor()
             cursor.execute("SELECT version()")
             version = cursor.fetchone()

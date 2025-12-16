@@ -163,7 +163,6 @@ if USE_POSTGRESQL:
         "database": parsed.path[1:],  # Remove leading '/'
         "user": parsed.username,
         "password": parsed.password,
-        "sslmode": "require",
     }
 else:
     # SQLite for local development
@@ -175,7 +174,7 @@ def get_db_connection():
     """Get database connection (PostgreSQL on Railway, SQLite locally)"""
     if USE_POSTGRESQL:
         conn = psycopg2.connect(
-            DATABASE_URL, sslmode="require", cursor_factory=RealDictCursor
+            DATABASE_URL, cursor_factory=RealDictCursor
         )
         return conn
     else:

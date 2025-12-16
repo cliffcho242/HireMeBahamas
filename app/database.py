@@ -24,7 +24,6 @@ def init_db():
             url,
             pool_pre_ping=True,
             pool_recycle=300,
-            connect_args={"sslmode": "require"},
         )
 
         logging.info("Database engine initialized successfully")
