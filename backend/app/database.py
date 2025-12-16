@@ -115,44 +115,46 @@ if DATABASE_URL.startswith("postgresql://"):
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
-parsed = urlparse(DATABASE_URL)
-missing_fields = []
-if not parsed.username:
-    missing_fields.append("username")
-if not parsed.password:
-    missing_fields.append("password")
-if not parsed.hostname:
-    missing_fields.append("hostname")
-if not parsed.port:
-    missing_fields.append("port (explicit port required, e.g., :5432)")
-if not parsed.path or len(parsed.path) <= 1:
-    # path should be /database_name, so length > 1
-    missing_fields.append("path")
+# Only validate if DATABASE_URL is actually configured (not placeholder)
+if DATABASE_URL and DATABASE_URL != DB_PLACEHOLDER_URL:
+    parsed = urlparse(DATABASE_URL)
+    missing_fields = []
+    if not parsed.username:
+        missing_fields.append("username")
+    if not parsed.password:
+        missing_fields.append("password")
+    if not parsed.hostname:
+        missing_fields.append("hostname")
+    if not parsed.port:
+        missing_fields.append("port (explicit port required, e.g., :5432)")
+    if not parsed.path or len(parsed.path) <= 1:
+        # path should be /database_name, so length > 1
+        missing_fields.append("path")
 
-if missing_fields:
-    # Production-safe: log warning instead of raising exception
-    # This allows the app to start for health checks and diagnostics
-    logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+    if missing_fields:
+        # Production-safe: log warning instead of raising exception
+        # This allows the app to start for health checks and diagnostics
+        logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
-# Additional validation for cloud deployment requirements
-if parsed.hostname:
-    hostname = parsed.hostname.lower()
-    # Reject localhost/127.0.0.1 which may cause Unix socket usage
-    if hostname in ('localhost', '127.0.0.1', '::1'):
+    # Additional validation for cloud deployment requirements
+    if parsed.hostname:
+        hostname = parsed.hostname.lower()
+        # Reject localhost/127.0.0.1 which may cause Unix socket usage
+        if hostname in ('localhost', '127.0.0.1', '::1'):
+            logger.warning(
+                f"⚠️  DATABASE_URL uses '{parsed.hostname}' which may cause socket usage. "
+                "For cloud deployments, use a remote database hostname. "
+                "Example: ep-xxxx.us-east-1.aws.neon.tech"
+            )
+
+    # Check for SSL mode requirement
+    query_params = parsed.query.lower() if parsed.query else ""
+    if 'sslmode=' not in query_params:
         logger.warning(
-            f"⚠️  DATABASE_URL uses '{parsed.hostname}' which may cause socket usage. "
-            "For cloud deployments, use a remote database hostname. "
-            "Example: ep-xxxx.us-east-1.aws.neon.tech"
+            "⚠️  DATABASE_URL missing sslmode parameter. "
+            "SSL is required for secure cloud database connections. "
+            "Add ?sslmode=require to your DATABASE_URL."
         )
-
-# Check for SSL mode requirement
-query_params = parsed.query.lower() if parsed.query else ""
-if 'sslmode=' not in query_params:
-    logger.warning(
-        "⚠️  DATABASE_URL missing sslmode parameter. "
-        "SSL is required for secure cloud database connections. "
-        "Add ?sslmode=require to your DATABASE_URL."
-    )
 
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:
@@ -357,6 +359,7 @@ def get_engine():
                             # The "ssl": _get_ssl_context() provides the actual TLS 1.3 SSL configuration
                         }
                     )
+                    logger.info("✅ Database engine initialized successfully")
                     logger.info(
                         f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
                         f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
