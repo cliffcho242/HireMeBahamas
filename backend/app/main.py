@@ -128,12 +128,17 @@ for _module_name in _schema_modules:
 
 # Import APIs (with nuclear safety net)
 try:
-    from .api import auth, hireme, jobs, messages, notifications, posts, profile_pictures, reviews, upload, users
+    from .api import hireme, jobs, messages, notifications, profile_pictures, reviews, upload
+    # Import new Facebook-style modular routers
+    from .auth import routes as auth_routes
+    from .users import routes as users_routes
+    from .feed import routes as feed_routes
+    from .health import router as health_router
     print("✅ API routers imported successfully")
 except Exception as e:
     print(f"API router import failed: {e}")
-    auth = hireme = jobs = messages = notifications = None
-    posts = profile_pictures = reviews = upload = users = None
+    auth_routes = hireme = jobs = messages = notifications = None
+    feed_routes = profile_pictures = reviews = upload = users_routes = health_router = None
 
 try:
     from .database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
@@ -758,8 +763,15 @@ async def get_metrics():
 
 
 # Include routers with /api prefix to match frontend expectations (with safety checks)
-if auth is not None:
-    app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+# New Facebook-style modular routers
+if auth_routes is not None:
+    app.include_router(auth_routes.router, prefix="/api/auth", tags=["authentication"])
+if users_routes is not None:
+    app.include_router(users_routes.router, prefix="/api/users", tags=["users"])
+if feed_routes is not None:
+    app.include_router(feed_routes.router, prefix="/api/posts", tags=["posts", "feed"])
+
+# Legacy API routers (will be migrated gradually)
 if hireme is not None:
     app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
 if jobs is not None:
@@ -768,16 +780,16 @@ if messages is not None:
     app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
 if notifications is not None:
     app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
-if posts is not None:
-    app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 if profile_pictures is not None:
     app.include_router(profile_pictures.router, prefix="/api/profile-pictures", tags=["profile-pictures"])
 if reviews is not None:
     app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
 if upload is not None:
     app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
-if users is not None:
-    app.include_router(users.router, prefix="/api/users", tags=["users"])
+
+# Include health check router (no prefix as it provides /health, /ready endpoints)
+if health_router is not None:
+    app.include_router(health_router, tags=["health"])
 
 # Include GraphQL router (if available)
 if HAS_GRAPHQL:
@@ -801,46 +813,14 @@ sio = socketio.AsyncServer(
 # Create Socket.IO ASGI app
 socket_app = socketio.ASGIApp(sio, app)
 
-
-# Socket.IO event handlers
-@sio.event
-async def connect(sid, environ, auth_data):
-    """Handle client connection"""
-    logger.info(f"Client connected: {sid}")
-    await sio.emit('connected', {'sid': sid}, room=sid)
-
-
-@sio.event
-async def disconnect(sid):
-    """Handle client disconnection"""
-    logger.info(f"Client disconnected: {sid}")
-
-
-@sio.event
-async def join_conversation(sid, data):
-    """Join a conversation room"""
-    conversation_id = data.get('conversation_id')
-    if conversation_id:
-        await sio.enter_room(sid, f"conversation_{conversation_id}")
-        logger.info(f"Client {sid} joined conversation {conversation_id}")
-
-
-@sio.event
-async def leave_conversation(sid, data):
-    """Leave a conversation room"""
-    conversation_id = data.get('conversation_id')
-    if conversation_id:
-        await sio.leave_room(sid, f"conversation_{conversation_id}")
-        logger.info(f"Client {sid} left conversation {conversation_id}")
-
-
-@sio.event
-async def typing(sid, data):
-    """Handle typing indicator"""
-    conversation_id = data.get('conversation_id')
-    is_typing = data.get('is_typing')
-    if conversation_id:
-        await sio.emit('typing', data, room=f"conversation_{conversation_id}", skip_sid=sid)
+# Set up Socket.IO event handlers using the new realtime module
+try:
+    from .realtime.websocket import setup_socket_handlers
+    socket_manager = setup_socket_handlers(sio)
+    logger.info("✅ WebSocket handlers registered via realtime module")
+except Exception as e:
+    logger.warning(f"⚠️  WebSocket handlers registration failed (non-critical): {e}")
+    socket_manager = None
 
 
 # Root endpoint
