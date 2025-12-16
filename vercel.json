@@ -1,5 +1,4 @@
 {
-  "_comment": "Force deployment trigger - 2025-12-16T18:04:40.720Z",
   "version": 2,
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
@@ -29,11 +28,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.py"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "https://hire-me-bahamas.onrender.com/api/$1"
     }
   ],
   "headers": [
