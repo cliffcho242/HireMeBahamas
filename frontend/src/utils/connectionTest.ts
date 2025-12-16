@@ -126,8 +126,9 @@ export function getCurrentApiUrl(): string {
     return window.location.origin;
   }
   
-  // Fallback for non-browser environments (should not be reached)
-  return 'http://localhost:8000';
+  // ❌ SECURITY: No HTTP fallback allowed in production
+  // SSR/build environments must use VITE_API_URL environment variable
+  throw new Error('VITE_API_URL environment variable is required. Frontend URLs must be absolute, public, and start with https://');
 }
 
 /**

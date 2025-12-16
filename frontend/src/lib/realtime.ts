@@ -25,8 +25,9 @@ if (ENV_API) {
   // If running in browser and no explicit env override, use same-origin (for Vercel serverless)
   SOCKET_URL = window.location.origin;
 } else {
-  // Fallback for SSR or build-time (should not be reached in normal operation)
-  SOCKET_URL = 'http://localhost:8000';
+  // ❌ SECURITY: No HTTP fallback allowed in production
+  // SSR/build environments must use VITE_SOCKET_URL or VITE_API_URL environment variable
+  throw new Error('VITE_SOCKET_URL or VITE_API_URL environment variable is required. Frontend URLs must be absolute, public, and start with https://');
 }
 const RECONNECT_DELAY_BASE = 1000;
 const MAX_RECONNECT_DELAY = 30000;

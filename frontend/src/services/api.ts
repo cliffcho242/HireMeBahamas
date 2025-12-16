@@ -79,8 +79,9 @@ if (ENV_API) {
     console.log('🌐 Using same-origin API (Vercel serverless):', API_BASE_URL);
   }
 } else {
-  // Fallback for SSR or build-time (should not be reached in normal operation)
-  API_BASE_URL = 'http://localhost:8000';
+  // ❌ SECURITY: No HTTP fallback allowed in production
+  // SSR/build environments must use VITE_API_URL environment variable
+  throw new Error('VITE_API_URL environment variable is required. Frontend URLs must be absolute, public, and start with https://');
 }
 
 // Export API constant for use in fetch calls

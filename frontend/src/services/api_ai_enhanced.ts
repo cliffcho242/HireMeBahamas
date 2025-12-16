@@ -26,8 +26,9 @@ const getBackendUrl = (): string => {
     return window.location.origin;
   }
   
-  // Fallback for SSR or build-time (should not be reached in normal operation)
-  return 'http://localhost:8000';
+  // ❌ SECURITY: No HTTP fallback allowed in production
+  // SSR/build environments must use VITE_API_URL environment variable
+  throw new Error('VITE_API_URL environment variable is required. Frontend URLs must be absolute, public, and start with https://');
 };
 
 // AI Error Prevention: Multiple backend endpoints for redundancy
@@ -35,8 +36,9 @@ const BACKEND_ENDPOINTS = (() => {
   const primary = getBackendUrl();
   const endpoints = [primary];
   
-  // Note: No localhost fallbacks - use VITE_API_URL env var for local development
+  // ✅ SECURITY: No localhost fallbacks - use VITE_API_URL env var for local development
   // This prevents production deployments from trying to connect to localhost
+  // Frontend URLs must be absolute, public, and start with https://
   
   return endpoints;
 })();
