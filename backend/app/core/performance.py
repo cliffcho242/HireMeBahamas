@@ -107,7 +107,7 @@ async def create_performance_indexes():
     try:
         engine = get_engine()
         if engine is None:
-            logger.warning("Cannot create performance indexes: database engine not available")
+            logger.debug("Cannot create performance indexes: database engine not available")
             return False
         async with engine.begin() as conn:
             for idx in DATABASE_INDEXES:
@@ -181,7 +181,7 @@ async def warmup_database_connections():
     try:
         engine = get_engine()
         if engine is None:
-            logger.warning("Cannot warm up database connections: database engine not available")
+            logger.debug("Cannot warm up database connections: database engine not available")
             return False
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
