@@ -505,7 +505,7 @@ async def lazy_import_heavy_stuff():
     
     This prevents ALL database connections until first actual database request.
     
-    ⚡ SIGTERM FIX: Entire startup wrapped in {TOTAL_STARTUP_TIMEOUT}s timeout to prevent worker hangs
+    ⚡ SIGTERM FIX: Entire startup wrapped in 20s timeout to prevent worker hangs
     """
     startup_start = time.time()
     logger.info("Starting HireMeBahamas API initialization (NO database connections)...")
@@ -581,7 +581,7 @@ async def lazy_import_heavy_stuff():
         logger.error(f"⚠️  CRITICAL: Startup timed out after {TOTAL_STARTUP_TIMEOUT}s!")
         logger.error(f"   Worker may receive SIGTERM if this happens repeatedly")
         logger.error(f"   Time elapsed: {startup_duration:.2f}s")
-        logger.error(f"   This should not happen with current timeouts (3 × {STARTUP_OPERATION_TIMEOUT}s = {3 * STARTUP_OPERATION_TIMEOUT}s max)")
+        logger.error(f"   Individual operation timeout: {STARTUP_OPERATION_TIMEOUT}s each")
         logger.error(f"   If you see this message, check for:")
         logger.error(f"   - Slow network connections to Redis/external services")
         logger.error(f"   - Platform resource constraints (CPU/memory)")
