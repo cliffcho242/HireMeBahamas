@@ -237,4 +237,4 @@ async def run_all_performance_optimizations():
         # Log error but don't crash the application
         # Performance optimizations are important but not critical for startup
         logger.warning(f"Performance optimizations failed (non-critical): {e}")
-        logger.debug(f"Full traceback:", exc_info=True)
+        logger.debug('Full traceback:', exc_info=True)

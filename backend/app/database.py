@@ -60,6 +60,26 @@ DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@localhost:543
 # Check if we're in production mode
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
+def _get_fallback_database_url(reason: str) -> str:
+    """Get fallback DATABASE_URL based on environment.
+    
+    Args:
+        reason: Reason for using fallback (for logging)
+        
+    Returns:
+        Fallback database URL (placeholder for production, local dev for development)
+    """
+    if ENVIRONMENT == "production":
+        # Production-safe: log warning instead of raising exception
+        # This allows the app to start for health checks and diagnostics
+        logger.warning(f"DATABASE_URL {reason}, using placeholder")
+        # Use a placeholder to prevent crashes, connections will fail gracefully
+        return DB_PLACEHOLDER_URL
+    else:
+        # Use local development default only in development mode
+        logger.warning(f"DATABASE_URL {reason}, using default local development database URL")
+        return "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+
 # Get database URL with proper fallback
 # Priority order as per configuration requirements:
 # 1. DATABASE_URL (primary connection URL)
@@ -71,16 +91,7 @@ DATABASE_URL = os.getenv('DATABASE_URL') or \
 
 # For local development only - require explicit configuration in production
 if not DATABASE_URL:
-    if ENVIRONMENT == "production":
-        # Production-safe: log warning instead of raising exception
-        # This allows the app to start for health checks and diagnostics
-        logger.warning("DATABASE_URL must be set in production")
-        # Use a placeholder to prevent crashes, connections will fail gracefully
-        DATABASE_URL = DB_PLACEHOLDER_URL
-    else:
-        # Use local development default only in development mode
-        DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
-        logger.warning("Using default local development database URL. Set DATABASE_URL for production.")
+    DATABASE_URL = _get_fallback_database_url("not set")
 
 # Strip whitespace to prevent connection errors from misconfigured environment variables
 DATABASE_URL = DATABASE_URL.strip()
@@ -88,16 +99,7 @@ DATABASE_URL = DATABASE_URL.strip()
 # Check if DATABASE_URL is empty after stripping (whitespace-only string)
 # If so, treat it as if it wasn't set at all
 if not DATABASE_URL:
-    if ENVIRONMENT == "production":
-        # Production-safe: log warning instead of raising exception
-        # This allows the app to start for health checks and diagnostics
-        logger.warning("DATABASE_URL is empty (whitespace-only), using placeholder")
-        # Use a placeholder to prevent crashes, connections will fail gracefully
-        DATABASE_URL = DB_PLACEHOLDER_URL
-    else:
-        # Use local development default only in development mode
-        DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
-        logger.warning("DATABASE_URL is empty (whitespace-only), using default local development database URL")
+    DATABASE_URL = _get_fallback_database_url("is empty (whitespace-only)")
 
 # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
 # This handles cases where the 'p' is missing from "postgresql"
