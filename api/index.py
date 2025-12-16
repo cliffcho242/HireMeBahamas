@@ -642,7 +642,7 @@ def health_ping():
     ❌ No disk access
     Target latency: < 30ms
     """
-    return {"status": "ok"}
+    return {"ok": True}
 
 @app.get("/status")
 async def status():

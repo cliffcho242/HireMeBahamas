@@ -75,7 +75,7 @@ def test_api_index_health_endpoint():
                 stripped = line.strip()
                 if stripped.startswith('#') or stripped.startswith('"""') or stripped.startswith("'''"):
                     continue
-                if keyword in line.lower() and not line.strip().startswith('#'):
+                if keyword in line.lower():
                     print(f"⚠️  WARNING: Keyword '{keyword}' found in health function (may indicate DB access)")
     
     print("✅ PASS: No obvious database access in health endpoint")
