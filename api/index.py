@@ -619,17 +619,19 @@ async def get_user_from_db(user_id: int):
 # Note: Vercel's rewrite rule routes /api/* to /api/index.py
 # So FastAPI only sees the path AFTER /api/, meaning /api/health becomes /health
 @app.get("/health", include_in_schema=False)
-@app.head("/health", include_in_schema=False)
-async def health():
+def health():
     """Instant health check - responds in <5ms
     
-    This endpoint always returns {"status": "ok"} to fulfill the requirement
-    that apps must boot without the database. Database connectivity is NOT
-    checked by this endpoint.
+    This endpoint always returns {"ok": True} as required by Render.
+    This endpoint does NOT check database connectivity.
     
-    ✅ CRITICAL: Does NOT touch the database to ensure instant response.
+    ✅ NO DATABASE - instant response
+    ✅ NO IO - instant response  
+    ✅ NO async/await - synchronous function
+    
+    Render kills apps that fail health checks, so this must be instant.
     """
-    return {"status": "ok"}
+    return {"ok": True}
 
 @app.get("/health/ping", include_in_schema=False)
 def health_ping():

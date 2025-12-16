@@ -38,7 +38,6 @@ app = FastAPI(
 
 # IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
 @app.get("/health", include_in_schema=False)
-@app.head("/health", include_in_schema=False)
 def health():
     """Instant health check - no database dependency.
     
@@ -47,9 +46,13 @@ def health():
     
     Use /ready for database connectivity check.
     
-    ✅ CRITICAL: Does NOT touch the database to ensure instant response.
+    ✅ NO DATABASE - instant response
+    ✅ NO IO - instant response
+    ✅ NO async/await - synchronous function
+    
+    Render kills apps that fail health checks, so this must be instant.
     """
-    return {"status": "ok"}
+    return {"ok": True}
 
 
 # LIVENESS PROBE — Kubernetes/Render liveness check
