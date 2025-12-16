@@ -473,6 +473,57 @@ app.add_middleware(
 )
 
 # ============================================================================
+# CACHE CONTROL MIDDLEWARE
+# ============================================================================
+# Cache control configuration for different endpoint patterns
+CACHE_CONTROL_RULES = {
+    # Public endpoints - cacheable for 30 seconds
+    "/health": {"GET": "public, max-age=30"},
+    "/health/ping": {"GET": "public, max-age=30"},
+    "/status": {"GET": "public, max-age=30"},
+    "/ready": {"GET": "public, max-age=30"},
+    "/": {"GET": "public, max-age=30"},
+    # API endpoints with authentication - shorter cache
+    "/auth/me": {"GET": "private, max-age=30"},
+    # Default for other GET endpoints
+    "*": {"GET": "public, max-age=30"},
+}
+
+
+@app.middleware("http")
+async def add_cache_headers(request: Request, call_next):
+    """Add Cache-Control headers to API responses for browser caching.
+    
+    Implements HTTP caching with Cache-Control: public, max-age=30 for public endpoints.
+    This improves performance by allowing browsers and CDNs to cache responses for 30 seconds.
+    """
+    response = await call_next(request)
+    
+    # Only add cache headers to successful GET requests
+    if request.method == "GET" and 200 <= response.status_code < 300:
+        path = request.url.path
+        
+        # Don't override if already set by endpoint
+        if "cache-control" not in response.headers:
+            cache_control = None
+            
+            # Check if this path matches any specific cache rules
+            for pattern, methods in CACHE_CONTROL_RULES.items():
+                if pattern == "*":
+                    # Default rule, apply if no other matches
+                    if request.method in methods and cache_control is None:
+                        cache_control = methods[request.method]
+                elif path.startswith(pattern) and request.method in methods:
+                    cache_control = methods[request.method]
+                    break
+            
+            # Apply the cache control header
+            if cache_control:
+                response.headers["Cache-Control"] = cache_control
+    
+    return response
+
+# ============================================================================
 # MIDDLEWARE - Request Logging with Enhanced Auth Tracking
 # ============================================================================
 @app.middleware("http")

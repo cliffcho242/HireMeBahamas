@@ -324,29 +324,47 @@ CACHE_CONTROL_RULES = {
     "/api/jobs": {"GET": "public, max-age=60, stale-while-revalidate=120"},
     "/api/posts": {"GET": "private, max-age=30, stale-while-revalidate=60"},
     "/api/jobs/stats": {"GET": "public, max-age=300, stale-while-revalidate=600"},
-    # Health endpoints - ping is ultra-fast, no caching needed
-    "/health/ping": {"GET": "no-cache"},
-    "/health": {"GET": "public, max-age=10"},
+    # Health endpoints with standard 30-second cache
+    "/health/ping": {"GET": "public, max-age=30"},
+    "/health": {"GET": "public, max-age=30"},
+    "/live": {"GET": "public, max-age=30"},
+    "/ready": {"GET": "public, max-age=30"},
+    # Default for public GET endpoints
+    "*": {"GET": "public, max-age=30"},
 }
 
 
 # Add cache control middleware
 @app.middleware("http")
 async def add_cache_headers(request: Request, call_next):
-    """Add Cache-Control headers to API responses for browser caching."""
+    """Add Cache-Control headers to API responses for browser caching.
+    
+    Implements HTTP caching with Cache-Control: public, max-age=30 for public endpoints.
+    This improves performance by allowing browsers and CDNs to cache responses for 30 seconds.
+    """
     response = await call_next(request)
     
     # Only add cache headers to successful GET requests
     if request.method == "GET" and 200 <= response.status_code < 300:
         path = request.url.path
         
-        # Check if this path matches any cache rules
-        for pattern, methods in CACHE_CONTROL_RULES.items():
-            if path.startswith(pattern) and request.method in methods:
-                # Don't override if already set
-                if "cache-control" not in response.headers:
-                    response.headers["Cache-Control"] = methods[request.method]
-                break
+        # Don't override if already set by endpoint
+        if "cache-control" not in response.headers:
+            cache_control = None
+            
+            # Check if this path matches any specific cache rules
+            for pattern, methods in CACHE_CONTROL_RULES.items():
+                if pattern == "*":
+                    # Default rule, apply if no other matches
+                    if request.method in methods and cache_control is None:
+                        cache_control = methods[request.method]
+                elif path.startswith(pattern) and request.method in methods:
+                    cache_control = methods[request.method]
+                    break
+            
+            # Apply the cache control header
+            if cache_control:
+                response.headers["Cache-Control"] = cache_control
     
     return response
 
