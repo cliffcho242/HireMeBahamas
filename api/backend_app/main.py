@@ -90,7 +90,7 @@ if 'app' not in sys.modules:
     inject_typing_exports(backend_app.api)
     
     # Dynamically alias all api submodules to handle all "from app.api.X" imports
-    _api_modules = ['analytics', 'auth', 'debug', 'feed', 'hireme', 'jobs', 'messages', 
+    _api_modules = ['analytics', 'auth', 'debug', 'feed', 'health', 'hireme', 'jobs', 'messages', 
                     'notifications', 'posts', 'profile_pictures', 'reviews', 'upload', 'users']
     for _module_name in _api_modules:
         try:

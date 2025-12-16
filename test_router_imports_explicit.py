@@ -20,7 +20,12 @@ print("="*70)
 # Test 1: Verify main.py syntax is valid
 print("\n1. Verify main.py syntax...")
 try:
-    with open(os.path.join(repo_root, 'api', 'backend_app', 'main.py'), 'r') as f:
+    main_py_path = os.path.join(repo_root, 'api', 'backend_app', 'main.py')
+    if not os.path.exists(main_py_path):
+        print(f"   ✗ FAILED: main.py not found at {main_py_path}")
+        sys.exit(1)
+    
+    with open(main_py_path, 'r') as f:
         code = f.read()
     ast.parse(code)
     print("   ✓ main.py syntax is valid")
