@@ -89,52 +89,36 @@ def test_index_no_fallback_engine():
         print("❌ get_db_engine() function not found in index.py")
         return False
     
-    # Extract the get_db_engine function
-    lines = content.split('\n')
-    func_start = None
-    func_end = None
-    indent_level = None
+    # Check the entire file for problematic patterns
+    # We don't need to extract just the function - if create_async_engine
+    # appears anywhere in get_db_engine's context, that's a problem
+    func_content = content
     
-    for i, line in enumerate(lines):
-        if "def get_db_engine():" in line:
-            func_start = i
-            # Get the indentation level of the function
-            indent_level = len(line) - len(line.lstrip())
-        elif func_start is not None and line.strip() and not line.startswith(' ' * (indent_level + 1)):
-            # Found a line that's not indented more than the function - end of function
-            if i > func_start + 5:  # Make sure we captured some function body
-                func_end = i
-                break
+    # Primary check: Look for engine creation in get_db_engine function context
+    # Split into sections to check the relevant function
+    func_sections = content.split('def get_db_engine():')
     
-    if func_start is None:
+    if len(func_sections) < 2:
         print("❌ Could not find get_db_engine function")
         return False
     
-    # Use end of file if function goes to the end
-    if func_end is None:
-        func_end = len(lines)
+    # Get the function body (everything after the function definition until the next function or end)
+    func_body = func_sections[1].split('\ndef ')[0]  # Get until next function def
     
-    func_content = '\n'.join(lines[func_start:func_end])
-    
-    # Check for problematic patterns in the function
-    has_create_engine = "create_async_engine" in func_content
+    # Check for problematic patterns in the function body
+    has_create_engine = "create_async_engine" in func_body
     
     if has_create_engine:
         print("❌ api/index.py still creates its own database engine (dual path issue)")
         return False
     
-    # Check for the proper comment about no fallback
-    if "NO FALLBACK" in func_content or "no fallback" in func_content.lower():
-        print("✅ api/index.py does NOT create fallback database engine")
+    # Check that it uses backend_app.database
+    if "from backend_app.database import" in func_body:
+        print("✅ api/index.py uses backend_app.database (no dual path)")
         return True
     else:
-        # If it doesn't create an engine and imports from backend_app, that's also good
-        if "from backend_app.database import" in func_content:
-            print("✅ api/index.py uses backend_app.database (no fallback)")
-            return True
-        else:
-            print("⚠️  Could not verify no-fallback pattern, but no engine creation detected")
-            return True
+        print("⚠️  Could not find backend_app.database import in get_db_engine")
+        return False
 
 
 def test_cron_health_no_database():
