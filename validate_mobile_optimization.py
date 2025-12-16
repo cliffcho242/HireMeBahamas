@@ -53,7 +53,9 @@ def main():
     print("=" * 70)
     print()
     
-    base_path = "/home/runner/work/HireMeBahamas/HireMeBahamas"
+    # Get the base path (script directory parent, or use environment variable if available)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    base_path = os.getenv("GITHUB_WORKSPACE", script_dir)
     backend_path = os.path.join(base_path, "backend")
     
     all_checks_passed = True

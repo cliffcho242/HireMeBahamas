@@ -11,7 +11,8 @@ Use cases:
 - Data aggregation
 - Cleanup operations
 
-DO NOT use this module for operations that block user requests.
+DO NOT use this module for operations that require the user to wait for completion
+or for synchronous operations that affect the API response.
 All tasks should be fast, async, and non-critical to the immediate response.
 """
 import logging

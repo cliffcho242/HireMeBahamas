@@ -529,10 +529,8 @@ async def like_post(
     Mobile Optimization: Returns immediately while push notifications
     are sent asynchronously in the background (DO NOT BLOCK REQUEST).
     """
-    # Check if post exists and get owner info
-    result = await db.execute(
-        select(Post).options(selectinload(Post.user)).where(Post.id == post_id)
-    )
+    # Check if post exists - load user only if needed for notifications
+    result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
 
     if not post:
@@ -563,10 +561,16 @@ async def like_post(
         # ✅ BACKGROUND TASK: Send push notification to post owner (DO NOT BLOCK REQUEST)
         # Only notify if liking (not unliking) and not liking own post
         if post.user_id != current_user.id:
+            # Load user info for notification (only when needed)
+            user_result = await db.execute(
+                select(User).where(User.id == current_user.id)
+            )
+            user = user_result.scalar_one()
+            
             background_tasks.add_task(
                 notify_new_like_task,
                 liker_id=current_user.id,
-                liker_name=f"{current_user.first_name} {current_user.last_name}",
+                liker_name=f"{user.first_name} {user.last_name}",
                 post_owner_id=post.user_id,
                 post_id=post_id
             )
@@ -648,10 +652,8 @@ async def create_comment(
     Mobile Optimization: Returns immediately while push notifications
     are sent asynchronously in the background (DO NOT BLOCK REQUEST).
     """
-    # Check if post exists and get owner info
-    result = await db.execute(
-        select(Post).options(selectinload(Post.user)).where(Post.id == post_id)
-    )
+    # Check if post exists
+    result = await db.execute(select(Post).where(Post.id == post_id))
     post = result.scalar_one_or_none()
 
     if not post:
