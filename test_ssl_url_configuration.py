@@ -44,9 +44,9 @@ def test_backend_app_database():
     print("✅ backend/app/database.py: All checks passed!\n")
 
 
-def test_backend_app_core_database():
-    """Test backend/app/core/database.py configuration (DEPRECATED - file removed)."""
-    print("Testing backend/app/core/database.py...")
+def test_duplicate_database_module_removed():
+    """Verify that duplicate backend/app/core/database.py was removed during consolidation."""
+    print("Verifying duplicate database module removed...")
     
     filepath = project_root / "backend" / "app" / "core" / "database.py"
     
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     
     try:
         test_backend_app_database()
-        test_backend_app_core_database()
+        test_duplicate_database_module_removed()
         test_api_backend_app_database()
         test_engine_configuration_pattern()
         
