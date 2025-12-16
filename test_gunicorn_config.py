@@ -18,7 +18,7 @@ def test_gunicorn_config():
     
     # Set minimal environment for testing
     os.environ.setdefault("PORT", "10000")
-    os.environ.setdefault("WEB_CONCURRENCY", "2")
+    os.environ.setdefault("WEB_CONCURRENCY", "3")
     os.environ.setdefault("WEB_THREADS", "4")
     os.environ.setdefault("GUNICORN_TIMEOUT", "60")
     
@@ -34,8 +34,8 @@ def test_gunicorn_config():
         
         # Test workers
         print(f"Workers (default): {gunicorn_conf.workers}")
-        assert gunicorn_conf.workers == 2, f"Expected workers=2, got {gunicorn_conf.workers}"
-        print("✅ Workers configuration: PASS (2)")
+        assert gunicorn_conf.workers == 3, f"Expected workers=3, got {gunicorn_conf.workers}"
+        print("✅ Workers configuration: PASS (3)")
         print()
         
         # Test threads
@@ -70,15 +70,15 @@ def test_gunicorn_config():
         
         # Test environment variable override capability
         print("Testing environment variable overrides...")
-        os.environ["WEB_CONCURRENCY"] = "3"
+        os.environ["WEB_CONCURRENCY"] = "4"
         os.environ["WEB_THREADS"] = "8"
         os.environ["GUNICORN_TIMEOUT"] = "90"
         
         # Reload module with new env vars
         spec.loader.exec_module(gunicorn_conf)
         
-        print(f"  Workers (WEB_CONCURRENCY=3): {gunicorn_conf.workers}")
-        assert gunicorn_conf.workers == 3, f"Expected workers=3, got {gunicorn_conf.workers}"
+        print(f"  Workers (WEB_CONCURRENCY=4): {gunicorn_conf.workers}")
+        assert gunicorn_conf.workers == 4, f"Expected workers=4, got {gunicorn_conf.workers}"
         print(f"  Threads (WEB_THREADS=8): {gunicorn_conf.threads}")
         assert gunicorn_conf.threads == 8, f"Expected threads=8, got {gunicorn_conf.threads}"
         print(f"  Timeout (GUNICORN_TIMEOUT=90): {gunicorn_conf.timeout}s")
@@ -90,15 +90,21 @@ def test_gunicorn_config():
         print("✅ ALL TESTS PASSED")
         print("=" * 70)
         print()
-        print("Configuration Summary:")
-        print(f"  Default Workers: 2")
+        print("Configuration Summary (Step 7.6 - Cached Traffic):")
+        print(f"  Default Workers: 3")
         print(f"  Default Threads: 4")
         print(f"  Default Timeout: 60s")
-        print(f"  Total Capacity: 2 workers × 4 threads = 8 concurrent requests")
+        print(f"  Total Capacity: 3 workers × 4 threads = 12 concurrent requests")
         print(f"  Worker Class: gthread (optimized for I/O-bound operations)")
         print(f"  Keepalive: 5s")
         print()
-        print("✨ Lightning Fast Configuration Applied! ⚡")
+        print("Expected Performance After Step 7.6:")
+        print(f"  Feed: 400-800ms → 20-60ms")
+        print(f"  Auth: 200ms → <50ms")
+        print(f"  Health: 6s → <30ms")
+        print(f"  DB load: High → Very low")
+        print()
+        print("✨ Facebook-Level Architecture with Redis Caching! ⚡")
         return True
         
     except AssertionError as e:

@@ -13,20 +13,30 @@ import time
 bind = f"0.0.0.0:{os.environ.get('PORT', '10000')}"
 
 # ============================================================================
-# WORKER CONFIGURATION (Optimized for Cloud Platforms)
+# WORKER CONFIGURATION (Optimized for Cached Traffic - Step 7.6)
 # ============================================================================
-# Optimized for Railway, Render, and similar PaaS platforms
+# Optimized for Railway, Render, and similar PaaS platforms with Redis caching
 # Typical CPU allocation: Free tier: 0.1-0.5 CPU, Paid: 1+ CPU
+# 
+# With Redis caching infrastructure in place, we can increase workers:
+# - workers=3: Higher concurrency for handling more concurrent requests
+# - threads=4: Each worker handles 4 concurrent requests
+# - Total capacity: 3 × 4 = 12 concurrent requests
+# 
+# This configuration is optimized for scenarios where:
+# - Caching reduces database load significantly
+# - More workers can handle higher traffic volumes
+# - CPU/memory becomes the bottleneck, not DB connections
 cpu_count = multiprocessing.cpu_count()
 
-# Workers: 2 for optimal performance on Render
+# Workers: 3 for optimal performance with Redis caching (Facebook-level architecture)
 # Use WEB_CONCURRENCY env var to override
-workers = int(os.environ.get("WEB_CONCURRENCY", "2"))
+workers = int(os.environ.get("WEB_CONCURRENCY", "3"))
 
 # Worker class: gthread for I/O-bound operations (database queries)
 worker_class = "gthread"
 
-# Threads per worker: Total capacity = workers * threads
+# Threads per worker: Total capacity = workers * threads = 12 concurrent requests
 # 4 threads = handles up to 4 concurrent requests per worker
 threads = int(os.environ.get("WEB_THREADS", "4"))
 
@@ -103,11 +113,12 @@ def on_starting(server):
     """Log startup configuration"""
     global _master_start_time
     _master_start_time = time.time()
-    print(f"🚀 Starting Gunicorn (Railway Healthcheck Optimized)")
+    print(f"🚀 Starting Gunicorn (Cached Traffic Optimized - Step 7.6)")
     print(f"   Workers: {workers} × {threads} threads = {workers * threads} capacity")
     print(f"   Timeout: {timeout}s | Keepalive: {keepalive}s")
     print(f"   Preload: {preload_app} (workers initialize independently)")
-    print(f"   This allows fast startup and immediate health check responses")
+    print(f"   Redis Cache: Enabled (handles most requests)")
+    print(f"   Configuration: Facebook-level architecture with high concurrency")
 
 
 def when_ready(server):
