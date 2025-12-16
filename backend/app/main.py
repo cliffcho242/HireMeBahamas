@@ -712,12 +712,16 @@ async def cache_health():
 
 # API health check endpoint (simple status check)
 @app.get("/api/health")
-async def api_health():
-    """Simple API health check endpoint
+def api_health():
+    """Instant API health check - no database dependency.
     
-    Returns a simple status response for basic health verification.
+    ✅ NO DATABASE - instant response
+    ✅ NO IO - instant response
+    ✅ NO async/await - synchronous function
+    
+    Render kills apps that fail health checks, so this must be instant.
     """
-    return {"status": "ok"}
+    return {"ok": True}
 
 
 # Detailed health check endpoint for monitoring
