@@ -2,7 +2,8 @@
 # DATABASE ENGINE CONFIGURATION - CORRECT & PORTABLE (Dec 2025)
 # =============================================================================
 #
-# ✅ RULE: For PostgreSQL + SQLAlchemy, SSL belongs in the URL — NOT in connect_args
+# ✅ RULE: For PostgreSQL + SQLAlchemy with asyncpg, SSL belongs in the URL — NOT in connect_args
+# (This rule applies specifically to asyncpg. Other drivers may differ.)
 #
 # This configuration works on:
 # - Render
@@ -261,6 +262,8 @@ def get_engine():
                         
                         # asyncpg-specific connection arguments
                         # NOTE: SSL is configured via DATABASE_URL query string (?sslmode=require), NOT here
+                        # If sslmode is not specified in the URL, asyncpg defaults to 'prefer' (secure if available, unencrypted if not)
+                        # For cloud deployments, always use ?sslmode=require to enforce encrypted connections
                         connect_args={
                             # Connection timeout (5s for Railway cold starts)
                             "timeout": CONNECT_TIMEOUT,
