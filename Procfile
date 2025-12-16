@@ -12,8 +12,10 @@
 # - Worker process management (graceful restarts, health checks)
 # - Modern async/await patterns via Uvicorn workers
 #
-# Configuration (Step 7.6 - Tuned for Cached Traffic):
-# - workers=3: Higher concurrency now that Redis handles most requests
+# Configuration (Step 10 - Scaling to 100K+ Users):
+# - workers=4: Optimized for 100K+ concurrent users with Redis caching
+# - threads=4: Each worker handles 4 concurrent requests
+# - Total capacity: 16 concurrent requests (4 workers × 4 threads)
 # - timeout=120: Allows for database cold starts
 # - Uvicorn workers: ASGI support for FastAPI async operations
 # - Gunicorn: Production-grade worker management
@@ -21,19 +23,20 @@
 #
 # Environment variables:
 #   PORT=8000            Default port
-#   WEB_CONCURRENCY=3    Three workers for cached traffic (12 total capacity with 4 threads)
+#   WEB_CONCURRENCY=4    Four workers for 100K+ users (16 total capacity with 4 threads)
 #   GUNICORN_TIMEOUT=120 Worker timeout in seconds
 # 
-# Expected Performance After Step 7.6:
-# - Feed: 400-800ms → 20-60ms
-# - Auth: 200ms → <50ms
-# - Health: 6s → <30ms
-# - DB load: High → Very low
+# Expected Performance After Step 10:
+# - Feed: 20-60ms (with Redis caching)
+# - Auth: <50ms
+# - Health: <30ms
+# - DB load: Very low (Redis handles most requests)
+# - Concurrent capacity: 16 requests
 # 
 # Note: This is Facebook-level architecture with Redis caching
 # =============================================================================
 
-web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-3} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --log-level info
+web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-4} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --log-level info
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh

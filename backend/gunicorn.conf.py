@@ -33,11 +33,14 @@ cpu_count = multiprocessing.cpu_count()
 # Use WEB_CONCURRENCY env var to override
 workers = int(os.environ.get("WEB_CONCURRENCY", "4"))
 
-# Worker class: gthread for I/O-bound operations (database queries)
-worker_class = "gthread"
+# Worker class: uvicorn.workers.UvicornWorker for FastAPI async support
+# Uvicorn workers provide ASGI support with excellent async/await performance
+worker_class = "uvicorn.workers.UvicornWorker"
 
-# Threads per worker: Total capacity = workers * threads = 16 concurrent requests (Step 10)
-# 4 threads = handles up to 4 concurrent requests per worker
+# Note: Uvicorn workers handle concurrency internally via async event loop
+# The 'threads' parameter is not used with UvicornWorker, but we keep it for documentation
+# Total capacity: 4 workers, each handling multiple concurrent requests via async
+# Expected capacity: ~16+ concurrent requests with async handling
 threads = int(os.environ.get("WEB_THREADS", "4"))
 
 # ============================================================================
