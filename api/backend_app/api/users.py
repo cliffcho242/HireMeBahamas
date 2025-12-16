@@ -3,6 +3,7 @@ import logging
 import re
 
 from app.api.auth import get_current_user
+from app.core.user_cache import user_cache
 from app.database import get_db
 from app.models import Follow, Notification, NotificationType, User, Post
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -68,8 +69,8 @@ async def resolve_user_by_identifier(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid user ID: value too large"
                 )
-            result = await db.execute(select(User).where(User.id == user_id))
-            target_user = result.scalar_one_or_none()
+            # Use cached lookup for better performance
+            target_user = await user_cache.get_user_by_id(db, user_id)
         except HTTPException:
             raise
         except (ValueError, OverflowError):
@@ -82,8 +83,8 @@ async def resolve_user_by_identifier(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid identifier format"
             )
-        result = await db.execute(select(User).where(User.username == identifier))
-        target_user = result.scalar_one_or_none()
+        # Use cached lookup for better performance
+        target_user = await user_cache.get_user_by_username(db, identifier)
     
     if not target_user:
         raise HTTPException(
@@ -368,8 +369,8 @@ async def get_user(
                     detail="Invalid user ID: value too large"
                 )
             
-            result = await db.execute(select(User).where(User.id == user_id))
-            user = result.scalar_one_or_none()
+            # Use cached lookup for better performance
+            user = await user_cache.get_user_by_id(db, user_id)
             lookup_method = "ID"
             logger.debug(f"Lookup by ID {user_id}: {'found' if user else 'not found'}")
         except HTTPException:
@@ -382,8 +383,8 @@ async def get_user(
     
     # If not found by ID or not a digit, try username
     if not user:
-        result = await db.execute(select(User).where(User.username == identifier))
-        user = result.scalar_one_or_none()
+        # Use cached lookup for better performance
+        user = await user_cache.get_user_by_username(db, identifier)
         lookup_method = "username"
         logger.debug(f"Lookup by username '{identifier}': {'found' if user else 'not found'}")
 

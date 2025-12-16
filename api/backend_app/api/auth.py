@@ -18,6 +18,7 @@ from app.core.security import (
     BCRYPT_ROUNDS,
 )
 from app.core.upload import upload_image
+from app.core.user_cache import user_cache
 from app.database import get_db
 from app.models import User, LoginAttempt
 from app.schemas.auth import (
@@ -177,8 +178,8 @@ async def get_current_user(
                 detail="Invalid user ID in token",
             )
         
-        result = await db.execute(select(User).where(User.id == user_id_int))
-        user = result.scalar_one_or_none()
+        # Use cached user lookup for better performance
+        user = await user_cache.get_user_by_id(db, user_id_int)
 
         if user is None:
             logger.warning(f"User not found for authenticated token: user_id={user_id_int}")
@@ -239,6 +240,9 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     db.add(db_user)
     await db.commit()
     await db.refresh(db_user)
+    
+    # Pre-populate cache with new user for immediate subsequent requests
+    await user_cache.cache_user(db_user)
 
     # Create access token
     access_token = create_access_token(data={"sub": str(db_user.id)})
@@ -284,6 +288,8 @@ async def login(user_data: UserLogin, request: Request, db: AsyncSession = Depen
     )
 
     # Try to find user by email first, then by phone number
+    # NOTE: Login requires hashed_password for verification, so we query database directly
+    # (cannot use cache since hashed_password is excluded for security)
     db_query_start = time.time()
     result = await db.execute(select(User).where(User.email == user_data.email))
     user = result.scalar_one_or_none()
@@ -535,6 +541,14 @@ async def update_profile(
 
     await db.commit()
     await db.refresh(current_user)
+    
+    # Invalidate user cache after profile update
+    await user_cache.invalidate_user(
+        current_user.id,
+        email=current_user.email,
+        username=current_user.username,
+        phone=current_user.phone
+    )
 
     return UserResponse.from_orm(current_user)
 
@@ -560,6 +574,14 @@ async def upload_avatar(
     current_user.updated_at = datetime.utcnow()
 
     await db.commit()
+    
+    # Invalidate user cache after avatar update
+    await user_cache.invalidate_user(
+        current_user.id,
+        email=current_user.email,
+        username=current_user.username,
+        phone=current_user.phone
+    )
 
     return {"image_url": image_url}
 
@@ -585,6 +607,14 @@ async def change_password(
     current_user.updated_at = datetime.utcnow()
 
     await db.commit()
+    
+    # Invalidate user cache after password change
+    await user_cache.invalidate_user(
+        current_user.id,
+        email=current_user.email,
+        username=current_user.username,
+        phone=current_user.phone
+    )
 
     return {"message": "Password changed successfully"}
 
@@ -599,6 +629,14 @@ async def delete_account(
     current_user.updated_at = datetime.utcnow()
 
     await db.commit()
+    
+    # Invalidate user cache after account deactivation
+    await user_cache.invalidate_user(
+        current_user.id,
+        email=current_user.email,
+        username=current_user.username,
+        phone=current_user.phone
+    )
 
     return {"message": "Account deactivated successfully"}
 
