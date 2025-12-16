@@ -8,6 +8,7 @@ import re
 from urllib.parse import urlparse, urlunparse
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
+from sqlalchemy.exc import ArgumentError
 from .db_url_utils import ensure_sslmode, validate_database_url_structure
 
 # Global engine (reused across invocations)
@@ -225,6 +226,16 @@ def get_engine():
                 },
                 echo=False,                    # Disable SQL logging in production
             )
+        except ArgumentError as e:
+            # Catch SQLAlchemy ArgumentError specifically (URL parsing errors)
+            logger.warning(
+                f"SQLAlchemy ArgumentError: Could not parse DATABASE_URL. "
+                f"The URL format is invalid or empty. "
+                f"Error: {str(e)}. "
+                f"Please check your DATABASE_URL environment variable. "
+                f"Required format: postgresql://user:password@host:port/database?sslmode=require"
+            )
+            return None
         except Exception as e:
             # Catch asyncpg errors and log warnings instead of raising
             error_msg = str(e).lower()

@@ -44,6 +44,7 @@ if _project_root not in sys.path:
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.exc import ArgumentError
 
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
@@ -376,6 +377,17 @@ def get_engine():
                         f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
                         f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
                     )
+                except ArgumentError as e:
+                    # Catch SQLAlchemy ArgumentError specifically (URL parsing errors)
+                    logger.warning(
+                        f"SQLAlchemy ArgumentError: Could not parse DATABASE_URL. "
+                        f"The URL format is invalid or empty. "
+                        f"Error: {str(e)}. "
+                        f"Application will start but database operations will fail. "
+                        f"Required format: postgresql://user:password@host:port/database?sslmode=require"
+                    )
+                    _engine = None
+                    return None
                 except Exception as e:
                     # Log warning instead of raising exception - allows app to start
                     logger.warning(

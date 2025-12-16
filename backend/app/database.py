@@ -39,6 +39,7 @@ from urllib.parse import urlparse
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.exc import ArgumentError
 
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
@@ -315,55 +316,76 @@ def get_engine():
         with _engine_lock:
             # Check again inside the lock in case another thread created it
             if _engine is None:
-                _engine = create_async_engine(
-                    DATABASE_URL,
-                    # Pool configuration (CRITICAL for serverless + SSL EOF fix)
-                    pool_size=POOL_SIZE,
-                    max_overflow=MAX_OVERFLOW,
-                    pool_pre_ping=True,  # Validate connections before use (detects stale connections)
-                    pool_recycle=POOL_RECYCLE,  # Recycle connections (default: 300s for serverless)
-                    pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
-                    
-                    # Echo SQL for debugging (disabled in production)
-                    echo=os.getenv("DB_ECHO", "false").lower() == "true",
-                    
-                    # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
-                    connect_args={
-                        # Connection timeout (5s for Railway cold starts)
-                        "timeout": CONNECT_TIMEOUT,
+                try:
+                    _engine = create_async_engine(
+                        DATABASE_URL,
+                        # Pool configuration (CRITICAL for serverless + SSL EOF fix)
+                        pool_size=POOL_SIZE,
+                        max_overflow=MAX_OVERFLOW,
+                        pool_pre_ping=True,  # Validate connections before use (detects stale connections)
+                        pool_recycle=POOL_RECYCLE,  # Recycle connections (default: 300s for serverless)
+                        pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
                         
-                        # Query timeout (30s per query)
-                        "command_timeout": COMMAND_TIMEOUT,
+                        # Echo SQL for debugging (disabled in production)
+                        echo=os.getenv("DB_ECHO", "false").lower() == "true",
                         
-                        # PostgreSQL server settings
-                        "server_settings": {
-                            # CRITICAL: Disable JIT to prevent 60s+ first-query delays
-                            "jit": "off",
-                            # Statement timeout in milliseconds
-                            "statement_timeout": str(STATEMENT_TIMEOUT_MS),
-                            # Application name for pg_stat_activity
-                            "application_name": "hiremebahamas",
-                        },
-                        
-                        # SSL configuration - THE MASTERMIND FIX
-                        # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
-                        # Uses TLS 1.3 only + no cert verification for Railway compatibility
-                        # The SSL context is provided via the "ssl" key in connect_args
-                        "ssl": _get_ssl_context(),
-                        
-                        # FORCE TCP + SSL: Guarantee TCP connection with SSL encryption
-                        # This ensures SSL is required even if DATABASE_URL or env vars are misconfigured
-                        # NOTE: Both "ssl" and "sslmode" parameters in connect_args coexist safely:
-                        # - "sslmode": "require" ensures connection fails if SSL is unavailable
-                        # - "ssl": _get_ssl_context() provides the actual TLS 1.3 SSL configuration
-                        # This dual-layer approach provides defense-in-depth security
-                        "sslmode": "require",
-                    }
-                )
-                logger.info(
-                    f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
-                    f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
-                )
+                        # asyncpg-specific connection arguments - THE ACTUAL SSL FIX
+                        connect_args={
+                            # Connection timeout (5s for Railway cold starts)
+                            "timeout": CONNECT_TIMEOUT,
+                            
+                            # Query timeout (30s per query)
+                            "command_timeout": COMMAND_TIMEOUT,
+                            
+                            # PostgreSQL server settings
+                            "server_settings": {
+                                # CRITICAL: Disable JIT to prevent 60s+ first-query delays
+                                "jit": "off",
+                                # Statement timeout in milliseconds
+                                "statement_timeout": str(STATEMENT_TIMEOUT_MS),
+                                # Application name for pg_stat_activity
+                                "application_name": "hiremebahamas",
+                            },
+                            
+                            # SSL configuration - THE MASTERMIND FIX
+                            # This is the PERMANENT fix for "SSL error: unexpected eof while reading"
+                            # Uses TLS 1.3 only + no cert verification for Railway compatibility
+                            # The SSL context is provided via the "ssl" key in connect_args
+                            "ssl": _get_ssl_context(),
+                            
+                            # FORCE TCP + SSL: Guarantee TCP connection with SSL encryption
+                            # This ensures SSL is required even if DATABASE_URL or env vars are misconfigured
+                            # NOTE: Both "ssl" and "sslmode" parameters in connect_args coexist safely:
+                            # - "sslmode": "require" ensures connection fails if SSL is unavailable
+                            # - "ssl": _get_ssl_context() provides the actual TLS 1.3 SSL configuration
+                            # This dual-layer approach provides defense-in-depth security
+                            "sslmode": "require",
+                        }
+                    )
+                    logger.info(
+                        f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
+                        f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
+                    )
+                except ArgumentError as e:
+                    # Catch SQLAlchemy ArgumentError specifically (URL parsing errors)
+                    logger.warning(
+                        f"SQLAlchemy ArgumentError: Could not parse DATABASE_URL. "
+                        f"The URL format is invalid or empty. "
+                        f"Error: {str(e)}. "
+                        f"Application will start but database operations will fail. "
+                        f"Required format: postgresql://user:password@host:port/database?sslmode=require"
+                    )
+                    _engine = None
+                    return None
+                except Exception as e:
+                    # Log warning instead of raising exception - allows app to start
+                    logger.warning(
+                        f"Failed to create database engine: {type(e).__name__}: {e}. "
+                        f"Application will start but database operations will fail. "
+                        f"Check your DATABASE_URL configuration."
+                    )
+                    _engine = None
+                    return None
     
     return _engine
 
