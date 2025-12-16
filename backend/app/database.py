@@ -570,7 +570,6 @@ async def close_db():
             if actual_engine is not None:
                 try:
                     await actual_engine.dispose()
-                    logger.info("Database connections closed")
                 except OSError as e:
                     # Handle "Bad file descriptor" errors (errno 9) gracefully
                     # This occurs when connections are already closed
@@ -581,6 +580,9 @@ async def close_db():
                 except Exception as e:
                     # Handle other disposal errors (e.g., network issues)
                     logger.warning(f"Error disposing database engine: {e}")
+                else:
+                    # Only log success if no exception occurred
+                    logger.info("Database connections closed")
             else:
                 logger.debug("Database engine was never initialized, nothing to close")
             _engine = None
