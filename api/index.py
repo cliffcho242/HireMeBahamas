@@ -198,7 +198,12 @@ try:
     if backend_app_path not in sys.path:
         sys.path.insert(0, backend_app_path)
     
-    from backend_app.api import auth, posts, jobs, users, messages, notifications
+    from backend_app.api.auth import router as auth_router
+    from backend_app.api.posts import router as posts_router
+    from backend_app.api.jobs import router as jobs_router
+    from backend_app.api.users import router as users_router
+    from backend_app.api.messages import router as messages_router
+    from backend_app.api.notifications import router as notifications_router
     HAS_BACKEND = True
     logger.info("✅ Backend modules imported successfully")
 except Exception as e:
@@ -953,17 +958,17 @@ async def get_current_user(authorization: str = Header(None)):
 if HAS_BACKEND:
     try:
         logger.info("Registering backend routers...")
-        app.include_router(auth.router, prefix="/auth", tags=["auth"])
+        app.include_router(auth_router, prefix="/auth", tags=["auth"])
         logger.info("✅ Auth router registered")
-        app.include_router(posts.router, prefix="/posts", tags=["posts"])
+        app.include_router(posts_router, prefix="/posts", tags=["posts"])
         logger.info("✅ Posts router registered")
-        app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
+        app.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
         logger.info("✅ Jobs router registered")
-        app.include_router(users.router, prefix="/users", tags=["users"])
+        app.include_router(users_router, prefix="/users", tags=["users"])
         logger.info("✅ Users router registered")
-        app.include_router(messages.router, prefix="/messages", tags=["messages"])
+        app.include_router(messages_router, prefix="/messages", tags=["messages"])
         logger.info("✅ Messages router registered")
-        app.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+        app.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
         logger.info("✅ Notifications router registered")
         logger.info("✅ All backend routers registered successfully")
     except Exception as e:

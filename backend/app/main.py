@@ -128,7 +128,14 @@ for _module_name in _schema_modules:
 
 # Import APIs (with nuclear safety net)
 try:
-    from .api import hireme, jobs, messages, notifications, profile_pictures, reviews, upload
+    # Explicit router imports to avoid circular dependencies and import-time side effects
+    from .api.hireme import router as hireme_router
+    from .api.jobs import router as jobs_router
+    from .api.messages import router as messages_router
+    from .api.notifications import router as notifications_router
+    from .api.profile_pictures import router as profile_pictures_router
+    from .api.reviews import router as reviews_router
+    from .api.upload import router as upload_router
     # Import new Facebook-style modular routers
     from .auth import routes as auth_routes
     from .users import routes as users_routes
@@ -137,8 +144,8 @@ try:
     print("✅ API routers imported successfully")
 except Exception as e:
     print(f"API router import failed: {e}")
-    auth_routes = hireme = jobs = messages = notifications = None
-    feed_routes = profile_pictures = reviews = upload = users_routes = health_router = None
+    auth_routes = hireme_router = jobs_router = messages_router = notifications_router = None
+    feed_routes = profile_pictures_router = reviews_router = upload_router = users_routes = health_router = None
 
 try:
     from .database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
@@ -772,20 +779,20 @@ if feed_routes is not None:
     app.include_router(feed_routes.router, prefix="/api/posts", tags=["posts", "feed"])
 
 # Legacy API routers (will be migrated gradually)
-if hireme is not None:
-    app.include_router(hireme.router, prefix="/api/hireme", tags=["hireme"])
-if jobs is not None:
-    app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
-if messages is not None:
-    app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
-if notifications is not None:
-    app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
-if profile_pictures is not None:
-    app.include_router(profile_pictures.router, prefix="/api/profile-pictures", tags=["profile-pictures"])
-if reviews is not None:
-    app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
-if upload is not None:
-    app.include_router(upload.router, prefix="/api/upload", tags=["uploads"])
+if hireme_router is not None:
+    app.include_router(hireme_router, prefix="/api/hireme", tags=["hireme"])
+if jobs_router is not None:
+    app.include_router(jobs_router, prefix="/api/jobs", tags=["jobs"])
+if messages_router is not None:
+    app.include_router(messages_router, prefix="/api/messages", tags=["messages"])
+if notifications_router is not None:
+    app.include_router(notifications_router, prefix="/api/notifications", tags=["notifications"])
+if profile_pictures_router is not None:
+    app.include_router(profile_pictures_router, prefix="/api/profile-pictures", tags=["profile-pictures"])
+if reviews_router is not None:
+    app.include_router(reviews_router, prefix="/api/reviews", tags=["reviews"])
+if upload_router is not None:
+    app.include_router(upload_router, prefix="/api/upload", tags=["uploads"])
 
 # Include health check router (no prefix as it provides /health, /ready endpoints)
 if health_router is not None:
