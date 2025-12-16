@@ -126,14 +126,14 @@ if DATABASE_URL:
                 "Example: ep-xxxx.us-east-1.aws.neon.tech"
             )
 
-# Check for SSL mode requirement
-query_params = parsed.query.lower() if parsed.query else ""
-if 'sslmode=' not in query_params:
-    logger.warning(
-        "⚠️  DATABASE_URL missing sslmode parameter. "
-        "SSL is required for secure cloud database connections. "
-        "Add ?sslmode=require to your DATABASE_URL."
-    )
+    # Check for SSL mode requirement
+    query_params = parsed.query.lower() if parsed.query else ""
+    if 'sslmode=' not in query_params:
+        logger.warning(
+            "⚠️  DATABASE_URL missing sslmode parameter. "
+            "SSL is required for secure cloud database connections. "
+            "Add ?sslmode=require to your DATABASE_URL."
+        )
 
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:
@@ -145,7 +145,7 @@ def _mask_database_url(url: str) -> str:
     Returns:
         URL with password replaced by ****
     """
-    if "@" not in url:
+    if not url or "@" not in url:
         return url
     try:
         # Split at @ to get auth and host parts
@@ -156,8 +156,9 @@ def _mask_database_url(url: str) -> str:
     except (ValueError, IndexError):
         return url
 
-_masked_url = _mask_database_url(DATABASE_URL)
-logger.info(f"Database URL: {_masked_url}")
+if DATABASE_URL:
+    _masked_url = _mask_database_url(DATABASE_URL)
+    logger.info(f"Database URL: {_masked_url}")
 
 # =============================================================================
 # POOL CONFIGURATION - OPTIMIZED FOR PRODUCTION (Dec 2025)

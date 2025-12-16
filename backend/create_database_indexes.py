@@ -390,8 +390,12 @@ async def create_indexes():
     
     DATABASE_URL = os.environ.get("DATABASE_PRIVATE_URL") or os.environ.get("DATABASE_URL")
     
+    if not DATABASE_URL:
+        logger.error("DATABASE_URL is not set. Please set DATABASE_URL or DATABASE_PRIVATE_URL environment variable.")
+        return False
+    
     # Convert async URL to sync
-    if DATABASE_URL and DATABASE_URL.startswith("postgresql+asyncpg://"):
+    if DATABASE_URL.startswith("postgresql+asyncpg://"):
         DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
     
     logger.info(f"Connecting to database...")
@@ -475,7 +479,11 @@ async def analyze_tables():
     
     DATABASE_URL = os.environ.get("DATABASE_PRIVATE_URL") or os.environ.get("DATABASE_URL")
     
-    if DATABASE_URL and DATABASE_URL.startswith("postgresql+asyncpg://"):
+    if not DATABASE_URL:
+        logger.error("DATABASE_URL is not set. Please set DATABASE_URL or DATABASE_PRIVATE_URL environment variable.")
+        return
+    
+    if DATABASE_URL.startswith("postgresql+asyncpg://"):
         DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
     
     tables = list(set(idx[0] for idx in INDEXES))
