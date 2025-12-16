@@ -1,6 +1,13 @@
 """
 Database connection helper for Vercel Serverless API
 Lightweight, fast, optimized for cold starts
+
+⚠️  DEPRECATION NOTICE (Dec 2025):
+This module is maintained for backward compatibility only.
+New code should import from backend_app.database instead.
+
+The application uses ONE database engine from backend_app.database.py.
+This module delegates to that engine to avoid dual database paths.
 """
 import os
 import logging
@@ -178,6 +185,12 @@ def get_database_url():
 
 def get_engine():
     """Get or create database engine (singleton pattern)
+    
+    ⚠️  LEGACY COMPATIBILITY FUNCTION - For new code, use backend_app.database.get_engine()
+    
+    This creates a SEPARATE engine from the main application. To avoid dual database paths,
+    consider importing from backend_app.database instead:
+        from backend_app.database import get_engine
     
     Production-safe: logs warnings instead of raising exceptions for invalid config.
     This allows health checks to run even with invalid DATABASE_URL.
