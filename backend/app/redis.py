@@ -119,7 +119,7 @@ class AsyncRedisCache:
             bool: True if Redis is available, False if using memory fallback
         """
         if not REDIS_URL:
-            logger.debug("No Redis URL configured, using in-memory cache")
+            logger.debug("Redis URL not configured, using in-memory cache (this is expected)")
             return False
         
         # Circuit breaker: Don't retry too frequently
@@ -151,7 +151,7 @@ class AsyncRedisCache:
             return True
             
         except ImportError:
-            logger.warning("redis package not installed, using in-memory cache")
+            logger.debug("redis package not installed, using in-memory cache (this is expected)")
             return False
         except asyncio.TimeoutError:
             self._connection_attempts += 1
