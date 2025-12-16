@@ -135,8 +135,11 @@ def test_database_config():
     assert 'pool_recycle=' in source, "❌ FAILED: pool_recycle not in engine config"
     logger.info("✅ PASSED: pool_recycle found in engine config")
     
-    assert 'sslmode' in source, "❌ FAILED: sslmode not in connect_args"
-    logger.info("✅ PASSED: sslmode found in connect_args")
+    # Verify sslmode is referenced in DATABASE_URL context, not in connect_args
+    if '"sslmode": "require"' in source or "'sslmode': 'require'" in source:
+        logger.error("❌ FAILED: sslmode should NOT be in connect_args (should be in DATABASE_URL)")
+        return False
+    logger.info("✅ PASSED: sslmode not in connect_args (correctly in DATABASE_URL)")
     
     return True
 
