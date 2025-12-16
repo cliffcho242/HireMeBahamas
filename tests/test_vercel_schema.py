@@ -17,23 +17,30 @@ import pytest
 # Get repository root
 REPO_ROOT = Path(__file__).parent.parent
 
-# Automatically discover all vercel*.json files in the repository
-# This makes the tests maintainable if new Vercel configuration files are added
+
 def discover_vercel_files():
-    """Find all vercel configuration files in the repository."""
+    """
+    Find all vercel configuration files in the repository.
+    
+    Uses rglob for efficient recursive search with explicit exclusions
+    to avoid searching in large dependency directories.
+    
+    This function is called lazily from fixtures to ensure test isolation
+    and avoid module-level filesystem access.
+    """
     vercel_files = []
     
-    # Find all vercel*.json files (including vercel.json, vercel_*.json, etc.)
-    vercel_files.extend(REPO_ROOT.glob("vercel*.json"))
+    # Directories to exclude from search
+    exclude_dirs = {'.git', 'node_modules', '.venv', 'venv', '__pycache__', 
+                    '.pytest_cache', 'dist', 'build', '.next'}
     
-    # Also search in subdirectories (but not in node_modules, .git, etc.)
-    for subdir in REPO_ROOT.iterdir():
-        if subdir.is_dir() and not subdir.name.startswith('.') and subdir.name != 'node_modules':
-            vercel_files.extend(subdir.glob("vercel*.json"))
+    # Use rglob for efficient recursive search
+    for json_file in REPO_ROOT.rglob("vercel*.json"):
+        # Check if any parent directory is in exclude list
+        if not any(part in exclude_dirs for part in json_file.parts):
+            vercel_files.append(json_file)
     
     return sorted(vercel_files)  # Sort for consistent test order
-
-VERCEL_FILES = discover_vercel_files()
 
 # Valid properties for function configuration (per Vercel documentation)
 VALID_FUNCTION_PROPERTIES = {
@@ -57,8 +64,13 @@ class TestVercelSchema:
 
     @pytest.fixture
     def vercel_files(self):
-        """Get all vercel.json files that exist."""
-        return [f for f in VERCEL_FILES if f.exists()]
+        """
+        Get all vercel.json files that exist.
+        
+        Uses lazy discovery to ensure test isolation and avoid
+        module-level filesystem access.
+        """
+        return [f for f in discover_vercel_files() if f.exists()]
 
     def test_vercel_files_exist(self, vercel_files):
         """Ensure at least one vercel.json file exists."""
@@ -168,27 +180,38 @@ class TestVercelSchema:
             self._check_regions_placement(data, vfile.name)
 
     def _check_regions_placement(self, obj, filename, path=""):
-        """Recursively check that 'regions' only appears at top level."""
-        if not isinstance(obj, dict):
-            return
+        """
+        Iteratively check that 'regions' only appears at top level.
         
-        for key, value in obj.items():
-            current_path = f"{path}.{key}" if path else key
+        Uses iterative approach with a queue to avoid stack overflow
+        on deeply nested JSON structures.
+        """
+        # Use a queue for iterative traversal: (object, path)
+        queue = [(obj, path)]
+        
+        while queue:
+            current_obj, current_path = queue.pop(0)
             
-            # If we find 'regions' anywhere except top level
-            if key == 'regions' and path != "":
-                pytest.fail(
-                    f"INVALID: {filename} has 'regions' at {current_path}. "
-                    f"The 'regions' property should ONLY be at the top level."
-                )
+            if not isinstance(current_obj, dict):
+                continue
             
-            # Recursively check nested objects
-            if isinstance(value, dict):
-                self._check_regions_placement(value, filename, current_path)
-            elif isinstance(value, list):
-                for i, item in enumerate(value):
-                    if isinstance(item, dict):
-                        self._check_regions_placement(item, filename, f"{current_path}[{i}]")
+            for key, value in current_obj.items():
+                new_path = f"{current_path}.{key}" if current_path else key
+                
+                # If we find 'regions' anywhere except top level
+                if key == 'regions' and current_path != "":
+                    pytest.fail(
+                        f"INVALID: {filename} has 'regions' at {new_path}. "
+                        f"The 'regions' property should ONLY be at the top level."
+                    )
+                
+                # Add nested objects to queue
+                if isinstance(value, dict):
+                    queue.append((value, new_path))
+                elif isinstance(value, list):
+                    for i, item in enumerate(value):
+                        if isinstance(item, dict):
+                            queue.append((item, f"{new_path}[{i}]"))
 
     def test_no_underscore_properties(self, vercel_files):
         """Ensure no properties start with underscore (comment properties)."""
@@ -229,8 +252,10 @@ class TestVercelSchema:
 
 
 if __name__ == "__main__":
-    # This file should be run using: python -m pytest tests/test_vercel_schema.py
-    print("Please run this test file using pytest:")
-    print("  python -m pytest tests/test_vercel_schema.py -v")
-    print("\nOr run all tests:")
-    print("  python -m pytest tests/ -v")
+    # Provide clear guidance and exit with error code
+    raise SystemExit(
+        "This test file should be run using pytest:\n"
+        "  python -m pytest tests/test_vercel_schema.py -v\n\n"
+        "Or run all tests:\n"
+        "  python -m pytest tests/ -v"
+    )

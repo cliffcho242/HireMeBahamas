@@ -291,6 +291,6 @@ If you encounter Vercel schema validation errors:
 
 ---
 
-**Last Updated:** December 16, 2025  
+**Last Updated:** December 16, 2024  
 **Issue:** Vercel schema validation error for regions property in functions  
 **Resolution:** Validated correct configuration, added comprehensive tests and CI checks
