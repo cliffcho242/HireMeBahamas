@@ -19,9 +19,10 @@ bind = f"0.0.0.0:{os.environ.get('PORT', '10000')}"
 # Typical CPU allocation: Free tier: 0.1-0.5 CPU, Paid: 1+ CPU
 cpu_count = multiprocessing.cpu_count()
 
-# Workers: 2 for optimal performance on Render
+# Workers: 4 for scaling to 100K+ users (optimized for production deployment)
 # Use WEB_CONCURRENCY env var to override
-workers = int(os.environ.get("WEB_CONCURRENCY", "2"))
+# Each worker handles concurrent requests via threads
+workers = int(os.environ.get("WEB_CONCURRENCY", "4"))
 
 # Worker class: gthread for I/O-bound operations (database queries)
 worker_class = "gthread"
