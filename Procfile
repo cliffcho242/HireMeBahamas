@@ -38,16 +38,21 @@
 # Note: This is Facebook-level architecture with Poetry dependency management
 # =============================================================================
 
-# Main web process - Poetry-managed Gunicorn (STEP 18)
+# Main web process - Optimized Gunicorn for Render (AGGRESSIVE FOREVER FIX)
 # Note: This Procfile assumes the working directory is the project root
 # Changes to backend/ where app/main.py and gunicorn.conf.py are located
 # For Railway/Heroku with root directory set to 'backend/', use backend/Procfile instead
-# Uses gunicorn.conf.py for complete configuration (workers, threads, timeouts, etc.)
+# 
+# CRITICAL SETTINGS FOR RENDER:
+# - workers=1: Single worker for small instances (faster + safer)
+# - threads=2: Minimal threading overhead
+# - timeout=120: Prevents worker SIGTERM during slow startup
+# - graceful_timeout=30: Clean shutdown
+# - keepalive=5: Connection persistence
 # 
 # PYTHONPATH is set to current directory (.) after cd to backend, which achieves
 # the same effect as PYTHONPATH=backend when run from project root.
-# This aligns with problem statement Option B: Set PYTHONPATH=backend
-web: cd backend && PYTHONPATH=. poetry run gunicorn app.main:app --config gunicorn.conf.py
+web: cd backend && PYTHONPATH=. poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh

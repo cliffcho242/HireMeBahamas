@@ -57,32 +57,34 @@ services:
     buildCommand: pip install poetry && poetry install --only=main
     
     # ==========================================================================
-    # START COMMAND - STEP 18: Production Commands (Final)
+    # START COMMAND - RENDER OPTIMIZED (AGGRESSIVE FOREVER FIX)
     # ==========================================================================
-    # Poetry-managed Gunicorn with configuration file
-    # - Poetry: Manages all Python dependencies consistently
-    # - Gunicorn: Production WSGI server with worker management
-    # - Config file: gunicorn.conf.py contains all worker/timeout settings
-    # - Uvicorn workers: ASGI support for FastAPI async operations
-    # - Workers: 4 (defined in gunicorn.conf.py)
-    # - Concurrency: Async event loop per worker (handles ~100+ connections per worker)
+    # Optimized Gunicorn configuration for Render small instances
     # 
-    # Benefits of using Poetry + config file:
-    # - Consistent dependency management across environments
-    # - Centralized configuration in gunicorn.conf.py
-    # - Easier to maintain and update settings
-    # - All worker, timeout, and performance settings in one place
+    # CRITICAL SETTINGS FOR RENDER:
+    # - workers=1: Single worker is faster + safer on small instances
+    # - threads=2: Minimal threading for request handling
+    # - timeout=120: Prevents worker SIGTERM during slow startup
+    # - graceful-timeout=30: Clean shutdown of in-flight requests
+    # - keep-alive=5: Connection persistence
+    # - log-level=info: Production logging
+    # 
+    # Benefits of single worker configuration:
+    # - Lower memory footprint
+    # - Faster startup times (no worker coordination)
+    # - More predictable behavior on constrained resources
+    # - Prevents worker timeout issues
+    # - Single worker with async event loop handles 100+ concurrent connections
     # 
     # Expected Performance:
-    # - Feed: 20-60ms (with Redis caching)
-    # - Auth: <50ms
-    # - Health: <30ms
-    # - Concurrent capacity: 400+ connections (4 workers × async event loop)
-    # - Supported users: 100K+ concurrent
+    # - Health: <30ms (instant response)
+    # - Auth: <100ms
+    # - API: <200ms
+    # - Startup: <60s (with background initialization)
     #
     # ⚠️ CRITICAL: This command is a SINGLE LINE with NO backslashes
     # Working directory: Changes to backend/ where app/main.py and gunicorn.conf.py are located
-    startCommand: cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py
+    startCommand: cd backend && poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
     
     envVars:
       - key: ENVIRONMENT
@@ -139,19 +141,22 @@ services:
       - key: DB_ECHO
         value: "false"
       # ==========================================================================
-      # GUNICORN PERFORMANCE SETTINGS (Lightning Fast Configuration)
+      # GUNICORN PERFORMANCE SETTINGS (Render Optimized - Single Worker)
       # ==========================================================================
-      # Optimized for Render Standard plan (always-on, 1GB RAM)
-      # STEP 10 - SCALING TO 100K+ USERS:
-      # Workers: 4 with UvicornWorker (async event loop, not threads)
-      # Capacity: 4 workers × ~100+ async connections = 400+ concurrent
-      # Timeout: 60s for fast responses without cold start delays
+      # Optimized for Render small instances (AGGRESSIVE FOREVER FIX)
+      # CRITICAL: Render does NOT like many workers on small instances
+      # 
+      # Configuration:
+      # - Workers: 1 (single worker is faster + safer)
+      # - Threads: 2 (minimal threading overhead)
+      # - Timeout: 120s (prevents worker SIGTERM during slow startup)
+      # - Single worker with async event loop handles 100+ concurrent connections
       - key: WEB_CONCURRENCY
-        value: "4"
+        value: "1"
       - key: WEB_THREADS
-        value: "4"
+        value: "2"
       - key: GUNICORN_TIMEOUT
-        value: "60"
+        value: "120"
       - key: KEEPALIVE
         value: "5"
       # Trust Render's load balancer for proxy headers
