@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 
 export default function Settings() {
   const [settings, setSettings] = useState({
@@ -10,7 +10,7 @@ export default function Settings() {
 
   const [saved, setSaved] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     // Simulate saving settings
     setSaved(true);
