@@ -1,8 +1,19 @@
 """
 Examples of integrating slow query logging into API endpoints.
 
+⚠️  IMPORTANT: This is a REFERENCE/EXAMPLE file, not executable code.
+    It demonstrates usage patterns. Copy these patterns into your actual
+    API endpoints and adjust imports and model references to match your
+    application structure.
+
 This file demonstrates practical usage patterns for the lightweight query logger.
-Copy these patterns into your actual API endpoints to track slow queries.
+The examples show different ways to integrate slow query logging, but you'll
+need to adjust:
+- Import paths to match your project structure
+- Model names and relationships to match your database schema
+- Query logic to match your business requirements
+
+For a working example, see: api/backend_app/api/users.py
 """
 
 import time
@@ -11,13 +22,9 @@ from typing import List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.query_logger import (
-    log_query_performance,
-    log_query_time,
-    track_query_start,
-    track_query_end,
-)
-from app.models import User, Post
+# Example imports - adjust to match your actual project structure
+# from app.core.query_logger import log_query_performance, log_query_time, track_query_start, track_query_end
+# from app.models import User, Post
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +33,19 @@ logger = logging.getLogger(__name__)
 # EXAMPLE 1: Context Manager (Recommended)
 # =============================================================================
 # This is the cleanest and most Pythonic approach
+# NOTE: These examples use pseudo-code. Adjust model names and relationships
+# to match your actual database schema.
 
 async def get_user_posts_with_context_manager(
     user_id: int,
     db: AsyncSession
-) -> List[Post]:
-    """Fetch user posts with automatic slow query logging."""
+):
+    """Fetch user posts with automatic slow query logging.
+    
+    Example usage pattern - adjust imports and model references for your code.
+    """
+    from app.core.query_logger import log_query_performance
+    from app.models import Post
     
     # Context manager automatically tracks time and logs if > threshold
     async with log_query_performance("fetch_user_posts", warn_threshold=1.0):

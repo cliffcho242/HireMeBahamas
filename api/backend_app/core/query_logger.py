@@ -156,11 +156,11 @@ def track_query_end(start: float) -> float:
 # ============================================================================
 # INTEGRATION WITH EXISTING MONITORING
 # ============================================================================
-# Optional: Integrate with existing monitoring system if available
-# Note: The monitoring module is located at backend/app/core/monitoring.py
-# If you want to enable this integration, import and use it in your endpoint code.
-# Example:
-#   from backend.app.core.monitoring import track_database_query
+# Optional: Integrate with existing monitoring system if available.
+# If your application has a monitoring module (e.g., backend/app/core/monitoring.py
+# or similar), you can extend this to call both logging and monitoring functions.
+# Example integration in your endpoint code:
+#   from app.core.monitoring import track_database_query  # if available
 #   elapsed_ms = elapsed * 1000
 #   track_database_query(elapsed_ms)
 
