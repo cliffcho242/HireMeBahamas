@@ -4,6 +4,7 @@ import { Job } from '../types/job';
 import { debugLog } from '../utils/debugLogger';
 import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
 import { ENV_API } from '../config/env';
+import { refreshToken } from './auth';
 
 // Note: Backend URL validation happens automatically when backendRouter is imported
 // The validateBackendUrl() function is called at module load in backendRouter.ts
@@ -161,6 +162,7 @@ declare module 'axios' {
   export interface InternalAxiosRequestConfig {
     _retryCount?: number;
     _requestStartTime?: number;
+    _refreshAttempted?: boolean; // Track if refresh was already attempted for this request
   }
 }
 
@@ -356,29 +358,54 @@ api.interceptors.response.use(
       circuitBreaker.recordFailure();
     }
     
-    // Handle auth errors
+    // Handle auth errors with automatic token refresh
     if (error.response?.status === 401) {
       // Check if this is a USER_NOT_FOUND error (user account deleted or database reset)
       const errorData = error.response?.data;
       const isUserNotFound = errorData?.error_code === 'USER_NOT_FOUND' || 
                              errorData?.action === 'logout';
       
+      // Skip refresh for refresh endpoint itself to prevent infinite loop
+      const isRefreshEndpoint = config.url === '/api/auth/refresh' || config.url?.endsWith('/auth/refresh');
+      
+      // Check if we already attempted refresh for this request
+      const alreadyRefreshed = config._refreshAttempted === true;
+      
       // Auto-logout for auth endpoints, profile endpoints, or when user is not found
       const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/profile');
       
-      if (isAuthEndpoint || isUserNotFound) {
+      // If user not found, refresh endpoint failing, or already refreshed once, logout immediately
+      if (isUserNotFound || isRefreshEndpoint || alreadyRefreshed) {
         console.log('Authentication failed - logging out', isUserNotFound ? '(user not found in database)' : '');
         localStorage.removeItem('token');
-        // Clear session storage as well (use the same key as sessionManager)
-        try {
-          localStorage.removeItem(SESSION_KEY);
-        } catch {
-          // Ignore errors when clearing session (e.g., in private browsing)
-        }
+        localStorage.removeItem(SESSION_KEY);
+        const USER_KEY = 'hireme_user'; // Match sessionManager.ts
+        localStorage.removeItem(USER_KEY);
         window.location.href = '/login';
       } else {
-        // For other endpoints, just log the error but don't force logout
-        console.warn('Unauthorized access to:', config.url);
+        // Try to refresh the token silently
+        try {
+          await refreshToken();
+          
+          // Update the config with new token and mark as refreshed
+          const newToken = localStorage.getItem('token');
+          if (newToken && config.headers) {
+            config.headers.Authorization = `Bearer ${newToken}`;
+          }
+          config._refreshAttempted = true; // Prevent infinite refresh loop
+          
+          // Retry the original request with new token
+          console.log('Token refreshed, retrying request...');
+          return api(config);
+        } catch (refreshError) {
+          // If refresh fails, logout
+          console.error('Token refresh failed:', refreshError);
+          localStorage.removeItem('token');
+          localStorage.removeItem(SESSION_KEY);
+          const USER_KEY = 'hireme_user'; // Match sessionManager.ts
+          localStorage.removeItem(USER_KEY);
+          window.location.href = '/login';
+        }
       }
     }
     
