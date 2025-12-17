@@ -19,6 +19,21 @@ type SrcSet =
       '3x'?: string;
     };
 
+// Utility function to convert srcSet to string format
+function convertSrcSetToString(srcSet: SrcSet | undefined): string | undefined {
+  if (!srcSet) return undefined;
+  
+  // If srcSet is already a string, return it as-is
+  if (typeof srcSet === 'string') {
+    return srcSet;
+  }
+  
+  // If srcSet is an object, build the srcSet string
+  return Object.entries(srcSet)
+    .map(([density, url]) => `${url} ${density}`)
+    .join(', ');
+}
+
 interface LazyImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'srcSet'> {
   src: string;
   alt: string;
@@ -58,13 +73,7 @@ export function LazyImage({
   const [hasError, setHasError] = useState(false);
 
   // Convert srcSet to string format if it's an object
-  const srcSetString = srcSet
-    ? typeof srcSet === 'string'
-      ? srcSet
-      : Object.entries(srcSet)
-          .map(([density, url]) => `${url} ${density}`)
-          .join(', ')
-    : undefined;
+  const srcSetString = convertSrcSetToString(srcSet);
 
   useEffect(() => {
     if (!imageRef) return;
@@ -192,27 +201,11 @@ export function ResponsiveImage({
   alt,
   ...props
 }: ResponsiveImageProps) {
-  const buildSrcSet = () => {
-    if (!srcSet) return undefined;
-    
-    // If srcSet is already a string, return it as-is
-    if (typeof srcSet === 'string') {
-      return srcSet;
-    }
-    
-    // If srcSet is an object, build the srcSet string
-    const srcSetString = Object.entries(srcSet)
-      .map(([density, url]) => `${url} ${density}`)
-      .join(', ');
-    
-    return srcSetString;
-  };
-
   return (
     <LazyImage
       src={src}
       alt={alt}
-      srcSet={buildSrcSet()}
+      srcSet={srcSet}
       sizes={sizes}
       {...props}
     />
