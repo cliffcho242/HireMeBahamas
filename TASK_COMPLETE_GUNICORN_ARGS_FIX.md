@@ -2,16 +2,7 @@
 
 ## Problem Statement
 
-Deployment was failing with the following error:
-
-```
-==> Build successful 🎉
-==> Deploying...
-==> Running 'gunicorn app:app \   --bind 0.0.0.0:$PORT \   --workers 2 \   --timeout 120 \   --graceful-timeout 30 \   --log-level info'
-usage: gunicorn [OPTIONS] [APP_MODULE]
-gunicorn: error: unrecognized arguments:        
-==> Exited with exit code 2
-```
+Deployment was failing with "gunicorn: error: unrecognized arguments"
 
 ## Root Cause Analysis
 
@@ -21,14 +12,7 @@ The error occurred because:
 
 2. **Backslashes treated as literals**: In shell scripts, backslashes (`\`) indicate line continuation. However, when pasted into web dashboard fields, the backslashes and extra whitespace are treated as **literal characters** in the command string
 
-3. **Parsing failure**: Gunicorn received the command as:
-   ```
-   gunicorn app:app \ --bind 0.0.0.0:$PORT \ --workers 2 ...
-   ```
-   Instead of:
-   ```
-   gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 ...
-   ```
+3. **Parsing failure**: Commands must be on a single line without backslashes when entered in deployment dashboards
 
 4. **Result**: Gunicorn interpreted the backslashes and spaces as unrecognized arguments, causing the deployment to fail
 

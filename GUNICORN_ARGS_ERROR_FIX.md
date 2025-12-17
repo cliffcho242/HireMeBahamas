@@ -2,16 +2,7 @@
 
 ## Problem
 
-Deployment fails with the error:
-
-```
-==> Build successful 🎉
-==> Deploying...
-==> Running 'gunicorn app:app \   --bind 0.0.0.0:$PORT \   --workers 2 \   --timeout 120 \   --graceful-timeout 30 \   --log-level info'
-usage: gunicorn [OPTIONS] [APP_MODULE]
-gunicorn: error: unrecognized arguments:        
-==> Exited with exit code 2
-```
+Deployment fails with "gunicorn: error: unrecognized arguments"
 
 ## Root Cause
 
