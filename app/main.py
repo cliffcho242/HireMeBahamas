@@ -38,7 +38,6 @@ async def background_init():
     
     Note: Using sync database functions with asyncio.to_thread to avoid blocking.
     """
-    import asyncio
     from app.database import init_db, warmup_db
 
     try:

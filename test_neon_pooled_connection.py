@@ -7,14 +7,19 @@ Test that verifies Neon pooled connection fix:
 """
 import os
 import sys
+from pathlib import Path
 from urllib.parse import urlparse
+
+# Get the repository root directory dynamically
+REPO_ROOT = Path(__file__).parent.resolve()
 
 # Test 1: Verify statement_timeout is removed from connect_args
 def test_no_statement_timeout_in_options():
     """Verify that statement_timeout is not in the options parameter."""
     print("Test 1: Checking app/database.py for statement_timeout in options...")
     
-    with open('/home/runner/work/HireMeBahamas/HireMeBahamas/app/database.py', 'r') as f:
+    database_py = REPO_ROOT / 'app' / 'database.py'
+    with open(database_py, 'r') as f:
         content = f.read()
     
     # Check that the problematic pattern is removed
@@ -35,11 +40,14 @@ def test_neon_connection_detection():
     """Verify that Neon connections are detected and logged correctly."""
     print("\nTest 2: Checking Neon connection detection logic...")
     
-    with open('/home/runner/work/HireMeBahamas/HireMeBahamas/app/database.py', 'r') as f:
+    database_py = REPO_ROOT / 'app' / 'database.py'
+    with open(database_py, 'r') as f:
         content = f.read()
     
-    # Check for Neon detection logic
-    if "'neon.tech' in parsed_url.hostname.lower()" in content:
+    # Check for Neon detection logic (updated to check for None explicitly)
+    if "'neon.tech' in hostname.lower()" in content and "hostname is not None" in content:
+        print("✅ PASS: Neon hostname detection implemented with proper None check")
+    elif "'neon.tech' in parsed_url.hostname.lower()" in content:
         print("✅ PASS: Neon hostname detection implemented")
     else:
         print("❌ FAIL: Neon hostname detection not found")
@@ -58,7 +66,8 @@ def test_warmup_success_message():
     """Verify that the warmup success message is correct."""
     print("\nTest 3: Checking database warmup success message...")
     
-    with open('/home/runner/work/HireMeBahamas/HireMeBahamas/app/database.py', 'r') as f:
+    database_py = REPO_ROOT / 'app' / 'database.py'
+    with open(database_py, 'r') as f:
         content = f.read()
     
     if 'Database warmup successful' in content:
@@ -73,7 +82,8 @@ def test_main_uses_to_thread():
     """Verify that main.py properly calls sync database functions."""
     print("\nTest 4: Checking main.py uses asyncio.to_thread for sync functions...")
     
-    with open('/home/runner/work/HireMeBahamas/HireMeBahamas/app/main.py', 'r') as f:
+    main_py = REPO_ROOT / 'app' / 'main.py'
+    with open(main_py, 'r') as f:
         content = f.read()
     
     if 'asyncio.to_thread(init_db)' in content and 'asyncio.to_thread(warmup_db)' in content:
@@ -89,8 +99,9 @@ def test_no_other_statement_timeout_in_options():
     print("\nTest 5: Checking for statement_timeout in other database files...")
     
     # Check api/backend_app/database.py (async version)
+    backend_database_py = REPO_ROOT / 'api' / 'backend_app' / 'database.py'
     try:
-        with open('/home/runner/work/HireMeBahamas/HireMeBahamas/api/backend_app/database.py', 'r') as f:
+        with open(backend_database_py, 'r') as f:
             content = f.read()
         
         # This file uses asyncpg, which uses server_settings, not options

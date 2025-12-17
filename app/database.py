@@ -293,7 +293,8 @@ def get_engine():
                     
                     # Detect connection type for logging
                     parsed_url = urlparse(DATABASE_URL)
-                    if parsed_url.hostname and 'neon.tech' in parsed_url.hostname.lower():
+                    hostname = parsed_url.hostname
+                    if hostname is not None and 'neon.tech' in hostname.lower():
                         logger.info("✅ Database engine initialized (Neon pooled)")
                     else:
                         logger.info("✅ Database engine initialized successfully (sync)")
