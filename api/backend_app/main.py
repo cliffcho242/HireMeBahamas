@@ -994,18 +994,21 @@ async def metrics():
 if __name__ == "__main__":
     import uvicorn
 
-    # Production mode - no reload, multiple workers for better performance
+    # Production mode - no reload, single worker for better stability
     # Use the correct module path based on whether we're in standalone mode or not
     # When running as: python -m api.backend_app.main
     # Or from Railway/Docker: uvicorn api.backend_app.main:app
     module_path = "api.backend_app.main:socket_app" if HAS_SOCKETIO else "api.backend_app.main:app"
     
+    # Get port from environment variable (no hardcoded ports)
+    port = int(os.getenv('PORT', 8000))
+    
     logger.info(f"Starting uvicorn with module: {module_path}")
     uvicorn.run(
         module_path,
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=False,
-        workers=2,  # Use 2 workers for production mode
+        workers=1,  # Single worker for production mode (per NEVER AGAIN list)
         log_level="info"
     )
