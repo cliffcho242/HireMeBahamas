@@ -7,7 +7,8 @@ and works as expected by directly checking the app configuration.
 """
 
 import sys
-sys.path.insert(0, '/home/runner/work/HireMeBahamas/HireMeBahamas/backend')
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.main import app, logger
 from fastapi import Request

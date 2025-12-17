@@ -239,7 +239,7 @@ async def panic_handler(request: Request, exc: Exception) -> JSONResponse:
     All exceptions are logged with request ID for traceability.
     """
     # Get request ID from request state (set by middleware or generate new one)
-    request_id = getattr(request.state, "id", None) or getattr(request.state, "request_id", str(uuid.uuid4())[:8])
+    request_id = getattr(request.state, "id", None) or getattr(request.state, "request_id", None) or str(uuid.uuid4())[:8]
     
     # Log the panic with full details
     logger.error(f"PANIC {request_id}: {exc}", exc_info=True)
