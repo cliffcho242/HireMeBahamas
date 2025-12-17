@@ -905,10 +905,10 @@ else:
 
 # Initialize Socket.IO for real-time messaging (if available)
 if HAS_SOCKETIO:
-    # Allow all origins for Socket.IO to match CORS middleware configuration
+    # Use same CORS origins as CORS middleware (no wildcards in production)
     sio = socketio.AsyncServer(
         async_mode='asgi',
-        cors_allowed_origins="*"
+        cors_allowed_origins=cors_origins  # Uses same origins as CORS middleware
     )
 
     # Create Socket.IO ASGI app

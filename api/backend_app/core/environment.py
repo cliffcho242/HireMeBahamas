@@ -37,29 +37,51 @@ def get_cors_origins() -> List[str]:
     
     In production:
     - Only HTTPS origins for production domains
-    - Includes Vercel preview deployments (*.vercel.app)
+    - NO wildcard patterns allowed (security requirement)
+    - Specific Vercel deployment URLs only
     
     In development:
     - Includes localhost origins for local development
     - Plus all production origins for testing
     
+    Environment Variables:
+    - ALLOWED_ORIGINS: Comma-separated list of additional origins (production only)
+    
     Returns:
         List[str]: List of allowed CORS origins
     """
-    # Production origins (always included)
-    origins = [
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-        "https://*.vercel.app",  # Vercel preview deployments
-    ]
+    # Check for custom origins from environment variable
+    custom_origins_env = os.getenv("ALLOWED_ORIGINS", "")
     
-    # Add localhost origins only in development
-    if is_development():
-        origins.extend([
+    if is_production():
+        # Production mode: strict domain whitelist only
+        # 🚫 ABSOLUTE BAN: No wildcard (*) in production
+        if custom_origins_env and custom_origins_env != "*":
+            # Use custom origins if provided (and not wildcard)
+            origins = [origin.strip() for origin in custom_origins_env.split(",") if origin.strip()]
+        else:
+            # Default production origins - specific domains only
+            origins = [
+                "https://hiremebahamas.com",
+                "https://www.hiremebahamas.com",
+                "https://hiremebahamas.vercel.app",  # Vercel production deployment
+            ]
+        
+        # Note: For additional Vercel preview deployments, add them to
+        # ALLOWED_ORIGINS environment variable as comma-separated list.
+        # Example: ALLOWED_ORIGINS="https://hiremebahamas.com,https://hiremebahamas-git-feature.vercel.app"
+        # Wildcard patterns (*.vercel.app) are NOT supported in production mode.
+        
+    else:
+        # Development mode: includes localhost for testing
+        origins = [
+            "https://hiremebahamas.com",
+            "https://www.hiremebahamas.com",
+            "https://hiremebahamas.vercel.app",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
             "http://localhost:5173",  # Vite default
             "http://127.0.0.1:5173",
-        ])
+        ]
     
     return origins
