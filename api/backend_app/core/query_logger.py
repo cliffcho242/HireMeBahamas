@@ -156,31 +156,28 @@ def track_query_end(start: float) -> float:
 # ============================================================================
 # INTEGRATION WITH EXISTING MONITORING
 # ============================================================================
-# Optional: Integrate with existing monitoring.py if available
-try:
-    from app.core.monitoring import track_database_query
+# Optional: Integrate with existing monitoring system if available
+# Note: The monitoring module is located at backend/app/core/monitoring.py
+# If you want to enable this integration, import and use it in your endpoint code.
+# Example:
+#   from backend.app.core.monitoring import track_database_query
+#   elapsed_ms = elapsed * 1000
+#   track_database_query(elapsed_ms)
+
+def log_query_with_monitoring(query_name: str, elapsed: float, warn_threshold: Optional[float] = None) -> None:
+    """
+    Log query time. This is an alias for log_query_time for convenience.
     
-    def log_query_with_monitoring(query_name: str, elapsed: float, warn_threshold: Optional[float] = None) -> None:
-        """
-        Log query time and update monitoring metrics.
-        
-        This function combines slow query logging with the existing monitoring system.
-        
-        Args:
-            query_name: Descriptive name for the query
-            elapsed: Query execution time in seconds
-            warn_threshold: Threshold in seconds for logging warnings (default: 1.0)
-        """
-        # Log slow query if threshold exceeded
-        log_query_time(query_name, elapsed, warn_threshold)
-        
-        # Update monitoring metrics
-        elapsed_ms = elapsed * 1000
-        track_database_query(elapsed_ms)
+    To integrate with the monitoring system, you can extend this function
+    in your application code to call both logging and monitoring functions.
     
-except ImportError:
-    # Monitoring module not available, use standalone logging
-    log_query_with_monitoring = log_query_time
+    Args:
+        query_name: Descriptive name for the query
+        elapsed: Query execution time in seconds
+        warn_threshold: Threshold in seconds for logging warnings (default: 1.0)
+    """
+    # Log slow query if threshold exceeded
+    log_query_time(query_name, elapsed, warn_threshold)
 
 
 # ============================================================================

@@ -8,13 +8,39 @@ import asyncio
 import time
 import logging
 from io import StringIO
-from api.backend_app.core.query_logger import (
-    log_query_performance,
-    log_query_time,
-    track_query_start,
-    track_query_end,
-    DEFAULT_SLOW_QUERY_THRESHOLD,
-)
+
+# Add api/backend_app to path for imports
+import sys
+import os
+backend_app_path = os.path.join(os.path.dirname(__file__), 'api', 'backend_app')
+if backend_app_path not in sys.path:
+    sys.path.insert(0, backend_app_path)
+
+# Now import - this will use the api/backend_app/core/query_logger.py module
+# which internally uses app.core imports due to module aliasing in main.py
+try:
+    from app.core.query_logger import (
+        log_query_performance,
+        log_query_time,
+        track_query_start,
+        track_query_end,
+        DEFAULT_SLOW_QUERY_THRESHOLD,
+    )
+except ImportError:
+    # Fallback to direct import if module aliasing hasn't been set up
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "query_logger",
+        os.path.join(backend_app_path, "core", "query_logger.py")
+    )
+    query_logger = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(query_logger)
+    
+    log_query_performance = query_logger.log_query_performance
+    log_query_time = query_logger.log_query_time
+    track_query_start = query_logger.track_query_start
+    track_query_end = query_logger.track_query_end
+    DEFAULT_SLOW_QUERY_THRESHOLD = query_logger.DEFAULT_SLOW_QUERY_THRESHOLD
 
 
 def test_query_logger_does_not_log_fast_queries(caplog):
@@ -139,15 +165,21 @@ if __name__ == "__main__":
             self.records = []
             self._stream = StringIO()
             self._handler = logging.StreamHandler(self._stream)
-            self._logger = logging.getLogger("api.backend_app.core.query_logger")
+            self._handler.setFormatter(logging.Formatter('%(message)s'))
+            # Get the query_logger module's logger
+            self._logger = logging.getLogger("query_logger")
             self._original_level = self._logger.level
+            self._original_propagate = self._logger.propagate
         
         def set_level(self, level):
             self._logger.setLevel(level)
             self._handler.setLevel(level)
+            self._logger.propagate = False
             self._logger.addHandler(self._handler)
         
         def capture(self):
+            # Flush the stream to ensure all output is captured
+            self._handler.flush()
             self.text = self._stream.getvalue()
             # Count log records by lines (simple approximation)
             self.records = [line for line in self.text.split('\n') if line.strip()]
@@ -155,6 +187,7 @@ if __name__ == "__main__":
         def cleanup(self):
             self._logger.removeHandler(self._handler)
             self._logger.setLevel(self._original_level)
+            self._logger.propagate = self._original_propagate
     
     # Test 1: Fast queries
     print("\n1. Testing fast queries (should not log)...")

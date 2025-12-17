@@ -202,11 +202,9 @@ async def get_trending_posts(
     db: AsyncSession,
     limit: int = 20
 ) -> List[Post]:
-    """Fetch trending posts with integrated monitoring."""
+    """Fetch trending posts with query logging."""
     
-    from app.core.query_logger import log_query_with_monitoring
-    
-    # Track query with both logging and monitoring
+    # Track query with logging
     start = track_query_start()
     
     result = await db.execute(
@@ -218,8 +216,8 @@ async def get_trending_posts(
     
     elapsed = track_query_end(start)
     
-    # This function logs slow queries AND updates monitoring metrics
-    log_query_with_monitoring("fetch_trending_posts", elapsed)
+    # Log slow query if threshold exceeded
+    log_query_time("fetch_trending_posts", elapsed)
     
     return posts
 
