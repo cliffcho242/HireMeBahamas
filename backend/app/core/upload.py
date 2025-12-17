@@ -1,3 +1,4 @@
+import asyncio
 import io
 import os
 import uuid
@@ -9,6 +10,8 @@ import aiofiles
 from decouple import config
 from fastapi import HTTPException, UploadFile
 from PIL import Image
+
+from app.core.request_timeout import with_upload_timeout
 
 # Try to import GCS, but don't fail if not available
 try:
@@ -90,7 +93,7 @@ def extract_filename_from_url(url: str) -> str:
 
 
 async def save_file_locally(file: UploadFile, folder: str = "general") -> str:
-    """Save file to local storage"""
+    """Save file to local storage with timeout protection"""
     validate_file(file)
 
     filename = generate_filename(file.filename)
@@ -99,12 +102,20 @@ async def save_file_locally(file: UploadFile, folder: str = "general") -> str:
     # Ensure folder exists
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-    # Save file
-    async with aiofiles.open(file_path, "wb") as f:
-        content = await file.read()
-        await f.write(content)
-
-    return f"/uploads/{folder}/{filename}"
+    try:
+        # Save file with timeout protection (10 seconds)
+        async def _save_file():
+            async with aiofiles.open(file_path, "wb") as f:
+                content = await file.read()
+                await f.write(content)
+        
+        await with_upload_timeout(_save_file())
+        return f"/uploads/{folder}/{filename}"
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=408,
+            detail=f"File upload timed out. Please try again with a smaller file or better connection."
+        )
 
 
 def resize_image(
@@ -139,28 +150,38 @@ def resize_image(
 async def upload_image(
     file: UploadFile, folder: str = "general", resize: bool = True
 ) -> str:
-    """Upload and optionally resize image"""
+    """Upload and optionally resize image with timeout protection"""
     validate_file(file, ALLOWED_IMAGE_TYPES)
 
-    # Read file content
-    content = await file.read()
+    try:
+        # Upload and process image with timeout protection (10 seconds)
+        async def _process_and_save():
+            # Read file content
+            content = await file.read()
 
-    # Resize if requested
-    if resize and file.content_type in ALLOWED_IMAGE_TYPES:
-        content = resize_image(content)
+            # Resize if requested
+            if resize and file.content_type in ALLOWED_IMAGE_TYPES:
+                content = resize_image(content)
 
-    # Generate filename
-    filename = generate_filename(file.filename)
-    file_path = os.path.join(UPLOAD_DIR, folder, filename)
+            # Generate filename
+            filename = generate_filename(file.filename)
+            file_path = os.path.join(UPLOAD_DIR, folder, filename)
 
-    # Ensure folder exists
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            # Ensure folder exists
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-    # Save file
-    async with aiofiles.open(file_path, "wb") as f:
-        await f.write(content)
-
-    return f"/uploads/{folder}/{filename}"
+            # Save file
+            async with aiofiles.open(file_path, "wb") as f:
+                await f.write(content)
+            
+            return f"/uploads/{folder}/{filename}"
+        
+        return await with_upload_timeout(_process_and_save())
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=408,
+            detail=f"Image upload timed out. Please try again with a smaller image or better connection."
+        )
 
 
 async def upload_multiple_files(
@@ -213,24 +234,36 @@ def setup_cloudinary():
 
 
 async def upload_to_cloudinary(file: UploadFile, folder: str = "hirebahamas") -> str:
-    """Upload file to Cloudinary"""
+    """Upload file to Cloudinary with timeout protection"""
     if not setup_cloudinary():
         return await save_file_locally(file, folder)
 
     try:
         import cloudinary.uploader
 
-        # Upload to Cloudinary
-        result = cloudinary.uploader.upload(
-            file.file,
-            folder=folder,
-            resource_type="auto",
-            quality="auto",
-            fetch_format="auto",
-        )
+        # Upload to Cloudinary with timeout protection (external API call)
+        async def _upload_to_cloudinary():
+            # Cloudinary upload is synchronous, run in executor to avoid blocking
+            import asyncio
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: cloudinary.uploader.upload(
+                    file.file,
+                    folder=folder,
+                    resource_type="auto",
+                    quality="auto",
+                    fetch_format="auto",
+                )
+            )
+            return result["secure_url"]
+        
+        return await with_upload_timeout(_upload_to_cloudinary())
 
-        return result["secure_url"]
-
+    except asyncio.TimeoutError:
+        print(f"Cloudinary upload timed out, falling back to local storage")
+        # Fallback to local storage
+        return await save_file_locally(file, folder)
     except Exception as e:
         print(f"Cloudinary upload failed: {e}")
         # Fallback to local storage
@@ -267,7 +300,7 @@ def setup_gcs():
 
 
 async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
-    """Upload file to Google Cloud Storage
+    """Upload file to Google Cloud Storage with timeout protection
     
     Files are uploaded as public or private based on GCS_MAKE_PUBLIC environment variable.
     - If GCS_MAKE_PUBLIC=True: Files are made public and public URL is returned
@@ -283,41 +316,53 @@ async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
         return await save_file_locally(file, folder)
 
     try:
-        # Generate unique filename
-        filename = generate_filename(file.filename)
-        blob_name = f"{folder}/{filename}"
+        # Upload to GCS with timeout protection (external API call)
+        async def _upload_to_gcs():
+            # Generate unique filename
+            filename = generate_filename(file.filename)
+            blob_name = f"{folder}/{filename}"
 
-        # Get bucket
-        bucket = client.bucket(GCS_BUCKET_NAME)
-        blob = bucket.blob(blob_name)
+            # Get bucket
+            bucket = client.bucket(GCS_BUCKET_NAME)
+            blob = bucket.blob(blob_name)
 
-        # Reset file pointer to beginning in case it was read before
-        await file.seek(0)
-        
-        # Set content type
-        content_type = file.content_type or "application/octet-stream"
-        
-        # Read content into BytesIO for efficient upload
-        # This is more memory-efficient than reading into a string
-        content = await file.read()
-        file_obj = io.BytesIO(content)
+            # Reset file pointer to beginning in case it was read before
+            await file.seek(0)
+            
+            # Set content type
+            content_type = file.content_type or "application/octet-stream"
+            
+            # Read content into BytesIO for efficient upload
+            # This is more memory-efficient than reading into a string
+            content = await file.read()
+            file_obj = io.BytesIO(content)
 
-        # Upload to GCS using file object
-        blob.upload_from_file(file_obj, content_type=content_type)
-
-        # Make public or generate signed URL based on configuration
-        if GCS_MAKE_PUBLIC:
-            blob.make_public()
-            return blob.public_url
-        else:
-            # Generate a signed URL valid for 1 hour for private files
-            signed_url = blob.generate_signed_url(
-                version="v4",
-                expiration=timedelta(hours=1),
-                method="GET"
+            # GCS upload is synchronous, run in executor to avoid blocking
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: blob.upload_from_file(file_obj, content_type=content_type)
             )
-            return signed_url
 
+            # Make public or generate signed URL based on configuration
+            if GCS_MAKE_PUBLIC:
+                blob.make_public()
+                return blob.public_url
+            else:
+                # Generate a signed URL valid for 1 hour for private files
+                signed_url = blob.generate_signed_url(
+                    version="v4",
+                    expiration=timedelta(hours=1),
+                    method="GET"
+                )
+                return signed_url
+        
+        return await with_upload_timeout(_upload_to_gcs())
+
+    except asyncio.TimeoutError:
+        print(f"GCS upload timed out, falling back to local storage")
+        # Fallback to local storage
+        return await save_file_locally(file, folder)
     except Exception as e:
         print(f"GCS upload failed: {e}")
         # Fallback to local storage
