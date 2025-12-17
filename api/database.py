@@ -171,8 +171,10 @@ def get_database_url():
         # If URL parsing fails after validation, log it but continue
         logger.warning(f"Could not clean database name from URL: {e}")
     
-    # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
-    db_url = ensure_sslmode(db_url)
+    # ⚠️  CRITICAL: Do NOT add sslmode for Neon pooled connections
+    # Neon pooler (PgBouncer) does NOT support sslmode parameter
+    # SSL is handled automatically by the Neon proxy
+    # The ensure_sslmode() function is deprecated and no longer modifies URLs
     
     # Validate DATABASE_URL structure meets cloud deployment requirements
     is_valid, error_msg = validate_database_url_structure(db_url)
@@ -180,7 +182,7 @@ def get_database_url():
         logger.warning(
             f"DATABASE_URL validation failed: {error_msg}. "
             f"Database connections will fail. "
-            f"Required format: postgresql://user:pass@hostname:port/dbname?sslmode=require"
+            f"Required format: postgresql://user:pass@hostname:port/dbname"
         )
         # In production, this is a critical error but we still return the URL
         # to allow health checks and diagnostics to run
@@ -237,7 +239,7 @@ def get_engine():
                 logger.error(
                     f"❌ DATABASE_URL validation failed using make_url(): {url_error}. "
                     f"Application will start but database operations will fail. "
-                    f"Required format: postgresql://user:password@host:port/database?sslmode=require"
+                    f"Required format: postgresql://user:password@host:port/database"
                 )
                 return None
             
@@ -250,18 +252,19 @@ def get_engine():
             pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "300"))
             
             # CRITICAL: Production-safe engine configuration for Neon pooled connections
-            # NO startup DB options (statement_timeout, sslmode, or options in connect_args)
-            # Neon pooled connections (PgBouncer) do NOT support startup parameters
+            # ⚠️  ABSOLUTE RULES FOR NEON POOLER (PgBouncer):
+            # 1. NO sslmode in URL or connect_args (SSL handled by proxy)
+            # 2. NO statement_timeout in connect_args (not supported by PgBouncer)
+            # 3. NO server_settings with startup options
+            # 4. Only connection and command timeouts are allowed
             _engine = create_async_engine(
                 db_url,
                 pool_pre_ping=True,            # Validate connections before use
                 pool_size=pool_size,           # Small pool for serverless
                 max_overflow=max_overflow,     # Limited overflow
                 pool_recycle=pool_recycle,     # Recycle connections every 5 minutes
-                # CRITICAL: Minimal connect_args for Neon compatibility
-                # NO sslmode (must be in URL query string)
-                # NO statement_timeout (not supported by PgBouncer)
-                # NO server_settings with startup options
+                # CRITICAL: Minimal connect_args for Neon pooler compatibility
+                # ONLY timeout parameters are allowed - NO SSL, NO startup options
                 connect_args={
                     "timeout": connect_timeout,  # Connection timeout (5s default for asyncpg)
                     "command_timeout": command_timeout,  # Query timeout (30s default)
@@ -276,7 +279,7 @@ def get_engine():
                 f"The URL format is invalid or empty. "
                 f"Error: {str(e)}. "
                 f"Please check your DATABASE_URL environment variable. "
-                f"Required format: postgresql://user:password@host:port/database?sslmode=require"
+                f"Required format: postgresql://user:password@host:port/database"
             )
             return None
         except Exception as e:

@@ -9,7 +9,8 @@
 # ⚠️  SYNC SQLAlchemy (Option A): This module uses synchronous SQLAlchemy
 # with psycopg2 driver instead of async SQLAlchemy with asyncpg.
 #
-# ✅ RULE: For PostgreSQL + SQLAlchemy with psycopg2, SSL belongs in the URL
+# ⚠️  CRITICAL RULE: For Neon pooled connections, DO NOT use sslmode
+# SSL is handled automatically by the Neon proxy (PgBouncer)
 #
 # This configuration works on:
 # - Render
@@ -19,14 +20,18 @@
 # - SQLAlchemy 1.4 / 2.0
 #
 # DATABASE_URL FORMAT (copy-paste):
-# postgresql://user:password@host:5432/database?sslmode=require
+# postgresql://user:password@host:5432/database
 #
-# ENV VARS (for Railway/Render/Vercel deployment):
-# DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
+# ⚠️  CRITICAL: Do NOT add sslmode for Neon pooled connections
+# Neon pooler (PgBouncer) does NOT support sslmode parameter
+# SSL is handled automatically by the Neon proxy
+#
+# ENV VARS (for Railway/Render/Vercel/Neon deployment):
+# DATABASE_URL=postgresql://user:pass@host:5432/db
 # DB_POOL_RECYCLE=300
 #
 # Key improvements:
-# 1. SSL configured via URL query string (?sslmode=require) - portable across platforms
+# 1. NO sslmode parameter (incompatible with Neon pooler)
 # 2. pool_recycle=300 - prevents stale connections
 # 3. pool_pre_ping=True - validates connections before use
 # 4. connect_timeout=5 - handles cold starts
@@ -58,8 +63,9 @@ DB_PLACEHOLDER_URL = "postgresql://placeholder:placeholder@invalid.local:5432/pl
 # 2. Local development default (only for development, not production)
 #
 # SYNC SQLALCHEMY FORMAT:
-# DATABASE_URL=postgresql://USER:ENCODED_PASSWORD@host:5432/DB_NAME?sslmode=require
+# DATABASE_URL=postgresql://USER:ENCODED_PASSWORD@host:5432/DB_NAME
 # Note: Uses psycopg2 driver (synchronous) instead of asyncpg
+# ⚠️  Do NOT add sslmode for Neon pooled connections
 # =============================================================================
 
 # Check if we're in production mode
@@ -83,7 +89,7 @@ if (ENV == "production" or ENVIRONMENT == "production") and not DATABASE_URL:
     logger.warning(
         "DATABASE_URL is required in production. "
         "Please set DATABASE_URL environment variable with your PostgreSQL connection string. "
-        "Format: postgresql://USER:PASSWORD@host:5432/DB_NAME?sslmode=require"
+        "Format: postgresql://USER:PASSWORD@host:5432/DB_NAME (no sslmode for Neon pooler)"
     )
     # Use placeholder to prevent crashes, connections will fail gracefully
     DATABASE_URL = DB_PLACEHOLDER_URL
@@ -198,11 +204,17 @@ COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
 STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
 
 # =============================================================================
-# SSL CONFIGURATION
+# SSL CONFIGURATION - NEON POOLER SAFE
 # =============================================================================
-# SSL is configured via the DATABASE_URL query string parameter: ?sslmode=require
-# This is the correct and portable way to configure SSL for PostgreSQL connections.
-# No additional SSL configuration is needed in connect_args.
+# ⚠️  CRITICAL: Do NOT configure SSL for Neon pooled connections
+# 
+# Neon pooler (PgBouncer) does NOT support sslmode parameter.
+# SSL is handled automatically by the Neon proxy layer.
+# 
+# Adding sslmode to the URL or connect_args will cause connection crashes.
+# 
+# For direct PostgreSQL connections (non-pooled), SSL can be configured via URL.
+# For Neon pooled connections, use the URL exactly as provided by Neon.
 # =============================================================================
 
 # =============================================================================
@@ -217,10 +229,10 @@ STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s
 # 1. pool_pre_ping=True - validates connections before use (detects dead connections)
 # 2. pool_recycle=300 - recycles connections (serverless-friendly)
 # 3. connect_timeout=5 - allows Railway cold starts
-# 4. SSL configured via URL query string (?sslmode=require)
+# 4. NO sslmode parameter (incompatible with Neon pooler)
 #
-# COPY-PASTE ENV VARS FOR RAILWAY/RENDER/VERCEL:
-# DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
+# COPY-PASTE ENV VARS FOR RAILWAY/RENDER/VERCEL/NEON:
+# DATABASE_URL=postgresql://user:pass@host:5432/db
 # DB_POOL_RECYCLE=300
 # =============================================================================
 
@@ -274,8 +286,9 @@ def get_engine():
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
                         
                         # psycopg2-specific connection arguments
-                        # NOTE: SSL is configured via DATABASE_URL query string (?sslmode=require), NOT here
-                        # For cloud deployments, always use ?sslmode=require to enforce encrypted connections
+                        # ⚠️  CRITICAL: NO SSL configuration for Neon pooler compatibility
+                        # SSL is handled automatically by the Neon proxy (PgBouncer)
+                        # Do NOT add sslmode to URL or connect_args
                         connect_args={
                             # Connection timeout (5s for Railway cold starts)
                             # Using 'connect_timeout' which is the standard psycopg2 parameter
@@ -310,7 +323,7 @@ def get_engine():
                         f"The URL format is invalid or empty. "
                         f"Error: {str(e)}. "
                         f"Application will start but database operations will fail. "
-                        f"Required format: postgresql://user:password@host:port/database?sslmode=require"
+                        f"Required format: postgresql://user:password@host:port/database (no sslmode for Neon pooler)"
                     )
                     _engine = None
                     return None

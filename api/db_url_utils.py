@@ -21,9 +21,8 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
     4. Must not contain whitespace (leading, trailing, or embedded)
     5. Must not contain quotes (single or double)
     
-    Note: SSL mode (sslmode parameter) is handled separately by the ensure_sslmode()
-    function, which automatically adds ?sslmode=require if it's missing. This
-    validation function does not check for sslmode to avoid redundancy.
+    ⚠️  CRITICAL: This function does NOT validate or require sslmode parameter.
+    For Neon pooled connections, sslmode is NOT supported and will cause crashes.
     
     Args:
         db_url: Database connection URL to validate
@@ -39,25 +38,23 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
         - postgresql://user:pass@127.0.0.1/dbname
         
         ❌ BAD (contains whitespace):
-        - postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname ?sslmode=require
-        - postgresql://user:pass @ep-xxxx.neon.tech:5432/dbname?sslmode=require
-        -  postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require
+        - postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname ?param=value
+        - postgresql://user:pass @ep-xxxx.neon.tech:5432/dbname
+        -  postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname
         
         ❌ BAD (contains quotes):
-        - "postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require"
-        - 'postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require'
-        - postgresql://"user":pass@ep-xxxx.neon.tech:5432/dbname?sslmode=require
+        - "postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname"
+        - 'postgresql://user:pass@ep-xxxx.neon.tech:5432/dbname'
+        - postgresql://"user":pass@ep-xxxx.neon.tech:5432/dbname
         
-        ✅ CORRECT (Neon example - before ensure_sslmode):
+        ✅ CORRECT (Neon pooled connection):
         postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname
         ✔ Real hostname (ep-xxxx.us-east-1.aws.neon.tech)
         ✔ Port present (:5432)
         ✔ TCP enforced
         ✔ No spaces
         ✔ No quotes
-        
-        After ensure_sslmode() is called, it becomes:
-        postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require
+        ✔ NO sslmode parameter (not supported by Neon pooler)
     """
     if not db_url:
         return False, "DATABASE_URL is empty or None"
@@ -68,7 +65,7 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
         return False, (
             "DATABASE_URL contains leading or trailing whitespace. "
             "Remove all spaces from the connection string. "
-            "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
+            "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname"
         )
     
     # Check for embedded whitespace (spaces within the URL)
@@ -76,7 +73,7 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
         return False, (
             "DATABASE_URL contains whitespace characters. "
             "Remove all spaces, tabs, and newlines from the connection string. "
-            "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
+            "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname"
         )
     
     # Check for quotes (single or double)
@@ -87,7 +84,7 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
             "DATABASE_URL contains quote characters (single or double quotes). "
             "Remove all quotes from the connection string. "
             "Do not wrap the URL in quotes - paste it directly without any surrounding quotes. "
-            "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
+            "Example: postgresql://user:pass@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname"
         )
     
     try:
@@ -98,7 +95,7 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
         if not parsed.hostname:
             return False, (
                 "DATABASE_URL missing hostname. "
-                "Format: postgresql://user:pass@hostname:port/dbname?sslmode=require"
+                "Format: postgresql://user:pass@hostname:port/dbname"
             )
         
         # Check 2: Hostname must NOT be localhost or 127.0.0.1 (Unix socket usage)
@@ -115,12 +112,13 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
             return False, (
                 "DATABASE_URL missing port number. "
                 "Add explicit port (e.g., :5432) after hostname. "
-                "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
+                "Example: postgresql://user:pass@hostname:5432/dbname"
             )
         
-        # Note: sslmode parameter validation removed as redundant
-        # The ensure_sslmode() function automatically adds sslmode=require if missing
-        # This validation would always pass after ensure_sslmode() is called
+        # ⚠️  CRITICAL: sslmode validation REMOVED
+        # Neon pooled connections (PgBouncer) do NOT support sslmode parameter
+        # Adding sslmode will cause connection crashes
+        # SSL is handled automatically by the Neon proxy
         
         # All checks passed
         return True, ""
@@ -130,33 +128,26 @@ def validate_database_url_structure(db_url: str) -> Tuple[bool, str]:
 
 
 def ensure_sslmode(db_url: str) -> str:
-    """Ensure SSL mode is set in the database URL.
+    """DEPRECATED: Do NOT use sslmode with Neon pooled connections.
     
-    Vercel Postgres (Neon) and other cloud databases require SSL connections.
-    This function automatically adds ?sslmode=require to URLs that don't have
-    SSL mode specified.
+    ⚠️  CRITICAL: This function is DEPRECATED and should NOT be used.
+    
+    Neon pooled connections (PgBouncer) do NOT support sslmode parameter.
+    Adding sslmode to the URL will cause connection crashes.
+    
+    This function now returns the URL unchanged to prevent adding sslmode.
+    It is kept only for backward compatibility and will be removed in a future version.
+    
+    For Neon pooled connections:
+    - Use the URL exactly as provided by Neon (without modifications)
+    - SSL is handled automatically by the Neon proxy
+    - Do NOT add any SSL-related parameters
     
     Args:
         db_url: Database connection URL
         
     Returns:
-        Database URL with sslmode parameter added if it was missing
-        
-    Examples:
-        >>> ensure_sslmode("postgresql://user:pass@host/db")
-        'postgresql://user:pass@host/db?sslmode=require'
-        
-        >>> ensure_sslmode("postgresql://user:pass@host/db?timeout=10")
-        'postgresql://user:pass@host/db?timeout=10&sslmode=require'
-        
-        >>> ensure_sslmode("postgresql://user:pass@host/db?sslmode=prefer")
-        'postgresql://user:pass@host/db?sslmode=prefer'
+        Database URL unchanged (sslmode is NOT added)
     """
-    if "?" not in db_url:
-        # No query parameters - add sslmode=require
-        return f"{db_url}?sslmode=require"
-    elif "sslmode=" not in db_url:
-        # Has query parameters but no sslmode - append it
-        return f"{db_url}&sslmode=require"
-    # else: sslmode is already present, don't override user's explicit setting
+    # Return URL unchanged - DO NOT add sslmode for Neon compatibility
     return db_url
