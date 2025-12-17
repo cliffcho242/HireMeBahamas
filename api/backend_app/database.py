@@ -131,14 +131,27 @@ if DATABASE_URL.startswith("postgresql://"):
 backend_core_path = os.path.join(_project_root, 'backend', 'app', 'core')
 if backend_core_path not in sys.path:
     sys.path.insert(0, backend_core_path)
+
+# Import db_utils functions
+# These are critical for production - if import fails, log error
+_db_utils_available = False
 try:
     from db_utils import strip_sslmode_from_url, ensure_port_in_url, get_ssl_config
+    _db_utils_available = True
+except ImportError as e:
+    logger.error(
+        f"CRITICAL: Could not import db_utils: {e}. "
+        f"DATABASE_URL auto-fixes will not be applied. "
+        f"This may cause connection issues in production. "
+        f"Check that backend/app/core/db_utils.py exists."
+    )
+
+# Apply auto-fixes if db_utils is available
+if _db_utils_available:
     # Remove sslmode from URL for asyncpg compatibility
     DATABASE_URL = strip_sslmode_from_url(DATABASE_URL)
     # Ensure explicit port in DATABASE_URL (required for cloud deployments)
     DATABASE_URL = ensure_port_in_url(DATABASE_URL)
-except ImportError as e:
-    logger.warning(f"Could not import db_utils: {e}. Using DATABASE_URL without auto-fixes.")
 
 # Strip whitespace from database name in the URL path
 # This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
@@ -181,8 +194,11 @@ if DATABASE_URL and DATABASE_URL != DB_PLACEHOLDER_URL:
         missing_fields.append("hostname")
     if not parsed.port:
         # Port should have been auto-fixed by ensure_port_in_url()
-        # If we still don't have a port here, something went wrong
-        missing_fields.append("port (auto-fix failed, explicit port required, e.g., :5432)")
+        # If we still don't have a port here, check why
+        if not parsed.hostname:
+            missing_fields.append("port (requires hostname first, explicit port required, e.g., :5432)")
+        else:
+            missing_fields.append("port (auto-fix failed, explicit port required, e.g., :5432)")
     if not parsed.path or len(parsed.path) <= 1:
         # path should be /database_name, so length > 1
         missing_fields.append("database name in path (e.g., /mydatabase)")

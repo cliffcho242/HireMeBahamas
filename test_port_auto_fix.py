@@ -36,7 +36,7 @@ def ensure_port_in_url(database_url: str, default_port: int = DEFAULT_POSTGRES_P
     
     # Construct new netloc with port
     netloc = parsed_url.hostname
-    if default_port:
+    if default_port is not None:
         netloc = f"{netloc}:{default_port}"
     
     # Add username and password if present

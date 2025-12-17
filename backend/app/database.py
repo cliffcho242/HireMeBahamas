@@ -159,8 +159,11 @@ if DATABASE_URL and DATABASE_URL != DB_PLACEHOLDER_URL and DATABASE_URL != LOCAL
         missing_fields.append("hostname")
     if not parsed.port:
         # Port should have been auto-fixed by ensure_port_in_url()
-        # If we still don't have a port here, something went wrong
-        missing_fields.append("port (auto-fix failed, explicit port required, e.g., :5432)")
+        # If we still don't have a port here, check why
+        if not parsed.hostname:
+            missing_fields.append("port (requires hostname first, explicit port required, e.g., :5432)")
+        else:
+            missing_fields.append("port (auto-fix failed, explicit port required, e.g., :5432)")
     if not parsed.path or len(parsed.path) <= 1:
         # path should be /database_name, so length > 1
         missing_fields.append("database name in path (e.g., /mydatabase)")
