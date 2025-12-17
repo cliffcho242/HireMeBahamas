@@ -383,28 +383,13 @@ GUNICORN_TIMEOUT=120
 ### Start Command (Render/Production)
 
 ```bash
-cd backend && poetry run gunicorn app.main:app \
-  --workers 1 \
-  --threads 2 \
-  --timeout 120 \
-  --graceful-timeout 30 \
-  --keep-alive 5 \
-  --log-level info \
-  --config gunicorn.conf.py
+cd backend && poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
 ```
 
 ### Alternative (Without Poetry)
 
 ```bash
-cd backend && gunicorn app.main:app \
-  --workers 1 \
-  --worker-class uvicorn.workers.UvicornWorker \
-  --threads 2 \
-  --timeout 120 \
-  --graceful-timeout 30 \
-  --keep-alive 5 \
-  --log-level info \
-  --bind 0.0.0.0:$PORT
+cd backend && gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --bind 0.0.0.0:$PORT
 ```
 
 ---

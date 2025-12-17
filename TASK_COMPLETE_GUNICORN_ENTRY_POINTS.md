@@ -117,18 +117,12 @@ CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 
 ### Render (FastAPI)
 ```bash
-cd backend && gunicorn app.main:app \
-  --workers 2 \
-  --worker-class uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:$PORT \
-  --log-level info
+cd backend && gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --log-level info
 ```
 
 ### Render (Flask)
 ```bash
-gunicorn final_backend_postgresql:application \
-  --config gunicorn.conf.py \
-  --bind 0.0.0.0:$PORT
+gunicorn final_backend_postgresql:application --config gunicorn.conf.py --bind 0.0.0.0:$PORT
 ```
 
 ### Railway

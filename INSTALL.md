@@ -419,12 +419,7 @@ pip install gunicorn
 ### Run Backend with Gunicorn
 ```bash
 # Basic production start
-gunicorn final_backend_postgresql:application \
-    --bind 0.0.0.0:8080 \
-    --workers 4 \
-    --timeout 120 \
-    --access-logfile - \
-    --error-logfile -
+gunicorn final_backend_postgresql:application --bind 0.0.0.0:8080 --workers 4 --timeout 120 --access-logfile - --error-logfile -
 
 # With systemd service
 sudo nano /etc/systemd/system/hiremebahamas.service

@@ -60,16 +60,6 @@ Located at: `/Procfile` or `/backend/Procfile`
 
 ## Common Mistakes to Avoid
 
-### ❌ WRONG: Multi-line command in dashboard
-```
-# This will FAIL in deployment dashboards
-gunicorn app.main:app \
-  --bind 0.0.0.0:$PORT \
-  --workers 2
-```
-
-**Why it fails:** Backslashes and line breaks are treated as literal characters, causing "unrecognized arguments" error.
-
 ### ⚠️ NOT RECOMMENDED: Using `app:app`
 ```
 gunicorn app:app --bind 0.0.0.0:$PORT

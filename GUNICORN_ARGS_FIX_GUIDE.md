@@ -130,26 +130,6 @@ Valid options include:
 
 ### Common Valid Commands
 
-**For FastAPI with Uvicorn workers:**
-```bash
-gunicorn app.main:app \
-  --workers 3 \
-  --worker-class uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:8000 \
-  --timeout 120 \
-  --log-level info
-```
-
-**With environment variables:**
-```bash
-gunicorn app.main:app \
-  --workers ${WEB_CONCURRENCY:-3} \
-  --worker-class uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:$PORT \
-  --timeout ${GUNICORN_TIMEOUT:-120} \
-  --log-level info
-```
-
 **With config file (recommended):**
 ```bash
 gunicorn app.main:app --config gunicorn.conf.py

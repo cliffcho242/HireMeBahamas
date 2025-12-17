@@ -50,14 +50,7 @@ keepalive = 5  # ✅ Connection persistence
 web: cd backend && PYTHONPATH=. poetry run gunicorn app.main:app --config gunicorn.conf.py
 
 # AFTER
-web: cd backend && PYTHONPATH=. poetry run gunicorn app.main:app \
-  --workers 1 \
-  --threads 2 \
-  --timeout 120 \
-  --graceful-timeout 30 \
-  --keep-alive 5 \
-  --log-level info \
-  --config gunicorn.conf.py
+web: cd backend && PYTHONPATH=. poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
 ```
 
 **Why Explicit Flags?**
@@ -80,9 +73,7 @@ WEB_THREADS: "2"      # Changed from "4"
 GUNICORN_TIMEOUT: "120"  # Changed from "60"
 
 # Start Command
-startCommand: cd backend && poetry run gunicorn app.main:app \
-  --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 \
-  --keep-alive 5 --log-level info --config gunicorn.conf.py
+startCommand: cd backend && poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
 ```
 
 ---

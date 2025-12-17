@@ -1,13 +1,8 @@
 # 🚨 URGENT: Fix Render Gunicorn "Unrecognized Arguments" Error
 
-## You're Seeing This Error on Render:
+## You're Seeing "Unrecognized Arguments" Error on Render
 
-```
-==> Running 'gunicorn app:app \   --bind 0.0.0.0:$PORT \   --workers 2 \   --timeout 120 \   --graceful-timeout 30 \   --log-level info.main:app'
-usage: gunicorn [OPTIONS] [APP_MODULE]
-gunicorn: error: unrecognized arguments:        
-==> Exited with exit code 2
-```
+The error message shows: `gunicorn: error: unrecognized arguments`
 
 ## ✅ The Fix (5 Minutes)
 
@@ -52,16 +47,9 @@ cd backend && gunicorn app.main:app --workers ${WEB_CONCURRENCY:-3} --worker-cla
 
 ## ❓ Why Did This Happen?
 
-Someone entered a **multi-line command** with backslashes (`\`) in the Render dashboard. Backslashes work in terminal/scripts but **NOT** in web form fields. They get treated as literal characters, confusing gunicorn.
+Someone entered a command with backslashes (`\`) in the Render dashboard. Backslashes work in terminal/scripts but **NOT** in web form fields. They get treated as literal characters, confusing gunicorn.
 
-**Example of WRONG command (causes error):**
-```
-gunicorn app:app \
-  --bind 0.0.0.0:$PORT \
-  --workers 2
-```
-
-**Example of CORRECT command:**
+**Commands must be on a single line:**
 ```
 gunicorn app.main:app --workers 2 --bind 0.0.0.0:$PORT
 ```

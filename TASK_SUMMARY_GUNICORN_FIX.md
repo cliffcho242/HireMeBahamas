@@ -2,31 +2,17 @@
 
 ## Problem Statement
 
-Users were encountering this error during Render deployment:
-
-```
-==> Running 'gunicorn app:app \   --bind 0.0.0.0:$PORT \   --workers 2 \   --timeout 120 \   --graceful-timeout 30 \   --log-level info.main:app'
-usage: gunicorn [OPTIONS] [APP_MODULE]
-gunicorn: error: unrecognized arguments:        
-==> Exited with exit code 2
-```
+Users were encountering "gunicorn: error: unrecognized arguments" during Render deployment.
 
 ## Root Cause Analysis
 
-The error occurs when a **multi-line gunicorn command with backslashes** is entered in the Render dashboard's "Start Command" field. 
+The error occurs when commands with backslashes are entered in the Render dashboard's "Start Command" field. 
 
 **Why this happens:**
 - Backslashes (`\`) are used for line continuation in shell scripts
 - In web form fields, backslashes are treated as literal characters
 - Gunicorn receives the backslashes and whitespace as arguments
 - This causes "unrecognized arguments" error
-
-**Example of problematic command:**
-```bash
-gunicorn app:app \
-  --bind 0.0.0.0:$PORT \
-  --workers 2
-```
 
 **Correct format for web dashboards:**
 ```bash

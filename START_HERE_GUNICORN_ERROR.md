@@ -2,13 +2,7 @@
 
 ## Quick Problem Identification
 
-Are you seeing this error during deployment?
-
-```
-==> Running 'gunicorn app:app \   --bind 0.0.0.0:$PORT \   --workers 2 \   ...'
-gunicorn: error: unrecognized arguments:        
-==> Exited with exit code 2
-```
+Are you seeing "gunicorn: error: unrecognized arguments" during deployment?
 
 ✅ **You're in the right place!** This guide will fix your issue in 5 minutes.
 
@@ -126,17 +120,9 @@ Read these guides for detailed information:
 
 ## Why Did This Happen?
 
-Someone (maybe you!) saw this in documentation:
+Someone copied a command with backslashes into the Render/Railway dashboard.
 
-```bash
-gunicorn app.main:app \
-  --workers 2 \
-  --bind 0.0.0.0:$PORT
-```
-
-And thought "I'll copy this into the Render/Railway dashboard!"
-
-**Problem:** Those backslashes (`\`) work in terminal/scripts but NOT in web forms. They need to be on a single line:
+**Problem:** Those backslashes (`\`) work in terminal/scripts but NOT in web forms. Commands need to be on a single line like:
 
 ```bash
 gunicorn app.main:app --workers 2 --bind 0.0.0.0:$PORT

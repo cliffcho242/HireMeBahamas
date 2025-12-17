@@ -24,14 +24,6 @@ For this project, use these **recommended** entry points:
 - Multi-line commands with `\` are ONLY for shell scripts
 - Copy-pasting multi-line commands into dashboard fields will cause parsing errors
 
-**Example of ERROR:**
-```
-# ❌ WRONG - Multi-line with backslashes will fail in deployment dashboards
-gunicorn app.main:app \
-  --bind 0.0.0.0:$PORT \
-  --workers 2
-```
-
 **Correct approach:**
 ```
 # ✅ CORRECT - Single line for deployment dashboards
@@ -47,17 +39,6 @@ The Flask backend is defined in `final_backend_postgresql.py` and provides a tra
 **For Deployment Dashboards (Render, Railway, Heroku) - SINGLE LINE:**
 ```bash
 gunicorn final_backend_postgresql:application --config gunicorn.conf.py --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --graceful-timeout 30 --log-level info
-```
-
-**For Shell Scripts - Multi-line (with backslashes):**
-```bash
-gunicorn final_backend_postgresql:application \
-  --config gunicorn.conf.py \
-  --bind 0.0.0.0:$PORT \
-  --workers 2 \
-  --timeout 120 \
-  --graceful-timeout 30 \
-  --log-level info
 ```
 
 **Why `application`?**
@@ -125,17 +106,6 @@ For production deployments, use Gunicorn for worker management with Uvicorn work
 gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --preload --log-level info
 ```
 
-**For Shell Scripts - Multi-line (with backslashes):**
-```bash
-gunicorn app.main:app \
-  --workers ${WEB_CONCURRENCY:-2} \
-  --worker-class uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:$PORT \
-  --timeout ${GUNICORN_TIMEOUT:-120} \
-  --preload \
-  --log-level info
-```
-
 ## Configuration Files
 
 ### render.yaml
@@ -159,8 +129,7 @@ web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicor
 ### start.sh
 
 ```bash
-exec gunicorn final_backend_postgresql:application \
-    --config gunicorn.conf.py
+exec gunicorn final_backend_postgresql:application --config gunicorn.conf.py
 ```
 
 **Entry Point:** `final_backend_postgresql:application` (Flask)
@@ -332,14 +301,7 @@ To verify the correct entry point is being used:
 
 ### Error: "gunicorn: error: unrecognized arguments"
 
-**Symptoms:**
-```
-==> Running 'gunicorn app:app \   --bind 0.0.0.0:$PORT \   --workers 2 \   ...'
-usage: gunicorn [OPTIONS] [APP_MODULE]
-gunicorn: error: unrecognized arguments:        
-```
-
-**Cause:** Multi-line command with backslashes was copied into a deployment dashboard field, causing the backslashes and extra whitespace to be treated as literal arguments.
+**Cause:** Command with backslashes was copied into a deployment dashboard field, causing the backslashes and extra whitespace to be treated as literal arguments.
 
 **Solution:**
 1. Go to your deployment platform dashboard (Render, Railway, etc.)
@@ -348,7 +310,6 @@ gunicorn: error: unrecognized arguments:
 4. Use one of the recommended commands from this document
 
 **Example Fix for Render:**
-- ❌ **Wrong:** Multi-line command copied from documentation
 - ✅ **Correct:** `cd backend && gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info`
 
 **Example Fix for Railway:**
