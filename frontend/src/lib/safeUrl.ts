@@ -43,6 +43,16 @@ export function hasValidProtocol(url: string): boolean {
 }
 
 /**
+ * Check if hostname is localhost
+ * @internal Shared utility for validation
+ */
+function isLocalhostHostname(hostname: string): boolean {
+  return hostname === 'localhost' || 
+         hostname === '127.0.0.1' ||
+         hostname === '0.0.0.0';
+}
+
+/**
  * Safely parse a URL string into a URL object
  * 
  * @param urlString - The URL string to parse
@@ -97,11 +107,8 @@ export function safeParseUrl(
     }
     
     const hostname = hostnameMatch[1];
-    const isLocalhost = hostname === 'localhost' || 
-                       hostname === '127.0.0.1' ||
-                       hostname === '0.0.0.0';
     
-    if (protocol === 'http' && !isLocalhost) {
+    if (protocol === 'http' && !isLocalhostHostname(hostname)) {
       return {
         success: false,
         error: `${contextPrefix}Production URLs must use HTTPS. Found: ${trimmedUrl}`,
@@ -174,11 +181,7 @@ export function isSecureUrl(urlString: string | undefined | null): boolean {
   
   // In production, only allow HTTPS or localhost
   if (import.meta.env.PROD) {
-    const isLocalhost = url.hostname === 'localhost' || 
-                       url.hostname === '127.0.0.1' ||
-                       url.hostname === '0.0.0.0';
-    
-    return url.protocol === 'https:' || (url.protocol === 'http:' && isLocalhost);
+    return url.protocol === 'https:' || (url.protocol === 'http:' && isLocalhostHostname(url.hostname));
   }
   
   // In development, allow both HTTP and HTTPS

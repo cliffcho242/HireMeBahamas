@@ -29,23 +29,25 @@ const BACKEND_ENDPOINTS = (() => {
 
 // Intelligent endpoint selection
 const selectBestEndpoint = async () => {
-  for (const endpoint of BACKEND_ENDPOINTS) {
-    try {
-      // Use safe URL builder for health check endpoint
-      const healthUrl = apiUrl('/health');
-      const response = await fetch(healthUrl, { 
-        method: 'GET'
-      });
-      if (response.ok) {
-        console.log(`AI: Selected optimal endpoint: ${endpoint}`);
-        return endpoint;
-      }
-    } catch {
-      console.warn(`AI: Endpoint ${endpoint} unavailable`);
+  // Since we're using the safe URL builder which validates the configured endpoint,
+  // we check the health of the current configured endpoint
+  // Note: Multiple endpoints are managed through VITE_API_URL configuration
+  const currentEndpoint = BACKEND_ENDPOINTS[0];
+  try {
+    const healthUrl = apiUrl('/health');
+    const response = await fetch(healthUrl, { 
+      method: 'GET'
+    });
+    if (response.ok) {
+      console.log(`AI: Selected optimal endpoint: ${currentEndpoint}`);
+      return currentEndpoint;
     }
+  } catch {
+    console.warn(`AI: Endpoint ${currentEndpoint} unavailable`);
   }
   
-  // Default fallback
+  // Default fallback - return the configured endpoint even if unhealthy
+  // The circuit breaker will handle repeated failures
   console.warn('AI: Using default endpoint (may need manual restart)');
   return BACKEND_ENDPOINTS[0];
 };
