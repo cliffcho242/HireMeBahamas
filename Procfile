@@ -30,8 +30,9 @@
 # Main web process - Production FastAPI with Gunicorn
 # 
 # CRITICAL PRODUCTION SETTINGS:
+# - worker-class=uvicorn.workers.UvicornWorker: ASGI support for FastAPI (REQUIRED)
 # - workers=1: Single worker (predictable memory, no coordination overhead)
-# - threads=2: Minimal threading (async event loop handles concurrency)
+# - bind=0.0.0.0:$PORT: Listen on all interfaces, dynamic port
 # - timeout=120: Prevents premature SIGTERM during startup
 # - graceful-timeout=30: Clean shutdown of in-flight requests
 # - keep-alive=5: Connection persistence for load balancers
@@ -40,7 +41,8 @@
 #
 # Single worker with UvicornWorker (async event loop) handles 100+ concurrent connections efficiently.
 # This is the correct production pattern for FastAPI on Render.
-web: cd backend && PYTHONPATH=. poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
+# MASTER FIX: Single line, explicit worker-class, explicit bind
+web: cd backend && PYTHONPATH=. poetry run gunicorn app.main:app --worker-class uvicorn.workers.UvicornWorker --workers 1 --bind 0.0.0.0:$PORT --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh

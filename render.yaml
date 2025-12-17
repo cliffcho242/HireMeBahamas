@@ -105,7 +105,8 @@ services:
     # This is how production FastAPI apps actually run.
     #
     # Working directory: Changes to backend/ where app/main.py and gunicorn.conf.py are located
-    startCommand: cd backend && poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
+    # CRITICAL: Single line command, explicit worker-class, bind to 0.0.0.0:$PORT
+    startCommand: cd backend && poetry run gunicorn app.main:app --worker-class uvicorn.workers.UvicornWorker --workers 1 --bind 0.0.0.0:$PORT --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
     
     envVars:
       - key: ENVIRONMENT
