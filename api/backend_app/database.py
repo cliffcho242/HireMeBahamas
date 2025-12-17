@@ -286,9 +286,8 @@ def get_engine():
                     # This is the production-grade way to parse and validate database URLs
                     try:
                         validated_url = make_url(DATABASE_URL)
-                        logger.info(
-                            f"✅ DATABASE_URL validated: {validated_url.drivername}://{validated_url.host}:{validated_url.port}/{validated_url.database}"
-                        )
+                        # Log only driver name to avoid exposing sensitive connection details
+                        logger.info(f"✅ DATABASE_URL validated successfully (driver: {validated_url.drivername})")
                     except Exception as url_error:
                         logger.error(
                             f"❌ DATABASE_URL validation failed using make_url(): {url_error}. "
