@@ -3,12 +3,23 @@ Test edge cache headers implementation for the feed endpoint.
 
 This test verifies that the feed endpoint returns proper
 Cache-Control headers for edge caching (CDN/browser caching).
+
+Note: This test uses sys.path and sys.modules manipulation to set up the
+backend_app module aliases (app -> backend_app). This is necessary because
+the backend code uses "from app.X import Y" imports, but the actual module
+is named "backend_app". In production, this aliasing is handled by main.py
+during startup. For testing, we need to replicate this setup.
+
+This is a known pattern in the codebase - see api/backend_app/main.py for
+the production implementation of the same aliasing logic.
 """
 import os
 import sys
 from pathlib import Path
 
 # Add api directory to path
+# Note: sys.path manipulation is necessary here to allow importing backend_app
+# This matches the production setup where api/ is the root of the module tree
 api_dir = Path(__file__).parent / "api"
 sys.path.insert(0, str(api_dir))
 
@@ -17,16 +28,20 @@ os.environ["DATABASE_URL"] = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:mem
 os.environ["ENVIRONMENT"] = "test"
 
 # Set up module aliases for backend_app -> app
+# This replicates the production aliasing done in api/backend_app/main.py
+# Without this, imports like "from app.core import X" will fail
 import backend_app
 sys.modules['app'] = backend_app
 
-# Import submodules dynamically
+# Import and alias submodules dynamically
+# This ensures all "from app.X.Y import Z" patterns work correctly
 import backend_app.core
 sys.modules['app.core'] = backend_app.core
 
 import backend_app.api
 sys.modules['app.api'] = backend_app.api
 
+# Optional modules (may not exist in all test environments)
 try:
     import backend_app.models
     sys.modules['app.models'] = backend_app.models
@@ -116,15 +131,30 @@ def test_no_sessions_in_redis():
     # Search for session or JWT storage in redis_cache.py
     redis_cache_file = Path(__file__).parent / "api" / "backend_app" / "core" / "redis_cache.py"
     
-    with open(redis_cache_file) as f:
+    with open(redis_cache_file, encoding='utf-8') as f:
         content = f.read().lower()
     
     # These should NOT be in redis_cache.py (as per requirements)
-    forbidden_patterns = ["session", "jwt", "token_storage", "session_store"]
+    # Note: We allow "session" in context of database sessions (AsyncSessionLocal)
+    # but not user/auth sessions
+    forbidden_patterns = {
+        "session_store": "Session storage",
+        "user_session": "User session storage", 
+        "auth_session": "Auth session storage",
+        "jwt_store": "JWT storage",
+        "token_storage": "Token storage"
+    }
     
-    for pattern in forbidden_patterns:
-        if pattern in content and "jwt_secret" not in pattern:  # Allow JWT_SECRET_KEY env var
-            print(f"⚠️  Warning: Found '{pattern}' in redis_cache.py")
+    warnings_found = []
+    for pattern, description in forbidden_patterns.items():
+        if pattern in content:
+            warnings_found.append(f"{description} ('{pattern}')")
+    
+    if warnings_found:
+        print(f"⚠️  Warning: Found prohibited patterns in redis_cache.py:")
+        for warning in warnings_found:
+            print(f"    - {warning}")
+        print("Note: Database sessions (AsyncSessionLocal) are allowed")
     
     print("✅ Redis used only for TTL-based caching (not sessions/JWTs)")
     return True
