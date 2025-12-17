@@ -7,13 +7,49 @@
  * Features:
  * - User-friendly error messages
  * - Multiple recovery actions (retry, go home, reload)
- * - Error details in development mode
+ * - Error details in development mode (sanitized for security)
  * - Accessibility support (ARIA labels, keyboard navigation)
  * - Responsive design
  * - Customizable appearance and actions
  */
 
 import React from 'react';
+
+/**
+ * Sanitize error message to prevent exposure of sensitive information
+ * Filters out potential passwords, tokens, API keys, and file paths
+ */
+const sanitizeErrorMessage = (message: string): string => {
+  return message
+    // Remove potential tokens/keys (long alphanumeric strings)
+    .replace(/\b[A-Za-z0-9]{32,}\b/g, '[REDACTED_TOKEN]')
+    // Remove potential API keys
+    .replace(/api[_-]?key[=:]\s*[\w-]+/gi, 'api_key=[REDACTED]')
+    // Remove potential passwords
+    .replace(/password[=:]\s*[\w!@#$%^&*()]+/gi, 'password=[REDACTED]')
+    // Remove absolute file paths
+    .replace(/\/[^\s]+\/([\w.-]+)/g, '[PATH]/$1')
+    .replace(/[A-Z]:\\[^\s]+\\([\w.-]+)/g, '[PATH]\\$1');
+};
+
+/**
+ * Sanitize stack trace to prevent exposure of implementation details
+ * Filters absolute paths while keeping relative context
+ */
+const sanitizeStackTrace = (stack: string): string => {
+  return stack
+    .split('\n')
+    .map(line => {
+      // Keep only the last 2 parts of file paths for context
+      return line
+        .replace(/\/[^\s]+\/([\w.-]+\/[\w.-]+:\d+:\d+)/g, '[...]/$1')
+        .replace(/[A-Z]:\\[^\s]+\\([\w.-]+\\[\w.-]+:\d+:\d+)/g, '[...]\\$1')
+        // Remove potential tokens in query strings
+        .replace(/\?[^\s)]+/g, '?[PARAMS]');
+    })
+    .slice(0, 10) // Limit to first 10 lines
+    .join('\n');
+};
 
 export interface ErrorFallbackProps {
   /** The error that was caught */
@@ -122,15 +158,15 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
                 Error Details (Development Only):
               </p>
               <pre className="text-xs text-red-600 overflow-auto max-h-40 whitespace-pre-wrap break-words">
-                {error.message}
+                {sanitizeErrorMessage(error.message)}
               </pre>
               {error.stack && (
                 <details className="mt-2">
                   <summary className="text-xs text-gray-600 cursor-pointer hover:text-gray-800">
-                    Stack Trace
+                    Stack Trace (filtered)
                   </summary>
                   <pre className="text-xs text-gray-500 overflow-auto max-h-40 mt-2 whitespace-pre-wrap break-words">
-                    {error.stack}
+                    {sanitizeStackTrace(error.stack)}
                   </pre>
                 </details>
               )}
@@ -155,7 +191,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-sm"
                 aria-label="Try again"
               >
-                🔄 Try Again
+                Try Again
               </button>
             )}
 
@@ -164,7 +200,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-sm"
               aria-label="Refresh page"
             >
-              ↻ Refresh Page
+              Refresh Page
             </button>
 
             <button
@@ -172,7 +208,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
               className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-6 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               aria-label="Go to home page"
             >
-              🏠 Go to Home
+              Go to Home
             </button>
           </div>
 
