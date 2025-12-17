@@ -21,12 +21,14 @@ import React from 'react';
  */
 const sanitizeErrorMessage = (message: string): string => {
   return message
-    // Remove potential tokens/keys (long alphanumeric strings)
-    .replace(/\b[A-Za-z0-9]{32,}\b/g, '[REDACTED_TOKEN]')
-    // Remove potential API keys
-    .replace(/api[_-]?key[=:]\s*[\w-]+/gi, 'api_key=[REDACTED]')
-    // Remove potential passwords
-    .replace(/password[=:]\s*[\w!@#$%^&*()]+/gi, 'password=[REDACTED]')
+    // Remove potential tokens/keys (long alphanumeric strings - 40+ chars to reduce false positives)
+    .replace(/\b[A-Za-z0-9]{40,}\b/g, '[REDACTED_TOKEN]')
+    // Remove common token prefixes followed by long strings
+    .replace(/\b(token|jwt|bearer|auth)[=:]\s*[A-Za-z0-9_.-]{20,}/gi, '$1=[REDACTED]')
+    // Remove potential API keys (various formats)
+    .replace(/api[_-]?keys?[=:]\s*[\w.-]+/gi, 'api_key=[REDACTED]')
+    // Remove potential passwords (any non-whitespace after password=)
+    .replace(/password[=:]\s*\S+/gi, 'password=[REDACTED]')
     // Remove absolute file paths
     .replace(/\/[^\s]+\/([\w.-]+)/g, '[PATH]/$1')
     .replace(/[A-Z]:\\[^\s]+\\([\w.-]+)/g, '[PATH]\\$1');
