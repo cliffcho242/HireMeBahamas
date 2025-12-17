@@ -127,6 +127,19 @@ if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
 
+# Import db_utils for URL manipulation
+backend_core_path = os.path.join(_project_root, 'backend', 'app', 'core')
+if backend_core_path not in sys.path:
+    sys.path.insert(0, backend_core_path)
+try:
+    from db_utils import strip_sslmode_from_url, ensure_port_in_url, get_ssl_config
+    # Remove sslmode from URL for asyncpg compatibility
+    DATABASE_URL = strip_sslmode_from_url(DATABASE_URL)
+    # Ensure explicit port in DATABASE_URL (required for cloud deployments)
+    DATABASE_URL = ensure_port_in_url(DATABASE_URL)
+except ImportError as e:
+    logger.warning(f"Could not import db_utils: {e}. Using DATABASE_URL without auto-fixes.")
+
 # Strip whitespace from database name in the URL path
 # This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
 try:
@@ -166,14 +179,21 @@ if DATABASE_URL and DATABASE_URL != DB_PLACEHOLDER_URL:
         missing_fields.append("password")
     if not parsed.hostname:
         missing_fields.append("hostname")
+    if not parsed.port:
+        # Port should have been auto-fixed by ensure_port_in_url()
+        # If we still don't have a port here, something went wrong
+        missing_fields.append("port (auto-fix failed, explicit port required, e.g., :5432)")
     if not parsed.path or len(parsed.path) <= 1:
         # path should be /database_name, so length > 1
-        missing_fields.append("path")
+        missing_fields.append("database name in path (e.g., /mydatabase)")
 
     if missing_fields:
         # Production-safe: log warning instead of raising exception
         # This allows the app to start for health checks and diagnostics
-        logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+        logger.warning(
+            f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}. "
+            f"Required format: postgresql://user:password@host:5432/database"
+        )
 
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:
@@ -314,7 +334,7 @@ def get_engine():
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
                         
                         # CRITICAL: Minimal connect_args for Neon compatibility
-                        # NO sslmode (must be in URL query string)
+                        # NO sslmode in URL (asyncpg doesn't accept it)
                         # NO statement_timeout (not supported by PgBouncer)
                         # NO server_settings with startup options
                         connect_args={
@@ -323,6 +343,10 @@ def get_engine():
                             
                             # Query timeout (30s per query)
                             "command_timeout": COMMAND_TIMEOUT,
+                            
+                            # SSL configuration for asyncpg
+                            # asyncpg does NOT accept sslmode in URL - it must be in connect_args
+                            "ssl": get_ssl_config(ENVIRONMENT) if 'get_ssl_config' in dir() else "require" if ENVIRONMENT == "production" else True,
                         }
                     )
                     logger.info("✅ Database engine initialized successfully (Neon-safe, no startup options)")
