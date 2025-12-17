@@ -118,11 +118,6 @@ jobs:
             fi
           done
 
-      - name: Type check frontend (optional)
-        working-directory: ./frontend
-        run: npm run typecheck || echo "Type checking skipped or warnings detected"
-        continue-on-error: true
-
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
@@ -132,6 +127,76 @@ jobs:
         run: |
           echo "::error::Frontend build failed. Check the logs above for details."
           echo "Common issues: TypeScript errors, missing dependencies, or environment configuration."
+
+  # Optional TypeScript type checking - provides feedback without blocking builds
+  type-check:
+    runs-on: ubuntu-latest
+    needs: smoke-tests
+    permissions:
+      contents: read
+    # This job never fails the build, only provides feedback
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: |
+          # Add retry logic for npm ci
+          for i in 1 2 3; do
+            if npm ci; then
+              echo "✅ Dependencies installed successfully"
+              break
+            else
+              if [ $i -eq 3 ]; then
+                echo "::error::❌ Failed to install dependencies after 3 attempts"
+                exit 1
+              fi
+              echo "⚠️ Attempt $i failed, retrying..."
+              sleep 5
+            fi
+          done
+
+      - name: Type check frontend
+        working-directory: ./frontend
+        run: |
+          echo "🔍 Running TypeScript type checking..."
+          npm run typecheck
+          echo "✅ Type checking completed successfully"
+
+      - name: Type check summary
+        if: always()
+        run: |
+          echo "## TypeScript Type Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ **Type checking passed** - No TypeScript errors detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All types are correctly defined and used throughout the frontend codebase." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Type checking found issues** - Review the logs above for details" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Note:** Type checking errors do not block deployments, but fixing them improves code quality and prevents runtime errors." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Common TypeScript errors:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Missing type definitions" >> $GITHUB_STEP_SUMMARY
+            echo "- Incorrect prop types in components" >> $GITHUB_STEP_SUMMARY
+            echo "- Unused variables or imports" >> $GITHUB_STEP_SUMMARY
+            echo "- Type mismatches in function calls" >> $GITHUB_STEP_SUMMARY
+          fi
 
   validate-vercel-config:
     runs-on: ubuntu-latest
