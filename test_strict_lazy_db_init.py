@@ -22,7 +22,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Mock DATABASE_URL to prevent actual connections during testing
-os.environ['DATABASE_URL'] = 'postgresql+asyncpg://test:test@localhost:5432/test?sslmode=require'
+# Note: sslmode is not allowed with Neon pooled connections, removed from URL
+os.environ['DATABASE_URL'] = 'postgresql+asyncpg://test:test@localhost:5432/test'
 os.environ['ENV'] = 'test'  # Prevent production warnings
 
 def test_no_connection_at_import():

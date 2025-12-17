@@ -26,8 +26,8 @@ def test_valid_database_url():
     """Test with a valid DATABASE_URL"""
     print("\n=== Test 1: Valid DATABASE_URL ===")
     
-    # Set a valid DATABASE_URL
-    os.environ['DATABASE_URL'] = 'postgresql://user:pass@localhost:5432/testdb?sslmode=require'
+    # Set a valid DATABASE_URL (without sslmode - it's not allowed with Neon pooled connections)
+    os.environ['DATABASE_URL'] = 'postgresql://user:pass@localhost:5432/testdb'
     
     # Clear previous logs
     log_capture.truncate(0)
