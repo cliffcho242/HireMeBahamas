@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { MessageNotificationProvider } from './contexts/MessageNotificationContext';
 import { AIMonitoringProvider } from './contexts/AIMonitoringContext';
+import { queryClient } from './config/reactQuery';
 
 // Premium UI Components
 import { AppLayout } from './components/premium';
@@ -42,18 +43,6 @@ import AuthGuard from './components/AuthGuard';
 import { AIErrorBoundary } from './components/AIErrorBoundary';
 import InstallPWA from './components/InstallPWA';
 import ConnectionStatus from './components/ConnectionStatus';
-
-// Create a client with optimized settings for fast loading
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-    },
-  },
-});
 
 // Fast loading spinner component with accessibility - now premium
 const LoadingSpinner = () => (
