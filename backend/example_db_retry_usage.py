@@ -13,10 +13,15 @@ Date: December 2025
 
 import asyncio
 import logging
-from sqlalchemy import select
+
+# Note: Actual import paths depend on how you run the module:
+# - From backend directory: from app.core.db_retry import db_retry
+# - From project root: from backend.app.core.db_retry import db_retry
+# This example uses the "from backend directory" convention
 from app.core.db_retry import db_retry, retry_db_operation
 from app.database import get_db, AsyncSessionLocal
 from app.models import User
+from sqlalchemy import select
 
 # Configure logging to see retry attempts
 logging.basicConfig(

@@ -12,9 +12,11 @@ import sys
 import logging
 from pathlib import Path
 
-# Add app to path
+# Add app to path for imports
+# This allows the demo to run standalone from the backend directory
 sys.path.insert(0, str(Path(__file__).parent))
 
+# Import the retry logic (works when running from backend directory)
 from app.core.db_retry import db_retry, retry_db_operation
 
 # Configure logging to see retry attempts

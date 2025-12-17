@@ -11,12 +11,14 @@ cold starts.
 
 Example usage:
     from app.core.db_retry import db_retry
+    from sqlalchemy import select
     
-    # ✅ SAFE: Idempotent read operation
+    # ✅ SAFE: Idempotent read operation (async)
     @db_retry(retries=3, delay=1)
-    def get_user_by_id(user_id: int):
-        with get_db() as session:
-            return session.query(User).filter(User.id == user_id).first()
+    async def get_user_by_id(user_id: int):
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(User).where(User.id == user_id))
+            return result.scalar_one_or_none()
     
     # 🚫 UNSAFE: Write operation - DO NOT USE RETRY
     # Never use db_retry on writes (INSERT, UPDATE, DELETE)
@@ -77,15 +79,19 @@ def db_retry(
         Exception: The last exception encountered if all retries fail
     
     Example:
-        # Using decorator with default parameters
+        # Using decorator with default parameters (async)
         @db_retry
-        def get_user(user_id: int):
-            return session.query(User).get(user_id)
+        async def get_user(user_id: int):
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(select(User).where(User.id == user_id))
+                return result.scalar_one_or_none()
         
-        # Using decorator with custom parameters
+        # Using decorator with custom parameters (async)
         @db_retry(retries=5, delay=2.0)
-        def get_users_list():
-            return session.query(User).all()
+        async def get_users_list():
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(select(User))
+                return result.scalars().all()
     
     Note:
         - Logs a warning for each retry attempt with attempt number and error
@@ -184,8 +190,14 @@ def retry_db_operation(
         Exception: The last exception if all retries fail
     
     Example:
-        result = retry_db_operation(
-            lambda: session.query(User).filter(User.id == user_id).first(),
+        # For async operations, wrap in an async lambda or function
+        async def fetch_user():
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(select(User).where(User.id == user_id))
+                return result.scalar_one_or_none()
+        
+        result = await retry_db_operation(
+            fetch_user,
             retries=3,
             delay=1.0
         )
