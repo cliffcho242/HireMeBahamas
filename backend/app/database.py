@@ -293,10 +293,12 @@ def get_engine():
                             "server_settings": {
                                 # CRITICAL: Disable JIT to prevent 60s+ first-query delays
                                 "jit": "off",
-                                # Statement timeout in milliseconds
-                                "statement_timeout": str(STATEMENT_TIMEOUT_MS),
                                 # Application name for pg_stat_activity
                                 "application_name": "hiremebahamas",
+                                # NOTE: statement_timeout is NOT set here for compatibility with
+                                # Neon pooled connections (PgBouncer), which don't support startup
+                                # parameters. If needed, statement_timeout can be set at the
+                                # session level using: SET statement_timeout = '30s'
                             },
                         }
                     )
