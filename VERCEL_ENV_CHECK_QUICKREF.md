@@ -74,8 +74,8 @@ curl https://your-backend.onrender.com/health
 
 ## ⚠️ Common Mistakes
 
-| ❌ WRONG | ✅ CORRECT |
-|----------|------------|
+| ❌ INCORRECT | ✅ CORRECT |
+|--------------|------------|
 | `NEXT_PUBLIC_API_URL` | `VITE_API_URL` |
 | `API_URL` | `VITE_API_URL` |
 | `http://backend.com` | `https://backend.com` |

@@ -453,14 +453,14 @@ Choose your deployment platform and follow the step-by-step guide:
 
 1. **Push to GitHub** (if not already done)
 2. **Import to Vercel**: [vercel.com/new](https://vercel.com/new)
-3. **Add Environment Variables**:
+3. **Add Backend Environment Variables**:
    ```env
    DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
    SECRET_KEY=your-secret-key-32-chars
    JWT_SECRET_KEY=your-jwt-secret-32-chars
    ENVIRONMENT=production
    ```
-4. **4️⃣ MANDATORY: Configure Frontend Environment Variables** ⚠️
+4. **Configure Frontend Environment Variables** ⚠️ **MANDATORY**
    - 📖 **[VERCEL_ENV_CHECK.md](./VERCEL_ENV_CHECK.md)** - **REQUIRED**: Vercel frontend environment variable setup
    - ⚡ **[VERCEL_ENV_CHECK_QUICKREF.md](./VERCEL_ENV_CHECK_QUICKREF.md)** - 30-second quick reference
 5. **Deploy!** ✅
