@@ -35,6 +35,7 @@ anyio==4.7.0
 sqlalchemy[asyncio]==2.0.44
 asyncpg==0.30.0
 psycopg2-binary==2.9.11
+alembic==1.14.0
 
 # Authentication & Security (with ALL dependencies)
 # CRITICAL: python-jose[cryptography] for JWT - The 'jose' module comes from python-jose

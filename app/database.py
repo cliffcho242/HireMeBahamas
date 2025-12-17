@@ -477,9 +477,15 @@ DB_INIT_MAX_RETRIES = int(os.getenv("DB_INIT_MAX_RETRIES", "3"))
 DB_INIT_RETRY_DELAY = float(os.getenv("DB_INIT_RETRY_DELAY", "2.0"))
 
 def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
-    """Initialize database tables with retry logic.
+    """Initialize database connection with retry logic.
     
-    This function is called during startup to ensure database tables exist.
+    ⚠️  PRODUCTION SAFETY: This function no longer auto-creates tables.
+    Tables must be created using Alembic migrations:
+      - Run migrations manually: `alembic upgrade head`
+      - Or via CI/CD pipeline
+      - Or as a one-off job on deployment
+    
+    This function now only tests database connectivity to prevent race conditions.
     Uses retry logic to handle Railway cold starts and transient failures.
     
     CRITICAL BEHAVIOR: Returns False if database is not configured, allowing
@@ -513,38 +519,33 @@ def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     if retry_delay is None:
         retry_delay = DB_INIT_RETRY_DELAY
     
-    # Import models for table registration
-    try:
-        # Try to import models from common locations
-        try:
-            from app import models  # noqa: F401
-        except ImportError:
-            try:
-                from . import models  # noqa: F401
-            except ImportError:
-                logger.warning("Could not import models for table creation. Tables may need to be created manually.")
-    except Exception as e:
-        logger.warning(f"Error importing models: {e}")
-    
+    # Test database connectivity instead of creating tables
+    # Tables should be created via Alembic migrations
     for attempt in range(max_retries):
         try:
-            with engine.begin() as conn:
-                # SQLAlchemy 2.0+ compatible: use conn directly without bind parameter
-                Base.metadata.create_all(conn)
-            _db_initialized = True
-            _db_init_error = None
-            logger.info("Database tables initialized successfully")
-            return True
+            success, error_msg = test_db_connection()
+            if success:
+                _db_initialized = True
+                _db_init_error = None
+                logger.info("✅ Database connection verified (tables managed by Alembic)")
+                logger.info("ℹ️  Run migrations: alembic upgrade head")
+                return True
+            else:
+                _db_init_error = error_msg
+                logger.warning(
+                    f"Database connection attempt {attempt + 1}/{max_retries} failed: {error_msg}"
+                )
         except Exception as e:
             _db_init_error = str(e)
             logger.warning(
                 f"Database initialization attempt {attempt + 1}/{max_retries} failed: {e}"
             )
-            if attempt < max_retries - 1:
-                import time
-                time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+        
+        if attempt < max_retries - 1:
+            import time
+            time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
     
-    logger.warning(f"Database initialization failed after {max_retries} attempts. Application will start anyway.")
+    logger.warning(f"Database connection failed after {max_retries} attempts. Application will start anyway.")
     return False
 
 
