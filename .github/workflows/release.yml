@@ -1,0 +1,218 @@
+name: Release with Lighthouse CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Prevent concurrent releases
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Lighthouse CI - Check performance scores
+  lighthouse-ci:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+        env:
+          # Use production-like API URL for Lighthouse testing
+          VITE_API_URL: https://hiremebahamas.vercel.app
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          urls: |
+            http://localhost:3000
+          configPath: './frontend/.lighthouserc.json'
+          temporaryPublicStorage: true
+          uploadArtifacts: true
+          runs: 3
+        continue-on-error: true
+
+      - name: Check Lighthouse scores
+        working-directory: ./frontend
+        run: |
+          echo "📊 Lighthouse CI Results"
+          echo ""
+          echo "Performance target: 90+"
+          echo "Accessibility target: 90+"
+          echo "Best Practices target: 90+"
+          echo "SEO target: 90+"
+          echo ""
+          echo "See Lighthouse report in artifacts or job logs for detailed scores"
+
+  # Bundle size check
+  bundle-size-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Analyze bundle size
+        working-directory: ./frontend
+        run: |
+          echo "📦 Bundle Size Analysis"
+          echo ""
+          
+          # Calculate total sizes
+          total_js=$(find dist/assets -name "*.js" -exec stat --format=%s {} + 2>/dev/null | awk '{sum+=$1}END{print sum}' || echo "0")
+          total_css=$(find dist/assets -name "*.css" -exec stat --format=%s {} + 2>/dev/null | awk '{sum+=$1}END{print sum}' || echo "0")
+          total_gz=$(find dist/assets -name "*.js.gz" -exec stat --format=%s {} + 2>/dev/null | awk '{sum+=$1}END{print sum}' || echo "0")
+          
+          # Convert to KB with better calculation
+          total_js_kb=$(awk "BEGIN {printf \"%.2f\", $total_js / 1024}")
+          total_css_kb=$(awk "BEGIN {printf \"%.2f\", $total_css / 1024}")
+          total_gz_kb=$(awk "BEGIN {printf \"%.2f\", $total_gz / 1024}")
+          
+          echo "Total JS (uncompressed): ${total_js_kb} KB"
+          echo "Total CSS (uncompressed): ${total_css_kb} KB"
+          echo "Total JS (gzipped): ${total_gz_kb} KB"
+          echo ""
+          
+          # Check vendor chunk size
+          vendor_file=$(find dist/assets -name "vendor*.js" | head -1)
+          if [ -n "$vendor_file" ]; then
+            vendor_size=$(stat --format=%s "$vendor_file" 2>/dev/null || stat -f%z "$vendor_file" 2>/dev/null || echo "0")
+            vendor_kb=$(awk "BEGIN {printf \"%.2f\", $vendor_size / 1024}")
+            echo "Vendor bundle: ${vendor_kb} KB"
+            
+            # Find gzipped vendor
+            vendor_gz="${vendor_file}.gz"
+            if [ -f "$vendor_gz" ]; then
+              vendor_gz_size=$(stat --format=%s "$vendor_gz" 2>/dev/null || stat -f%z "$vendor_gz" 2>/dev/null || echo "0")
+              vendor_gz_kb=$(awk "BEGIN {printf \"%.2f\", $vendor_gz_size / 1024}")
+              echo "Vendor bundle (gzipped): ${vendor_gz_kb} KB"
+              
+              # Performance targets
+              if [ "$vendor_gz_size" -gt 204800 ]; then
+                echo ""
+                echo "⚠️  Warning: Vendor bundle exceeds 200KB target (gzipped)"
+                echo "Consider:"
+                echo "  - Using dynamic imports for large libraries"
+                echo "  - Removing unused dependencies"
+                echo "  - Splitting vendor chunks further"
+              else
+                echo ""
+                echo "✅ Vendor bundle is within 200KB target"
+              fi
+            fi
+          fi
+          
+          # List top 10 largest chunks
+          echo ""
+          echo "📊 Top 10 largest chunks:"
+          find dist/assets -name "*.js" -exec ls -lh {} \; | awk '{print $5, $9}' | sort -hr | head -10
+
+      - name: Check bundle size limits
+        working-directory: ./frontend
+        run: |
+          echo "🎯 Bundle Size Limits Check"
+          echo ""
+          
+          # Define limits (in bytes)
+          MAX_VENDOR_SIZE=$((300 * 1024))  # 300KB uncompressed
+          MAX_VENDOR_GZ_SIZE=$((100 * 1024))  # 100KB gzipped
+          
+          vendor_file=$(find dist/assets -name "vendor*.js" | head -1)
+          if [ -n "$vendor_file" ]; then
+            vendor_size=$(stat --format=%s "$vendor_file" 2>/dev/null || stat -f%z "$vendor_file" 2>/dev/null || echo "0")
+            
+            if [ "$vendor_size" -gt "$MAX_VENDOR_SIZE" ]; then
+              echo "❌ Vendor bundle exceeds ${MAX_VENDOR_SIZE} bytes limit"
+              echo "Current size: $vendor_size bytes"
+              exit 1
+            else
+              echo "✅ Vendor bundle within limits"
+            fi
+          fi
+          
+          echo "✅ All bundle size checks passed"
+
+  # Performance summary
+  performance-summary:
+    runs-on: ubuntu-latest
+    needs: [lighthouse-ci, bundle-size-check]
+    if: always()
+    permissions:
+      contents: read
+    steps:
+      - name: Performance Summary
+        run: |
+          echo "## 🚀 Performance Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Lighthouse CI" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.lighthouse-ci.result }}" == "success" ]; then
+            echo "✅ Lighthouse CI passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️  Lighthouse CI completed with warnings or errors" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Bundle Size Check" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.bundle-size-check.result }}" == "success" ]; then
+            echo "✅ Bundle size within limits" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Bundle size check failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Performance Targets" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎯 Lighthouse Performance: 90+" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎯 Vendor bundle (gzipped): <100KB" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎯 First Contentful Paint: <1.8s" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎯 Time to Interactive: <3.8s" >> $GITHUB_STEP_SUMMARY

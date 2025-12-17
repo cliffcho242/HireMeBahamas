@@ -45,6 +45,9 @@ import { QueryErrorBoundary } from './components/QueryErrorBoundary';
 import InstallPWA from './components/InstallPWA';
 import ConnectionStatus from './components/ConnectionStatus';
 
+// Sentry error monitoring
+import { Sentry } from './config/sentry';
+
 // Fast loading spinner component with accessibility - now premium
 const LoadingSpinner = () => (
   <div 
@@ -75,32 +78,70 @@ function SpeedInsightsWrapper() {
 function App() {
   return (
     <>
-      <AIMonitoringProvider>
-        <AIErrorBoundary>
-          {/* QueryErrorBoundary wraps QueryClientProvider for React Query v5 + Edge compatibility */}
-          <QueryErrorBoundary>
-            <QueryClientProvider client={queryClient}>
-              <Router>
-                <AuthProvider>
-                  <SocketProvider>
-                    <MessageNotificationProvider>
-                      <AppLayout 
-                        enableCustomCursor={true}
-                        enableSmoothScroll={true}
-                        enablePageTransitions={true}
-                        defaultTheme="system"
-                      >
-                        <AppContent />
-                      </AppLayout>
-                      <SpeedInsightsWrapper />
-                    </MessageNotificationProvider>
-                  </SocketProvider>
-                </AuthProvider>
-              </Router>
-            </QueryClientProvider>
-          </QueryErrorBoundary>
-        </AIErrorBoundary>
-      </AIMonitoringProvider>
+      {/* Sentry ErrorBoundary - Production error monitoring */}
+      <Sentry.ErrorBoundary
+        fallback={({ error, resetError }) => (
+          <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+            <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
+              <div className="text-red-500 text-5xl mb-4">⚠️</div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
+              <p className="text-gray-600 mb-4">
+                We've been notified and are looking into it. Please try refreshing the page.
+              </p>
+              <div className="space-y-2">
+                <button
+                  onClick={resetError}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Try again
+                </button>
+                <button
+                  onClick={() => window.location.href = '/'}
+                  className="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 transition-colors"
+                >
+                  Go to homepage
+                </button>
+              </div>
+              {import.meta.env.DEV && (
+                <details className="mt-4 text-left">
+                  <summary className="cursor-pointer text-sm text-gray-500">Error details</summary>
+                  <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
+                    {error?.toString()}
+                  </pre>
+                </details>
+              )}
+            </div>
+          </div>
+        )}
+        showDialog={false}
+      >
+        <AIMonitoringProvider>
+          <AIErrorBoundary>
+            {/* QueryErrorBoundary wraps QueryClientProvider for React Query v5 + Edge compatibility */}
+            <QueryErrorBoundary>
+              <QueryClientProvider client={queryClient}>
+                <Router>
+                  <AuthProvider>
+                    <SocketProvider>
+                      <MessageNotificationProvider>
+                        <AppLayout 
+                          enableCustomCursor={true}
+                          enableSmoothScroll={true}
+                          enablePageTransitions={true}
+                          defaultTheme="system"
+                        >
+                          <AppContent />
+                        </AppLayout>
+                        <SpeedInsightsWrapper />
+                      </MessageNotificationProvider>
+                    </SocketProvider>
+                  </AuthProvider>
+                </Router>
+              </QueryClientProvider>
+            </QueryErrorBoundary>
+          </AIErrorBoundary>
+        </AIMonitoringProvider>
+      </Sentry.ErrorBoundary>
       <Analytics />
     </>
   );

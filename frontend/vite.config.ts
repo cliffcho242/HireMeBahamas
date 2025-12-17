@@ -2,6 +2,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import compression from 'vite-plugin-compression';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 import path from 'path';
 
 // https://vitejs.dev/config/
@@ -24,6 +25,16 @@ export default defineConfig({
       algorithm: 'brotliCompress',
       ext: '.br',
       threshold: 1024,
+    }),
+    // Sentry plugin for production source maps (only in production builds)
+    process.env.NODE_ENV === 'production' && process.env.SENTRY_AUTH_TOKEN && sentryVitePlugin({
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      telemetry: false,
+      sourcemaps: {
+        assets: './dist/assets/**',
+      },
     }),
     VitePWA({
       registerType: 'autoUpdate',

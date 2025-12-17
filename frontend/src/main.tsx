@@ -8,6 +8,12 @@ import './styles/mobile-responsive.css'
 // This catches configuration errors early before they cause runtime issues
 import './config/envValidator'
 
+// 🚀 Production error monitoring with Sentry
+import { initSentry } from './config/sentry'
+
+// Initialize Sentry before rendering the app
+initSentry()
+
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
