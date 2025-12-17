@@ -186,6 +186,8 @@ VITE_API_URL=https://your-backend.up.railway.app  # Railway
 VITE_API_URL=https://your-backend.onrender.com    # Render
 ```
 
+📖 **[4️⃣ VERCEL ENV CHECK (MANDATORY)](./VERCEL_ENV_CHECK.md)** - Required environment variable setup  
+📖 **[Quick Reference](./VERCEL_ENV_CHECK_QUICKREF.md)** - 30-second setup guide  
 📖 **[Complete Environment Variable Guide](./VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md)** - Step-by-step instructions with examples
 
 ---
@@ -458,7 +460,10 @@ Choose your deployment platform and follow the step-by-step guide:
    JWT_SECRET_KEY=your-jwt-secret-32-chars
    ENVIRONMENT=production
    ```
-4. **Deploy!** ✅
+4. **4️⃣ MANDATORY: Configure Frontend Environment Variables** ⚠️
+   - 📖 **[VERCEL_ENV_CHECK.md](./VERCEL_ENV_CHECK.md)** - **REQUIRED**: Vercel frontend environment variable setup
+   - ⚡ **[VERCEL_ENV_CHECK_QUICKREF.md](./VERCEL_ENV_CHECK_QUICKREF.md)** - 30-second quick reference
+5. **Deploy!** ✅
 
 📚 **[Complete Deployment & Connection Guide](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Everything you need to connect your database and deploy to Vercel, Railway, or Render
 
