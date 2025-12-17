@@ -162,6 +162,7 @@ declare module 'axios' {
   export interface InternalAxiosRequestConfig {
     _retryCount?: number;
     _requestStartTime?: number;
+    _refreshAttempted?: boolean; // Track if refresh was already attempted for this request
   }
 }
 
@@ -365,28 +366,33 @@ api.interceptors.response.use(
                              errorData?.action === 'logout';
       
       // Skip refresh for refresh endpoint itself to prevent infinite loop
-      const isRefreshEndpoint = config.url?.includes('/auth/refresh');
+      const isRefreshEndpoint = config.url === '/api/auth/refresh' || config.url?.endsWith('/auth/refresh');
+      
+      // Check if we already attempted refresh for this request
+      const alreadyRefreshed = config._refreshAttempted === true;
       
       // Auto-logout for auth endpoints, profile endpoints, or when user is not found
       const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/profile');
       
-      // If user not found or this is the refresh endpoint failing, logout immediately
-      if (isUserNotFound || isRefreshEndpoint) {
+      // If user not found, refresh endpoint failing, or already refreshed once, logout immediately
+      if (isUserNotFound || isRefreshEndpoint || alreadyRefreshed) {
         console.log('Authentication failed - logging out', isUserNotFound ? '(user not found in database)' : '');
         localStorage.removeItem('token');
         localStorage.removeItem(SESSION_KEY);
-        localStorage.removeItem('hireme_user');
+        const USER_KEY = 'hireme_user'; // Match sessionManager.ts
+        localStorage.removeItem(USER_KEY);
         window.location.href = '/login';
       } else {
         // Try to refresh the token silently
         try {
           await refreshToken();
           
-          // Update the config with new token
+          // Update the config with new token and mark as refreshed
           const newToken = localStorage.getItem('token');
           if (newToken && config.headers) {
             config.headers.Authorization = `Bearer ${newToken}`;
           }
+          config._refreshAttempted = true; // Prevent infinite refresh loop
           
           // Retry the original request with new token
           console.log('Token refreshed, retrying request...');
@@ -396,7 +402,8 @@ api.interceptors.response.use(
           console.error('Token refresh failed:', refreshError);
           localStorage.removeItem('token');
           localStorage.removeItem(SESSION_KEY);
-          localStorage.removeItem('hireme_user');
+          const USER_KEY = 'hireme_user'; // Match sessionManager.ts
+          localStorage.removeItem(USER_KEY);
           window.location.href = '/login';
         }
       }

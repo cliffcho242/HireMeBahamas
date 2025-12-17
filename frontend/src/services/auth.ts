@@ -6,6 +6,10 @@
  * with automatic silent token refresh.
  */
 
+// Session storage key - must match sessionManager.ts
+const SESSION_KEY = 'hireme_session';
+const USER_KEY = 'hireme_user';
+
 let refreshing = false;
 let queue: (() => void)[] = [];
 
@@ -27,10 +31,15 @@ export async function refreshToken(): Promise<void> {
   refreshing = true;
 
   try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('No token available to refresh');
+    }
+
     const response = await fetch("/api/auth/refresh", {
       credentials: "include",
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${token}`,
       },
     });
 
@@ -47,7 +56,7 @@ export async function refreshToken(): Promise<void> {
 
     // Update user data if provided
     if (data.user) {
-      localStorage.setItem('hireme_user', JSON.stringify(data.user));
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     }
   } catch (error) {
     console.error('Token refresh error:', error);
@@ -107,8 +116,8 @@ export async function apiFetch(
       // If refresh fails, redirect to login
       console.error('Token refresh failed, redirecting to login');
       localStorage.removeItem('token');
-      localStorage.removeItem('hireme_session');
-      localStorage.removeItem('hireme_user');
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(USER_KEY);
       window.location.href = '/login';
       throw error;
     }
