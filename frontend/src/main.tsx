@@ -9,13 +9,50 @@ import './styles/mobile-responsive.css'
 // This catches configuration errors early before they cause runtime issues
 import './config/envValidator'
 
-// Initialize Sentry for production error monitoring
+// Performance monitoring: Track Core Web Vitals
+import { reportWebVitals } from './utils/webVitals'
+
+// Initialize Sentry for production error monitoring with Web Vitals tracking
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
   environment: import.meta.env.MODE,
+  
+  // Performance monitoring
   tracesSampleRate: parseFloat(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE || '0.2'),
+  
+  // Enable profiling for performance insights
+  profilesSampleRate: parseFloat(import.meta.env.VITE_SENTRY_PROFILES_SAMPLE_RATE || '0.1'),
+  
+  // Web Vitals tracking - automatically capture Core Web Vitals
+  integrations: [
+    Sentry.browserTracingIntegration({
+      // Enable automatic instrumentation
+      tracingOrigins: ['localhost', /^\//],
+      // Track navigation timing
+      enableLongTask: true,
+      enableInp: true,
+    }),
+    // Capture user interactions and clicks
+    Sentry.replayIntegration({
+      maskAllText: true,
+      blockAllMedia: true,
+      // Sample rate for session replays
+      replaysSessionSampleRate: 0.1,
+      replaysOnErrorSampleRate: 1.0,
+    }),
+  ],
+  
   // Only enable if DSN is configured
   enabled: !!import.meta.env.VITE_SENTRY_DSN,
+  
+  // Send performance data
+  beforeSend(event) {
+    // Don't send events in development
+    if (import.meta.env.DEV) {
+      return null;
+    }
+    return event;
+  },
 })
 
 // Register Service Worker for PWA
@@ -79,3 +116,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </Sentry.ErrorBoundary>
   </StrictMode>,
 )
+
+// Start tracking Web Vitals after the app is mounted
+reportWebVitals()
