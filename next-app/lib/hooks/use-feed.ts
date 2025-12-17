@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api-client";
+import { CACHE_TIMES } from "@/lib/cache-config";
 
 /**
  * Type for feed post items
@@ -34,7 +35,7 @@ export function useFeed() {
   return useQuery({
     queryKey: ["feed"],
     queryFn: () => apiGet<{ success: boolean; posts: FeedPost[] }>("/api/feed"),
-    staleTime: 30_000, // 30 seconds - matches the middleware cache time
+    staleTime: CACHE_TIMES.STALE_TIME, // Matches the middleware cache time
     select: (data) => data.posts,
   });
 }

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api-client";
+import { CACHE_TIMES } from "@/lib/cache-config";
 import type { Job } from "@/lib/db";
 
 /**
@@ -24,7 +25,7 @@ export function useJobs(options?: { limit?: number }) {
         : "/api/jobs";
       return apiGet<{ success: boolean; jobs: Job[] }>(endpoint);
     },
-    staleTime: 30_000, // 30 seconds - matches the middleware cache time
+    staleTime: CACHE_TIMES.STALE_TIME, // Matches the middleware cache time
     select: (data) => data.jobs, // Extract just the jobs array from the response
   });
 }
@@ -40,7 +41,7 @@ export function useJob(jobId: string | number | undefined) {
     queryKey: ["job", jobId],
     queryFn: () => apiGet<{ success: boolean; job: Job }>(`/api/jobs/${jobId}`),
     enabled: !!jobId, // Only fetch when jobId is defined
-    staleTime: 30_000,
+    staleTime: CACHE_TIMES.STALE_TIME,
     select: (data) => data.job,
   });
 }

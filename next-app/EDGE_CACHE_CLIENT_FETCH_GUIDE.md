@@ -126,13 +126,14 @@ export function useCustomData() {
 ### Files Created/Modified
 
 1. **`middleware.ts`** - Edge cache headers
-2. **`lib/providers.tsx`** - React Query provider
-3. **`lib/api-client.ts`** - API fetch utilities
-4. **`lib/hooks/use-jobs.ts`** - Jobs data hooks
-5. **`lib/hooks/use-feed.ts`** - Feed data hooks
-6. **`lib/hooks/index.ts`** - Hooks exports
-7. **`app/layout.tsx`** - Added Providers wrapper
-8. **`components/jobs-list-client.tsx`** - Example client component
+2. **`lib/cache-config.ts`** - Centralized cache configuration
+3. **`lib/providers.tsx`** - React Query provider
+4. **`lib/api-client.ts`** - API fetch utilities
+5. **`lib/hooks/use-jobs.ts`** - Jobs data hooks
+6. **`lib/hooks/use-feed.ts`** - Feed data hooks
+7. **`lib/hooks/index.ts`** - Hooks exports
+8. **`app/layout.tsx`** - Added Providers wrapper
+9. **`components/jobs-list-client.tsx`** - Example client component
 
 ### Data Flow
 
