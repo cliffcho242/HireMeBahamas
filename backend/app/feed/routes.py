@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 from app.auth.dependencies import get_current_user
 from app.core.cache import get_cached, set_cached, invalidate_cache
 from app.core.pagination import paginate_auto, format_paginated_response
+from app.core.query_timeout import set_query_timeout
 from app.database import get_db
 from app.models import Post, PostLike, PostComment, User
 from app.schemas.post import (
@@ -37,6 +38,9 @@ async def get_feed(
     current_user: User = Depends(get_current_user),
 ):
     """Get user's personalized feed with posts from followed users."""
+    # Set query timeout for feed queries (5s default)
+    await set_query_timeout(db)
+    
     # Get list of users the current user follows
     from app.models import Follow
     

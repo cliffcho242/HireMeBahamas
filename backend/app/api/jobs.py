@@ -4,6 +4,7 @@ from app.core.security import get_current_user
 from app.core.cache import get_cached, set_cached, invalidate_cache
 from app.core.cache_headers import CacheStrategy, handle_conditional_request, apply_performance_headers
 from app.core.pagination import paginate_auto, format_paginated_response
+from app.core.query_timeout import set_query_timeout
 from app.database import get_db
 from app.models import Job, JobApplication, Notification, NotificationType, Post, User
 from app.schemas.job import (
@@ -29,6 +30,9 @@ async def create_job(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new job posting"""
+    # Set query timeout for job creation (5s default)
+    await set_query_timeout(db)
+    
     db_job = Job(**job.dict(), employer_id=current_user.id)
     db.add(db_job)
     await db.commit()
@@ -101,6 +105,9 @@ async def get_jobs(
         response = handle_conditional_request(request, cached_response, CacheStrategy.JOBS)
         apply_performance_headers(response)
         return response
+    
+    # Set query timeout for job listing (5s default)
+    await set_query_timeout(db)
     
     # Build query with eager loading (prevents N+1)
     base_query = select(Job).options(selectinload(Job.employer))
