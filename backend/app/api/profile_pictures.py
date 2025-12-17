@@ -25,14 +25,11 @@ async def upload_profile_picture(
         )
 
     try:
-        # Read file content once
-        content = await file.read()
-        file_size = len(content)
+        # ✅ UPLOAD HARDENING: Get file size from Content-Length header if available
+        # This avoids reading the entire file into memory just to get size
+        file_size = file.size if file.size else 0
         
-        # Reset file pointer for upload
-        await file.seek(0)
-        
-        # Upload image
+        # Upload image (will validate size early and stream upload)
         file_url = await upload_image(file, folder="profile_pictures", resize=True)
 
         # Check if this is the user's first profile picture
@@ -104,14 +101,11 @@ async def upload_multiple_profile_pictures(
         uploaded_pictures = []
 
         for idx, file in enumerate(files):
-            # Read file content once for size calculation
-            content = await file.read()
-            file_size = len(content)
+            # ✅ UPLOAD HARDENING: Get file size from Content-Length header if available
+            # This avoids reading the entire file into memory just to get size
+            file_size = file.size if file.size else 0
             
-            # Reset file pointer for upload
-            await file.seek(0)
-            
-            # Upload image
+            # Upload image (will validate size early and stream upload)
             file_url = await upload_image(file, folder="profile_pictures", resize=True)
 
             # Set first picture as current if no existing pictures
