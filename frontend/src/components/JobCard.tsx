@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { MapPinIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 import { Job } from '../types/job';
-import { formatDistanceToNow } from 'date-fns';
+import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 
 interface JobCardProps {
   job: Job;
