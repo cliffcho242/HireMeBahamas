@@ -1,6 +1,8 @@
 from typing import List, Optional
 
 from app.core.security import get_current_user
+# Note: Maintaining both Redis (get_cached/set_cached/invalidate_cache) and 
+# in-memory cache for backward compatibility and gradual migration
 from app.core.cache import get_cached, set_cached, invalidate_cache
 from app.core.memory_cache import cache_get, cache_set, cache_delete, cache_invalidate_prefix
 from app.core.cache_headers import CacheStrategy, handle_conditional_request, apply_performance_headers
@@ -22,6 +24,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 router = APIRouter()
+
+
+async def invalidate_jobs_cache():
+    """
+    Helper function to invalidate both Redis and in-memory caches for jobs.
+    
+    This maintains backward compatibility while using the new in-memory cache.
+    """
+    # Invalidate Redis cache (if available)
+    await invalidate_cache("jobs:list:")
+    await invalidate_cache("jobs:stats:")
+    
+    # Invalidate in-memory cache
+    cache_invalidate_prefix("jobs:list:")
+    cache_invalidate_prefix("jobs:stats:")
 
 
 @router.post("/", response_model=JobResponse)
@@ -61,11 +78,8 @@ async def create_job(
     db.add(db_post)
     await db.commit()
     
-    # Invalidate jobs cache after creating new job (both Redis and in-memory)
-    await invalidate_cache("jobs:list:")
-    await invalidate_cache("jobs:stats:")
-    cache_invalidate_prefix("jobs:list:")
-    cache_invalidate_prefix("jobs:stats:")
+    # Invalidate jobs cache after creating new job
+    await invalidate_jobs_cache()
 
     return job_with_employer
 
@@ -243,11 +257,8 @@ async def update_job(
     )
     updated_job = result.scalar_one()
     
-    # Invalidate jobs cache after updating job (both Redis and in-memory)
-    await invalidate_cache("jobs:list:")
-    await invalidate_cache("jobs:stats:")
-    cache_invalidate_prefix("jobs:list:")
-    cache_invalidate_prefix("jobs:stats:")
+    # Invalidate jobs cache after updating job
+    await invalidate_jobs_cache()
 
     return updated_job
 
@@ -276,11 +287,8 @@ async def delete_job(
     await db.delete(job)
     await db.commit()
     
-    # Invalidate jobs cache after deleting job (both Redis and in-memory)
-    await invalidate_cache("jobs:list:")
-    await invalidate_cache("jobs:stats:")
-    cache_invalidate_prefix("jobs:list:")
-    cache_invalidate_prefix("jobs:stats:")
+    # Invalidate jobs cache after deleting job
+    await invalidate_jobs_cache()
 
     return {"message": "Job deleted successfully"}
 

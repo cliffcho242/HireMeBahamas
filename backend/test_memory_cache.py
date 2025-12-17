@@ -281,6 +281,45 @@ def test_jobs_endpoint_cache_key():
     assert result == jobs_data
 
 
+def test_thread_safety():
+    """Test thread-safe operations with concurrent access"""
+    import threading
+    
+    def worker(worker_id, iterations=100):
+        """Worker function that performs cache operations"""
+        for i in range(iterations):
+            key = f"thread_{worker_id}_key_{i}"
+            value = f"thread_{worker_id}_value_{i}"
+            
+            # Set value
+            cache_set(key, value)
+            
+            # Get value
+            result = cache_get(key, ttl=30)
+            assert result == value, f"Worker {worker_id}: Expected {value}, got {result}"
+            
+            # Delete some entries
+            if i % 10 == 0:
+                cache_delete(key)
+    
+    # Create multiple threads
+    threads = []
+    num_threads = 5
+    
+    for i in range(num_threads):
+        t = threading.Thread(target=worker, args=(i,))
+        threads.append(t)
+        t.start()
+    
+    # Wait for all threads to complete
+    for t in threads:
+        t.join()
+    
+    # Verify cache is still functional
+    cache_set("post_test", "value")
+    assert cache_get("post_test", ttl=30) == "value"
+
+
 if __name__ == "__main__":
     # Run tests
     pytest.main([__file__, "-v"])
