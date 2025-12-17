@@ -82,14 +82,36 @@ except ImportError as e:
         openapi_url=None,
     )
     
-    # CORS Configuration
-    # NOTE: allow_credentials must be False when using wildcard origins per CORS spec
+    # CORS Configuration (Fallback mode - still secure)
+    # Use specific origins even in fallback mode for security
+    # NOTE: Using allow_credentials=True for production security
+    import os
+    _is_prod = os.getenv("ENVIRONMENT", "").lower() == "production" or os.getenv("VERCEL_ENV", "").lower() == "production"
+    
+    # 🚫 SECURITY: No wildcard patterns (*) in production
+    if _is_prod:
+        _fallback_origins = [
+            "https://hiremebahamas.com",
+            "https://www.hiremebahamas.com",
+            "https://hiremebahamas.vercel.app",
+        ]
+    else:
+        _fallback_origins = [
+            "https://hiremebahamas.com",
+            "https://www.hiremebahamas.com",
+            "https://hiremebahamas.vercel.app",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=False,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=_fallback_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Authorization", "Content-Type"],
     )
     
     @app.get("/api/health", include_in_schema=False)

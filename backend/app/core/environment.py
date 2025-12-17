@@ -44,6 +44,9 @@ def get_cors_origins() -> List[str]:
     - Includes localhost origins for local development
     - Plus all production origins for testing
     
+    Environment Variables:
+    - ALLOWED_ORIGINS: Comma-separated list of additional origins (production only)
+    
     Returns:
         List[str]: List of allowed CORS origins
     """
@@ -57,14 +60,15 @@ def get_cors_origins() -> List[str]:
             # Use custom origins if provided (and not wildcard)
             origins = [origin.strip() for origin in custom_origins_env.split(",") if origin.strip()]
         else:
-            # Default production origins
+            # Default production origins - specific domains only
             origins = [
                 "https://hiremebahamas.com",
                 "https://www.hiremebahamas.com",
+                "https://hiremebahamas.vercel.app",  # Vercel production deployment
             ]
         
-        # Note: Specific Vercel preview deployment URLs can be added to
-        # ALLOWED_ORIGINS environment variable if needed for testing.
+        # Note: For additional Vercel preview deployments, add them to
+        # ALLOWED_ORIGINS environment variable as comma-separated list.
         # Example: ALLOWED_ORIGINS="https://hiremebahamas.com,https://hiremebahamas-git-feature.vercel.app"
         # Wildcard patterns (*.vercel.app) are NOT supported in production mode.
         
@@ -73,6 +77,7 @@ def get_cors_origins() -> List[str]:
         origins = [
             "https://hiremebahamas.com",
             "https://www.hiremebahamas.com",
+            "https://hiremebahamas.vercel.app",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
             "http://localhost:5173",  # Vite default
