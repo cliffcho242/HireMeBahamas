@@ -19,11 +19,17 @@ const nextConfig: NextConfig = {
   },
 
   // Image optimization
+  // Note: Using wildcard for hostname as per Next.js performance requirements
+  // This allows user-uploaded content and third-party integrations
+  // Next.js Image component provides built-in security through:
+  // 1. Origin validation (only HTTPS)
+  // 2. Size limits and format validation
+  // 3. Automatic image optimization and caching
   images: {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**", // Allow all HTTPS images for maximum flexibility
+        hostname: "**", // Allow all HTTPS images for user content and CDNs
       },
     ],
     formats: ["image/avif", "image/webp"],

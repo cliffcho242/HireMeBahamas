@@ -38,7 +38,7 @@ export default async function ProfilesPage() {
       {/* Profiles Grid */}
       <section className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <Suspense fallback={<ProfilesGrid />}>
+          <Suspense fallback={<ProfilesGridSkeleton />}>
             <ProfilesContent />
           </Suspense>
         </div>
@@ -47,7 +47,7 @@ export default async function ProfilesPage() {
   );
 }
 
-function ProfilesGrid() {
+function ProfilesGridSkeleton() {
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (

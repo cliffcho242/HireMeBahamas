@@ -41,9 +41,8 @@ export default function JobApplicationModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log("Submitting application for job:", jobId, formData);
-    // In a real app, this would send data to an API
+    // Handle form submission - TODO: implement API call
+    // POST to /api/applications with formData and jobId
     onClose();
   };
 
