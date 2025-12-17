@@ -28,7 +28,7 @@ The TypeScript compiler has been explicitly configured to **disable** unused var
 
 Vite is configured to **skip TypeScript type checking** during the build process:
 
-```javascript
+```typescript
 // IMPORTANT: Vite build does NOT perform TypeScript type checking by default.
 // Type checking is separated into `npm run typecheck` to prevent TS errors 
 // from blocking production builds. This ensures Vercel deployments always 
@@ -105,7 +105,7 @@ $ cd frontend && npm run typecheck
 
 1. **Keep this configuration**: Do not enable `noUnusedLocals` or `noUnusedParameters` in production tsconfig
 2. **Use typecheck in development**: Run `npm run typecheck` locally before committing
-3. **Consider linting**: Use ESLint rules for unused variables instead of TypeScript
+3. **Consider linting**: Use ESLint rules set to "warn" (not "error") for unused variables to provide feedback without blocking builds
 4. **Document changes**: Update this file if the build configuration changes
 
 ## References
