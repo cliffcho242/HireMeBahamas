@@ -43,4 +43,4 @@
 #
 # Single worker with UvicornWorker (async event loop) handles 100+ concurrent connections efficiently.
 # This is the correct production pattern for FastAPI.
-web: poetry run gunicorn app.main:app --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --log-level info --config gunicorn.conf.py
+web: poetry run gunicorn app.main:app --config gunicorn.conf.py
