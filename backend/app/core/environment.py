@@ -63,8 +63,10 @@ def get_cors_origins() -> List[str]:
                 "https://www.hiremebahamas.com",
             ]
         
-        # Note: Vercel preview deployments (*.vercel.app) should be added
-        # to ALLOWED_ORIGINS environment variable if needed for testing
+        # Note: Specific Vercel preview deployment URLs can be added to
+        # ALLOWED_ORIGINS environment variable if needed for testing.
+        # Example: ALLOWED_ORIGINS="https://hiremebahamas.com,https://hiremebahamas-git-feature.vercel.app"
+        # Wildcard patterns (*.vercel.app) are NOT supported in production mode.
         
     else:
         # Development mode: includes localhost for testing
