@@ -157,10 +157,10 @@ if __name__ == "__main__":
     all_passed = True
     
     try:
-        all_passed &= test_module_imports()
-        all_passed &= test_timeout_constants()
-        all_passed &= test_get_timeout_for_operation()
-        all_passed &= test_environment_variable_support()
+        all_passed = all_passed and test_module_imports()
+        all_passed = all_passed and test_timeout_constants()
+        all_passed = all_passed and test_get_timeout_for_operation()
+        all_passed = all_passed and test_environment_variable_support()
     except Exception as e:
         print(f"\n❌ Test failed with exception: {e}")
         import traceback

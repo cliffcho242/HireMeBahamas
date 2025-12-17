@@ -36,9 +36,10 @@ logger = logging.getLogger(__name__)
 
 # Default timeout configuration (in milliseconds)
 # Can be overridden via environment variables
+# Ordered from fastest to slowest for clarity
+FAST_QUERY_TIMEOUT_MS = int(os.getenv("DB_FAST_QUERY_TIMEOUT_MS", "2000"))  # 2 seconds for fast operations
 DEFAULT_QUERY_TIMEOUT_MS = int(os.getenv("DB_QUERY_TIMEOUT_MS", "5000"))  # 5 seconds default
 SLOW_QUERY_TIMEOUT_MS = int(os.getenv("DB_SLOW_QUERY_TIMEOUT_MS", "30000"))  # 30 seconds for slow operations
-FAST_QUERY_TIMEOUT_MS = int(os.getenv("DB_FAST_QUERY_TIMEOUT_MS", "2000"))  # 2 seconds for fast operations
 
 
 async def set_query_timeout(
@@ -73,10 +74,20 @@ async def set_query_timeout(
     if timeout_ms is None:
         timeout_ms = DEFAULT_QUERY_TIMEOUT_MS
     
+    # Validate timeout_ms to prevent SQL injection
+    # Timeout must be a positive integer
+    if not isinstance(timeout_ms, int) or timeout_ms <= 0:
+        logger.warning(
+            f"Invalid timeout value: {timeout_ms}. Must be a positive integer. "
+            f"Using default: {DEFAULT_QUERY_TIMEOUT_MS}ms"
+        )
+        timeout_ms = DEFAULT_QUERY_TIMEOUT_MS
+    
     try:
         # SET LOCAL statement_timeout applies only to the current transaction
         # and is automatically reset when the transaction ends.
         # This is the Neon-safe way to set timeouts (not in startup parameters).
+        # Using f-string is safe here because timeout_ms is validated as a positive integer above.
         await db.execute(text(f"SET LOCAL statement_timeout = {timeout_ms}"))
         logger.debug(f"Query timeout set to {timeout_ms}ms for current transaction")
     except Exception as e:
