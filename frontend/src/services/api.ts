@@ -177,7 +177,9 @@ const isAuthEndpoint = (url: string | undefined): boolean => {
   return url.endsWith('/auth/login') || url.endsWith('/auth/register');
 };
 
-// Future-safe helper: Mark intentionally unused helpers to prevent accidental removal
+// 🔒 LOCKED PATTERN: Future-safe helper for broader auth endpoint detection
+// Mark intentionally unused helpers to prevent accidental removal during refactoring
+// This signals: (1) You know it's unused, (2) Compiler won't block, (3) Future-safe
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const isAuthEndpointGeneral = (url: string): boolean => {
   return url.includes("/auth");
