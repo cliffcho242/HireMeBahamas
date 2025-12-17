@@ -129,6 +129,16 @@ if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
 
+# CRITICAL: Remove sslmode from URL for asyncpg compatibility
+# asyncpg does NOT accept sslmode in URL - it must be in connect_args
+# sslmode in URL causes: connect() got an unexpected keyword argument 'sslmode'
+import sys
+backend_dir = os.path.dirname(os.path.dirname(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+from app.core.db_utils import strip_sslmode_from_url, get_ssl_config
+DATABASE_URL = strip_sslmode_from_url(DATABASE_URL)
+
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
 # Only validate if DATABASE_URL is actually configured (not placeholder or local dev default)
@@ -308,7 +318,7 @@ def get_engine():
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
                         
                         # CRITICAL: Minimal connect_args for Neon compatibility
-                        # NO sslmode (must be in URL query string)
+                        # NO sslmode in URL (asyncpg doesn't accept it)
                         # NO statement_timeout (not supported by PgBouncer)
                         # NO server_settings with startup options
                         connect_args={
@@ -317,6 +327,10 @@ def get_engine():
                             
                             # Query timeout (30s per query)
                             "command_timeout": COMMAND_TIMEOUT,
+                            
+                            # SSL configuration for asyncpg
+                            # asyncpg does NOT accept sslmode in URL - it must be in connect_args
+                            "ssl": get_ssl_config(ENVIRONMENT),
                         }
                     )
                     logger.info("✅ Database engine initialized successfully (Neon-safe, no startup options)")

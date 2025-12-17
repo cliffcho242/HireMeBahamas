@@ -48,6 +48,12 @@ logger = logging.getLogger(__name__)
 DATABASE_URL = settings.get_database_url()
 logger.info("Database URL configured from settings")
 
+# CRITICAL: Remove sslmode from URL for asyncpg compatibility
+# asyncpg does NOT accept sslmode in URL - it must be in connect_args
+# sslmode in URL causes: connect() got an unexpected keyword argument 'sslmode'
+from .db_utils import strip_sslmode_from_url, get_ssl_config
+DATABASE_URL = strip_sslmode_from_url(DATABASE_URL)
+
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
 parsed = urlparse(DATABASE_URL)
@@ -208,15 +214,20 @@ def get_engine():
                     echo=settings.DB_ECHO,
                     
                     # asyncpg-specific connection arguments
-                    # NOTE: SSL is configured via DATABASE_URL query string (?sslmode=require), NOT here
-                    # If sslmode is not specified in the URL, asyncpg defaults to 'prefer' (secure if available, unencrypted if not)
-                    # For cloud deployments, always use ?sslmode=require to enforce encrypted connections
+                    # NOTE: For asyncpg driver, SSL MUST be in connect_args, NOT in URL query string
+                    # sslmode in URL causes: connect() got an unexpected keyword argument 'sslmode'
+                    # For cloud deployments, use ssl='require' or ssl=True in connect_args
                     connect_args={
                         # Connection timeout (45s for Railway cold starts)
                         "timeout": CONNECT_TIMEOUT,
                         
                         # Query timeout (30s per query)
                         "command_timeout": COMMAND_TIMEOUT,
+                        
+                        # SSL configuration for asyncpg
+                        # Use 'require' to enforce SSL connections (recommended for production)
+                        # asyncpg does NOT accept sslmode in URL - it must be in connect_args
+                        "ssl": get_ssl_config(settings.ENVIRONMENT),
                         
                         # PostgreSQL server settings
                         "server_settings": {
