@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Mode Test - HireMeBahamas</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .status.demo {
+            background: #ff6b6b;
+            color: white;
+        }
+        .status.production {
+            background: #51cf66;
+            color: white;
+        }
+        .test-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #4a90e2;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #4a90e2;
+        }
+        button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .log {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #333;
+        }
+        .log-entry.warning {
+            color: #ff9f40;
+        }
+        .log-entry.success {
+            color: #51cf66;
+        }
+        .log-entry.error {
+            color: #ff6b6b;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-box h4 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e83e8c;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🎤 Demo Mode Test</h1>
+        <p class="subtitle">Test the investor-safe demo mode for HireMeBahamas</p>
+        
+        <div id="status-indicator" class="status">Loading...</div>
+        
+        <div class="info-box">
+            <h4>📝 How to Test</h4>
+            <p>1. Set <code>VITE_DEMO_MODE=true</code> in your <code>.env</code> file</p>
+            <p>2. Restart the development server</p>
+            <p>3. Click the test buttons below</p>
+            <p>4. Observe that mutations are blocked with console warnings</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Mutation Tests</h3>
+            <p>Try these mutations and watch the console log below:</p>
+            
+            <button onclick="testLogin()">🔐 Test Login</button>
+            <button onclick="testCreatePost()">📝 Test Create Post</button>
+            <button onclick="testLikePost()">❤️ Test Like Post</button>
+            <button onclick="testFollowUser()">👥 Test Follow User</button>
+            <button onclick="testUploadFile()">📤 Test Upload File</button>
+            <button onclick="testDeleteJob()">🗑️ Test Delete Job</button>
+            
+            <div class="log" id="console-log"></div>
+        </div>
+
+        <div class="info-box" style="background: #fff3cd; border-left-color: #ffc107;">
+            <h4>⚠️ Important Notes</h4>
+            <p>• All mutations return mock success responses in demo mode</p>
+            <p>• No actual data is modified when demo mode is active</p>
+            <p>• Perfect for investor demos and presentations</p>
+            <p>• Console warnings clearly indicate when mutations are skipped</p>
+        </div>
+    </div>
+
+    <script type="module">
+        // Simulated demo mode check (in real app, this comes from env.ts)
+        const VITE_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+        
+        function updateStatus() {
+            const statusEl = document.getElementById('status-indicator');
+            if (VITE_DEMO_MODE) {
+                statusEl.className = 'status demo';
+                statusEl.textContent = '🎤 DEMO MODE ACTIVE';
+            } else {
+                statusEl.className = 'status production';
+                statusEl.textContent = '✅ PRODUCTION MODE';
+            }
+        }
+        
+        function addLog(message, type = 'info') {
+            const logEl = document.getElementById('console-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logEl.insertBefore(entry, logEl.firstChild);
+        }
+        
+        // Simulate guardMutation behavior
+        async function guardMutation(mutation, options) {
+            if (VITE_DEMO_MODE) {
+                const warning = `🎤 Demo mode: ${options.message} - mutation skipped`;
+                console.warn(warning);
+                addLog(warning, 'warning');
+                addLog(`Returning mock response: ${JSON.stringify(options.mockResponse)}`, 'success');
+                return Promise.resolve(options.mockResponse);
+            }
+            addLog(`Executing real mutation: ${options.message}`, 'info');
+            return mutation();
+        }
+        
+        window.testLogin = async () => {
+            addLog('Testing login mutation...', 'info');
+            const result = await guardMutation(
+                async () => ({ success: true, token: 'real-token' }),
+                {
+                    message: 'login',
+                    mockResponse: { success: true, token: 'demo-token', user: { id: 'demo-user' } }
+                }
+            );
+            addLog(`Result: ${JSON.stringify(result)}`, 'success');
+        };
+        
+        window.testCreatePost = async () => {
+            addLog('Testing create post mutation...', 'info');
+            const result = await guardMutation(
+                async () => ({ success: true, post_id: 'real-post' }),
+                {
+                    message: 'create post',
+                    mockResponse: { success: true, post_id: 'demo-post-id', content: 'Demo post', likes: 0 }
+                }
+            );
+            addLog(`Result: ${JSON.stringify(result)}`, 'success');
+        };
+        
+        window.testLikePost = async () => {
+            addLog('Testing like post mutation...', 'info');
+            const result = await guardMutation(
+                async () => ({ success: true, liked: true }),
+                {
+                    message: 'like post',
+                    mockResponse: { success: true, post_id: 123, liked: true }
+                }
+            );
+            addLog(`Result: ${JSON.stringify(result)}`, 'success');
+        };
+        
+        window.testFollowUser = async () => {
+            addLog('Testing follow user mutation...', 'info');
+            const result = await guardMutation(
+                async () => ({ success: true, following: true }),
+                {
+                    message: 'follow user',
+                    mockResponse: { success: true, user_id: 456, following: true }
+                }
+            );
+            addLog(`Result: ${JSON.stringify(result)}`, 'success');
+        };
+        
+        window.testUploadFile = async () => {
+            addLog('Testing upload file mutation...', 'info');
+            const result = await guardMutation(
+                async () => ({ success: true, url: 'real-url.png' }),
+                {
+                    message: 'upload avatar',
+                    mockResponse: { success: true, url: 'https://demo-avatar.png' }
+                }
+            );
+            addLog(`Result: ${JSON.stringify(result)}`, 'success');
+        };
+        
+        window.testDeleteJob = async () => {
+            addLog('Testing delete job mutation...', 'info');
+            const result = await guardMutation(
+                async () => ({ success: true }),
+                {
+                    message: 'delete job',
+                    mockResponse: { success: true, id: 789 }
+                }
+            );
+            addLog(`Result: ${JSON.stringify(result)}`, 'success');
+        };
+        
+        // Initialize
+        updateStatus();
+        addLog('Demo mode test page initialized', 'success');
+        addLog(`Current mode: ${VITE_DEMO_MODE ? 'DEMO' : 'PRODUCTION'}`, 'info');
+        addLog('Click buttons above to test mutations', 'info');
+    </script>
+</body>
+</html>

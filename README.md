@@ -667,6 +667,44 @@ For local development, access the built-in database management interface (Admine
 
 📖 **[Database Admin Interface Guide](./DATABASE_ADMIN_INTERFACE.md)** - Complete guide for using Adminer to inspect and manage your database.
 
+## 🎤 Demo Mode / Safe Mode
+
+**Investor-Ready Demonstrations with Zero Risk**
+
+Enable **demo mode** for perfect investor pitches and product demonstrations. When active, all data mutations are blocked and replaced with mock responses, ensuring zero risk of accidental data modification during presentations.
+
+### Quick Setup
+
+```bash
+# Enable demo mode in .env
+VITE_DEMO_MODE=true
+
+# Restart your development server
+npm run dev
+```
+
+### Features
+
+✅ **Perfect Demos** - Present with confidence  
+✅ **No Data Mutations** - All writes blocked  
+✅ **Mock Responses** - Realistic success responses  
+✅ **Console Warnings** - Clear mutation indicators  
+✅ **Zero Risk** - No accidental changes  
+
+### Protected Operations
+
+All mutations are protected in demo mode:
+- Authentication (login, register, OAuth)
+- Posts & Social (create, update, delete, like, comment)
+- Jobs (create, update, delete, apply)
+- Messages (send, mark read)
+- User interactions (follow, uploads, profile updates)
+- Reviews, notifications, and more
+
+**📖 [Complete Demo Mode Guide: DEMO_MODE_README.md](./DEMO_MODE_README.md)**
+
+---
+
 ## 🌟 Features
 
 ### Core Social Features (Facebook-Style)
