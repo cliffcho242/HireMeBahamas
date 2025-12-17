@@ -284,7 +284,8 @@ def get_engine():
                             "application_name": "hiremebahamas",
                             
                             # PostgreSQL options for performance
-                            "options": f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
+                            # Note: statement_timeout expects milliseconds
+                            "options": f"-c statement_timeout={STATEMENT_TIMEOUT_MS}ms",
                         }
                     )
                     logger.info("✅ Database engine initialized successfully (sync)")
@@ -443,9 +444,12 @@ def get_async_session():
     """Get database session (alias for get_db).
     
     Provided for API consistency - use get_db() as primary dependency.
-    Note: Despite the name, this returns a sync session for backward compatibility.
+    Note: Despite the name, this yields a sync session for backward compatibility.
+    
+    Yields:
+        Session: Database session for query execution
     """
-    return get_db()
+    yield from get_db()
 
 
 # =============================================================================
