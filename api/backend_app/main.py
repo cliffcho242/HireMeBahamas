@@ -428,20 +428,27 @@ async def log_requests(request: Request, call_next):
     
     Captures detailed information for failed requests (4xx, 5xx) to aid in debugging.
     For authentication endpoints, logs the error detail to help diagnose login issues.
+    
+    Adds X-Request-ID header to all responses for request tracing (like Facebook).
     """
-    request_id = str(uuid.uuid4())[:8]
+    request_id = str(uuid.uuid4())
     start_time = time.time()
     
     # Store request_id in request state for potential use by endpoints
-    request.state.request_id = request_id
+    # Store as both .id and .request_id for compatibility
+    request.state.id = request_id
+    request.state.request_id = request_id[:8]  # Keep short version for logging
     
     # Get client info
     client_ip = request.client.host if request.client else 'unknown'
     user_agent = request.headers.get('user-agent', 'unknown')
     
+    # Use short request_id for logging (first 8 chars)
+    log_request_id = request.state.request_id
+    
     # Log incoming request with more context
     logger.info(
-        f"[{request_id}] --> {request.method} {request.url.path} "
+        f"[{log_request_id}] --> {request.method} {request.url.path} "
         f"from {client_ip} | UA: {user_agent[:50]}..."
     )
     
@@ -450,11 +457,14 @@ async def log_requests(request: Request, call_next):
         response = await call_next(request)
         duration_ms = int((time.time() - start_time) * 1000)
         
+        # Add X-Request-ID header to response for tracing
+        response.headers["X-Request-ID"] = request.state.id
+        
         # Determine log level and capture error details for failed requests
         if response.status_code < 400:
             # Success - log at INFO level
             logger.info(
-                f"[{request_id}] <-- {response.status_code} {request.method} {request.url.path} "
+                f"[{log_request_id}] <-- {response.status_code} {request.method} {request.url.path} "
                 f"in {duration_ms}ms"
             )
         else:
@@ -497,14 +507,14 @@ async def log_requests(request: Request, call_next):
             
             logger.log(
                 log_level,
-                f"[{request_id}] <-- {response.status_code} {request.method} {request.url.path} "
+                f"[{log_request_id}] <-- {response.status_code} {request.method} {request.url.path} "
                 f"in {duration_ms}ms from {client_ip}{error_detail}"
             )
             
             # Log slow requests separately
             if duration_ms > SLOW_REQUEST_THRESHOLD_MS:
                 logger.warning(
-                    f"[{request_id}] SLOW REQUEST: {request.method} {request.url.path} "
+                    f"[{log_request_id}] SLOW REQUEST: {request.method} {request.url.path} "
                     f"took {duration_ms}ms (>{SLOW_REQUEST_THRESHOLD_MS}ms threshold)"
                 )
         
@@ -512,7 +522,7 @@ async def log_requests(request: Request, call_next):
     except Exception as e:
         duration_ms = int((time.time() - start_time) * 1000)
         logger.error(
-            f"[{request_id}] <-- EXCEPTION {request.method} {request.url.path} "
+            f"[{log_request_id}] <-- EXCEPTION {request.method} {request.url.path} "
             f"in {duration_ms}ms from {client_ip} | {type(e).__name__}: {str(e)}"
         )
         raise
