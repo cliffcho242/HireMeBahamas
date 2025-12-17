@@ -882,10 +882,34 @@ async def metrics():
 
 if __name__ == "__main__":
     import uvicorn
+    import sys
 
     # Production mode - single worker (ABSOLUTE REQUIREMENT)
     # Multiple Gunicorn workers are PROHIBITED
     port = int(os.getenv('PORT', 10000))
+    
+    # ⚠️ CRITICAL: Port 5432 is for PostgreSQL, NOT HTTP services
+    # DO NOT BIND TO PORT 5432 - This is a PostgreSQL port, not for your backend
+    if port == 5432:
+        print("=" * 80, file=sys.stderr)
+        print("❌ CRITICAL ERROR: Cannot bind to port 5432", file=sys.stderr)
+        print("=" * 80, file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Port 5432 is reserved for PostgreSQL database servers.", file=sys.stderr)
+        print("Your HTTP backend should use a different port.", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Common HTTP ports:", file=sys.stderr)
+        print("  • 8000, 8080: Common development ports", file=sys.stderr)
+        print("  • 10000: Railway/Render default", file=sys.stderr)
+        print("  • Use $PORT environment variable for cloud deployments", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("To fix this:", file=sys.stderr)
+        print("  1. Check your PORT environment variable", file=sys.stderr)
+        print("  2. Use a different port (e.g., 8000, 8080, 10000)", file=sys.stderr)
+        print("  3. Never manually set PORT=5432", file=sys.stderr)
+        print("=" * 80, file=sys.stderr)
+        sys.exit(1)
+    
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
