@@ -23,6 +23,11 @@
  * ```
  */
 
+import { isValidUrl, isSecureUrl, safeParseUrl, hasValidProtocol } from './safeUrl';
+
+// Note: hasValidProtocol is imported but may be unused in this file
+// It's available for future URL validation needs
+
 /**
  * Validate and get the base API URL from environment
  * @throws Error if VITE_API_URL is missing or invalid
@@ -45,12 +50,21 @@ function validateAndGetBaseUrl(): string {
     );
   }
 
-  // Validate that the base URL starts with http or https
-  if (!base.startsWith("http://") && !base.startsWith("https://")) {
+  // Use our safe URL validator instead of manual checks
+  if (!isValidUrl(base)) {
     throw new Error(
       `VITE_API_URL is invalid: "${base}". ` +
       "URL must start with 'http://' or 'https://'. " +
       "Example: VITE_API_URL=https://your-backend.com"
+    );
+  }
+
+  // Validate HTTPS in production
+  if (!isSecureUrl(base)) {
+    throw new Error(
+      `VITE_API_URL must use HTTPS in production: "${base}". ` +
+      "HTTP is only allowed for localhost in development. " +
+      "Change to: VITE_API_URL=https://your-domain.com"
     );
   }
 
