@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
@@ -38,7 +38,7 @@ interface Conversation {
   messages: Message[];
 }
 
-const Messages: React.FC = () => {
+const Messages = () => {
   const { user } = useAuth();
   const { socket } = useSocket();
   const { refreshUnreadCount } = useMessageNotifications();
@@ -208,7 +208,7 @@ const Messages: React.FC = () => {
     handleUserQueryParam();
   }, [searchParams, user, loading, setSearchParams, fetchConversations]);
 
-  const sendMessage = async (e: React.FormEvent) => {
+  const sendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedConversation || !user) return;
 

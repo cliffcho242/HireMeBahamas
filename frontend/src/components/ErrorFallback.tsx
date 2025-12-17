@@ -13,8 +13,6 @@
  * - Customizable appearance and actions
  */
 
-import React from 'react';
-
 /**
  * Sanitize error message to prevent exposure of sensitive information
  * Filters out potential passwords, tokens, API keys, and file paths
@@ -82,7 +80,7 @@ export interface ErrorFallbackProps {
   iconVariant?: 'warning' | 'error' | 'info';
 }
 
-const ErrorFallback: React.FC<ErrorFallbackProps> = ({
+const ErrorFallback = ({
   error,
   errorId,
   onReset,
@@ -92,7 +90,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
   showDetails = true,
   className = '',
   iconVariant = 'error',
-}) => {
+}): ErrorFallbackProps => {
   const handleReload = () => {
     window.location.reload();
   };

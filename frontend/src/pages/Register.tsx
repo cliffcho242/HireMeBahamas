@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { ButtonHTMLAttributes, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
@@ -19,7 +19,7 @@ interface RegisterForm {
   user_type: 'freelancer' | 'client';
 }
 
-const Register: React.FC = () => {
+const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register: registerUser, loginWithGoogle, loginWithApple, isLoading, isAuthenticated } = useAuth();
@@ -377,7 +377,7 @@ const Register: React.FC = () => {
                 }}
                 onSuccess={handleAppleSuccess}
                 onError={handleAppleError}
-                render={(props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+                render={(props: ButtonHTMLAttributes<HTMLButtonElement>) => (
                   <button
                     {...props}
                     type="button"

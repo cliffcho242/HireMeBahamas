@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAIMonitoring } from '../contexts/AIMonitoringContext';
 import {
@@ -15,7 +15,7 @@ import {
   Zap
 } from 'lucide-react';
 
-const AISystemStatus: React.FC = () => {
+const AISystemStatus = () => {
   const { health, performHealthCheck, attemptRecovery, getSystemStatus } = useAIMonitoring();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);

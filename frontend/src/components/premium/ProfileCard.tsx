@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef , ReactNode , MouseEvent } from 'react';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -14,7 +14,7 @@ interface ProfileCardProps {
   following?: number;
   className?: string;
   onClick?: () => void;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 /**
@@ -40,7 +40,7 @@ export function ProfileCard({
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
     
     const rect = cardRef.current.getBoundingClientRect();

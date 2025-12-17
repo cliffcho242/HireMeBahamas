@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Social feed component with dynamic API responses
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { API } from '../services/api';
 import LazyImage from './LazyImage';
 import './SocialFeed.css';
@@ -164,7 +164,7 @@ const CreatePost = ({ onPostCreated, currentUser }: { onPostCreated: any, curren
   const [isPosting, setIsPosting] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
 
@@ -354,7 +354,7 @@ const SocialFeed = () => {
     }
   }, [loadPosts, loadAnalytics, isLoggedIn]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     try {
       const result = await socialAPI.login(loginForm.email, loginForm.password);

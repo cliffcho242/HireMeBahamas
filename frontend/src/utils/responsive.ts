@@ -176,10 +176,12 @@ export const throttle = <T extends (...args: unknown[]) => unknown>(
 };
 
 // Custom hook for responsive behavior
+import { useState, useEffect } from 'react';
+
 export const useResponsive = () => {
-  const [screenSize, setScreenSize] = React.useState(getScreenSize());
+  const [screenSize, setScreenSize] = useState(getScreenSize());
   
-  React.useEffect(() => {
+  useEffect(() => {
     const handleResize = debounce(() => {
       setScreenSize(getScreenSize());
     }, 150);
@@ -231,9 +233,6 @@ export const hapticFeedback = (type: 'light' | 'medium' | 'heavy' = 'light') => 
     navigator.vibrate(duration);
   }
 };
-
-// React import for hooks
-import React from 'react';
 
 export default {
   isMobile,

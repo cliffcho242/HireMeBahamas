@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback , ReactNode } from 'react';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -6,7 +6,7 @@ import { twMerge } from 'tailwind-merge';
 interface BottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
   title?: string;
   snapPoints?: number[];
   initialSnap?: number;
@@ -167,11 +167,11 @@ export function BottomSheet({
 }
 
 interface SwipeableItemProps {
-  children: React.ReactNode;
+  children: ReactNode;
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
-  leftAction?: React.ReactNode;
-  rightAction?: React.ReactNode;
+  leftAction?: ReactNode;
+  rightAction?: ReactNode;
   threshold?: number;
   className?: string;
 }

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import { Suspense, lazy } from 'react';
 import type { EmojiClickData } from 'emoji-picker-react';
 import { Theme } from 'emoji-picker-react';
 
@@ -26,12 +26,12 @@ const EmojiPickerSkeleton = () => (
  * Lazy-loaded wrapper for emoji-picker-react to reduce initial bundle size.
  * The emoji picker is only loaded when the component is rendered.
  */
-const LazyEmojiPicker: React.FC<LazyEmojiPickerProps> = ({
+const LazyEmojiPicker = ({
   onEmojiClick,
   theme = Theme.LIGHT,
   width = 350,
   height = 400,
-}) => {
+}): LazyEmojiPickerProps => {
   return (
     <Suspense fallback={<EmojiPickerSkeleton />}>
       <EmojiPicker

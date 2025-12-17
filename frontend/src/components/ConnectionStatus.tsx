@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBackendHealth } from '../hooks/useBackendHealth';
 
@@ -37,14 +37,14 @@ interface BannerContentProps {
   maxRetries: number;
 }
 
-const BannerContent: React.FC<BannerContentProps> = ({
+const BannerContent = ({
   isWaking,
   message,
   onDismiss,
   onRetry,
   retryCount,
   maxRetries,
-}) => {
+}: BannerContentProps) => {
   const [progress, setProgress] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -227,7 +227,7 @@ const BannerContent: React.FC<BannerContentProps> = ({
  * This helps users understand that the app is still working during cold starts
  * (common with Render.com free tier) or network issues.
  */
-const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ show = true }) => {
+const ConnectionStatus = ({ show = true }): ConnectionStatusProps => {
   const health = useBackendHealth();
   const [dismissed, setDismissed] = useState(false);
 

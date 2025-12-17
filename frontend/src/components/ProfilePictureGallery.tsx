@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { ChangeEvent, useEffect, useState } from 'react';
 import { profilePicturesAPI } from '../services/api';
 import { PhotoIcon, TrashIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
@@ -14,7 +14,7 @@ interface ProfilePicture {
   created_at: string;
 }
 
-const ProfilePictureGallery: React.FC = () => {
+const ProfilePictureGallery = () => {
   const [pictures, setPictures] = useState<ProfilePicture[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -35,7 +35,7 @@ const ProfilePictureGallery: React.FC = () => {
     }
   };
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 

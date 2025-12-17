@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import { ChangeEvent, useState, useEffect } from 'react';
 import { PlusIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
@@ -18,7 +18,7 @@ interface Story {
   };
 }
 
-const Stories: React.FC = () => {
+const Stories = () => {
   const { user, token } = useAuth();
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +50,7 @@ const Stories: React.FC = () => {
     }
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+  const handleFileSelect = (event: ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
     const file = event.target.files?.[0];
     if (!file) return;
 

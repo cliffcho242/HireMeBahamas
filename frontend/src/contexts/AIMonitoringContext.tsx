@@ -2,8 +2,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react-refresh/only-export-components */
 // AI Monitoring uses dynamic window object access and complex hook dependencies
-import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-
+import { ReactNode, createContext, useCallback, useContext, useEffect, useState } from 'react';
 interface SystemHealth {
   frontend: boolean;
   backend: boolean;
@@ -41,12 +40,12 @@ interface AIMonitoringProviderProps {
   maxRecoveryAttempts?: number;
 }
 
-export const AIMonitoringProvider: React.FC<AIMonitoringProviderProps> = ({
+export const AIMonitoringProvider = ({
   children,
   backendUrl = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : ''),
   checkInterval = 30000, // 30 seconds
   maxRecoveryAttempts = 3
-}) => {
+}): AIMonitoringProviderProps => {
   // 🔍 TEMP DEBUG: Check if API URL is properly configured
   if (import.meta.env.DEV) {
     console.log("API URL:", import.meta.env.VITE_API_URL);

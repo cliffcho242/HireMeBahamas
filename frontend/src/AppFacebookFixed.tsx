@@ -1,7 +1,6 @@
-import React from 'react';
 import SimpleAuth from './components/SimpleAuth';
 
-const AppFacebook: React.FC = () => {
+const AppFacebook = () => {
   return <SimpleAuth />;
 };
 

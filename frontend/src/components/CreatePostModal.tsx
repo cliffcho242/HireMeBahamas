@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { EmojiClickData } from 'emoji-picker-react';
 import LazyEmojiPicker from './LazyEmojiPicker';
@@ -21,7 +21,7 @@ interface CreatePostModalProps {
   onPostCreated?: () => void;
 }
 
-const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPostCreated }) => {
+const CreatePostModal = ({ isOpen, onClose, onPostCreated }): CreatePostModalProps => {
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
@@ -51,7 +51,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
     };
   }, [showEmojiPicker]);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       setIsLoadingMedia(true);
@@ -84,7 +84,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
     }
   };
 
-  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file size (max 100MB for video)

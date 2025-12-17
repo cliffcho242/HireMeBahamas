@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -11,7 +10,7 @@ import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
 
-const LandingPage: React.FC = () => {
+const LandingPage = () => {
   const features = [
     {
       icon: UserIcon,

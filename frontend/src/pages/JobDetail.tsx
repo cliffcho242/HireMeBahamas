@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Switch } from '@headlessui/react';
 import { useAuth } from '../contexts/AuthContext';
 import api, { jobsAPI } from '../services/api';
 import { Job } from '../types/job';
 
-const JobDetail: React.FC = () => {
+const JobDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);

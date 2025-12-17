@@ -10,7 +10,7 @@
  * 3. Navigate to /sendbird-demo in your app
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import '../styles/sendbird.css';
 import { useSendbird } from '../contexts/SendbirdContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,7 +22,7 @@ import {
   ChatBubbleLeftRightIcon 
 } from '@heroicons/react/24/outline';
 
-const SendbirdDemo: React.FC = () => {
+const SendbirdDemo = () => {
   const { user } = useAuth();
   const { 
     sdk, 

@@ -1,4 +1,4 @@
-import { useEffect, useState, createContext, useContext, useCallback } from 'react';
+import { useEffect, useState, createContext, useContext, useCallback , ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomCursor } from './CustomCursor';
 
@@ -19,7 +19,7 @@ const ThemeContext = createContext<ThemeContextType>({
 export const useTheme = () => useContext(ThemeContext);
 
 interface AppLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   enableCustomCursor?: boolean;
   enableSmoothScroll?: boolean;
   enablePageTransitions?: boolean;

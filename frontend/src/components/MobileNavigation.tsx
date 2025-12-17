@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   HomeIcon,
@@ -24,7 +24,7 @@ interface MobileNavigationProps {
   className?: string;
 }
 
-const MobileNavigation: React.FC<MobileNavigationProps> = ({ className = '' }) => {
+const MobileNavigation = ({ className = '' }): MobileNavigationProps => {
   const location = useLocation();
   const { user } = useAuth();
   const { unreadCount: unreadMessages } = useMessageNotifications();

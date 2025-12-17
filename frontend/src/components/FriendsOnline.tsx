@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { VideoCameraIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,7 +23,7 @@ interface FriendSuggestion {
   location?: string;
 }
 
-const FriendsOnline: React.FC = () => {
+const FriendsOnline = () => {
   const { user } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [suggestions, setSuggestions] = useState<FriendSuggestion[]>([]);

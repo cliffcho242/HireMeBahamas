@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { KeyboardEvent, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChatBubbleLeftRightIcon,
@@ -32,7 +32,7 @@ interface Conversation {
   messages: Message[];
 }
 
-const Messages: React.FC = () => {
+const Messages = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -50,7 +50,7 @@ const Messages: React.FC = () => {
     setNewMessage('');
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();

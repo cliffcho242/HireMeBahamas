@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MagnifyingGlassIcon,
@@ -28,12 +28,12 @@ interface SmartSearchBarProps {
   className?: string;
 }
 
-const SmartSearchBar: React.FC<SmartSearchBarProps> = ({
+const SmartSearchBar = ({
   onSearch,
   placeholder = "Search for jobs, skills, or services (e.g., 'plumber in Nassau')...",
   showPopularSearches = true,
   className = ''
-}) => {
+}): SmartSearchBarProps => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestionsOverride, setShowSuggestionsOverride] = useState(false);
   
@@ -112,7 +112,7 @@ const SmartSearchBar: React.FC<SmartSearchBarProps> = ({
     setSearchQuery(query);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
 

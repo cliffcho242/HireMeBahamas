@@ -5,7 +5,6 @@
  * It provides a complete messaging interface with channels, conversations, and real-time updates.
  */
 
-import React from 'react';
 import '@sendbird/uikit-react/dist/index.css';
 import '../styles/sendbird.css';
 import { App as SendbirdApp } from '@sendbird/uikit-react';
@@ -13,7 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getSendbirdAppId, isSendbirdConfigured } from '../config/sendbird';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
-const SendbirdMessages: React.FC = () => {
+const SendbirdMessages = () => {
   const { user } = useAuth();
 
   // Check if Sendbird is configured

@@ -8,7 +8,7 @@
  * - Object-fit cover for proper sizing
  * - Core Web Vitals optimization
  */
-import React from 'react';
+import { CSSProperties } from 'react';
 
 interface LazyImageProps {
   src: string;
@@ -17,7 +17,7 @@ interface LazyImageProps {
   height?: number;
   priority?: boolean;
   className?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
 
 export default function LazyImage({

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Switch } from '@headlessui/react';
 import api, { hireMeAPI } from '../services/api';
@@ -27,7 +27,7 @@ interface AvailableUser {
   trade: string;
 }
 
-const HireMeTab: React.FC = () => {
+const HireMeTab = () => {
   const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [userAvailability, setUserAvailability] = useState(false);

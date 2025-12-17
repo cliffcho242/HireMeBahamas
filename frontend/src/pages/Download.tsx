@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { MouseEvent, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -15,7 +15,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-const Download: React.FC = () => {
+const Download = () => {
   const navigate = useNavigate();
   
   // Use lazy initialization for platform detection to avoid cascading renders
@@ -70,7 +70,7 @@ const Download: React.FC = () => {
     };
   }, [isIOS, isAndroid, isDesktop]);
 
-  const handleInstallClick = async (e?: React.MouseEvent) => {
+  const handleInstallClick = async (e?: MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -114,7 +114,7 @@ const Download: React.FC = () => {
     }
   };
 
-  const handleOpenApp = (e?: React.MouseEvent) => {
+  const handleOpenApp = (e?: MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { API } from '../services/api';
@@ -49,7 +49,7 @@ interface InactiveUser {
   is_active: boolean;
 }
 
-const UserAnalytics: React.FC = () => {
+const UserAnalytics = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);

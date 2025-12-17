@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
   MagnifyingGlassIcon, 
@@ -7,7 +6,7 @@ import {
   CameraIcon
 } from '@heroicons/react/24/outline';
 
-const Dashboard: React.FC = () => {
+const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

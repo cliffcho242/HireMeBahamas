@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { useAdvancedAI, useAIContentGeneration, useAIResumeAnalysis, useAIChat } from '../contexts/AdvancedAIContext';
 
-const AIDashboard: React.FC = () => {
+const AIDashboard = () => {
   const { isAIOnline, aiCapabilities } = useAdvancedAI();
   const { generateJobDescription, generateCoverLetter, generateCareerAdvice } = useAIContentGeneration();
   const { analyzeResume } = useAIResumeAnalysis();
@@ -22,7 +22,7 @@ const AIDashboard: React.FC = () => {
     { id: 'recommendations', label: 'Smart Recommendations', icon: '💡' }
   ];
 
-  const handleChatSubmit = async (e: React.FormEvent) => {
+  const handleChatSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!chatMessage.trim()) return;
 

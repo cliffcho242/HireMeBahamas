@@ -1,8 +1,7 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
-const DownloadTest: React.FC = () => {
+const DownloadTest = () => {
   const navigate = useNavigate();
 
   const handleClick = () => {

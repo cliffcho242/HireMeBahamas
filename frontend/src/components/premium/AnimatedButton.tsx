@@ -1,11 +1,11 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo , ReactNode , MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 interface AnimatedButtonProps {
-  children: React.ReactNode;
-  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  children: ReactNode;
+  onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
   variant?: 'like' | 'follow' | 'send' | 'default';
   isActive?: boolean;
   className?: string;
@@ -53,7 +53,7 @@ export function AnimatedButton({
   }, [haptic]);
 
   const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
+    (e: MouseEvent<HTMLButtonElement>) => {
       if (disabled) return;
 
       // Calculate ripple position
