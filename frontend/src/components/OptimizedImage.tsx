@@ -1,9 +1,14 @@
 import { useState, useRef, ImgHTMLAttributes, useCallback } from 'react';
 import { useInView } from 'react-intersection-observer';
 
-interface OptimizedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
+interface OptimizedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'srcSet'> {
   src: string;
   alt: string;
+  /**
+   * Responsive image sources for different screen densities
+   * Example: "image.jpg 1x, image@2x.jpg 2x"
+   */
+  srcSet?: string;
   /**
    * Fallback image URL if the main image fails to load
    */
