@@ -17,14 +17,20 @@ import sys
 class TestServerDependencies:
     """Test critical server dependencies for deployment."""
     
+    @staticmethod
+    def _parse_version(version_str: str) -> tuple:
+        """Parse version string into tuple of integers for comparison."""
+        return tuple(map(int, version_str.split('.')[:3]))
+    
     def test_gunicorn_installed(self):
         """Verify gunicorn is installed with correct version."""
         try:
             version = importlib.metadata.version("gunicorn")
             assert version is not None, "gunicorn version should not be None"
             # Check minimum version (23.0.0)
-            major, minor, patch = map(int, version.split('.')[:3])
-            assert major >= 23, f"gunicorn version {version} is below minimum 23.0.0"
+            installed = self._parse_version(version)
+            minimum = self._parse_version("23.0.0")
+            assert installed >= minimum, f"gunicorn version {version} is below minimum 23.0.0"
             print(f"✅ gunicorn {version} is installed")
         except importlib.metadata.PackageNotFoundError:
             pytest.fail("❌ CRITICAL: gunicorn is NOT installed - deployment will fail!")
@@ -35,8 +41,9 @@ class TestServerDependencies:
             version = importlib.metadata.version("uvicorn")
             assert version is not None, "uvicorn version should not be None"
             # Check minimum version (0.31.0)
-            major, minor, patch = map(int, version.split('.')[:3])
-            assert minor >= 31, f"uvicorn version {version} is below minimum 0.31.0"
+            installed = self._parse_version(version)
+            minimum = self._parse_version("0.31.0")
+            assert installed >= minimum, f"uvicorn version {version} is below minimum 0.31.0"
             print(f"✅ uvicorn {version} is installed")
         except importlib.metadata.PackageNotFoundError:
             pytest.fail("❌ CRITICAL: uvicorn is NOT installed - deployment will fail!")
@@ -47,8 +54,9 @@ class TestServerDependencies:
             version = importlib.metadata.version("fastapi")
             assert version is not None, "fastapi version should not be None"
             # Check minimum version (0.115.0)
-            major, minor, patch = map(int, version.split('.')[:3])
-            assert minor >= 115, f"fastapi version {version} is below minimum 0.115.0"
+            installed = self._parse_version(version)
+            minimum = self._parse_version("0.115.0")
+            assert installed >= minimum, f"fastapi version {version} is below minimum 0.115.0"
             print(f"✅ fastapi {version} is installed")
         except importlib.metadata.PackageNotFoundError:
             pytest.fail("❌ CRITICAL: fastapi is NOT installed - deployment will fail!")
