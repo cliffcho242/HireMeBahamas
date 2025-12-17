@@ -101,7 +101,7 @@ if DATABASE_URL:
 # =============================================================================
 # Neon pooled connections (PgBouncer) do NOT support sslmode in the URL query string.
 # If sslmode is present in DATABASE_URL, the app refuses to boot to prevent connection failures.
-if "sslmode" in os.getenv("DATABASE_URL", ""):
+if DATABASE_URL and "sslmode" in DATABASE_URL:
     raise RuntimeError(
         "FATAL: sslmode is not allowed with Neon pooled connections. "
         "Remove ?sslmode=... from your DATABASE_URL. "
@@ -118,7 +118,7 @@ if (ENV == "production" or ENVIRONMENT == "production") and not DATABASE_URL:
     logger.warning(
         "DATABASE_URL is required in production. "
         "Please set DATABASE_URL environment variable with your Neon PostgreSQL connection string. "
-        "Format: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require"
+        "Format: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME"
     )
     # Use placeholder to prevent crashes, connections will fail gracefully
     DATABASE_URL = DB_PLACEHOLDER_URL
