@@ -226,7 +226,7 @@ export const invalidateQueries = {
 // Optimistic update helpers
 export const optimisticUpdates = {
   // Optimistically update post likes
-  likePost: (postId: number | string, userId: number | string) => {
+  likePost: (postId: number | string) => {
     const queryKey = queryKeys.posts.detail(postId);
     
     queryClient.setQueryData(queryKey, (old: any) => {
