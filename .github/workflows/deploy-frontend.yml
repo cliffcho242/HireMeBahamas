@@ -34,9 +34,9 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      - name: Verify React type declarations
+      - name: Check TypeScript info
         working-directory: ./frontend
-        run: npm run verify:types
+        run: npm run info:typecheck
 
       - name: Build frontend
         working-directory: ./frontend
