@@ -6,7 +6,7 @@ import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
 import { ENV_API } from '../config/env';
 import { refreshToken } from './auth';
 import { safeParseUrl } from '../lib/safeUrl';
-import { apiUrl } from '@/lib/api';
+import { apiUrl, getApiBase } from '../lib/api';
 
 // Note: Backend URL validation happens automatically when backendRouter is imported
 // The validateBackendUrl() function is called at module load in backendRouter.ts
@@ -69,8 +69,8 @@ if (import.meta.env.DEV) {
 }
 
 // Use safe URL builder to get validated API base URL
-// getApiUrl already uses the safe URL builder pattern from lib/api
-const API_BASE_URL = getApiUrl('/').replace(/\/$/, ''); // Remove trailing slash from base
+// getApiBase() returns normalized URL without trailing slash
+const API_BASE_URL = getApiBase();
 
 // Export API constant for use in fetch calls (for backward compatibility)
 export const API = API_BASE_URL;

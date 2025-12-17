@@ -31,7 +31,7 @@ const expectedImports = [
 ];
 
 console.log('🔍 Validating Safe URL Builder Enforcement\n');
-console.log('=' .repeat(60));
+console.log('='.repeat(60));
 
 let allPassed = true;
 
