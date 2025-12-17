@@ -76,17 +76,12 @@ export function validateEnvironmentVariables(): ValidationResult {
   });
 
   // Warn about unprefixed variables (these won't work)
-  const allImportMetaEnvKeys = Object.keys(import.meta.env);
-  allImportMetaEnvKeys.forEach(key => {
+  Object.keys(import.meta.env).forEach(key => {
     // Check if someone tried to use an unprefixed variable
-    if (
-      !key.startsWith('VITE_') && 
-      !key.startsWith('BASE_') && 
-      key !== 'MODE' && 
-      key !== 'DEV' && 
-      key !== 'PROD' && 
-      key !== 'SSR'
-    ) {
+    // Skip Vite's built-in environment variables
+    const isBuiltIn = ['BASE_URL', 'MODE', 'DEV', 'PROD', 'SSR'].includes(key);
+    
+    if (!key.startsWith('VITE_') && !isBuiltIn) {
       result.warnings.push(
         `⚠️  WARNING: Found unprefixed variable: ${key}\n` +
         `   This variable won't be exposed to the frontend in production.\n` +
@@ -145,10 +140,19 @@ export function validateEnvironmentVariables(): ValidationResult {
 }
 
 /**
+ * Environment mode constants
+ */
+const ENV_MODE = {
+  TEST: 'test',
+  PRODUCTION: 'production',
+  DEVELOPMENT: 'development',
+} as const;
+
+/**
  * Run validation immediately when this module is imported
  * This ensures validation happens during build time
  */
-if (import.meta.env.MODE !== 'test') {
+if (import.meta.env.MODE !== ENV_MODE.TEST) {
   const result = validateEnvironmentVariables();
   
   // In production builds, fail if validation fails

@@ -34,6 +34,12 @@ fi
 echo "📋 Checking frontend environment configuration..."
 echo ""
 
+# Array of forbidden unprefixed variables that commonly cause issues
+FORBIDDEN_UNPREFIXED_VARS=("API_URL" "DATABASE_URL" "BACKEND_URL")
+
+# Array of wrong framework prefixes
+WRONG_PREFIXES=("NEXT_PUBLIC_")
+
 # Check .env.example exists
 if [ ! -f "frontend/.env.example" ]; then
     echo -e "${RED}❌ ERROR: frontend/.env.example is missing${NC}"
@@ -60,13 +66,23 @@ if [ -f "frontend/.env.example" ]; then
         echo -e "${GREEN}✓${NC} No incorrect NEXT_PUBLIC_ variables found"
     fi
     
-    # Check for unprefixed API_URL or DATABASE_URL
-    if grep -q "^API_URL=" frontend/.env.example || grep -q "^DATABASE_URL=" frontend/.env.example; then
-        echo -e "${RED}❌ ERROR: frontend/.env.example contains unprefixed API_URL or DATABASE_URL${NC}"
-        echo "   Frontend variables must have VITE_ prefix to be exposed by Vercel."
-        ERRORS=$((ERRORS + 1))
+    # Check for forbidden unprefixed variables
+    FOUND_FORBIDDEN=false
+    for var in "${FORBIDDEN_UNPREFIXED_VARS[@]}"; do
+        if grep -q "^${var}=" frontend/.env.example; then
+            if [ "$FOUND_FORBIDDEN" = false ]; then
+                echo -e "${RED}❌ ERROR: frontend/.env.example contains unprefixed variables:${NC}"
+                FOUND_FORBIDDEN=true
+                ERRORS=$((ERRORS + 1))
+            fi
+            echo "   - ${var} (should be VITE_${var})"
+        fi
+    done
+    
+    if [ "$FOUND_FORBIDDEN" = false ]; then
+        echo -e "${GREEN}✓${NC} No forbidden unprefixed variables found"
     else
-        echo -e "${GREEN}✓${NC} No unprefixed API_URL or DATABASE_URL found"
+        echo "   Frontend variables must have VITE_ prefix to be exposed by Vercel."
     fi
 fi
 
