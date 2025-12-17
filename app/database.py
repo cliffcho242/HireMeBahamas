@@ -394,8 +394,9 @@ logger.info(
 # 3. Actual connections are created when sessions are instantiated (at runtime)
 # 4. When a session needs the engine, LazyEngine.__getattr__ triggers lazy initialization
 # This means the engine is still created lazily on first actual database operation
+# SQLAlchemy 2.0+ compatible session factory
+# Engine is passed to each session creation, not at factory level
 SessionLocal = sessionmaker(
-    bind=engine, 
     class_=Session, 
     expire_on_commit=False,  # Don't expire objects after commit (reduces DB round-trips)
     autoflush=False,  # Manual flush for better performance control
@@ -426,7 +427,8 @@ def get_db():
     Raises:
         RuntimeError: If database connection fails
     """
-    db = SessionLocal()
+    # SQLAlchemy 2.0+ pattern: pass engine when creating session
+    db = SessionLocal(bind=engine)
     try:
         yield db
     except Exception as e:
