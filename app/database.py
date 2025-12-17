@@ -278,14 +278,15 @@ def get_engine():
                         # For cloud deployments, always use ?sslmode=require to enforce encrypted connections
                         connect_args={
                             # Connection timeout (5s for Railway cold starts)
+                            # Using 'connect_timeout' which is the standard psycopg2 parameter
                             "connect_timeout": CONNECT_TIMEOUT,
                             
                             # PostgreSQL application name for pg_stat_activity
                             "application_name": "hiremebahamas",
                             
                             # PostgreSQL options for performance
-                            # Note: statement_timeout expects milliseconds
-                            "options": f"-c statement_timeout={STATEMENT_TIMEOUT_MS}ms",
+                            # STATEMENT_TIMEOUT_MS is already in milliseconds (e.g., 30000)
+                            "options": f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
                         }
                     )
                     logger.info("✅ Database engine initialized successfully (sync)")
@@ -513,7 +514,8 @@ def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     for attempt in range(max_retries):
         try:
             with engine.begin() as conn:
-                Base.metadata.create_all(bind=conn)
+                # SQLAlchemy 2.0+ compatible: use conn directly without bind parameter
+                Base.metadata.create_all(conn)
             _db_initialized = True
             _db_init_error = None
             logger.info("Database tables initialized successfully")
