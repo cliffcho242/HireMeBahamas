@@ -395,8 +395,9 @@ logger.info(
 # 4. When a session needs the engine, LazyEngine.__getattr__ triggers lazy initialization
 # This means the engine is still created lazily on first actual database operation
 # SQLAlchemy 2.0+ compatible session factory
-# Engine is passed to each session creation, not at factory level
+# Engine is passed to sessionmaker (not to individual session creation)
 SessionLocal = sessionmaker(
+    engine,
     class_=Session, 
     expire_on_commit=False,  # Don't expire objects after commit (reduces DB round-trips)
     autoflush=False,  # Manual flush for better performance control
@@ -427,8 +428,8 @@ def get_db():
     Raises:
         RuntimeError: If database connection fails
     """
-    # SQLAlchemy 2.0+ pattern: pass engine when creating session
-    db = SessionLocal(bind=engine)
+    # SQLAlchemy 2.0+ pattern: engine bound to sessionmaker, not individual sessions
+    db = SessionLocal()
     try:
         yield db
     except Exception as e:
