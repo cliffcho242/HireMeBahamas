@@ -93,11 +93,8 @@ export function validateEnvironmentVariables(): ValidationResult {
   });
 
   // Check for required variables
-  const requiredVars = {
-    // API URL is optional (can use same-origin for Vercel serverless)
-    // But if VITE_REQUIRE_BACKEND_URL is true, then it's required
-  };
-
+  // API URL is optional (can use same-origin for Vercel serverless)
+  // But if VITE_REQUIRE_BACKEND_URL is true, then it's required
   if (import.meta.env.VITE_REQUIRE_BACKEND_URL === 'true') {
     if (!import.meta.env.VITE_API_URL) {
       result.errors.push(
