@@ -53,6 +53,7 @@ export { default as ResourceHints } from './ResourceHints';
 export { default as EventReminderSystem } from './EventReminderSystem';
 export { AIErrorBoundary } from './AIErrorBoundary'; // Named export, not default
 export { default as AISystemStatus } from './AISystemStatus';
+export { default as ErrorFallback } from './ErrorFallback';
 
 // Sendbird components
 export { default as SendbirdMessages } from './SendbirdMessages';

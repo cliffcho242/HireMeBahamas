@@ -168,7 +168,12 @@ class AIErrorBoundaryClass extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      // Silent AI recovery - show simple error message to user
+      // If a custom fallback is provided, use it
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      // Otherwise, show the default AI error recovery UI
       return (
         <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
           <div className="max-w-md w-full bg-white rounded-xl shadow-2xl p-8 text-center">
