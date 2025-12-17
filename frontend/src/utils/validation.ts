@@ -15,7 +15,7 @@ const ALLOWED_PROTOCOLS = ['http:', 'https:', 'mailto:'];
  * Helper function to check if value is a valid string
  */
 const isValidString = (value: unknown): value is string => {
-  return typeof value === 'string' && value !== null && value !== undefined;
+  return typeof value === 'string';
 };
 
 /**

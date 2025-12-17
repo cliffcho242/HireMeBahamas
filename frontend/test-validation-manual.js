@@ -32,12 +32,12 @@ const tests = [
   ['http://example.com', true, 'Valid HTTP URL'],
   ['https://meet.google.com/abc', true, 'Valid Google Meet URL'],
   ['mailto:test@example.com', true, 'Valid mailto URL'],
-  ['', true, 'Empty string (optional) - trimmed is empty so returns true'],
-  ['   ', true, 'Whitespace only (optional) - trimmed is empty so returns true'],
+  ['', true, 'Empty string (optional)'],
+  ['   ', true, 'Whitespace only (optional)'],
   ['not-a-url', false, 'Invalid: no protocol'],
-  ['javascript:alert(1)', false, 'Invalid: dangerous javascript protocol (blocked for security)'],
-  ['data:text/html,<script>alert(1)</script>', false, 'Invalid: dangerous data protocol (blocked for security)'],
-  ['ftp://example.com', false, 'Invalid: ftp protocol not in allowed list'],
+  ['javascript:alert(1)', false, 'Invalid: dangerous javascript protocol'],
+  ['data:text/html,<script>alert(1)</script>', false, 'Invalid: dangerous data protocol'],
+  ['ftp://example.com', false, 'Invalid: ftp protocol not allowed'],
 ];
 
 let passed = 0;
