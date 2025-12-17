@@ -284,12 +284,21 @@ def get_engine():
                             # PostgreSQL application name for pg_stat_activity
                             "application_name": "hiremebahamas",
                             
-                            # PostgreSQL options for performance
-                            # STATEMENT_TIMEOUT_MS is in milliseconds (e.g., 30000), append 'ms' unit
-                            "options": f"-c statement_timeout={STATEMENT_TIMEOUT_MS}ms",
+                            # NOTE: statement_timeout is NOT set in options for compatibility with
+                            # Neon pooled connections (PgBouncer), which don't support startup parameters
+                            # in the options string. If needed, statement_timeout can be set at the
+                            # session level using SET statement_timeout = '30s' in queries.
                         }
                     )
-                    logger.info("✅ Database engine initialized successfully (sync)")
+                    
+                    # Detect connection type for logging
+                    parsed_url = urlparse(DATABASE_URL)
+                    hostname = parsed_url.hostname
+                    if hostname is not None and 'neon.tech' in hostname.lower():
+                        logger.info("✅ Database engine initialized (Neon pooled)")
+                    else:
+                        logger.info("✅ Database engine initialized successfully (sync)")
+                    
                     logger.info(
                         f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
                         f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
@@ -694,7 +703,7 @@ def warmup_db(engine_param=None) -> bool:
         with actual_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         
-        logger.info("Database warmup: Connection pool ready")
+        logger.info("✅ Database warmup successful")
         return True
         
     except Exception as e:

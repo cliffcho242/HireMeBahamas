@@ -34,11 +34,17 @@ def health():
     return {"ok": True}
 
 async def background_init():
+    """Initialize database in background (non-blocking).
+    
+    Note: Using sync database functions with asyncio.to_thread to avoid blocking.
+    """
     from app.database import init_db, warmup_db
 
     try:
-        success = await init_db()
+        # Run sync init_db in a thread to avoid blocking the event loop
+        success = await asyncio.to_thread(init_db)
         if success:
-            await warmup_db()
+            # Run sync warmup_db in a thread to avoid blocking the event loop
+            await asyncio.to_thread(warmup_db)
     except Exception as e:
         logging.warning(f"Background init skipped: {e}")
