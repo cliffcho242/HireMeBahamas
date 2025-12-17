@@ -75,6 +75,19 @@ if DATABASE_URL:
     DATABASE_URL = DATABASE_URL.strip()
 
 # =============================================================================
+# CRITICAL GUARD: BLOCK SSLMODE IN DATABASE_URL FOR NEON POOLED CONNECTIONS
+# =============================================================================
+# Neon pooled connections (PgBouncer) do NOT support sslmode in the URL query string.
+# If sslmode is present in DATABASE_URL, the app refuses to boot to prevent connection failures.
+if "sslmode" in os.getenv("DATABASE_URL", ""):
+    raise RuntimeError(
+        "FATAL: sslmode is not allowed with Neon pooled connections. "
+        "Remove ?sslmode=... from your DATABASE_URL. "
+        "SSL is handled automatically by the connection pooler."
+    )
+# =============================================================================
+
+# =============================================================================
 # PRODUCTION SAFETY: WARN IF POSTGRES NOT CONFIGURED (PRODUCTION-SAFE)
 # =============================================================================
 # This prevents silent SQLite usage in production while allowing app to start
