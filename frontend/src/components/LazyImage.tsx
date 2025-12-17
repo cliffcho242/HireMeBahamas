@@ -160,7 +160,7 @@ export function ProgressiveImage({
 /**
  * Responsive Image Component with srcset
  */
-interface ResponsiveImageProps extends LazyImageProps {
+interface ResponsiveImageProps extends Omit<LazyImageProps, 'srcSet'> {
   srcSet?: {
     '1x'?: string;
     '2x'?: string;

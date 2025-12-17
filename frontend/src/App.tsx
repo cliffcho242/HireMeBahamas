@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
@@ -43,17 +42,7 @@ import { AIErrorBoundary } from './components/AIErrorBoundary';
 import InstallPWA from './components/InstallPWA';
 import ConnectionStatus from './components/ConnectionStatus';
 
-// Create a client with optimized settings for fast loading
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-    },
-  },
-});
+// QueryClient is now provided at the root level in main.tsx
 
 // Fast loading spinner component with accessibility - now premium
 const LoadingSpinner = () => (
@@ -87,25 +76,23 @@ function App() {
     <>
       <AIMonitoringProvider>
         <AIErrorBoundary>
-          <QueryClientProvider client={queryClient}>
-            <Router>
-              <AuthProvider>
-                <SocketProvider>
-                  <MessageNotificationProvider>
-                    <AppLayout 
-                      enableCustomCursor={true}
-                      enableSmoothScroll={true}
-                      enablePageTransitions={true}
-                      defaultTheme="system"
-                    >
-                      <AppContent />
-                    </AppLayout>
-                    <SpeedInsightsWrapper />
-                  </MessageNotificationProvider>
-                </SocketProvider>
-              </AuthProvider>
-            </Router>
-          </QueryClientProvider>
+          <Router>
+            <AuthProvider>
+              <SocketProvider>
+                <MessageNotificationProvider>
+                  <AppLayout 
+                    enableCustomCursor={true}
+                    enableSmoothScroll={true}
+                    enablePageTransitions={true}
+                    defaultTheme="system"
+                  >
+                    <AppContent />
+                  </AppLayout>
+                  <SpeedInsightsWrapper />
+                </MessageNotificationProvider>
+              </SocketProvider>
+            </AuthProvider>
+          </Router>
         </AIErrorBoundary>
       </AIMonitoringProvider>
       <Analytics />
