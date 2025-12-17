@@ -68,32 +68,11 @@ if (import.meta.env.DEV) {
   logBackendConfiguration();
 }
 
-// Derive API base URL - using smart backend router
-// ✅ CORRECT: Use VITE_API_URL environment variable (exposed to browser by Vite)
-const BACKEND_URL = ENV_API;
+// Use safe URL builder to get validated API base URL
+// getApiUrl already uses the safe URL builder pattern from lib/api
+const API_BASE_URL = getApiUrl('/').replace(/\/$/, ''); // Remove trailing slash from base
 
-// Determine API base URL
-let API_BASE_URL: string;
-
-if (BACKEND_URL) {
-  // Use explicit environment variable if provided (e.g., Railway, Render, or local dev)
-  // ✅ CORRECT: VITE_API_URL is properly exposed to browser in Vite projects
-  API_BASE_URL = BACKEND_URL;
-} else if (typeof window !== 'undefined') {
-  // If running in browser and no explicit env override, use same-origin (for Vercel serverless)
-  API_BASE_URL = window.location.origin;
-  
-  // Only log for non-localhost origins
-  if (!window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
-    console.log('🌐 Using same-origin API (Vercel serverless):', API_BASE_URL);
-  }
-} else {
-  // ❌ WRONG: Never hardcode localhost in production fallback
-  // This should use same-origin or fail gracefully
-  throw new Error('API_BASE_URL could not be determined. Set VITE_API_URL environment variable.');
-}
-
-// Export API constant for use in fetch calls
+// Export API constant for use in fetch calls (for backward compatibility)
 export const API = API_BASE_URL;
 
 // 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
