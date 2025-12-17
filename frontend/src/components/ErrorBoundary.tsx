@@ -1,4 +1,4 @@
-import { Component, ReactNode } from "react";
+import React, { Component, ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
@@ -12,12 +12,13 @@ interface State {
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
-  static getDerivedStateFromError() {
+  static getDerivedStateFromError(_error: Error) {
     return { hasError: true };
   }
 
-  componentDidCatch(error: unknown) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("UI Error:", error);
+    console.error("Component Stack:", errorInfo.componentStack);
   }
 
   reset = () => {
