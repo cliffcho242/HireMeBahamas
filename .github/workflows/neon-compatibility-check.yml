@@ -1,0 +1,64 @@
+name: Neon Pooler Compatibility Check
+
+# Run this check on pull requests and pushes to main
+# Prevents sslmode and other Neon-incompatible patterns from being merged
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**/*.py'
+      - 'api/**/*.py'
+      - 'backend/**/*.py'
+      - '.github/workflows/neon-compatibility-check.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app/**/*.py'
+      - 'api/**/*.py'
+      - 'backend/**/*.py'
+
+jobs:
+  check-neon-compatibility:
+    name: Check Neon Pooler Compatibility
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Make script executable
+        run: chmod +x scripts/check_neon_compatibility.sh
+      
+      - name: Run Neon compatibility check
+        run: ./scripts/check_neon_compatibility.sh
+      
+      - name: Comment on PR (on failure)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ❌ Neon Pooler Compatibility Check Failed
+              
+              This PR contains code that is incompatible with Neon pooled connections (PgBouncer).
+              
+              Common issues:
+              - Adding \`sslmode=require\` to database URLs
+              - Using startup DB options in \`connect_args\`
+              - Creating indexes on application startup
+              
+              **What to do:**
+              1. Review the check output in the CI logs
+              2. Remove any sslmode parameters
+              3. Remove startup DB options
+              4. Move index creation to migrations
+              
+              **Documentation:**
+              - [NEON_POOLER_RULES.md](../blob/main/NEON_POOLER_RULES.md) - Full compatibility guide
+              - [BREAKING_CHANGE_SSLMODE.md](../blob/main/BREAKING_CHANGE_SSLMODE.md) - Why sslmode was removed
+              
+              Run \`./scripts/check_neon_compatibility.sh\` locally to verify your fixes.`
+            })
