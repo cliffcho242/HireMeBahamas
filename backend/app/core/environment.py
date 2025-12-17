@@ -37,7 +37,8 @@ def get_cors_origins() -> List[str]:
     
     In production:
     - Only HTTPS origins for production domains
-    - Includes Vercel preview deployments (*.vercel.app)
+    - NO wildcard (*) allowed in production (security requirement)
+    - Specific domains only
     
     In development:
     - Includes localhost origins for local development
@@ -46,20 +47,34 @@ def get_cors_origins() -> List[str]:
     Returns:
         List[str]: List of allowed CORS origins
     """
-    # Production origins (always included)
-    origins = [
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-        "https://*.vercel.app",  # Vercel preview deployments
-    ]
+    # Check for custom origins from environment variable
+    custom_origins_env = os.getenv("ALLOWED_ORIGINS", "")
     
-    # Add localhost origins only in development
-    if is_development():
-        origins.extend([
+    if is_production():
+        # Production mode: strict domain whitelist only
+        # 🚫 ABSOLUTE BAN: No wildcard (*) in production
+        if custom_origins_env and custom_origins_env != "*":
+            # Use custom origins if provided (and not wildcard)
+            origins = [origin.strip() for origin in custom_origins_env.split(",") if origin.strip()]
+        else:
+            # Default production origins
+            origins = [
+                "https://hiremebahamas.com",
+                "https://www.hiremebahamas.com",
+            ]
+        
+        # Note: Vercel preview deployments (*.vercel.app) should be added
+        # to ALLOWED_ORIGINS environment variable if needed for testing
+        
+    else:
+        # Development mode: includes localhost for testing
+        origins = [
+            "https://hiremebahamas.com",
+            "https://www.hiremebahamas.com",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
             "http://localhost:5173",  # Vite default
             "http://127.0.0.1:5173",
-        ])
+        ]
     
     return origins

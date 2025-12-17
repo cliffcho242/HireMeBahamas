@@ -256,26 +256,31 @@ except ImportError:
     # Fallback to manual configuration if import fails
     import os
     _is_prod = os.getenv("ENVIRONMENT", "").lower() == "production" or os.getenv("VERCEL_ENV", "").lower() == "production"
-    _allowed_origins = [
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-        "https://*.vercel.app",
-    ]
-    # ❌ ABSOLUTE BAN: Never allow localhost in production
-    if not _is_prod:
-        _allowed_origins.extend([
+    
+    # 🚫 SECURITY: No wildcard patterns (*) in production
+    if _is_prod:
+        # Production: specific domains only
+        _allowed_origins = [
+            "https://hiremebahamas.com",
+            "https://www.hiremebahamas.com",
+        ]
+    else:
+        # Development: includes localhost and production domains for testing
+        _allowed_origins = [
+            "https://hiremebahamas.com",
+            "https://www.hiremebahamas.com",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
             "http://localhost:5173",  # Vite default
             "http://127.0.0.1:5173",
-        ])
+        ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Cache control configuration for different endpoint patterns
