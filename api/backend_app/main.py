@@ -994,7 +994,8 @@ async def metrics():
 if __name__ == "__main__":
     import uvicorn
 
-    # Production mode - no reload, single worker for better stability
+    # Single worker for small instance compatibility (per NEVER AGAIN list)
+    # No reload in production, port from environment variable
     # Use the correct module path based on whether we're in standalone mode or not
     # When running as: python -m api.backend_app.main
     # Or from Railway/Docker: uvicorn api.backend_app.main:app
@@ -1009,6 +1010,6 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=port,
         reload=False,
-        workers=1,  # Single worker for production mode (per NEVER AGAIN list)
+        workers=1,  # Single worker for small instance compatibility (per NEVER AGAIN list)
         log_level="info"
     )
