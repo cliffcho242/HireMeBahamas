@@ -30,6 +30,7 @@
 
 import logging
 import threading
+import errno
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -449,13 +450,22 @@ async def close_db():
                 except OSError as e:
                     # Handle "Bad file descriptor" errors (errno 9) gracefully
                     # This occurs when connections are already closed
-                    if getattr(e, 'errno', None) == 9:
+                    # Check both errno attribute and error message for errno 9
+                    error_msg = str(e)
+                    if (getattr(e, 'errno', None) == errno.EBADF or 
+                        '[Errno 9]' in error_msg or 
+                        'Bad file descriptor' in error_msg):
                         logger.debug("Database connections already closed (file descriptor error)")
                     else:
                         logger.warning(f"OSError while closing database connections: {e}")
                 except Exception as e:
                     # Handle other disposal errors (e.g., network issues)
-                    logger.warning(f"Error disposing database engine: {e}")
+                    # Don't log errno 9 errors that might slip through as generic exceptions
+                    error_msg = str(e)
+                    if '[Errno 9]' not in error_msg and 'Bad file descriptor' not in error_msg:
+                        logger.warning(f"Error disposing database engine: {e}")
+                    else:
+                        logger.debug("Database connections already closed during dispose")
                 else:
                     # Only log success if no exception occurred
                     logger.info("Database connections closed")
