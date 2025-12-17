@@ -2,6 +2,8 @@
 
 **⚠️ CRITICAL: Read This First!**
 
+**🔒 FOREVER FIX:** See [FOREVER_FIX_ENV_VARIABLES.md](./FOREVER_FIX_ENV_VARIABLES.md) for the complete law
+
 This project uses **Vite (React)**, NOT Next.js.
 
 ## 🚨 Common Misconception
