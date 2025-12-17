@@ -7,13 +7,21 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 ---
 
-## 🔒 **FOREVER FIX: Environment Variable Law**
+## 🔒 **8️⃣ VERCEL ENV LOCK (MANDATORY)**
 
 **⚠️ READ THIS FIRST** - Critical configuration requirement for Vercel deployments
 
-**📖 [FOREVER_FIX_ENV_VARIABLES.md](./FOREVER_FIX_ENV_VARIABLES.md)** - **MANDATORY READING** before deployment
+**📖 [VERCEL_ENV_LOCK.md](./VERCEL_ENV_LOCK.md)** - **🔴 MANDATORY LOCK** - Must be followed for all deployments
 
 ### Quick Summary
+
+**Required environment variable: VITE_API_URL=https://your-backend.onrender.com**
+
+**CRITICAL RULES:**
+- ✅ **Use VITE_API_URL** (NOT NEXT_PUBLIC_API_URL - this is a Vite project, not Next.js)
+- 🚫 **No backend secrets** (DATABASE_URL, JWT_SECRET, etc.)
+- 🚫 **No DATABASE_URL** in Vercel frontend environment
+- 🚫 **No localhost** URLs in production
 
 **For Vite Frontend** (main app in `/frontend`):
 ```bash
@@ -23,10 +31,16 @@ VITE_API_URL=https://your-backend.onrender.com
 # ❌ NEVER USE - Vercel will NOT expose these
 API_URL=...                    # Missing prefix
 DATABASE_URL=...               # Backend only, dangerous!
+VITE_DATABASE_URL=...          # SECURITY RISK!
 NEXT_PUBLIC_API_URL=...        # Wrong framework (Next.js)
+VITE_API_URL=http://localhost  # No localhost in production
 ```
 
-**Why this matters**: Variables without the correct prefix are invisible to your frontend, causing silent failures.
+**Why this matters**: Violations cause deployment failures or security breaches.
+
+### Additional Documentation
+- **📖 [FOREVER_FIX_ENV_VARIABLES.md](./FOREVER_FIX_ENV_VARIABLES.md)** - Complete environment variable law
+- **📖 [VERCEL_ENV_CHECK.md](./VERCEL_ENV_CHECK.md)** - Detailed Vercel setup guide
 
 ---
 

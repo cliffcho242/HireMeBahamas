@@ -1,9 +1,15 @@
 #!/bin/bash
 #
-# 🔒 FOREVER FIX: Environment Variable Verification Script
+# 8️⃣ VERCEL ENV LOCK (MANDATORY): Environment Variable Verification Script
 #
 # This script verifies that environment variables are correctly configured
-# according to the FOREVER FIX law.
+# according to the VERCEL ENV LOCK mandatory rules.
+#
+# 🚫 No backend secrets (DATABASE_URL, JWT_SECRET, etc.)
+# 🚫 No DATABASE_URL in Vercel frontend environment
+# 🚫 No localhost URLs in production
+#
+# See: VERCEL_ENV_LOCK.md for complete documentation
 #
 # Usage:
 #   ./verify-env-config.sh
@@ -84,6 +90,36 @@ if [ -f "frontend/.env.example" ]; then
     else
         echo "   Frontend variables must have VITE_ prefix to be exposed by Vercel."
     fi
+    
+    # 🚫 VERCEL ENV LOCK: Check for forbidden backend secrets with VITE_ prefix
+    # NOTE: This list is also defined in frontend/src/config/envValidator.ts
+    # Keep both lists synchronized when adding new forbidden variables.
+    FORBIDDEN_SECRETS=("DATABASE_URL" "POSTGRES_URL" "JWT_SECRET" "JWT_SECRET_KEY" "SECRET_KEY" "PRIVATE_KEY" "CRON_SECRET" "API_SECRET" "DB_PASSWORD")
+    FOUND_SECRET=false
+    for secret in "${FORBIDDEN_SECRETS[@]}"; do
+        if grep -q "^VITE_${secret}=" frontend/.env.example; then
+            if [ "$FOUND_SECRET" = false ]; then
+                echo -e "${RED}❌ CRITICAL SECURITY ERROR: Backend secrets exposed with VITE_ prefix:${NC}"
+                echo "   🚫 VERCEL ENV LOCK VIOLATION: No backend secrets"
+                FOUND_SECRET=true
+                ERRORS=$((ERRORS + 1))
+            fi
+            echo "   - VITE_${secret} (NEVER expose backend secrets to frontend!)"
+        fi
+    done
+    
+    if [ "$FOUND_SECRET" = false ]; then
+        echo -e "${GREEN}✓${NC} No backend secrets exposed (VERCEL ENV LOCK compliant)"
+    else
+        echo "   Remove these immediately! See VERCEL_ENV_LOCK.md for security rules."
+    fi
+    
+    # 🚫 VERCEL ENV LOCK: Check for localhost URLs in example (warning only)
+    if grep -q "localhost\|127\.0\.0\.1" frontend/.env.example; then
+        echo -e "${YELLOW}⚠️  INFO: localhost URLs found in .env.example${NC}"
+        echo "   This is OK for local development, but remember:"
+        echo "   🚫 No localhost URLs in production (Vercel Dashboard)"
+    fi
 fi
 
 # Check .gitignore
@@ -120,6 +156,13 @@ if [ -f "frontend/src/main.tsx" ]; then
 fi
 
 # Check documentation
+if [ -f "VERCEL_ENV_LOCK.md" ]; then
+    echo -e "${GREEN}✓${NC} VERCEL_ENV_LOCK.md exists (MANDATORY)"
+else
+    echo -e "${RED}❌ ERROR: VERCEL_ENV_LOCK.md not found${NC}"
+    ERRORS=$((ERRORS + 1))
+fi
+
 if [ -f "FOREVER_FIX_ENV_VARIABLES.md" ]; then
     echo -e "${GREEN}✓${NC} FOREVER_FIX_ENV_VARIABLES.md exists"
 else
@@ -134,12 +177,15 @@ echo "=============================================="
 if [ $ERRORS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
     echo -e "${GREEN}✅ All checks passed!${NC}"
     echo ""
-    echo "Your environment variable configuration follows the FOREVER FIX law."
+    echo "Your environment variable configuration is VERCEL ENV LOCK compliant."
     echo ""
     echo "Next steps:"
     echo "  1. Configure environment variables in Vercel Dashboard"
-    echo "  2. Ensure all frontend variables have VITE_ prefix"
-    echo "  3. Deploy and verify in browser console"
+    echo "     - Use VITE_API_URL=https://your-backend.onrender.com"
+    echo "     - 🚫 NO backend secrets (DATABASE_URL, JWT_SECRET, etc.)"
+    echo "     - 🚫 NO localhost URLs in production"
+    echo "  2. Deploy and verify in browser console"
+    echo "  3. See VERCEL_ENV_LOCK.md for complete requirements"
     echo ""
     exit 0
 elif [ $ERRORS -eq 0 ]; then
