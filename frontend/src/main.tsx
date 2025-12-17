@@ -17,7 +17,7 @@ Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
   environment: import.meta.env.MODE,
   
-  // Performance monitoring
+  // Performance monitoring - trace sample rate
   tracesSampleRate: parseFloat(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE || '0.2'),
   
   // Enable profiling for performance insights
@@ -26,21 +26,20 @@ Sentry.init({
   // Web Vitals tracking - automatically capture Core Web Vitals
   integrations: [
     Sentry.browserTracingIntegration({
-      // Enable automatic instrumentation
-      tracingOrigins: ['localhost', /^\//],
-      // Track navigation timing
+      // Track navigation timing and long tasks
       enableLongTask: true,
       enableInp: true,
     }),
-    // Capture user interactions and clicks
+    // Capture user interactions and session replays for debugging
     Sentry.replayIntegration({
       maskAllText: true,
       blockAllMedia: true,
-      // Sample rate for session replays
-      replaysSessionSampleRate: 0.1,
-      replaysOnErrorSampleRate: 1.0,
     }),
   ],
+  
+  // Session replay sample rates
+  replaysSessionSampleRate: 0.1,  // 10% of normal sessions
+  replaysOnErrorSampleRate: 1.0,  // 100% of sessions with errors
   
   // Only enable if DSN is configured
   enabled: !!import.meta.env.VITE_SENTRY_DSN,
