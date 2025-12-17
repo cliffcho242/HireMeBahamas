@@ -1,11 +1,18 @@
 # Vercel
 .vercel
 
-# Local development environment
+# 🔒 FOREVER FIX: Environment files (NEVER commit these!)
+# These may contain sensitive API keys and backend URLs
+.env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+
+# ⚠️ ONLY .env.example should be committed (template without secrets)
 
 # Dependencies
 node_modules
