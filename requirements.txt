@@ -85,6 +85,9 @@ python-socketio==5.15.0
 flask-socketio==5.4.1
 eventlet==0.37.0
 
+# GraphQL API (optional - enables /api/graphql endpoint)
+strawberry-graphql==0.287.3
+
 # ============================================================================
 # DEPLOYMENT NOTES:
 # 1. Vercel automatically installs from this requirements.txt
