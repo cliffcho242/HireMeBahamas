@@ -1,18 +1,19 @@
 # =============================================================================
-# DATABASE CONFIGURATION - NEON-SAFE VERSION
+# DATABASE CONFIGURATION - NEON-SAFE VERSION (ASYNC-COMPATIBLE)
 # =============================================================================
 #
 # ✅ FINAL database.py (NEON-SAFE)
 # This fully resolves connection errors with Neon pooler
-# ✅ No startup parameters required
+# ✅ No startup parameters required  
 # ✅ Compatible with Neon pooler
+# ✅ Works with async FastAPI endpoints
 #
 # This configuration works on:
 # - Neon (with pooler)
 # - Railway
 # - Render
 # - Vercel Postgres
-# - SQLAlchemy 1.4 / 2.0
+# - SQLAlchemy 2.0
 #
 # DATABASE_URL FORMAT:
 # postgresql://user:password@host:5432/database?sslmode=require
@@ -29,7 +30,8 @@ import os
 import logging
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import make_url
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import declarative_base, sessionmaker
 from typing import Optional
 
 # Configure logging for database connection debugging
@@ -60,10 +62,14 @@ def init_db():
         return None
 
     try:
-        url = make_url(db_url)
+        # Convert postgresql:// to postgresql+asyncpg:// for async support
+        url_obj = make_url(db_url)
+        if url_obj.drivername == "postgresql":
+            db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            logger.info("Converted DATABASE_URL to asyncpg driver for async support")
 
-        engine = create_engine(
-            url,
+        engine = create_async_engine(
+            db_url,
             pool_pre_ping=True,    # Validate connections before use
             pool_recycle=300,       # Recycle connections every 5 minutes
             pool_size=5,            # Base pool size
@@ -78,7 +84,7 @@ def init_db():
         return None
 
 
-def warmup_db(engine_param):
+async def warmup_db(engine_param):
     """Warm up database connection pool.
     
     Performs a simple connection test to ensure the database is accessible
@@ -88,8 +94,8 @@ def warmup_db(engine_param):
         engine_param: Database engine instance
     """
     try:
-        with engine_param.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        async with engine_param.connect() as conn:
+            await conn.execute(text("SELECT 1"))
         logger.info("Database warmup successful")
     except Exception as e:
         logger.warning(f"Database warmup failed: {e}")
@@ -105,30 +111,31 @@ def get_db():
     Engine must be initialized via init_db() before this can be used.
     
     Yields:
-        Session: Database session for query execution
+        AsyncSession: Database session for query execution
     """
     if engine is None:
         raise RuntimeError("Database engine not initialized. Call init_db() first.")
     
-    SessionLocal = sessionmaker(
-        bind=engine,
-        class_=Session,
+    AsyncSessionLocal = sessionmaker(
+        engine,
+        class_=AsyncSession,
         expire_on_commit=False,
         autoflush=False,
     )
     
-    db = SessionLocal()
-    try:
-        yield db
-    except Exception as e:
-        logger.error(f"Database session error: {e}")
-        db.rollback()
-        raise
-    finally:
-        db.close()
+    async def _get_session():
+        async with AsyncSessionLocal() as session:
+            try:
+                yield session
+            except Exception as e:
+                logger.error(f"Database session error: {e}")
+                await session.rollback()
+                raise
+    
+    return _get_session()
 
 
-def test_db_connection() -> tuple[bool, Optional[str]]:
+async def test_db_connection() -> tuple[bool, Optional[str]]:
     """Test database connectivity.
     
     Used by health check endpoints to verify database is accessible.
@@ -140,8 +147,8 @@ def test_db_connection() -> tuple[bool, Optional[str]]:
         return False, "Database engine not initialized"
     
     try:
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
         return True, None
     except Exception as e:
         error_msg = str(e)
@@ -152,7 +159,7 @@ def test_db_connection() -> tuple[bool, Optional[str]]:
         return False, error_msg
 
 
-def close_db():
+async def close_db():
     """Close database connections gracefully.
     
     Called during application shutdown to release all connections.
@@ -160,7 +167,7 @@ def close_db():
     global engine
     try:
         if engine is not None:
-            engine.dispose()
+            await engine.dispose()
             logger.info("Database connections closed")
             engine = None
     except Exception as e:
@@ -175,14 +182,14 @@ def get_db_status() -> dict:
     """
     return {
         "initialized": engine is not None,
-        "engine_type": "Neon-safe pooled connection",
+        "engine_type": "Neon-safe pooled connection (async)",
         "pool_size": 5,
         "max_overflow": 10,
         "pool_recycle": 300,
     }
 
 
-def get_pool_status() -> dict:
+async def get_pool_status() -> dict:
     """Get connection pool status for monitoring.
     
     Returns:
@@ -205,24 +212,24 @@ def get_pool_status() -> dict:
 
 
 # Legacy compatibility functions
-def test_connection():
+async def test_connection():
     """Test database connectivity (legacy alias).
     
     Returns:
         bool: True if connection succeeded, False otherwise
     """
-    success, _ = test_db_connection()
+    success, _ = await test_db_connection()
     return success
 
 
-def close_engine():
+async def close_engine():
     """Close database engine (legacy alias)."""
-    close_db()
+    await close_db()
 
 
 # Backward compatibility aliases
 get_async_session = get_db
-async_session = None  # Not used in sync version
+async_session = None  # Deprecated, use get_db()
 
 
 # =============================================================================
