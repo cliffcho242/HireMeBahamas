@@ -15,9 +15,10 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 ### Quick Summary
 
-**Environment variables: NEXT_PUBLIC_API_URL=https://your-backend.onrender.com**
+**Required environment variable: VITE_API_URL=https://your-backend.onrender.com**
 
 **CRITICAL RULES:**
+- ✅ **Use VITE_API_URL** (NOT NEXT_PUBLIC_API_URL - this is a Vite project, not Next.js)
 - 🚫 **No backend secrets** (DATABASE_URL, JWT_SECRET, etc.)
 - 🚫 **No DATABASE_URL** in Vercel frontend environment
 - 🚫 **No localhost** URLs in production

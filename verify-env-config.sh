@@ -92,6 +92,8 @@ if [ -f "frontend/.env.example" ]; then
     fi
     
     # 🚫 VERCEL ENV LOCK: Check for forbidden backend secrets with VITE_ prefix
+    # NOTE: This list is also defined in frontend/src/config/envValidator.ts
+    # Keep both lists synchronized when adding new forbidden variables.
     FORBIDDEN_SECRETS=("DATABASE_URL" "POSTGRES_URL" "JWT_SECRET" "JWT_SECRET_KEY" "SECRET_KEY" "PRIVATE_KEY" "CRON_SECRET" "API_SECRET" "DB_PASSWORD")
     FOUND_SECRET=false
     for secret in "${FORBIDDEN_SECRETS[@]}"; do

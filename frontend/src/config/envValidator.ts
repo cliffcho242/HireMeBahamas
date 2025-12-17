@@ -26,6 +26,9 @@ interface ValidationResult {
  * (these are sensitive and should only be on the backend)
  * 
  * 🚫 VERCEL ENV LOCK (MANDATORY): No backend secrets
+ * 
+ * NOTE: This list is also defined in verify-env-config.sh for consistency.
+ * Keep both lists synchronized when adding new forbidden variables.
  */
 const FORBIDDEN_VITE_VARS = [
   'DATABASE_URL',
