@@ -1,4 +1,4 @@
-import { useState, useRef, ImgHTMLAttributes, useCallback } from 'react';
+import { useState, useRef, ImgHTMLAttributes, useCallback , CSSProperties , MutableRefObject } from 'react';
 import { useInView } from 'react-intersection-observer';
 
 interface OptimizedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'srcSet'> {
@@ -70,7 +70,7 @@ const OptimizedImage = ({
 
   // Combine refs
   const setRefs = useCallback((node: HTMLImageElement | null) => {
-    (imgRef as React.MutableRefObject<HTMLImageElement | null>).current = node;
+    (imgRef as MutableRefObject<HTMLImageElement | null>).current = node;
     if (!priority) {
       inViewRef(node);
     }
@@ -94,7 +94,7 @@ const OptimizedImage = ({
   const shouldLoad = priority || inView;
 
   // Container styles
-  const containerStyle: React.CSSProperties = {
+  const containerStyle: CSSProperties = {
     backgroundColor: placeholderColor,
     position: 'relative',
     overflow: 'hidden',
@@ -103,7 +103,7 @@ const OptimizedImage = ({
   };
 
   // Image styles
-  const imageStyle: React.CSSProperties = {
+  const imageStyle: CSSProperties = {
     width: '100%',
     height: '100%',
     objectFit,

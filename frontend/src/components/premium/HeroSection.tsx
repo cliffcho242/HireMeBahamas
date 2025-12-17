@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef , ReactNode , MouseEvent } from 'react';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -6,7 +6,7 @@ import { twMerge } from 'tailwind-merge';
 interface HeroSectionProps {
   title: string;
   subtitle?: string;
-  children?: React.ReactNode;
+  children?: ReactNode;
   variant?: 'particles' | 'tilt-cards' | 'gradient';
   className?: string;
 }
@@ -87,7 +87,7 @@ export function HeroSection({
  * 3D tilt card component
  */
 interface TiltCardProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   glareEnabled?: boolean;
   tiltAmount?: number;
@@ -114,7 +114,7 @@ export function TiltCard({
   const glareX = useTransform(mouseX, [-0.5, 0.5], ['0%', '100%']);
   const glareY = useTransform(mouseY, [-0.5, 0.5], ['0%', '100%']);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
     
     const rect = cardRef.current.getBoundingClientRect();

@@ -1,4 +1,4 @@
-﻿import React, { useState, Suspense, lazy } from 'react';
+import { useState, Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { Event } from '../types/event';
@@ -74,7 +74,7 @@ const IconButtonLoader = () => (
   <div className="w-9 h-9 bg-gray-200 rounded-full animate-pulse"></div>
 );
 
-const Home: React.FC = () => {
+const Home = () => {
   const { user } = useAuth();
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);

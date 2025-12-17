@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BellIcon,
@@ -22,7 +22,7 @@ interface ReminderNotification {
   type: 'urgent' | 'warning' | 'info';
 }
 
-const EventReminderSystem: React.FC<EventReminderSystemProps> = ({ events = [] }) => {
+const EventReminderSystem = ({ events = [] }: EventReminderSystemProps) => {
   const [activeReminders, setActiveReminders] = useState<ReminderNotification[]>([]);
   const [dismissedReminders, setDismissedReminders] = useState<Set<string>>(new Set());
 

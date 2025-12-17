@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Error boundary uses dynamic window.gc and analysis objects
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { useAIMonitoring } from '../contexts/AIMonitoringContext';
 import ErrorFallback from './ErrorFallback';
 
@@ -200,7 +200,7 @@ class AIErrorBoundaryClass extends Component<Props, State> {
 }
 
 // Wrapper component to use the monitoring context
-export const AIErrorBoundary: React.FC<Props> = (props) => {
+export const AIErrorBoundary = (props: any) => {
   const { reportError } = useAIMonitoring();
 
   return (

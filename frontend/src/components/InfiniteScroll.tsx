@@ -9,22 +9,22 @@
  * - Smooth scroll restoration
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState , TouchEvent } from 'react';
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 
 interface InfiniteScrollProps<T> {
   items: T[];
-  renderItem: (item: T, index: number) => React.ReactNode;
+  renderItem: (item: T, index: number) => ReactNode;
   loadMore: () => Promise<void>;
   hasMore: boolean;
   isLoading: boolean;
   onRefresh?: () => Promise<void>;
   keyExtractor: (item: T) => string | number;
-  skeleton?: React.ReactNode;
+  skeleton?: ReactNode;
   skeletonCount?: number;
   threshold?: number;
   className?: string;
-  emptyState?: React.ReactNode;
+  emptyState?: ReactNode;
 }
 
 /**
@@ -209,13 +209,13 @@ export function InfiniteScroll<T>({
   }, [handleIntersection, threshold]);
 
   // Pull to refresh handlers
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((e: TouchEvent) => {
     if (containerRef.current?.scrollTop === 0) {
       touchStartY.current = e.touches[0].clientY;
     }
   }, []);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!onRefresh || isRefreshing) return;
     
     const scrollTop = containerRef.current?.scrollTop ?? 0;

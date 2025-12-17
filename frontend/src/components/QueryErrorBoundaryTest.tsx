@@ -11,7 +11,7 @@
  * 4. Click "Trigger Error" to test error boundary
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 interface TestComponentProps {
@@ -19,7 +19,7 @@ interface TestComponentProps {
 }
 
 // Component that throws an error when shouldThrow is true
-const ErrorThrowingComponent: React.FC<TestComponentProps> = ({ shouldThrow }) => {
+const ErrorThrowingComponent = ({ shouldThrow }: TestComponentProps) => {
   if (shouldThrow) {
     throw new Error('Test error from QueryErrorBoundaryTest component');
   }
@@ -27,7 +27,7 @@ const ErrorThrowingComponent: React.FC<TestComponentProps> = ({ shouldThrow }) =
 };
 
 // Component that simulates a React Query error
-const QueryErrorComponent: React.FC = () => {
+const QueryErrorComponent = () => {
   const { data, error } = useQuery({
     queryKey: ['test-error'],
     queryFn: async () => {
@@ -45,7 +45,7 @@ const QueryErrorComponent: React.FC = () => {
   return <div>{data}</div>;
 };
 
-const QueryErrorBoundaryTest: React.FC = () => {
+const QueryErrorBoundaryTest = () => {
   const [shouldThrow, setShouldThrow] = useState(false);
   const [testQueryError, setTestQueryError] = useState(false);
 

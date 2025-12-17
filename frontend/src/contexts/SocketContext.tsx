@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 // Context files export both Provider components and custom hooks
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { toast } from 'react-hot-toast';
@@ -22,7 +22,7 @@ interface SocketProviderProps {
   children: ReactNode;
 }
 
-export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
+export const SocketProvider = ({ children }: SocketProviderProps) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);

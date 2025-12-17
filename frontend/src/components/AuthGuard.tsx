@@ -1,18 +1,18 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface AuthGuardProps {
-  children: React.ReactNode;
+  children: ReactNode;
   requireAuth?: boolean;
   redirectTo?: string;
 }
 
-const AuthGuard: React.FC<AuthGuardProps> = ({
+const AuthGuard = ({
   children,
   requireAuth = false,
   redirectTo = '/login'
-}) => {
+}: AuthGuardProps) => {
   const { isAuthenticated, isLoading } = useAuth();
 
   // Show loading spinner while checking authentication

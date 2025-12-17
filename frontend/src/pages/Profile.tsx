@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api, { hireMeAPI, usersAPI, postsAPI } from '../services/api';
@@ -62,7 +62,7 @@ interface FollowUser {
 
 type ProfileTab = 'posts' | 'about' | 'photos' | 'videos' | 'followers' | 'following' | 'gallery';
 
-const Profile: React.FC = () => {
+const Profile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -213,7 +213,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -229,7 +229,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,

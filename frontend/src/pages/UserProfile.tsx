@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -72,7 +72,7 @@ interface FollowUser {
 const USERS_LIST_ROUTE = '/friends';
 const REDIRECT_DELAY_SECONDS = 3;
 
-const UserProfile: React.FC = () => {
+const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();

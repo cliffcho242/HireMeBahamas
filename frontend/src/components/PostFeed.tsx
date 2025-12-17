@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import type { EmojiClickData } from 'emoji-picker-react';
@@ -62,7 +62,7 @@ function hasValidCommentUser(comment: Comment): comment is ValidComment {
 // Number of posts that should load with priority (above-the-fold optimization)
 const PRIORITY_POSTS_COUNT = 3;
 
-const PostFeed: React.FC = () => {
+const PostFeed = () => {
   const [posts, setPosts] = useState<ValidPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -222,7 +222,7 @@ const PostFeed: React.FC = () => {
   }, [isOnline, fetchPosts, syncPendingActions]);
 
   // TODO: Implement create post inline functionality
-  // const handleCreatePost = async (e: React.FormEvent) => {
+  // const handleCreatePost = async (e: FormEvent) => {
   //   e.preventDefault();
   //   if (!newPostContent.trim()) return;
   //   setIsPosting(true);

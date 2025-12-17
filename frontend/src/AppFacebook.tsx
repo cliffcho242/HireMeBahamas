@@ -1,15 +1,15 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import FacebookLikeAuth from './components/FacebookLikeAuth';
 import FacebookLikeDashboard from './components/FacebookLikeDashboard';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuth();
   return isAuthenticated ? <>{children}</> : <Navigate to="/auth" />;
 };
 
-const App: React.FC = () => {
+const App = () => {
   return (
     <AuthProvider>
       <Router>

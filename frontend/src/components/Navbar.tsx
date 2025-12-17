@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Bars3Icon,
@@ -19,7 +19,7 @@ import { useMessageNotifications } from '../contexts/MessageNotificationContext'
 import Notifications from './Notifications';
 import { ThemeToggle } from './premium';
 
-const Navbar: React.FC = () => {
+const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();

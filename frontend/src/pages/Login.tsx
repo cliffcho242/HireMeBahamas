@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { ButtonHTMLAttributes, FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -20,7 +20,7 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
-const Login: React.FC = () => {
+const Login = () => {
   const { login, loginWithGoogle, loginWithApple, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,7 +31,7 @@ const Login: React.FC = () => {
   const [connectionMessage, setConnectionMessage] = useState<string>('');
   
   // Generate particles once on mount for better performance
-  const particles = React.useMemo(() => 
+  const particles = useMemo(() => 
     Array.from({ length: 20 }, (_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
@@ -110,7 +110,7 @@ const Login: React.FC = () => {
     }
   }, [isAuthenticated, navigate, from]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (submitting) return;
     setSubmitting(true);
@@ -608,7 +608,7 @@ const Login: React.FC = () => {
                     }}
                     onSuccess={handleAppleSuccess}
                     onError={handleAppleError}
-                    render={(props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+                    render={(props: ButtonHTMLAttributes<HTMLButtonElement>) => (
                       <button
                         {...props}
                         type="button"

@@ -9,7 +9,7 @@
  * - Automatic permission request on login
  */
 
-import React, { createContext, useContext, useEffect, useCallback, useState, ReactNode, useRef } from 'react';
+import { ReactNode, createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { messagesAPI } from '../services/api';
@@ -84,7 +84,7 @@ interface MessageNotificationProviderProps {
   children: ReactNode;
 }
 
-export const MessageNotificationProvider: React.FC<MessageNotificationProviderProps> = ({ children }) => {
+export const MessageNotificationProvider = ({ children }: MessageNotificationProviderProps) => {
   const { socket } = useSocket();
   const { user, isAuthenticated } = useAuth();
   

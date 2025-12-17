@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import axios from 'axios';
@@ -20,7 +20,7 @@ interface User {
   following_count?: number;  // Make optional for defensive programming
 }
 
-const Users: React.FC = () => {
+const Users = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [following, setFollowing] = useState<User[]>([]);

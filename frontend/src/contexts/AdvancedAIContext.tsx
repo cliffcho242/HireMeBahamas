@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-refresh/only-export-components */
 // AI Context uses dynamic types for AI responses - any types are intentional
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { ReactNode, createContext, useCallback, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 
 interface AdvancedAIContextType {
@@ -52,12 +52,12 @@ interface AdvancedAIProviderProps {
   apiBaseUrl?: string;
 }
 
-export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
+export const AdvancedAIProvider = ({
   children,
   apiBaseUrl = import.meta.env.VITE_API_URL 
     ? `${import.meta.env.VITE_API_URL}/api/ai`
     : (typeof window !== 'undefined' ? `${window.location.origin}/api/ai` : '/api/ai')
-}) => {
+}: AdvancedAIProviderProps) => {
   const [aiSystemHealth, setAISystemHealth] = useState<any>({});
   const [isAIOnline, setIsAIOnline] = useState(false);
   const [aiCapabilities, setAICapabilities] = useState<string[]>([]);

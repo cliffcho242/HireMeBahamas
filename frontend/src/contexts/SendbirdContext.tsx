@@ -7,7 +7,7 @@
 
 /* eslint-disable react-refresh/only-export-components */
 // Context files export both Provider components and custom hooks
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import SendbirdChat, { User as SendbirdUser } from '@sendbird/chat';
 import { GroupChannelModule } from '@sendbird/chat/groupChannel';
 import { getSendbirdAppId, isSendbirdConfigured } from '../config/sendbird';
@@ -25,10 +25,10 @@ interface SendbirdContextType {
 const SendbirdContext = createContext<SendbirdContextType | undefined>(undefined);
 
 interface SendbirdProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-export const SendbirdProvider: React.FC<SendbirdProviderProps> = ({ children }) => {
+export const SendbirdProvider = ({ children }: SendbirdProviderProps) => {
   const [sdk, setSdk] = useState<SendbirdChat | null>(null);
   const [currentUser, setCurrentUser] = useState<SendbirdUser | null>(null);
   const [isConnected, setIsConnected] = useState(false);

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Event types use const assertions that require type casting
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   XMarkIcon,
@@ -22,7 +22,7 @@ interface CreateEventModalProps {
   onEventCreated?: () => void;
 }
 
-const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, onEventCreated }) => {
+const CreateEventModal = ({ isOpen, onClose, onEventCreated }: CreateEventModalProps) => {
   const [step, setStep] = useState(1);
   const [isCreating, setIsCreating] = useState(false);
 

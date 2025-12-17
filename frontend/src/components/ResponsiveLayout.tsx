@@ -1,12 +1,12 @@
-import React, { useEffect } from 'react';
+import { ReactNode, useEffect } from 'react';
 import MobileNavigation from './MobileNavigation';
 
 interface ResponsiveLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }
 
-const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({ children, className = '' }) => {
+const ResponsiveLayout = ({ children, className = '' }: ResponsiveLayoutProps) => {
   useEffect(() => {
     // Prevent pull-to-refresh on mobile
     let lastTouchY = 0;
