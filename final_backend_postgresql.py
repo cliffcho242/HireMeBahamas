@@ -1791,8 +1791,11 @@ def _get_connection_pool():
                         # Works with keepalives for faster detection of broken connections
                         tcp_user_timeout=TCP_USER_TIMEOUT_MS,
                         # FIX #2: jit=off prevents first-query timeout from JIT compilation
-                        # Combined with statement_timeout for query execution limits
-                        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS} -c jit=off",
+                        # NOTE: statement_timeout is NOT set in options for compatibility with
+                        # Neon pooled connections (PgBouncer), which don't support startup
+                        # parameters. If needed, set it at the session level, e.g.:
+                        # cursor.execute("SET statement_timeout = '30000ms'")
+                        options="-c jit=off",
                     )
                     keepalive_status = "enabled" if TCP_KEEPALIVE_ENABLED == 1 else "disabled"
                     user_timeout_sec = TCP_USER_TIMEOUT_MS // 1000
@@ -2088,7 +2091,11 @@ def _create_direct_postgresql_connection(sslmode: str = None):
         # Works with keepalives for faster detection of broken connections
         tcp_user_timeout=TCP_USER_TIMEOUT_MS,
         # FIX #2: jit=off prevents first-query timeout from JIT compilation
-        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS} -c jit=off",
+        # NOTE: statement_timeout is NOT set in options for compatibility with
+        # Neon pooled connections (PgBouncer), which don't support startup
+        # parameters. If needed, set it at the session level, e.g.:
+        # cursor.execute("SET statement_timeout = '30000ms'")
+        options="-c jit=off",
     )
 
 

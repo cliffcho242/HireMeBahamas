@@ -73,11 +73,12 @@ def test_production_connection_settings():
         )
         print("✓ Test 7 passed: server_settings['jit']='off'")
         
-        # Test 8: Verify statement_timeout in server_settings
-        assert server_settings.get("statement_timeout") == "30000", (
-            f"Expected server_settings['statement_timeout']='30000', got {server_settings.get('statement_timeout')}"
+        # Test 8: Verify statement_timeout is NOT in server_settings (Neon pooler compatibility)
+        assert "statement_timeout" not in server_settings, (
+            f"Expected statement_timeout NOT in server_settings for Neon pooler compatibility, "
+            f"but found: {server_settings.get('statement_timeout')}"
         )
-        print("✓ Test 8 passed: server_settings['statement_timeout']='30000'")
+        print("✓ Test 8 passed: statement_timeout correctly NOT in server_settings (Neon pooler compatibility)")
         
         # Test 9: Verify pool_pre_ping is enabled
         assert database.engine_kwargs.get("pool_pre_ping") is True, (
