@@ -228,6 +228,76 @@ STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s
 _engine = None
 _engine_lock = threading.Lock()
 
+
+# =============================================================================
+# IMMUNE DATABASE ENGINE (DROP-IN) - REGRESSION-PROOF
+# =============================================================================
+def create_db_engine():
+    """Create database engine (IMMUNE pattern - regression-proof).
+    
+    ✅ FINAL database engine creation (REGRESSION-PROOF):
+    - NO sslmode in connect_args (must be in URL)
+    - NO startup options (no server_settings)
+    - NO blocking boot (returns None on failure)
+    
+    This function implements the IMMUNE pattern:
+    1. Validates DATABASE_URL using make_url()
+    2. Creates engine with minimal, Neon-safe configuration
+    3. Returns None on failure (allows app to start without DB)
+    
+    Returns:
+        Engine | None: Database engine or None if creation fails
+    """
+    global _engine
+    
+    raw_url = os.getenv("DATABASE_URL")
+    if not raw_url:
+        logging.warning("DATABASE_URL missing — DB disabled")
+        return None
+    
+    try:
+        from sqlalchemy.engine.url import make_url
+        url = make_url(raw_url)
+        
+        _engine = create_engine(
+            url,
+            pool_size=5,
+            max_overflow=5,
+            pool_pre_ping=True,
+            pool_recycle=300,
+        )
+        
+        logging.info("Database engine created (Neon-safe)")
+        return _engine
+        
+    except Exception as e:
+        logging.warning(f"DB engine creation failed: {e}")
+        return None
+
+
+def warmup_db_simple(engine):
+    """Warm up database connection (IMMUNE pattern).
+    
+    Simple warmup function that doesn't block on failure.
+    
+    Args:
+        engine: Database engine to warm up
+    """
+    if not engine:
+        return
+    
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logging.info("Database warmup OK")
+        
+    except Exception as e:
+        logging.warning(f"Database warmup failed: {e}")
+
+
+# =============================================================================
+# ORIGINAL GET_ENGINE (Maintained for backward compatibility)
+# =============================================================================
 def get_engine():
     """Get or create database engine (lazy initialization for serverless).
     
@@ -743,6 +813,7 @@ __all__ = [
     # Core engine and configuration
     "engine",
     "get_engine",
+    "create_db_engine",  # IMMUNE pattern engine creation
     "Base",
     "DATABASE_URL",
     "DB_PLACEHOLDER_URL",
@@ -763,6 +834,7 @@ __all__ = [
     "test_db_connection",
     "test_connection",  # Legacy alias
     "warmup_db",
+    "warmup_db_simple",  # IMMUNE pattern warmup
     "get_db_status",
     "get_pool_status",
     
