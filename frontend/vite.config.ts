@@ -27,7 +27,8 @@ export default defineConfig({
       threshold: 1024,
     }),
     // Sentry plugin for production source maps (only in production builds)
-    process.env.NODE_ENV === 'production' && process.env.SENTRY_AUTH_TOKEN && sentryVitePlugin({
+    // Use import.meta.env for Vite compatibility
+    ...(process.env.SENTRY_AUTH_TOKEN ? [sentryVitePlugin({
       org: process.env.SENTRY_ORG,
       project: process.env.SENTRY_PROJECT,
       authToken: process.env.SENTRY_AUTH_TOKEN,
@@ -35,7 +36,7 @@ export default defineConfig({
       sourcemaps: {
         assets: './dist/assets/**',
       },
-    }),
+    })] : []),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'sounds/notification.mp3'],

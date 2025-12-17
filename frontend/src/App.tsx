@@ -80,7 +80,7 @@ function App() {
     <>
       {/* Sentry ErrorBoundary - Production error monitoring */}
       <Sentry.ErrorBoundary
-        fallback={({ error, resetError }) => (
+        fallback={({ resetError }) => (
           <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
             <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
               <div className="text-red-500 text-5xl mb-4">⚠️</div>
@@ -102,14 +102,6 @@ function App() {
                   Go to homepage
                 </button>
               </div>
-              {import.meta.env.DEV && (
-                <details className="mt-4 text-left">
-                  <summary className="cursor-pointer text-sm text-gray-500">Error details</summary>
-                  <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
-                    {error?.toString()}
-                  </pre>
-                </details>
-              )}
             </div>
           </div>
         )}

@@ -29,8 +29,8 @@ export function initSentry() {
         }),
       ],
       
-      // Configure trace propagation
-      tracePropagationTargets: ['localhost', /^https:\/\/.*\.vercel\.app/, /^https:\/\/hiremebahamas\.com/],
+      // Configure trace propagation (exclude localhost for security)
+      tracePropagationTargets: [/^https:\/\/.*\.vercel\.app/, /^https:\/\/hiremebahamas\.com/],
       
       // Performance monitoring sample rate
       tracesSampleRate: 0.1,
