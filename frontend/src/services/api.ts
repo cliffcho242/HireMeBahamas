@@ -177,6 +177,12 @@ const isAuthEndpoint = (url: string | undefined): boolean => {
   return url.endsWith('/auth/login') || url.endsWith('/auth/register');
 };
 
+// Future-safe helper: Mark intentionally unused helpers to prevent accidental removal
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const isAuthEndpointGeneral = (url: string): boolean => {
+  return url.includes("/auth");
+};
+
 // Add auth token to requests and apply smart backend routing
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
