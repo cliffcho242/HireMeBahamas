@@ -23,6 +23,7 @@ from app.core.security import (
     verify_password_async,
     BCRYPT_ROUNDS,
 )
+from app.core.query_timeout import set_fast_query_timeout
 from app.database import get_db
 from app.models import User
 from app.schemas.auth import (
@@ -84,6 +85,9 @@ def record_login_attempt(identifier: str, success: bool):
 async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     """Register a new user."""
     logger.info(f"Registration attempt for email: {user_data.email}")
+
+    # Set fast query timeout for registration queries (2s)
+    await set_fast_query_timeout(db)
 
     # Check if user already exists
     result = await db.execute(select(User).where(User.email == user_data.email))
@@ -147,6 +151,9 @@ async def login(
         )
     
     logger.info(f"[{request_id}] Login attempt - email/phone: {user_data.email}")
+
+    # Set fast query timeout for login queries (2s)
+    await set_fast_query_timeout(db)
 
     # Try to find user by email first
     db_query_start = time.time()
