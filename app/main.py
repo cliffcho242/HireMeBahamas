@@ -1,10 +1,11 @@
 """
-HireMeBahamas Backend - FastAPI Main File (Final Form)
+HireMeBahamas Backend - FastAPI Main File (SYNC DATABASE - OPTION A)
 
 Instant health check response with non-blocking database initialization.
 ✅ App responds immediately
-✅ DB never blocks startup
+✅ DB never blocks startup  
 ✅ Render health check always passes
+✅ SYNC DATABASE (no async/await on DB operations)
 """
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
@@ -34,11 +35,17 @@ def health():
     return {"ok": True}
 
 async def background_init():
+    """Background initialization task - runs DB init in background.
+    
+    ✅ SYNC DATABASE PATTERN:
+    - init_db() is NOT awaited (it's sync)
+    - warmup_db() is NOT awaited (it's sync)
+    """
     from app.database import init_db, warmup_db
 
     try:
-        engine = init_db()
+        engine = init_db()   # ✅ NOT awaited (sync function)
         if engine:
-            await warmup_db(engine)
+            warmup_db(engine)  # ✅ NOT awaited (sync function)
     except Exception as e:
         logging.warning(f"Background init skipped: {e}")
