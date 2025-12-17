@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Providers } from "@/lib/providers";
 import "./globals.css";
 
 // ✅ Font Optimization: Using next/font for automatic font optimization
@@ -93,9 +94,11 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} antialiased scroll-smooth`}>
-        {children}
-        <Analytics />
-        <SpeedInsights />
+        <Providers>
+          {children}
+          <Analytics />
+          <SpeedInsights />
+        </Providers>
       </body>
     </html>
   );

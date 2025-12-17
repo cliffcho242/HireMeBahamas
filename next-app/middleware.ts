@@ -83,6 +83,13 @@ export async function middleware(request: NextRequest) {
   // Create response
   const response = NextResponse.next();
 
+  // Set general Cache-Control header for all responses (Edge caching + security)
+  // This enables stale-while-revalidate for better performance
+  response.headers.set(
+    "Cache-Control",
+    "public, max-age=30, stale-while-revalidate=60"
+  );
+
   // A/B testing - only for page routes (not static assets or API routes)
   if (!pathname.startsWith("/api") && !pathname.startsWith("/_next")) {
     const variant = Math.random() < 0.5 ? "a" : "b";
@@ -112,7 +119,7 @@ export async function middleware(request: NextRequest) {
     response.headers.set("X-User-Id", userId.toString());
   }
 
-  // Add cache headers for static assets
+  // Override cache headers for static assets (longer cache time)
   if (
     pathname.startsWith("/_next/static") ||
     pathname.match(/\.(ico|png|jpg|jpeg|svg|gif|webp|woff2?)$/)
@@ -122,17 +129,15 @@ export async function middleware(request: NextRequest) {
       "public, max-age=31536000, immutable"
     );
   }
-
-  // Add cache headers for API responses - optimized for Facebook traffic
-  if (pathname.startsWith("/api/jobs") && request.method === "GET") {
+  // Override cache headers for API responses - optimized for Facebook traffic
+  else if (pathname.startsWith("/api/jobs") && request.method === "GET") {
     response.headers.set(
       "Cache-Control",
       "public, s-maxage=60, stale-while-revalidate=300"
     );
   }
-  
-  // Add cache headers for health endpoint
-  if (pathname.startsWith("/api/health") && request.method === "GET") {
+  // Override cache headers for health endpoint
+  else if (pathname.startsWith("/api/health") && request.method === "GET") {
     response.headers.set(
       "Cache-Control",
       "public, s-maxage=30, stale-while-revalidate=60"
