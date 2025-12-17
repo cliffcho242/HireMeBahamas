@@ -7,6 +7,7 @@
  * These examples can be integrated into any component in the application.
  */
 
+import { useState } from 'react';
 import { abVariant, getAbVariant, clearAbVariant } from '@/utils/abTest';
 
 /**
@@ -173,6 +174,9 @@ export function ABTestAdmin() {
     { key: "onboarding-flow", variants: ["single-step", "multi-step"] },
   ];
 
+  // Use state to force re-render when variants are cleared
+  const [refreshKey, setRefreshKey] = useState(0);
+
   return (
     <div className="max-w-2xl mx-auto p-6 bg-gray-50 rounded-lg">
       <h2 className="text-2xl font-bold mb-4">A/B Test Dashboard</h2>
@@ -181,7 +185,7 @@ export function ABTestAdmin() {
           const currentVariant = getAbVariant(test.key);
           return (
             <div 
-              key={test.key} 
+              key={`${test.key}-${refreshKey}`}
               className="bg-white p-4 rounded-lg border flex justify-between items-center"
             >
               <div>
@@ -196,8 +200,8 @@ export function ABTestAdmin() {
               <button
                 onClick={() => {
                   clearAbVariant(test.key);
-                  // Force re-render by updating a key or using state
-                  window.location.reload();
+                  // Force re-render without page reload
+                  setRefreshKey(prev => prev + 1);
                 }}
                 className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
               >
