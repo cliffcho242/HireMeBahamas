@@ -1,8 +1,14 @@
 /**
- * 🔒 FOREVER FIX: Environment Variable Validator
+ * 8️⃣ VERCEL ENV LOCK (MANDATORY): Environment Variable Validator
  * 
  * This script validates that environment variables are correctly configured
- * according to the FOREVER FIX law.
+ * according to the VERCEL ENV LOCK mandatory rules.
+ * 
+ * 🚫 No backend secrets (DATABASE_URL, JWT_SECRET, etc.)
+ * 🚫 No DATABASE_URL in Vercel frontend environment
+ * 🚫 No localhost URLs in production
+ * 
+ * See: VERCEL_ENV_LOCK.md for complete documentation
  * 
  * Run this during build time to catch configuration errors early.
  */
@@ -18,15 +24,19 @@ interface ValidationResult {
 /**
  * List of environment variables that should NEVER have VITE_ prefix
  * (these are sensitive and should only be on the backend)
+ * 
+ * 🚫 VERCEL ENV LOCK (MANDATORY): No backend secrets
  */
 const FORBIDDEN_VITE_VARS = [
   'DATABASE_URL',
   'POSTGRES_URL',
   'JWT_SECRET',
+  'JWT_SECRET_KEY',
   'SECRET_KEY',
   'PRIVATE_KEY',
   'API_SECRET',
   'DB_PASSWORD',
+  'CRON_SECRET',
 ];
 
 /**
@@ -58,8 +68,10 @@ export function validateEnvironmentVariables(): ValidationResult {
       result.valid = false;
       result.errors.push(
         `❌ CRITICAL SECURITY ERROR: ${viteVar} is exposed to the frontend!\n` +
+        `   🚫 VERCEL ENV LOCK VIOLATION: No backend secrets with VITE_ prefix\n` +
         `   This is a sensitive variable that should NEVER have VITE_ prefix.\n` +
-        `   Remove this from your environment variables immediately.`
+        `   Remove this from your environment variables immediately.\n` +
+        `   See VERCEL_ENV_LOCK.md for mandatory security rules.`
       );
     }
   });
@@ -118,15 +130,27 @@ export function validateEnvironmentVariables(): ValidationResult {
         `   URL must start with http:// or https://\n` +
         `   Example: VITE_API_URL=https://api.yourdomain.com`
       );
-    } else if (!isSecureUrl(apiUrl)) {
-      // Check if using HTTPS in production
-      result.valid = false;
-      result.errors.push(
-        `❌ INSECURE URL IN PRODUCTION: VITE_API_URL="${apiUrl}"\n` +
-        `   Production deployments must use HTTPS.\n` +
-        `   HTTP is only allowed for localhost in development.\n` +
-        `   Change to: VITE_API_URL=https://your-domain.com`
-      );
+    } else {
+      // 🚫 VERCEL ENV LOCK: No localhost in production
+      const isLocalhost = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
+      if (isLocalhost && import.meta.env.PROD) {
+        result.valid = false;
+        result.errors.push(
+          `❌ LOCALHOST URL IN PRODUCTION: VITE_API_URL="${apiUrl}"\n` +
+          `   🚫 VERCEL ENV LOCK VIOLATION: No localhost URLs in production\n` +
+          `   Production users cannot access your local development server.\n` +
+          `   Change to: VITE_API_URL=https://your-backend.onrender.com`
+        );
+      } else if (!isSecureUrl(apiUrl)) {
+        // Check if using HTTPS in production
+        result.valid = false;
+        result.errors.push(
+          `❌ INSECURE URL IN PRODUCTION: VITE_API_URL="${apiUrl}"\n` +
+          `   Production deployments must use HTTPS.\n` +
+          `   HTTP is only allowed for localhost in development.\n` +
+          `   Change to: VITE_API_URL=https://your-domain.com`
+        );
+      }
     }
   }
 
@@ -200,8 +224,10 @@ if (import.meta.env.MODE !== ENV_MODE.TEST) {
   // In production builds, fail if validation fails
   if (!result.valid && import.meta.env.PROD) {
     throw new Error(
-      'Environment variable validation failed. Check the errors above.\n' +
-      'See FOREVER_FIX_ENV_VARIABLES.md for the correct configuration.'
+      '8️⃣ VERCEL ENV LOCK VIOLATION: Environment variable validation failed.\n' +
+      'Check the errors above.\n\n' +
+      '📖 See VERCEL_ENV_LOCK.md for mandatory configuration rules.\n' +
+      '📖 See FOREVER_FIX_ENV_VARIABLES.md for detailed guidance.'
     );
   }
 }
