@@ -231,7 +231,7 @@ def get_engine():
             connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
             command_timeout = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))
             pool_size = int(os.getenv("DB_POOL_SIZE", "5"))
-            max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "10"))
+            max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "5"))  # Hard limit: prevents Neon exhaustion & Render OOM
             pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "300"))
             
             # Production-safe engine configuration with SSL enforcement

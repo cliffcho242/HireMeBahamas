@@ -128,7 +128,7 @@ logger.info(f"Database URL: {_masked_url}")
 # =============================================================================
 # CRITICAL: pool_recycle=300 prevents connection issues by recycling connections
 # before they become stale. This is serverless-friendly and prevents SSL EOF errors.
-# MAX_OVERFLOW=10 allows burst capacity for production load
+# MAX_OVERFLOW=5 (hard limit) prevents Neon exhaustion, Render OOM, and DB overload during traffic spikes
 # =============================================================================
 POOL_SIZE = settings.DB_POOL_SIZE
 MAX_OVERFLOW = settings.DB_MAX_OVERFLOW
