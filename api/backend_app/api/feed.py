@@ -7,7 +7,7 @@ when new posts are created (handled in posts.py).
 """
 import json
 from typing import List, Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -20,19 +20,29 @@ router = APIRouter()
 
 
 @router.get("/")
-async def feed(db: AsyncSession = Depends(get_db)):
+async def feed(response: Response, db: AsyncSession = Depends(get_db)):
     """
-    Get the global feed of posts with Redis caching.
+    Get the global feed of posts with Redis and edge caching.
     
-    This endpoint implements a cached feed that:
-    - Checks Redis cache first for fast response
+    This endpoint implements a multi-layer caching strategy:
+    - Edge caching via Cache-Control headers (CDN/browser caching)
+    - Redis cache for fast response (TTL: 30 seconds)
     - Falls back to database if cache miss
-    - Caches the result for 30 seconds
-    - Returns a list of posts with basic information
+    
+    Edge Cache Strategy:
+    - max-age=30: CDN/browser can serve cached response for 30 seconds
+    - stale-while-revalidate=60: Can serve stale content while revalidating for 60 seconds
+    - Total possible cache lifetime: up to 90 seconds (30s fresh + 60s stale)
+    
+    This "Facebook LOVES this" approach reduces database load and improves performance
+    by allowing CDNs (like Vercel Edge) to serve cached responses at the edge.
     
     Returns:
         dict: Response containing posts array
     """
+    # Set edge cache headers for CDN/browser caching
+    # This enables Vercel Edge Network and other CDNs to cache responses
+    response.headers["Cache-Control"] = "public, max-age=30, stale-while-revalidate=60"
     key = "feed:global"
     
     # Try to get cached data
