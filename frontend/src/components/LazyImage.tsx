@@ -29,11 +29,15 @@ function convertSrcSetToString(srcSet: SrcSet | undefined): string | undefined {
   }
   
   // If srcSet is an object, build the srcSet string
+  // Filter out undefined values to avoid 'undefined 1x' in the output
   return Object.entries(srcSet)
+    .filter(([, url]) => url !== undefined)
     .map(([density, url]) => `${url} ${density}`)
     .join(', ');
 }
 
+// LazyImageProps extends ImgHTMLAttributes but overrides srcSet to support both
+// string format (standard HTML) and object format (for responsive images)
 interface LazyImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'srcSet'> {
   src: string;
   alt: string;
