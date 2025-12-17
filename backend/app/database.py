@@ -137,8 +137,12 @@ import sys
 backend_dir = os.path.dirname(os.path.dirname(__file__))
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
-from app.core.db_utils import strip_sslmode_from_url, get_ssl_config
+from app.core.db_utils import strip_sslmode_from_url, get_ssl_config, ensure_port_in_url
 DATABASE_URL = strip_sslmode_from_url(DATABASE_URL)
+
+# Ensure explicit port in DATABASE_URL (required for cloud deployments)
+# This prevents socket-based connections and ensures proper TCP connections
+DATABASE_URL = ensure_port_in_url(DATABASE_URL)
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
@@ -154,15 +158,23 @@ if DATABASE_URL and DATABASE_URL != DB_PLACEHOLDER_URL and DATABASE_URL != LOCAL
     if not parsed.hostname:
         missing_fields.append("hostname")
     if not parsed.port:
-        missing_fields.append("port (explicit port required, e.g., :5432)")
+        # Port should have been auto-fixed by ensure_port_in_url()
+        # If we still don't have a port here, check why
+        if not parsed.hostname:
+            missing_fields.append("port (requires hostname first, explicit port required, e.g., :5432)")
+        else:
+            missing_fields.append("port (auto-fix failed, explicit port required, e.g., :5432)")
     if not parsed.path or len(parsed.path) <= 1:
         # path should be /database_name, so length > 1
-        missing_fields.append("path")
+        missing_fields.append("database name in path (e.g., /mydatabase)")
 
     if missing_fields:
         # Production-safe: log warning instead of raising exception
         # This allows the app to start for health checks and diagnostics
-        logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+        logger.warning(
+            f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}. "
+            f"Required format: postgresql://user:password@host:5432/database"
+        )
 
     # Additional validation for cloud deployment requirements
     if parsed.hostname:
