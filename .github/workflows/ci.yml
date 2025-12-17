@@ -124,7 +124,7 @@ jobs:
 
       - name: Lint frontend
         working-directory: ./frontend
-        run: npm run lint || echo "No lint script found, skipping..."
+        run: npm run lint || echo "Lint warnings detected or no lint script found"
 
       - name: Build frontend
         working-directory: ./frontend
