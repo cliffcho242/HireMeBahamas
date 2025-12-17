@@ -116,12 +116,13 @@ def validate_gunicorn_config():
         
         checks = []
         
-        # Workers default
-        has_workers = 'workers = int(os.environ.get("WEB_CONCURRENCY", "1"))' in content
+        # Workers default - use regex for more robust matching
+        import re
+        has_workers = bool(re.search(r'workers\s*=\s*int\s*\(\s*os\.environ\.get\s*\(\s*["\']WEB_CONCURRENCY["\']\s*,\s*["\']1["\']\s*\)\s*\)', content))
         checks.append(('Workers default = 1', has_workers))
         
         # Threads default
-        has_threads = 'threads = int(os.environ.get("WEB_THREADS", "2"))' in content
+        has_threads = bool(re.search(r'threads\s*=\s*int\s*\(\s*os\.environ\.get\s*\(\s*["\']WEB_THREADS["\']\s*,\s*["\']2["\']\s*\)\s*\)', content))
         checks.append(('Threads default = 2', has_threads))
         
         # Timeout default
@@ -187,7 +188,10 @@ def validate_vercel_config():
             has_api_source = rewrite.get('source') == '/api/(.*)'
             checks.append(('API source = /api/(.*)', has_api_source))
             
-            has_destination = 'destination' in rewrite and 'onrender.com' in rewrite['destination']
+            # Check if destination URL contains onrender.com domain
+            # This is validation only, not URL sanitization
+            destination = rewrite.get('destination', '')
+            has_destination = 'destination' in rewrite and 'onrender.com' in destination
             checks.append(('API destination points to Render', has_destination))
         
         # Security headers
@@ -242,28 +246,31 @@ def validate_fastapi_app():
         
         checks = []
         
+        # Use regex for more robust endpoint detection
+        import re
+        
         # Health endpoint
-        has_health = '@app.get("/health"' in content
+        has_health = bool(re.search(r'@app\.get\s*\(\s*["\']\/health["\']', content))
         checks.append(('Health endpoint /health exists', has_health))
         
         # Liveness endpoint
-        has_live = '@app.get("/live"' in content
+        has_live = bool(re.search(r'@app\.get\s*\(\s*["\']\/live["\']', content))
         checks.append(('Liveness endpoint /live exists', has_live))
         
         # Readiness endpoint
-        has_ready = '@app.get("/ready"' in content
+        has_ready = bool(re.search(r'@app\.get\s*\(\s*["\']\/ready["\']', content))
         checks.append(('Readiness endpoint /ready exists', has_ready))
         
         # No database in health
-        health_no_db = 'def health()' in content
+        health_no_db = bool(re.search(r'def\s+health\s*\(\s*\)', content))
         checks.append(('Health endpoint is synchronous (fast)', health_no_db))
         
         # FastAPI app initialization
-        has_fastapi = 'app = FastAPI(' in content
+        has_fastapi = bool(re.search(r'app\s*=\s*FastAPI\s*\(', content))
         checks.append(('FastAPI app initialized', has_fastapi))
         
-        # Docs disabled for performance
-        docs_disabled = 'docs_url=None' in content
+        # Docs disabled for performance - check for docs_url parameter
+        docs_disabled = bool(re.search(r'docs_url\s*=\s*None', content))
         checks.append(('Docs disabled for fast startup', docs_disabled))
         
         # Print results
