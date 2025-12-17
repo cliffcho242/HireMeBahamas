@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAIMonitoring } from '../contexts/AIMonitoringContext';
-import Activity from 'lucide-react/dist/esm/icons/activity';
-import Wifi from 'lucide-react/dist/esm/icons/wifi';
-import WifiOff from 'lucide-react/dist/esm/icons/wifi-off';
-import Server from 'lucide-react/dist/esm/icons/server';
-import ServerOff from 'lucide-react/dist/esm/icons/server-off';
-import Cpu from 'lucide-react/dist/esm/icons/cpu';
-import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
-import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
-import XCircle from 'lucide-react/dist/esm/icons/x-circle';
-import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
-import Zap from 'lucide-react/dist/esm/icons/zap';
+import {
+  Activity,
+  Wifi,
+  WifiOff,
+  Server,
+  ServerOff,
+  Cpu,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  Zap
+} from 'lucide-react';
 
 const AISystemStatus = () => {
   const { health, performHealthCheck, attemptRecovery, getSystemStatus } = useAIMonitoring();
