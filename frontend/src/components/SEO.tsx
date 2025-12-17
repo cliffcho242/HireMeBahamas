@@ -91,7 +91,7 @@ export function SEO({
     updateMetaTag('og:title', title ? `${title} | HireMeBahamas` : undefined, true);
     updateMetaTag('og:description', description, true);
     updateMetaTag('og:type', ogType, true);
-    updateMetaTag('og:url', ogUrl || window.location.href, true);
+    updateMetaTag('og:url', ogUrl || (typeof window !== 'undefined' ? window.location.href : undefined), true);
     updateMetaTag('og:image', ogImage, true);
 
     // Article-specific OG tags
@@ -254,7 +254,7 @@ export function generateArticleSchema(article: {
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': window.location.href,
+      '@id': typeof window !== 'undefined' ? window.location.href : article.image,
     },
   };
 }
