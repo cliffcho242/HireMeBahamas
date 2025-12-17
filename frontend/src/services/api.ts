@@ -6,6 +6,7 @@ import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
 import { ENV_API } from '../config/env';
 import { refreshToken } from './auth';
 import { safeParseUrl } from '../lib/safeUrl';
+import { apiUrl } from '@/lib/api';
 
 // Note: Backend URL validation happens automatically when backendRouter is imported
 // The validateBackendUrl() function is called at module load in backendRouter.ts
@@ -941,5 +942,38 @@ export const notificationsAPI = {
     return response.data;
   },
 };
+
+/**
+ * Fetch wrapper for API requests with proper type safety and error handling
+ * 
+ * @param path - The API path (e.g., "/api/auth/me")
+ * @param options - Optional fetch RequestInit options
+ * @returns Promise with typed response data
+ * @throws Error if the API response is not OK
+ * 
+ * @example
+ * ```typescript
+ * const user = await apiFetch<User>("/api/auth/me");
+ * ```
+ */
+export async function apiFetch<T>(
+  path: string,
+  options?: RequestInit
+): Promise<T> {
+  const res = await fetch(apiUrl(path), {
+    ...options,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options?.headers || {})
+    }
+  });
+
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}`);
+  }
+
+  return res.json();
+}
 
 export default api;
