@@ -1,25 +1,23 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  Home, 
-  Search, 
-  Bell, 
-  MessageCircle, 
-  User, 
-  Settings,
-  Plus,
-  Heart,
-  Share2,
-  MessageSquare,
-  Bookmark,
-  TrendingUp,
-  MapPin,
-  Clock,
-  DollarSign,
-  Users,
-  Star
-} from 'lucide-react';
+import Home from 'lucide-react/dist/esm/icons/home';
+import Search from 'lucide-react/dist/esm/icons/search';
+import Bell from 'lucide-react/dist/esm/icons/bell';
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle';
+import User from 'lucide-react/dist/esm/icons/user';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import Plus from 'lucide-react/dist/esm/icons/plus';
+import Heart from 'lucide-react/dist/esm/icons/heart';
+import Share2 from 'lucide-react/dist/esm/icons/share-2';
+import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
+import Bookmark from 'lucide-react/dist/esm/icons/bookmark';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Star from 'lucide-react/dist/esm/icons/star';
 
 interface DashboardJob {
   id: number;

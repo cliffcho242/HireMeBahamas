@@ -230,7 +230,7 @@ export default defineConfig({
     minify: 'terser',
     cssCodeSplit: true,
     chunkSizeWarningLimit: 1000,
-    sourcemap: 'hidden',
+    sourcemap: false,
     // Enable module preload for HTTP/2 multiplexing benefits
     modulePreload: {
       polyfill: true, // Polyfill for older browsers
