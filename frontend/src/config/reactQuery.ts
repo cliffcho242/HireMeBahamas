@@ -73,19 +73,19 @@ const mutationCache = new MutationCache({
   },
 });
 
-// Create optimized query client
+// Create optimized query client with Facebook-style smart retry logic
 export const queryClient = new QueryClient({
   queryCache,
   mutationCache,
   defaultOptions: {
     queries: {
-      // Use DYNAMIC cache times as default
-      staleTime: CACHE_TIMES.DYNAMIC.staleTime,
-      gcTime: CACHE_TIMES.DYNAMIC.gcTime, // React Query v5: renamed from cacheTime
-      
-      // Retry configuration
+      // Smart retry configuration (Facebook-style)
       retry: 2, // Retry failed requests 2 times
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000), // Exponential backoff, max 5s
+      
+      // Cache configuration for fast UI
+      staleTime: 1000 * 30, // 30 seconds - data stays fresh
+      gcTime: 1000 * 60 * 60, // 1 hour - keep data in cache for fast navigation
       
       // Refetch configuration for better UX
       refetchOnWindowFocus: true, // Refetch when user returns to tab
@@ -104,16 +104,12 @@ export const queryClient = new QueryClient({
       // or use the new placeholderData option per-query
     },
     mutations: {
-      // Retry failed mutations once
-      retry: 1,
-      retryDelay: 1000,
+      // Retry configuration for mutations
+      retry: 1, // Retry failed mutations once
+      throwOnError: true, // Throw errors for predictable failure handling
       
       // Network mode
       networkMode: 'online',
-      
-      // React Query v5: useErrorBoundary removed
-      // Use throwOnError: true if you want errors to throw to error boundaries
-      // Default behavior is to not throw (same as useErrorBoundary: false)
     },
   },
 });
