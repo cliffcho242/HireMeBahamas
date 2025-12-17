@@ -27,6 +27,10 @@ from app.core.request_timeout import (
     HEAVY_QUERY_TIMEOUT_SECONDS,
 )
 
+# Test constants for simulations
+UPLOAD_SIMULATION_SECONDS_PER_MB = 0.5
+QUERY_SIMULATION_ROWS_PER_SECOND = 1000
+
 
 # Helper async functions for testing
 async def fast_operation():
@@ -167,8 +171,8 @@ async def test_with_timeout_partial_failure():
 async def test_simulated_file_upload():
     """Test simulated file upload with timeout"""
     async def simulate_file_upload(size_mb: int):
-        # Simulate upload time based on file size (0.5s per MB)
-        await asyncio.sleep(size_mb * 0.5)
+        # Simulate upload time based on file size
+        await asyncio.sleep(size_mb * UPLOAD_SIMULATION_SECONDS_PER_MB)
         return f"uploaded {size_mb}MB"
     
     # Small file should succeed
@@ -200,8 +204,8 @@ async def test_simulated_external_api_call():
 async def test_simulated_heavy_query():
     """Test simulated heavy database query with timeout"""
     async def simulate_heavy_query(rows: int):
-        # Simulate query time based on rows (0.001s per 1000 rows)
-        await asyncio.sleep(rows / 1000)
+        # Simulate query time based on rows
+        await asyncio.sleep(rows / QUERY_SIMULATION_ROWS_PER_SECOND)
         return [{"id": i} for i in range(min(rows, 10))]
     
     # Normal query should succeed

@@ -244,7 +244,6 @@ async def upload_to_cloudinary(file: UploadFile, folder: str = "hirebahamas") ->
         # Upload to Cloudinary with timeout protection (external API call)
         async def _upload_to_cloudinary():
             # Cloudinary upload is synchronous, run in executor to avoid blocking
-            import asyncio
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(
                 None,

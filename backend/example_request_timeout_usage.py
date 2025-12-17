@@ -18,6 +18,7 @@ from app.core.request_timeout import (
     with_api_timeout,
     with_heavy_query_timeout,
 )
+from app.core.query_timeout import with_query_timeout
 from app.database import get_db
 from app.models import User, Post
 
@@ -194,9 +195,6 @@ async def search_users_example(query: str, db: AsyncSession = Depends(get_db)):
     """
     try:
         async def search_operation():
-            # Import query timeout utilities
-            from app.core.query_timeout import with_query_timeout
-            
             # Apply both request-level and query-level timeouts
             async with with_query_timeout(db, timeout_ms=5000):
                 result = await db.execute(

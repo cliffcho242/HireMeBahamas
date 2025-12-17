@@ -26,6 +26,9 @@ from app.core.request_timeout import (
     HEAVY_QUERY_TIMEOUT_SECONDS,
 )
 
+# Test constants for simulations
+UPLOAD_SIMULATION_SECONDS_PER_MB = 0.5
+
 
 # Helper async functions for testing
 async def fast_operation():
@@ -116,8 +119,8 @@ async def test_simulated_file_upload():
     print("Testing simulated file upload...")
     
     async def simulate_file_upload(size_mb: int):
-        # Simulate upload time based on file size (0.5s per MB)
-        await asyncio.sleep(size_mb * 0.5)
+        # Simulate upload time based on file size
+        await asyncio.sleep(size_mb * UPLOAD_SIMULATION_SECONDS_PER_MB)
         return f"uploaded {size_mb}MB"
     
     # Small file should succeed
