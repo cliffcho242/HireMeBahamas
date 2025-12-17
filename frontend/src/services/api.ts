@@ -7,7 +7,7 @@ import { ENV_API } from '../config/env';
 import { refreshToken } from './auth';
 import { safeParseUrl } from '../lib/safeUrl';
 import { apiUrl, getApiBase } from '../lib/api';
-import { DEMO_MODE, guardMutation, logDemoModeStatus } from '../config/demo';
+import { guardMutation, logDemoModeStatus } from '../config/demo';
 
 // Note: Backend URL validation happens automatically when backendRouter is imported
 // The validateBackendUrl() function is called at module load in backendRouter.ts

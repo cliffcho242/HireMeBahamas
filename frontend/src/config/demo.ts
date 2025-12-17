@@ -27,11 +27,13 @@
  * ```
  */
 
+import { DEMO_MODE } from './env';
+
 /**
  * Demo mode flag from environment variable
- * Set VITE_DEMO_MODE=true to enable demo/safe mode
+ * Imported from env.ts to maintain single source of truth
  */
-export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
+export { DEMO_MODE };
 
 /**
  * Check if application is in demo mode
