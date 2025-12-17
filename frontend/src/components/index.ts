@@ -41,6 +41,7 @@ export { default as LazyEmojiPicker } from './LazyEmojiPicker';
 export { default as InfiniteScroll } from './InfiniteScroll';
 export { default as SmartSearchBar } from './SmartSearchBar';
 export { default as HireMeTab } from './HireMeTab';
+export { SEO, generateJobPostingSchema, generateArticleSchema, generateBreadcrumbSchema } from './SEO';
 
 // Dashboard/Analytics components
 export { default as AIDashboard } from './AIDashboard';

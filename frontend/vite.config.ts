@@ -241,6 +241,12 @@ export default defineConfig({
         });
       },
     },
+    // Enable CSS minification
+    cssMinify: true,
+    // Report compressed size for production bundle analysis
+    reportCompressedSize: true,
+    // Optimize asset inlining threshold (4KB)
+    assetsInlineLimit: 4096,
     terserOptions: {
       compress: {
         drop_console: true,
