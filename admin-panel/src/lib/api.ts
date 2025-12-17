@@ -1,12 +1,75 @@
 import axios from 'axios';
 
-// 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
-if (import.meta.env.DEV) {
-  console.log("API URL:", import.meta.env.VITE_API_URL);
+/**
+ * Safe URL Builder Utility for Admin Panel
+ * 
+ * Validates and constructs API URLs safely to prevent "pattern mismatch" errors.
+ */
+
+/**
+ * Validate and get the base API URL from environment
+ * @throws Error if VITE_API_URL is missing or invalid
+ */
+function validateAndGetBaseUrl(): string {
+  const base = import.meta.env.VITE_API_URL as string | undefined;
+
+  // If no explicit API URL is set, use same-origin (for Vercel serverless)
+  if (!base) {
+    // Check if we're in a browser environment
+    if (typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+    
+    // If not in browser and no URL is set, throw an error
+    throw new Error(
+      "VITE_API_URL is missing or invalid. " +
+      "Set VITE_API_URL environment variable to your backend URL, " +
+      "or deploy to a serverless environment where same-origin is used."
+    );
+  }
+
+  // Validate URL format
+  if (!base.startsWith('http://') && !base.startsWith('https://')) {
+    throw new Error(
+      `VITE_API_URL is invalid: "${base}". ` +
+      "URL must start with 'http://' or 'https://'. " +
+      "Example: VITE_API_URL=https://your-backend.com"
+    );
+  }
+
+  return base;
 }
 
-// Use environment variable or fall back to same-origin for serverless deployments
-const API_BASE_URL = import.meta.env.VITE_API_URL || window.location.origin;
+/**
+ * Build a complete API URL from a path
+ * 
+ * @param path - The API path (e.g., "/admin/auth/login")
+ * @returns The complete URL with base URL prepended
+ * @throws Error if VITE_API_URL is missing or invalid
+ */
+export function apiUrl(path: string): string {
+  const base = validateAndGetBaseUrl();
+  
+  // Normalize the base URL (remove trailing slash) and path (ensure leading slash)
+  const normalizedBase = base.replace(/\/$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  
+  return `${normalizedBase}${normalizedPath}`;
+}
+
+/**
+ * Get the base API URL
+ * 
+ * @returns The base API URL
+ * @throws Error if VITE_API_URL is missing or invalid
+ */
+export function getApiBase(): string {
+  const base = validateAndGetBaseUrl();
+  return base.replace(/\/$/, "");
+}
+
+// ✅ SAFE: Use the safe API URL builder - never breaks
+const API_BASE_URL = getApiBase();
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

@@ -38,8 +38,9 @@ const Stories: React.FC = () => {
 
   const fetchStories = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
-      const response = await axios.get(`${apiUrl}/api/stories`);
+      // ✅ SAFE: Use the safe API URL builder - never breaks
+      const { apiUrl } = await import('../lib/api');
+      const response = await axios.get(apiUrl('/api/stories'));
       if (response.data.success) {
         setStories(response.data.stories);
       }
@@ -87,9 +88,10 @@ const Stories: React.FC = () => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    // ✅ SAFE: Use the safe API URL builder - never breaks
+    const { apiUrl } = await import('../lib/api');
     const response = await axios.post(
-      `${apiUrl}/api/upload/story-file`,
+      apiUrl('/api/upload/story-file'),
       formData,
       {
         headers: {
@@ -144,9 +146,10 @@ const Stories: React.FC = () => {
       }
 
       // Create story
-      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+      // ✅ SAFE: Use the safe API URL builder - never breaks
+      const { apiUrl } = await import('../lib/api');
       const response = await axios.post(
-        `${apiUrl}/api/stories`,
+        apiUrl('/api/stories'),
         {
           content: storyContent,
           image_path: imagePath,

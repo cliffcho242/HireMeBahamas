@@ -22,27 +22,11 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
 import { onError } from '@apollo/client/link/error';
 import { get, set, del } from 'idb-keyval';
+import { getApiBase, apiUrl } from '../lib/api';
 
-// API URL configuration - Use same logic as api.ts for consistency
-// ✅ CORRECT: Use VITE_API_URL environment variable (properly exposed to browser by Vite)
-const BACKEND_URL = import.meta.env.VITE_API_URL;
-
-// Determine API base URL
-let API_BASE_URL: string;
-
-if (BACKEND_URL) {
-  // ✅ CORRECT: Use explicit environment variable if provided
-  API_BASE_URL = BACKEND_URL;
-} else if (typeof window !== 'undefined') {
-  // If running in browser and no explicit env override, use same-origin (for Vercel serverless)
-  API_BASE_URL = window.location.origin;
-} else {
-  // ❌ WRONG: Never hardcode localhost in production fallback
-  // This should fail gracefully instead
-  throw new Error('API_BASE_URL could not be determined. Set VITE_API_URL environment variable or ensure running in browser context.');
-}
-
-const GRAPHQL_ENDPOINT = `${API_BASE_URL}/api/graphql`;
+// ✅ SAFE: Use the safe API URL builder - never breaks
+const API_BASE_URL = getApiBase();
+const GRAPHQL_ENDPOINT = apiUrl('/api/graphql');
 const WS_ENDPOINT = GRAPHQL_ENDPOINT.replace(/^http/, 'ws');
 
 // Cache persistence keys

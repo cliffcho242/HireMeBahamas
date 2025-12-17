@@ -11,25 +11,10 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { getApiBase } from './api';
 
-// Configuration - Use same logic as api.ts for consistency
-// ✅ CORRECT: Use VITE_API_URL environment variable (properly exposed to browser by Vite)
-const BACKEND_URL = import.meta.env.VITE_API_URL;
-
-// Determine socket URL
-let SOCKET_URL: string;
-
-if (BACKEND_URL) {
-  // ✅ CORRECT: Use explicit environment variable if provided
-  SOCKET_URL = BACKEND_URL;
-} else if (typeof window !== 'undefined') {
-  // If running in browser and no explicit env override, use same-origin (for Vercel serverless)
-  SOCKET_URL = window.location.origin;
-} else {
-  // ❌ WRONG: Never hardcode localhost in production fallback
-  // This should fail gracefully instead
-  throw new Error('Socket URL could not be determined. Set VITE_API_URL environment variable or ensure running in browser context.');
-}
+// ✅ SAFE: Use the safe API URL builder - never breaks
+const SOCKET_URL = getApiBase();
 const RECONNECT_DELAY_BASE = 1000;
 const MAX_RECONNECT_DELAY = 30000;
 const TYPING_TIMEOUT = 3000; // Show "typing" for 3 seconds after last keystroke

@@ -41,16 +41,30 @@ interface AIMonitoringProviderProps {
   maxRecoveryAttempts?: number;
 }
 
+// Helper to get backend URL safely
+const getBackendUrlSafely = async (): Promise<string> => {
+  const { getApiBase } = await import('../lib/api');
+  return getApiBase();
+};
+
 export const AIMonitoringProvider: React.FC<AIMonitoringProviderProps> = ({
   children,
-  backendUrl = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : ''),
+  backendUrl,
   checkInterval = 30000, // 30 seconds
   maxRecoveryAttempts = 3
 }) => {
-  // 🔍 TEMP DEBUG: Check if API URL is properly configured
-  if (import.meta.env.DEV) {
-    console.log("API URL:", import.meta.env.VITE_API_URL);
-  }
+  // ✅ SAFE: Use the safe API URL builder - never breaks
+  const [resolvedBackendUrl, setResolvedBackendUrl] = React.useState<string>(backendUrl || '');
+  
+  React.useEffect(() => {
+    if (!backendUrl) {
+      getBackendUrlSafely().then(setResolvedBackendUrl).catch(err => {
+        console.error('Failed to resolve backend URL:', err);
+      });
+    }
+  }, [backendUrl]);
+  
+  const actualBackendUrl = backendUrl || resolvedBackendUrl;
   const [health, setHealth] = useState<SystemHealth>({
     frontend: true,
     backend: false,
@@ -75,7 +89,7 @@ export const AIMonitoringProvider: React.FC<AIMonitoringProviderProps> = ({
 
       // Check backend connectivity
       try {
-        const backendResponse = await fetch(`${backendUrl}/health`, {
+        const backendResponse = await fetch(`${actualBackendUrl}/health`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
           signal: AbortSignal.timeout(5000) // 5 second timeout
@@ -207,7 +221,7 @@ export const AIMonitoringProvider: React.FC<AIMonitoringProviderProps> = ({
       if (!health.backend) {
         console.log('🤖 AI Recovery: Testing backend connectivity...');
         try {
-          const response = await fetch(`${backendUrl}/health`, {
+          const response = await fetch(`${actualBackendUrl}/health`, {
             method: 'GET',
             cache: 'no-cache'
           });

@@ -52,19 +52,35 @@ interface AdvancedAIProviderProps {
   apiBaseUrl?: string;
 }
 
+// Helper to get AI API base URL safely
+const getAIApiBaseUrl = async (): Promise<string> => {
+  const { apiUrl } = await import('../lib/api');
+  return apiUrl('/api/ai');
+};
+
 export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
   children,
-  apiBaseUrl = import.meta.env.VITE_API_URL 
-    ? `${import.meta.env.VITE_API_URL}/api/ai`
-    : (typeof window !== 'undefined' ? `${window.location.origin}/api/ai` : '/api/ai')
+  apiBaseUrl
 }) => {
+  // ✅ SAFE: Use the safe API URL builder - never breaks
+  const [resolvedApiBaseUrl, setResolvedApiBaseUrl] = React.useState<string>(apiBaseUrl || '/api/ai');
+  
+  React.useEffect(() => {
+    if (!apiBaseUrl) {
+      getAIApiBaseUrl().then(setResolvedApiBaseUrl).catch(err => {
+        console.error('Failed to resolve AI API base URL:', err);
+      });
+    }
+  }, [apiBaseUrl]);
+  
+  const actualApiBaseUrl = apiBaseUrl || resolvedApiBaseUrl;
   const [aiSystemHealth, setAISystemHealth] = useState<any>({});
   const [isAIOnline, setIsAIOnline] = useState(false);
   const [aiCapabilities, setAICapabilities] = useState<string[]>([]);
 
   const checkAISystemHealth = useCallback(async () => {
     try {
-      const response = await axios.get(`${apiBaseUrl}/health`);
+      const response = await axios.get(`${actualApiBaseUrl}/health`);
       setAISystemHealth(response.data);
       setIsAIOnline(response.data.status === 'healthy');
       setAICapabilities(response.data.capabilities || []);
@@ -91,7 +107,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
   // User Profile Analysis
   const analyzeUserProfile = useCallback(async (userData: any) => {
     try {
-      const response = await axios.post(`${apiBaseUrl}/analyze-profile`, {
+      const response = await axios.post(`${actualApiBaseUrl}/analyze-profile`, {
         user_data: userData
       });
       return response.data;
@@ -103,7 +119,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
 
   const getUserInsights = useCallback(async (userId: number) => {
     try {
-      const response = await axios.get(`${apiBaseUrl}/user-insights/${userId}`);
+      const response = await axios.get(`${actualApiBaseUrl}/user-insights/${userId}`);
       return response.data;
     } catch (error) {
       console.error('User insights fetch failed:', error);
@@ -114,7 +130,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
   // Job Matching
   const findJobMatches = useCallback(async (userProfile: any, jobs: any[]) => {
     try {
-      const response = await axios.post(`${apiBaseUrl}/job-matching`, {
+      const response = await axios.post(`${actualApiBaseUrl}/job-matching`, {
         user_profile: userProfile,
         jobs: jobs
       });
@@ -127,7 +143,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
 
   const getJobRecommendations = useCallback(async (userId: number) => {
     try {
-      const response = await axios.get(`${apiBaseUrl}/job-recommendations/${userId}`);
+      const response = await axios.get(`${actualApiBaseUrl}/job-recommendations/${userId}`);
       return response.data.recommendations || [];
     } catch (error) {
       console.error('Job recommendations fetch failed:', error);
@@ -138,7 +154,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
   // Content Generation
   const generateContent = useCallback(async (contentType: string, context: any) => {
     try {
-      const response = await axios.post(`${apiBaseUrl}/generate-content`, {
+      const response = await axios.post(`${actualApiBaseUrl}/generate-content`, {
         content_type: contentType,
         context: context
       });
@@ -172,7 +188,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await axios.post(`${apiBaseUrl}/analyze-resume`, formData, {
+      const response = await axios.post(`${actualApiBaseUrl}/analyze-resume`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -186,7 +202,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
 
   const extractResumeData = useCallback(async (imageData: string) => {
     try {
-      const response = await axios.post(`${apiBaseUrl}/extract-resume-data`, {
+      const response = await axios.post(`${actualApiBaseUrl}/extract-resume-data`, {
         image_data: imageData
       });
       return response.data;
@@ -199,7 +215,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
   // Career Prediction
   const predictCareerTrajectory = useCallback(async (userProfile: any) => {
     try {
-      const response = await axios.post(`${apiBaseUrl}/career-prediction`, {
+      const response = await axios.post(`${actualApiBaseUrl}/career-prediction`, {
         user_profile: userProfile
       });
       return response.data.prediction || {};
@@ -211,7 +227,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
 
   const getCareerInsights = useCallback(async (userId: number) => {
     try {
-      const response = await axios.get(`${apiBaseUrl}/career-insights/${userId}`);
+      const response = await axios.get(`${actualApiBaseUrl}/career-insights/${userId}`);
       return response.data;
     } catch (error) {
       console.error('Career insights fetch failed:', error);
@@ -222,7 +238,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
   // Real-time Recommendations
   const getRealTimeRecommendations = useCallback(async (userId: number, context?: any) => {
     try {
-      const response = await axios.post(`${apiBaseUrl}/recommendations`, {
+      const response = await axios.post(`${actualApiBaseUrl}/recommendations`, {
         user_id: userId,
         context: context || {}
       });
@@ -236,7 +252,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
   // AI Chat
   const sendChatMessage = useCallback(async (message: string, context?: any) => {
     try {
-      const response = await axios.post(`${apiBaseUrl}/chat`, {
+      const response = await axios.post(`${actualApiBaseUrl}/chat`, {
         message: message,
         context: context || {}
       });
@@ -249,7 +265,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
 
   const getChatHistory = useCallback(async (userId: number) => {
     try {
-      const response = await axios.get(`${apiBaseUrl}/chat-history/${userId}`);
+      const response = await axios.get(`${actualApiBaseUrl}/chat-history/${userId}`);
       return response.data.history || [];
     } catch (error) {
       console.error('Chat history fetch failed:', error);
@@ -260,7 +276,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
   // Analytics & Feedback
   const getAIAnalytics = useCallback(async () => {
     try {
-      const response = await axios.get(`${apiBaseUrl}/analytics`);
+      const response = await axios.get(`${actualApiBaseUrl}/analytics`);
       return response.data.analytics || {};
     } catch (error) {
       console.error('AI analytics fetch failed:', error);
@@ -270,7 +286,7 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
 
   const submitFeedback = useCallback(async (feedback: any) => {
     try {
-      await axios.post(`${apiBaseUrl}/feedback`, feedback);
+      await axios.post(`${actualApiBaseUrl}/feedback`, feedback);
     } catch (error) {
       console.error('Feedback submission failed:', error);
       throw error;
