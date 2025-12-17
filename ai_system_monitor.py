@@ -10,6 +10,7 @@ import sqlite3
 import subprocess
 import threading
 import time
+import tracemalloc
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -19,6 +20,9 @@ import bcrypt
 import psutil
 import requests
 import schedule
+
+# Enable tracemalloc to track memory allocations for debugging
+tracemalloc.start()
 
 # Install required packages
 required_packages = ["psutil", "schedule", "watchdog", "redis", "flask-socketio"]

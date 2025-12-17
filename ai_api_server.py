@@ -10,6 +10,7 @@ import io
 import json
 import logging
 import time
+import tracemalloc
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -19,9 +20,13 @@ from PIL import Image
 
 from advanced_ai_orchestrator import AIConfig, get_ai_orchestrator, initialize_ai_system
 
+# Enable tracemalloc to track memory allocations for debugging
+tracemalloc.start()
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.info("Tracemalloc enabled for memory tracking")
 
 # Create Flask app
 app = Flask(__name__)
@@ -68,7 +73,7 @@ def ai_health_check():
 
 
 @ai_bp.route("/analyze-profile", methods=["POST"])
-async def analyze_user_profile():
+def analyze_user_profile():
     """Analyze user profile with advanced AI"""
     try:
         data = request.get_json()
@@ -77,11 +82,8 @@ async def analyze_user_profile():
 
         orchestrator = init_ai_orchestrator()
 
-        # Run analysis in thread pool to avoid blocking
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        profile = await orchestrator.analyze_user_profile(data["user_data"])
+        # Run analysis using asyncio.run() for proper event loop management
+        profile = asyncio.run(orchestrator.analyze_user_profile(data["user_data"]))
 
         return jsonify(
             {
@@ -103,7 +105,7 @@ async def analyze_user_profile():
 
 
 @ai_bp.route("/job-matching", methods=["POST"])
-async def intelligent_job_matching():
+def intelligent_job_matching():
     """Advanced AI-powered job matching"""
     try:
         data = request.get_json()
@@ -131,11 +133,8 @@ async def intelligent_job_matching():
             engagement_score=user_data.get("engagement_score", 0.7),
         )
 
-        # Run job matching
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        matches = await orchestrator.intelligent_job_matching(profile, data["jobs"])
+        # Run job matching using asyncio.run() for proper event loop management
+        matches = asyncio.run(orchestrator.intelligent_job_matching(profile, data["jobs"]))
 
         return jsonify(
             {"success": True, "matches": matches, "total_matches": len(matches)}
@@ -147,7 +146,7 @@ async def intelligent_job_matching():
 
 
 @ai_bp.route("/generate-content", methods=["POST"])
-async def generate_content():
+def generate_content():
     """AI-powered content generation"""
     try:
         data = request.get_json()
@@ -156,12 +155,10 @@ async def generate_content():
 
         orchestrator = init_ai_orchestrator()
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        content = await orchestrator.generate_smart_content(
+        # Use asyncio.run() for proper event loop management
+        content = asyncio.run(orchestrator.generate_smart_content(
             data["content_type"], data["context"]
-        )
+        ))
 
         return jsonify(
             {"success": True, "content": content, "content_type": data["content_type"]}
@@ -173,7 +170,7 @@ async def generate_content():
 
 
 @ai_bp.route("/analyze-resume", methods=["POST"])
-async def analyze_resume():
+def analyze_resume():
     """AI-powered resume analysis from image"""
     try:
         if "file" not in request.files:
@@ -194,10 +191,8 @@ async def analyze_resume():
         try:
             orchestrator = init_ai_orchestrator()
 
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-            analysis = await orchestrator.analyze_resume_image(temp_path)
+            # Use asyncio.run() for proper event loop management
+            analysis = asyncio.run(orchestrator.analyze_resume_image(temp_path))
 
             return jsonify({"success": True, "analysis": analysis})
 
@@ -211,7 +206,7 @@ async def analyze_resume():
 
 
 @ai_bp.route("/career-prediction", methods=["POST"])
-async def predict_career():
+def predict_career():
     """AI-powered career trajectory prediction"""
     try:
         data = request.get_json()
@@ -239,10 +234,8 @@ async def predict_career():
             engagement_score=user_data.get("engagement_score", 0.7),
         )
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        prediction = await orchestrator.predict_career_trajectory(profile)
+        # Use asyncio.run() for proper event loop management
+        prediction = asyncio.run(orchestrator.predict_career_trajectory(profile))
 
         return jsonify({"success": True, "prediction": prediction})
 
@@ -252,7 +245,7 @@ async def predict_career():
 
 
 @ai_bp.route("/recommendations", methods=["POST"])
-async def get_recommendations():
+def get_recommendations():
     """Real-time AI-powered recommendations"""
     try:
         data = request.get_json()
@@ -261,12 +254,10 @@ async def get_recommendations():
 
         orchestrator = init_ai_orchestrator()
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        recommendations = await orchestrator.real_time_recommendations(
+        # Use asyncio.run() for proper event loop management
+        recommendations = asyncio.run(orchestrator.real_time_recommendations(
             data["user_id"], data.get("context", {})
-        )
+        ))
 
         return jsonify(
             {
@@ -282,7 +273,7 @@ async def get_recommendations():
 
 
 @ai_bp.route("/chat", methods=["POST"])
-async def ai_chat():
+def ai_chat():
     """AI-powered conversational assistant"""
     try:
         data = request.get_json()
@@ -299,23 +290,27 @@ async def ai_chat():
             "I'm sorry, but the AI chat service is not available at the moment."
         )
 
-        # Try OpenAI first
+        # Try OpenAI first (Note: OpenAI client may need async wrapper)
         if orchestrator.openai_available:
             import openai
 
-            response = await openai.ChatCompletion.acreate(
-                model="gpt-4",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are HireBot, an AI assistant for HireBahamas job platform. Help users with career advice, job searching, and professional development.",
-                    },
-                    {"role": "user", "content": message},
-                ],
-                temperature=0.7,
-                max_tokens=500,
-            )
-            response_text = response.choices[0].message.content
+            # Wrap async OpenAI call with asyncio.run()
+            async def get_openai_response():
+                response = await openai.ChatCompletion.acreate(
+                    model="gpt-4",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are HireBot, an AI assistant for HireBahamas job platform. Help users with career advice, job searching, and professional development.",
+                        },
+                        {"role": "user", "content": message},
+                    ],
+                    temperature=0.7,
+                    max_tokens=500,
+                )
+                return response.choices[0].message.content
+            
+            response_text = asyncio.run(get_openai_response())
 
         # Try Claude as fallback
         elif orchestrator.claude_available:
