@@ -156,6 +156,10 @@ if DATABASE_URL and DATABASE_URL != DB_PLACEHOLDER_URL:
         # This allows the app to start for health checks and diagnostics
         logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
 
+# NOTE: SQLAlchemy's create_engine() automatically handles URL decoding for
+# special characters in username/password. No manual decoding is needed here.
+# For example, passwords with '@' or '%' are automatically decoded from URL-encoded form.
+
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:
     """Mask the password in a database URL for logging.
@@ -241,6 +245,9 @@ def init_db():
             max_overflow=10,         # Burst capacity
         )
         
+        # Bind SessionLocal to the engine now that it's initialized
+        SessionLocal.configure(bind=engine)
+        
         logger.info("Database engine initialized (sync)")
         return engine
         
@@ -309,8 +316,8 @@ def get_db():
     if engine is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")
     
-    # Create session bound to engine
-    db = SessionLocal(bind=engine)
+    # Create session using SessionLocal factory (already bound to engine via configure())
+    db = SessionLocal()
     try:
         yield db
     finally:
