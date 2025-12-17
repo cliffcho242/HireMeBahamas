@@ -6,6 +6,46 @@ This document provides a comprehensive checklist for verifying Render deployment
 
 ---
 
+## 🚨 CRITICAL REQUIREMENT #0 (MOST IMPORTANT - CHECK THIS FIRST!)
+
+### ✅ Service Type: Web Service
+
+**Status**: ✅ REQUIRED - VERIFY IN RENDER DASHBOARD
+
+**What to check**:
+1. Go to: https://dashboard.render.com
+2. Find your backend service (e.g., `hiremebahamas-backend`)
+3. Check the service type displayed at the top
+
+**MUST see**:
+```
+Type: Web Service
+Runtime: Python
+```
+
+**MUST NOT see**:
+- ❌ Background Worker
+- ❌ Private Service
+- ❌ Database
+- ❌ TCP Service
+
+**If wrong type**:
+- You CANNOT change the type after creation
+- You MUST delete and create a NEW Web Service
+- See: [RENDER_SERVICE_TYPE_VERIFICATION.md](./RENDER_SERVICE_TYPE_VERIFICATION.md)
+
+**Validation**:
+```bash
+# Run this script to verify your render.yaml is correct
+python validate_render_service_type.py
+```
+
+**Configuration**:
+- ✅ `render.yaml` has `type: web` (line 27)
+- ✅ `render.yaml` has `runtime: python` (line 29)
+
+---
+
 ## ✅ FINAL CHECKLIST (All Items Verified)
 
 ### 1. ✅ Health Endpoint Exists
