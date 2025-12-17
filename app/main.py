@@ -37,10 +37,11 @@ async def background_init():
     from app.database import init_db, warmup_db, engine
 
     try:
-        # init_db is synchronous but returns async engine
+        # init_db() is synchronous - it creates and returns an async engine
+        # The engine itself supports async operations, but creation is sync
         engine_instance = init_db()
         if engine_instance:
-            # warmup_db is async - needs the engine parameter
+            # warmup_db() is async - it tests the connection asynchronously
             await warmup_db(engine_instance)
     except Exception as e:
         logging.warning(f"Background init skipped: {e}")

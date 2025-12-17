@@ -104,7 +104,24 @@ async def warmup_db(engine_param):
 # =============================================================================
 # SESSION FACTORY
 # =============================================================================
-def get_db():
+# Create session factory once at module level (will be initialized after engine is created)
+_AsyncSessionLocal = None
+
+
+def _ensure_session_factory():
+    """Ensure session factory is created. Called lazily when needed."""
+    global _AsyncSessionLocal
+    if _AsyncSessionLocal is None and engine is not None:
+        _AsyncSessionLocal = sessionmaker(
+            engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autoflush=False,
+        )
+    return _AsyncSessionLocal
+
+
+async def get_db():
     """Get database session with automatic cleanup.
     
     This is the primary dependency for FastAPI endpoints that need database access.
@@ -116,23 +133,17 @@ def get_db():
     if engine is None:
         raise RuntimeError("Database engine not initialized. Call init_db() first.")
     
-    AsyncSessionLocal = sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-        autoflush=False,
-    )
+    session_factory = _ensure_session_factory()
+    if session_factory is None:
+        raise RuntimeError("Failed to create session factory.")
     
-    async def _get_session():
-        async with AsyncSessionLocal() as session:
-            try:
-                yield session
-            except Exception as e:
-                logger.error(f"Database session error: {e}")
-                await session.rollback()
-                raise
-    
-    return _get_session()
+    async with session_factory() as session:
+        try:
+            yield session
+        except Exception as e:
+            logger.error(f"Database session error: {e}")
+            await session.rollback()
+            raise
 
 
 async def test_db_connection() -> tuple[bool, Optional[str]]:
