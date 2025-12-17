@@ -1,13 +1,15 @@
 # =============================================================================
-# DATABASE CONFIGURATION - SINGLE SOURCE OF TRUTH
+# DATABASE CONFIGURATION - SINGLE SOURCE OF TRUTH (SYNC SQLAlchemy)
 # =============================================================================
 #
 # This module is the SINGLE SOURCE OF TRUTH for all database configuration
 # in the HireMeBahamas application. All other database modules should import
 # from this module to ensure consistent configuration across the application.
 #
-# ✅ RULE: For PostgreSQL + SQLAlchemy with asyncpg, SSL belongs in the URL — NOT in connect_args
-# (This rule applies specifically to asyncpg. Other drivers may differ.)
+# ⚠️  SYNC SQLAlchemy (Option A): This module uses synchronous SQLAlchemy
+# with psycopg2 driver instead of async SQLAlchemy with asyncpg.
+#
+# ✅ RULE: For PostgreSQL + SQLAlchemy with psycopg2, SSL belongs in the URL
 #
 # This configuration works on:
 # - Render
@@ -17,18 +19,17 @@
 # - SQLAlchemy 1.4 / 2.0
 #
 # DATABASE_URL FORMAT (copy-paste):
-# postgresql+asyncpg://user:password@host:5432/database?sslmode=require
+# postgresql://user:password@host:5432/database?sslmode=require
 #
 # ENV VARS (for Railway/Render/Vercel deployment):
-# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
+# DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
 # DB_POOL_RECYCLE=300
 #
 # Key improvements:
 # 1. SSL configured via URL query string (?sslmode=require) - portable across platforms
 # 2. pool_recycle=300 - prevents stale connections
 # 3. pool_pre_ping=True - validates connections before use
-# 4. JIT=off - prevents first-query compilation delays
-# 5. connect_timeout=5 - handles cold starts
+# 4. connect_timeout=5 - handles cold starts
 # =============================================================================
 
 import os
@@ -37,10 +38,9 @@ import threading
 from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.exc import ArgumentError
-from sqlalchemy import text
 
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
@@ -48,17 +48,18 @@ logger = logging.getLogger(__name__)
 # Placeholder value for invalid database configuration
 # This allows the app to start for health checks even with invalid config
 # IMPORTANT: Uses a non-routable address (not localhost) to prevent accidental connections
-DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@invalid.local:5432/placeholder"
+DB_PLACEHOLDER_URL = "postgresql://placeholder:placeholder@invalid.local:5432/placeholder"
 
 # =============================================================================
-# DATABASE URL CONFIGURATION
+# DATABASE URL CONFIGURATION (SYNC SQLAlchemy)
 # =============================================================================
 # Priority order:
 # 1. DATABASE_URL (Standard PostgreSQL connection - REQUIRED)
 # 2. Local development default (only for development, not production)
 #
-# NEON DATABASE FORMAT:
-# DATABASE_URL=postgresql://USER:ENCODED_PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require
+# SYNC SQLALCHEMY FORMAT:
+# DATABASE_URL=postgresql://USER:ENCODED_PASSWORD@host:5432/DB_NAME?sslmode=require
+# Note: Uses psycopg2 driver (synchronous) instead of asyncpg
 # =============================================================================
 
 # Check if we're in production mode
@@ -88,7 +89,7 @@ if (ENV == "production" or ENVIRONMENT == "production") and not DATABASE_URL:
     DATABASE_URL = DB_PLACEHOLDER_URL
 elif not DATABASE_URL:
     # Use local development default only in development mode
-    DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+    DATABASE_URL = "postgresql://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
     logger.warning("Using default local development database URL. Set DATABASE_URL for production.")
 # =============================================================================
 
@@ -98,10 +99,11 @@ if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("ostgresql", "postgresql")
     logger.info("✓ Auto-fixed DATABASE_URL typo: 'ostgresql' → 'postgresql' (update env var to fix permanently)")
 
-# Convert sync PostgreSQL URLs to async driver format
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-    logger.info("Converted DATABASE_URL to asyncpg driver format")
+# Ensure postgresql:// format (sync driver)
+# Remove any async driver specifications
+if DATABASE_URL.startswith("postgresql+asyncpg://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
+    logger.info("Converted DATABASE_URL from asyncpg to sync psycopg2 driver format")
 
 # Strip whitespace from database name in the URL path
 # This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
@@ -204,7 +206,7 @@ STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s
 # =============================================================================
 
 # =============================================================================
-# CREATE ASYNC ENGINE - LAZY INITIALIZATION FOR SERVERLESS (Vercel/Render)
+# CREATE SYNC ENGINE - LAZY INITIALIZATION FOR SERVERLESS (Vercel/Render)
 # =============================================================================
 # ✅ GOOD PATTERN: Lazy connection initialization
 # - Defers connection until first request (not at module import)
@@ -214,12 +216,11 @@ STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s
 # This pattern PERMANENTLY FIXES serverless issues:
 # 1. pool_pre_ping=True - validates connections before use (detects dead connections)
 # 2. pool_recycle=300 - recycles connections (serverless-friendly)
-# 3. JIT=off - prevents first-query compilation delays
-# 4. connect_timeout=5 - allows Railway cold starts
-# 5. SSL configured via URL query string (?sslmode=require)
+# 3. connect_timeout=5 - allows Railway cold starts
+# 4. SSL configured via URL query string (?sslmode=require)
 #
 # COPY-PASTE ENV VARS FOR RAILWAY/RENDER/VERCEL:
-# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
+# DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
 # DB_POOL_RECYCLE=300
 # =============================================================================
 
@@ -242,7 +243,7 @@ def get_engine():
     This fulfills the "apps must boot without the database" requirement.
     
     Returns:
-        AsyncEngine | None: Database engine instance or None if creation fails
+        Engine | None: Database engine instance or None if creation fails
     """
     global _engine
     
@@ -260,7 +261,7 @@ def get_engine():
                     return None
                 
                 try:
-                    _engine = create_async_engine(
+                    _engine = create_engine(
                         DATABASE_URL,
                         # Pool configuration
                         pool_size=POOL_SIZE,
@@ -272,29 +273,21 @@ def get_engine():
                         # Echo SQL for debugging (disabled in production)
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
                         
-                        # asyncpg-specific connection arguments
+                        # psycopg2-specific connection arguments
                         # NOTE: SSL is configured via DATABASE_URL query string (?sslmode=require), NOT here
-                        # If sslmode is not specified in the URL, asyncpg defaults to 'prefer' (secure if available, unencrypted if not)
                         # For cloud deployments, always use ?sslmode=require to enforce encrypted connections
                         connect_args={
                             # Connection timeout (5s for Railway cold starts)
-                            "timeout": CONNECT_TIMEOUT,
+                            "connect_timeout": CONNECT_TIMEOUT,
                             
-                            # Query timeout (30s per query)
-                            "command_timeout": COMMAND_TIMEOUT,
+                            # PostgreSQL application name for pg_stat_activity
+                            "application_name": "hiremebahamas",
                             
-                            # PostgreSQL server settings
-                            "server_settings": {
-                                # CRITICAL: Disable JIT to prevent 60s+ first-query delays
-                                "jit": "off",
-                                # Statement timeout in milliseconds
-                                "statement_timeout": str(STATEMENT_TIMEOUT_MS),
-                                # Application name for pg_stat_activity
-                                "application_name": "hiremebahamas",
-                            },
+                            # PostgreSQL options for performance
+                            "options": f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
                         }
                     )
-                    logger.info("✅ Database engine initialized successfully")
+                    logger.info("✅ Database engine initialized successfully (sync)")
                     logger.info(
                         f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
                         f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
@@ -391,7 +384,7 @@ logger.info(
 )
 
 # =============================================================================
-# SESSION FACTORY - Optimized for async operations
+# SESSION FACTORY - Optimized for sync operations
 # =============================================================================
 # Note: sessionmaker works safely with LazyEngine because:
 # 1. sessionmaker() itself doesn't create any database connections
@@ -399,12 +392,15 @@ logger.info(
 # 3. Actual connections are created when sessions are instantiated (at runtime)
 # 4. When a session needs the engine, LazyEngine.__getattr__ triggers lazy initialization
 # This means the engine is still created lazily on first actual database operation
-AsyncSessionLocal = sessionmaker(
-    engine, 
-    class_=AsyncSession, 
+SessionLocal = sessionmaker(
+    bind=engine, 
+    class_=Session, 
     expire_on_commit=False,  # Don't expire objects after commit (reduces DB round-trips)
     autoflush=False,  # Manual flush for better performance control
 )
+
+# Backward compatibility alias
+AsyncSessionLocal = SessionLocal
 
 # Create declarative base for ORM models
 Base = declarative_base()
@@ -417,39 +413,39 @@ _db_initialized = False
 _db_init_error: Optional[str] = None
 
 
-async def get_db():
+def get_db():
     """Get database session with automatic cleanup.
     
     This is the primary dependency for FastAPI endpoints that need database access.
     
     Yields:
-        AsyncSession: Database session for query execution
+        Session: Database session for query execution
         
     Raises:
         RuntimeError: If database connection fails
     """
+    db = SessionLocal()
     try:
-        async with AsyncSessionLocal() as session:
-            yield session
+        yield db
     except Exception as e:
         logger.error(f"Database session error: {e}")
+        db.rollback()
         raise
+    finally:
+        db.close()
 
 
 # Alternative session creation (alias for backward compatibility)
-async_session = AsyncSessionLocal
+async_session = SessionLocal
 
 
-async def get_async_session():
-    """Get async database session (alias for get_db).
+def get_async_session():
+    """Get database session (alias for get_db).
     
     Provided for API consistency - use get_db() as primary dependency.
+    Note: Despite the name, this returns a sync session for backward compatibility.
     """
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+    return get_db()
 
 
 # =============================================================================
@@ -460,7 +456,7 @@ async def get_async_session():
 DB_INIT_MAX_RETRIES = int(os.getenv("DB_INIT_MAX_RETRIES", "3"))
 DB_INIT_RETRY_DELAY = float(os.getenv("DB_INIT_RETRY_DELAY", "2.0"))
 
-async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
+def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     """Initialize database tables with retry logic.
     
     This function is called during startup to ensure database tables exist.
@@ -512,8 +508,8 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     
     for attempt in range(max_retries):
         try:
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
+            with engine.begin() as conn:
+                Base.metadata.create_all(bind=conn)
             _db_initialized = True
             _db_init_error = None
             logger.info("Database tables initialized successfully")
@@ -524,14 +520,14 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
                 f"Database initialization attempt {attempt + 1}/{max_retries} failed: {e}"
             )
             if attempt < max_retries - 1:
-                import asyncio
-                await asyncio.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+                import time
+                time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
     
     logger.warning(f"Database initialization failed after {max_retries} attempts. Application will start anyway.")
     return False
 
 
-async def close_db():
+def close_db():
     """Close database connections gracefully.
     
     Called during application shutdown to release all connections.
@@ -545,7 +541,7 @@ async def close_db():
             actual_engine = get_engine()
             if actual_engine is not None:
                 try:
-                    await actual_engine.dispose()
+                    actual_engine.dispose()
                 except OSError as e:
                     # Handle "Bad file descriptor" errors (errno 9) gracefully
                     # This occurs when connections are already closed
@@ -567,7 +563,7 @@ async def close_db():
         logger.error(f"Unexpected error in close_db: {e}")
 
 
-async def test_db_connection() -> tuple[bool, Optional[str]]:
+def test_db_connection() -> tuple[bool, Optional[str]]:
     """Test database connectivity.
     
     Used by /ready endpoint to verify database is accessible.
@@ -587,8 +583,8 @@ async def test_db_connection() -> tuple[bool, Optional[str]]:
         return False, error_msg
     
     try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
         return True, None
     except Exception as e:
         error_msg = str(e)
@@ -615,7 +611,7 @@ def get_db_status() -> dict:
     }
 
 
-async def get_pool_status() -> dict:
+def get_pool_status() -> dict:
     """Get connection pool status for monitoring.
     
     CRITICAL BEHAVIOR: Returns empty metrics if database is not configured,
@@ -662,7 +658,7 @@ async def get_pool_status() -> dict:
 # use different function names or signatures.
 # =============================================================================
 
-async def warmup_db(engine_param=None) -> bool:
+def warmup_db(engine_param=None) -> bool:
     """Warm up database connection pool.
     
     Performs a simple connection test to ensure the database is accessible
@@ -683,8 +679,8 @@ async def warmup_db(engine_param=None) -> bool:
         
     try:
         # Perform a simple query to test connectivity and warm up the pool
-        async with actual_engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
+        with actual_engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
         
         logger.info("Database warmup: Connection pool ready")
         return True
@@ -694,7 +690,7 @@ async def warmup_db(engine_param=None) -> bool:
         return False
 
 
-async def test_connection():
+def test_connection():
     """Test database connectivity (legacy alias).
     
     Alias for test_db_connection() that returns a boolean instead of a tuple.
@@ -703,16 +699,16 @@ async def test_connection():
     Returns:
         bool: True if connection succeeded, False otherwise
     """
-    success, _ = await test_db_connection()
+    success, _ = test_db_connection()
     return success
 
 
-async def close_engine():
+def close_engine():
     """Close database engine (legacy alias).
     
     Alias for close_db() maintained for backward compatibility.
     """
-    await close_db()
+    close_db()
 
 
 # =============================================================================
@@ -729,18 +725,19 @@ __all__ = [
     "DATABASE_URL",
     "DB_PLACEHOLDER_URL",
     
-    # Session management
-    "AsyncSessionLocal",
+    # Session management (sync)
+    "SessionLocal",
+    "AsyncSessionLocal",  # Backward compatibility alias
     "get_db",
-    "get_async_session",
-    "async_session",
+    "get_async_session",  # Backward compatibility alias
+    "async_session",  # Backward compatibility alias
     
-    # Lifecycle management
+    # Lifecycle management (sync)
     "init_db",
     "close_db",
     "close_engine",  # Legacy alias
     
-    # Health and monitoring
+    # Health and monitoring (sync)
     "test_db_connection",
     "test_connection",  # Legacy alias
     "warmup_db",
