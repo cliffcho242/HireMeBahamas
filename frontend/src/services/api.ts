@@ -371,9 +371,6 @@ api.interceptors.response.use(
       // Check if we already attempted refresh for this request
       const alreadyRefreshed = config._refreshAttempted === true;
       
-      // Auto-logout for auth endpoints, profile endpoints, or when user is not found
-      const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/profile');
-      
       // If user not found, refresh endpoint failing, or already refreshed once, logout immediately
       if (isUserNotFound || isRefreshEndpoint || alreadyRefreshed) {
         console.log('Authentication failed - logging out', isUserNotFound ? '(user not found in database)' : '');

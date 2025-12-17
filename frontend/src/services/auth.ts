@@ -6,6 +6,8 @@
  * with automatic silent token refresh.
  */
 
+import { apiUrl } from '../lib/api';
+
 // Session storage key - must match sessionManager.ts
 const SESSION_KEY = 'hireme_session';
 const USER_KEY = 'hireme_user';
@@ -36,7 +38,7 @@ export async function refreshToken(): Promise<void> {
       throw new Error('No token available to refresh');
     }
 
-    const response = await fetch("/api/auth/refresh", {
+    const response = await fetch(apiUrl("/api/auth/refresh"), {
       credentials: "include",
       headers: {
         'Authorization': `Bearer ${token}`,

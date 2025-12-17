@@ -5,6 +5,8 @@
  * This helps diagnose issues where users can't log in due to connection problems.
  */
 
+import { apiUrl, getApiBase } from '../lib/api';
+
 interface ConnectionTestResult {
   success: boolean;
   apiUrl: string;
@@ -22,21 +24,22 @@ interface ConnectionTestResult {
 /**
  * Test connection to the backend API
  * 
- * @param apiUrl - The API base URL to test (e.g., 'https://api.example.com')
+ * @param baseUrl - The API base URL to test (e.g., 'https://api.example.com')
  * @returns Promise with connection test results
  */
-export async function testConnection(apiUrl: string): Promise<ConnectionTestResult> {
+export async function testConnection(baseUrl: string): Promise<ConnectionTestResult> {
   const timestamp = Date.now();
   
   try {
-    console.log(`[ConnectionTest] Testing connection to: ${apiUrl}/api/health`);
+    const healthUrl = apiUrl('/api/health');
+    console.log(`[ConnectionTest] Testing connection to: ${healthUrl}`);
     
     // Test health endpoint with timeout
     // Increased to 30 seconds to accommodate backend cold starts (Railway, Render, etc.)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
     
-    const response = await fetch(`${apiUrl}/api/health`, {
+    const response = await fetch(healthUrl, {
       method: 'GET',
       signal: controller.signal,
       headers: {
@@ -52,7 +55,7 @@ export async function testConnection(apiUrl: string): Promise<ConnectionTestResu
       
       return {
         success: true,
-        apiUrl,
+        apiUrl: baseUrl,
         message: 'Backend is reachable and healthy',
         details: {
           healthCheck: true,
@@ -66,7 +69,7 @@ export async function testConnection(apiUrl: string): Promise<ConnectionTestResu
       
       return {
         success: false,
-        apiUrl,
+        apiUrl: baseUrl,
         message: `Backend returned error status: ${response.status}`,
         details: {
           healthCheck: false,
@@ -98,7 +101,7 @@ export async function testConnection(apiUrl: string): Promise<ConnectionTestResu
     
     return {
       success: false,
-      apiUrl,
+      apiUrl: baseUrl,
       message: errorMessage,
       details: {
         healthCheck: false,
@@ -115,21 +118,7 @@ export async function testConnection(apiUrl: string): Promise<ConnectionTestResu
  * ✅ CORRECT: Use VITE_API_URL environment variable (properly exposed to browser by Vite)
  */
 export function getCurrentApiUrl(): string {
-  // ✅ CORRECT: Check VITE_API_URL environment variable first
-  const BACKEND_URL = import.meta.env.VITE_API_URL;
-  if (BACKEND_URL) {
-    return BACKEND_URL;
-  }
-  
-  // Otherwise, check if we're in production
-  if (typeof window !== 'undefined') {
-    // If no explicit env var is set, use same-origin (for Vercel serverless)
-    return window.location.origin;
-  }
-  
-  // ❌ WRONG: Never hardcode localhost in production fallback
-  // This should fail gracefully instead
-  throw new Error('API URL could not be determined. Set VITE_API_URL environment variable or ensure running in browser context.');
+  return getApiBase();
 }
 
 /**
@@ -137,18 +126,18 @@ export function getCurrentApiUrl(): string {
  * This is useful for debugging connection issues
  */
 export async function runConnectionDiagnostic(): Promise<void> {
-  const apiUrl = getCurrentApiUrl();
+  const baseUrl = getCurrentApiUrl();
   
   console.log('='.repeat(60));
   console.log('🔍 RUNNING CONNECTION DIAGNOSTIC');
   console.log('='.repeat(60));
-  console.log('Current API URL:', apiUrl);
+  console.log('Current API URL:', baseUrl);
   console.log('Window Origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
   console.log('Environment:', import.meta.env.MODE);
   console.log('VITE_API_URL:', import.meta.env.VITE_API_URL || 'not set');
   console.log('-'.repeat(60));
   
-  const result = await testConnection(apiUrl);
+  const result = await testConnection(baseUrl);
   
   console.log('Test Result:', result.success ? '✅ SUCCESS' : '❌ FAILED');
   console.log('Message:', result.message);
@@ -161,6 +150,6 @@ export async function runConnectionDiagnostic(): Promise<void> {
     console.error('1. Check if backend is running');
     console.error('2. Verify VITE_API_URL environment variable is correct');
     console.error('3. Check if CORS is properly configured on backend');
-    console.error('4. Try accessing backend directly:', `${apiUrl}/api/health`);
+    console.error('4. Try accessing backend directly:', apiUrl('/api/health'));
   }
 }

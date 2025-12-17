@@ -9,6 +9,8 @@
  * - Cache hit rates
  */
 
+import { apiUrl } from '../lib/api';
+
 interface PerformanceMetric {
   name: string;
   value: number;
@@ -256,11 +258,11 @@ async function sendPerformanceMetric(metric: PerformanceMetric) {
     
     // Use sendBeacon for reliable delivery even during page unload
     if ('sendBeacon' in navigator) {
-      const success = navigator.sendBeacon('/api/analytics/performance', data);
+      const success = navigator.sendBeacon(apiUrl('/api/analytics/performance'), data);
       
       // Fallback to fetch if sendBeacon fails
       if (!success) {
-        fetch('/api/analytics/performance', {
+        fetch(apiUrl('/api/analytics/performance'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: data,
@@ -271,7 +273,7 @@ async function sendPerformanceMetric(metric: PerformanceMetric) {
       }
     } else {
       // Fallback for browsers without sendBeacon
-      fetch('/api/analytics/performance', {
+      fetch(apiUrl('/api/analytics/performance'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: data,
