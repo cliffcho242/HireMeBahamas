@@ -62,8 +62,8 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, on
       return;
     }
 
-    // Validate meeting link URL if provided
-    if (meetingLink.trim() && !isValidUrl(meetingLink)) {
+    // Validate meeting link URL if provided (isValidUrl handles trimming internally)
+    if (meetingLink && !isValidUrl(meetingLink)) {
       toast.error('Please enter a valid meeting link URL');
       return;
     }

@@ -12,13 +12,32 @@
 const ALLOWED_PROTOCOLS = ['http:', 'https:', 'mailto:'];
 
 /**
+ * Helper function to check if value is a valid string
+ */
+const isValidString = (value: unknown): value is string => {
+  return typeof value === 'string' && value !== null && value !== undefined;
+};
+
+/**
+ * Validates if a URL string has a safe protocol
+ */
+const hasAllowedProtocol = (urlString: string): boolean => {
+  try {
+    const url = new URL(urlString);
+    return ALLOWED_PROTOCOLS.includes(url.protocol);
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Validates if a string is a valid URL with a safe protocol
  * @param value - The URL string to validate
  * @returns true if valid URL with safe protocol, false otherwise
  */
-export const isValidUrl = (value: string): boolean => {
-  // Handle null/undefined
-  if (value === null || value === undefined || typeof value !== 'string') {
+export const isValidUrl = (value: unknown): boolean => {
+  // Validate input is a string
+  if (!isValidString(value)) {
     return false;
   }
 
@@ -30,13 +49,7 @@ export const isValidUrl = (value: string): boolean => {
     return true;
   }
 
-  try {
-    const url = new URL(trimmedValue);
-    // Check if protocol is in the allowed list
-    return ALLOWED_PROTOCOLS.includes(url.protocol);
-  } catch {
-    return false;
-  }
+  return hasAllowedProtocol(trimmedValue);
 };
 
 /**
@@ -44,9 +57,9 @@ export const isValidUrl = (value: string): boolean => {
  * @param value - The URL string to validate
  * @returns true if valid and non-empty URL with safe protocol, false otherwise
  */
-export const isValidRequiredUrl = (value: string): boolean => {
-  // Handle null/undefined
-  if (value === null || value === undefined || typeof value !== 'string') {
+export const isValidRequiredUrl = (value: unknown): boolean => {
+  // Validate input is a string
+  if (!isValidString(value)) {
     return false;
   }
 
@@ -57,11 +70,5 @@ export const isValidRequiredUrl = (value: string): boolean => {
     return false;
   }
 
-  try {
-    const url = new URL(trimmedValue);
-    // Check if protocol is in the allowed list
-    return ALLOWED_PROTOCOLS.includes(url.protocol);
-  } catch {
-    return false;
-  }
+  return hasAllowedProtocol(trimmedValue);
 };
