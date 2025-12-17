@@ -285,8 +285,8 @@ def get_engine():
                             "application_name": "hiremebahamas",
                             
                             # PostgreSQL options for performance
-                            # STATEMENT_TIMEOUT_MS is already in milliseconds (e.g., 30000)
-                            "options": f"-c statement_timeout={STATEMENT_TIMEOUT_MS}",
+                            # STATEMENT_TIMEOUT_MS is in milliseconds (e.g., 30000), append 'ms' unit
+                            "options": f"-c statement_timeout={STATEMENT_TIMEOUT_MS}ms",
                         }
                     )
                     logger.info("✅ Database engine initialized successfully (sync)")
@@ -448,7 +448,10 @@ def get_async_session():
     """Get database session (alias for get_db).
     
     Provided for API consistency - use get_db() as primary dependency.
-    Note: Despite the name, this yields a sync session for backward compatibility.
+    
+    ⚠️  DEPRECATION NOTE: Despite the name, this yields a sync session for backward
+    compatibility after conversion to sync SQLAlchemy. New code should use get_db()
+    directly. This alias is maintained for existing endpoints that use this name.
     
     Yields:
         Session: Database session for query execution
