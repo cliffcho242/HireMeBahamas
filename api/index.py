@@ -380,33 +380,23 @@ app = FastAPI(
 # GLOBAL EXCEPTION HANDLER
 # ============================================================================
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
+async def panic_handler(request: Request, exc: Exception):
     """
-    Catch-all exception handler to ensure no error goes unlogged.
-    This is critical for debugging issues in Vercel where logs might not be visible.
+    Panic Shield - Global exception handler for graceful failure.
+    
+    This catches all unhandled exceptions and returns a calm, user-friendly
+    message while logging the full error details for debugging.
     """
-    logger.error(
-        f"UNHANDLED EXCEPTION: {type(exc).__name__}\n"
-        f"Path: {request.method} {request.url.path}\n"
-        f"Error: {str(exc)}\n"
-        f"Traceback:\n{traceback.format_exc()}"
-    )
+    # Get request ID if available (from request logging middleware)
+    request_id = getattr(request.state, 'id', 'unknown')
     
-    # Use helper function for consistent debug mode detection
-    is_dev = is_debug_mode()
+    # Log the panic with request ID for debugging
+    logger.error(f"PANIC {request_id}: {exc}")
     
-    # Return appropriate error response
+    # Return a calm, user-friendly error response
     return JSONResponse(
         status_code=500,
-        content={
-            "error": "INTERNAL_SERVER_ERROR",
-            "message": "An unexpected error occurred while processing your request",
-            "type": type(exc).__name__ if is_dev else "ServerError",
-            "details": str(exc) if is_dev else None,
-            "path": request.url.path,
-            "method": request.method,
-            "help": "Please try again. If the problem persists, contact support."
-        }
+        content={"error": "Temporary issue. Try again."}
     )
 
 # ============================================================================
