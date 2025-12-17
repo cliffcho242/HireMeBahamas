@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
-import AppFacebook from './AppFacebook.tsx'
+import AppFacebook from './AppFacebook'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
