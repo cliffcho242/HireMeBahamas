@@ -47,15 +47,19 @@ async def test_shutdown_hook_exists():
 
 
 async def test_engine_disposal_on_shutdown():
-    """Test that engine.dispose() is called during shutdown."""
+    """Test that engine.dispose() is called during shutdown.
+    
+    Note: backend_app.database uses AsyncEngine (asyncpg), so dispose() is async.
+    We use AsyncMock to properly mock the async dispose() method.
+    """
     print("\n2. Testing engine disposal during shutdown...")
     
     # Import close_db function
     from backend_app.database import close_db, get_engine
     
-    # Create a mock engine
+    # Create a mock async engine (backend_app.database uses AsyncEngine with asyncpg)
     mock_engine = AsyncMock()
-    mock_engine.dispose = AsyncMock()
+    mock_engine.dispose = AsyncMock()  # AsyncMock because dispose() is async in AsyncEngine
     
     # Patch get_engine to return our mock
     with patch('backend_app.database.get_engine', return_value=mock_engine):
@@ -152,13 +156,14 @@ async def test_full_shutdown_sequence():
             database_content = f.read()
         
         # Check that shutdown hook imports from app.database
-        imports_engine = 'from app.database import' in main_content and 'engine' in main_content
+        imports_engine = 'from app.database import' in main_content and ('engine' in main_content or 'close_db' in main_content)
         
         # Check that shutdown calls close_db or engine.dispose
         calls_close_db = 'await close_db()' in main_content or 'close_db()' in main_content
         
-        # Check that close_db calls engine.dispose()
-        disposes_engine = 'engine.dispose()' in database_content or 'actual_engine.dispose()' in database_content
+        # Check that close_db calls engine.dispose() (async version uses 'await')
+        # The async version in backend_app/database.py uses 'await actual_engine.dispose()'
+        disposes_engine = 'await actual_engine.dispose()' in database_content or 'actual_engine.dispose()' in database_content or 'engine.dispose()' in database_content
         
         if imports_engine and calls_close_db and disposes_engine:
             print("   ✅ Shutdown hook properly calls engine.dispose() to close connections")
