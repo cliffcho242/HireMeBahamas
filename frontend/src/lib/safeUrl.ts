@@ -34,6 +34,15 @@ export interface SafeUrlResult {
 }
 
 /**
+ * Validate URL protocol format
+ * Checks if URL starts with http:// or https://
+ * @internal Shared utility for validation
+ */
+export function hasValidProtocol(url: string): boolean {
+  return url.startsWith('http://') || url.startsWith('https://');
+}
+
+/**
  * Safely parse a URL string into a URL object
  * 
  * @param urlString - The URL string to parse
@@ -58,7 +67,7 @@ export function safeParseUrl(
   const trimmedUrl = urlString.trim();
   
   // Check for basic URL structure
-  if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+  if (!hasValidProtocol(trimmedUrl)) {
     return {
       success: false,
       error: `${contextPrefix}Invalid URL format: "${trimmedUrl}". URL must start with http:// or https://`,
@@ -67,20 +76,36 @@ export function safeParseUrl(
 
   // In production, enforce HTTPS (allow http only for localhost)
   if (import.meta.env.PROD) {
-    try {
-      const testUrl = new URL(trimmedUrl);
-      const isLocalhost = testUrl.hostname === 'localhost' || 
-                         testUrl.hostname === '127.0.0.1' ||
-                         testUrl.hostname === '0.0.0.0';
-      
-      if (testUrl.protocol === 'http:' && !isLocalhost) {
-        return {
-          success: false,
-          error: `${contextPrefix}Production URLs must use HTTPS. Found: ${trimmedUrl}`,
-        };
-      }
-    } catch {
-      // Fall through to main try-catch below
+    // Check protocol using string inspection to avoid new URL()
+    const protocolMatch = trimmedUrl.match(/^(https?):\/\//);
+    if (!protocolMatch) {
+      return {
+        success: false,
+        error: `${contextPrefix}Invalid URL format: "${trimmedUrl}". URL must start with http:// or https://`,
+      };
+    }
+    
+    const protocol = protocolMatch[1];
+    
+    // Extract hostname without using new URL()
+    const hostnameMatch = trimmedUrl.match(/^https?:\/\/([^/:?#]+)/);
+    if (!hostnameMatch) {
+      return {
+        success: false,
+        error: `${contextPrefix}Unable to extract hostname from URL: "${trimmedUrl}"`,
+      };
+    }
+    
+    const hostname = hostnameMatch[1];
+    const isLocalhost = hostname === 'localhost' || 
+                       hostname === '127.0.0.1' ||
+                       hostname === '0.0.0.0';
+    
+    if (protocol === 'http' && !isLocalhost) {
+      return {
+        success: false,
+        error: `${contextPrefix}Production URLs must use HTTPS. Found: ${trimmedUrl}`,
+      };
     }
   }
 

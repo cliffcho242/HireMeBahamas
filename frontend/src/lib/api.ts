@@ -23,7 +23,10 @@
  * ```
  */
 
-import { isValidUrl, isSecureUrl } from './safeUrl';
+import { isValidUrl, isSecureUrl, safeParseUrl, hasValidProtocol } from './safeUrl';
+
+// Note: hasValidProtocol is imported but may be unused in this file
+// It's available for future URL validation needs
 
 /**
  * Validate and get the base API URL from environment

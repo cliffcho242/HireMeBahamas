@@ -224,21 +224,13 @@ api.interceptors.request.use((config) => {
       config.baseURL = urlObj.origin;
       config.url = urlObj.pathname + urlObj.search;
     } else {
-      // Log error in development, fail gracefully in production
-      const errorMsg = `Failed to parse API URL: ${urlResult.error}`;
-      if (import.meta.env.DEV) {
-        console.error('❌ URL Parsing Error:', errorMsg);
-      }
-      
-      // Throw error to prevent silent failures
+      // Throw error with clear guidance
       throw new Error(
         `API URL configuration error: ${urlResult.error}\n\n` +
-        `Please check your VITE_API_URL environment variable.\n` +
-        `Current value: ${optimalUrl}\n\n` +
-        `Valid examples:\n` +
-        `- Production: VITE_API_URL=https://api.yourdomain.com\n` +
-        `- Local dev: VITE_API_URL=http://localhost:8000\n` +
-        `- Vercel serverless: Leave VITE_API_URL unset`
+        `Possible solutions:\n` +
+        `1. Set VITE_API_URL=https://api.yourdomain.com for production\n` +
+        `2. Set VITE_API_URL=http://localhost:8000 for local dev\n` +
+        `3. Leave VITE_API_URL unset for Vercel serverless (same-origin)`
       );
     }
   }
