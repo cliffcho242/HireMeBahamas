@@ -7,8 +7,8 @@
 # ============================================================================
 
 # Core Framework & Server
-fastapi==0.115.0
-uvicorn[standard]==0.31.0
+fastapi==0.115.6
+uvicorn[standard]==0.32.0
 gunicorn==23.0.0
 
 # Database - NUCLEAR OPTION: psycopg[binary] instead of asyncpg
