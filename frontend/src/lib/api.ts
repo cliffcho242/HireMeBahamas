@@ -24,28 +24,17 @@
  */
 
 /**
- * Build a complete API URL from a path
- * 
- * @param path - The API path (e.g., "/api/auth/me")
- * @returns The complete URL with base URL prepended
+ * Validate and get the base API URL from environment
  * @throws Error if VITE_API_URL is missing or invalid
- * 
- * @example
- * ```typescript
- * apiUrl("/api/auth/me") 
- * // Returns: "https://your-backend.com/api/auth/me"
- * ```
  */
-export function apiUrl(path: string): string {
-  // Get the base URL from environment variable
+function validateAndGetBaseUrl(): string {
   const base = import.meta.env.VITE_API_URL as string | undefined;
 
   // If no explicit API URL is set, use same-origin (for Vercel serverless)
   if (!base) {
     // Check if we're in a browser environment
     if (typeof window !== 'undefined') {
-      const origin = window.location.origin;
-      return `${origin.replace(/\/$/, "")}${path}`;
+      return window.location.origin;
     }
     
     // If not in browser and no URL is set, throw an error
@@ -64,6 +53,25 @@ export function apiUrl(path: string): string {
       "Example: VITE_API_URL=https://your-backend.com"
     );
   }
+
+  return base;
+}
+
+/**
+ * Build a complete API URL from a path
+ * 
+ * @param path - The API path (e.g., "/api/auth/me")
+ * @returns The complete URL with base URL prepended
+ * @throws Error if VITE_API_URL is missing or invalid
+ * 
+ * @example
+ * ```typescript
+ * apiUrl("/api/auth/me") 
+ * // Returns: "https://your-backend.com/api/auth/me"
+ * ```
+ */
+export function apiUrl(path: string): string {
+  const base = validateAndGetBaseUrl();
 
   // Normalize the base URL (remove trailing slash) and path (ensure leading slash)
   const normalizedBase = base.replace(/\/$/, "");
@@ -94,18 +102,6 @@ export function isApiConfigured(): boolean {
  * @throws Error if VITE_API_URL is missing or invalid
  */
 export function getApiBase(): string {
-  const base = import.meta.env.VITE_API_URL as string | undefined;
-
-  if (!base) {
-    if (typeof window !== 'undefined') {
-      return window.location.origin;
-    }
-    throw new Error("VITE_API_URL is missing or invalid");
-  }
-
-  if (!base.startsWith("http://") && !base.startsWith("https://")) {
-    throw new Error(`VITE_API_URL is invalid: "${base}"`);
-  }
-
+  const base = validateAndGetBaseUrl();
   return base.replace(/\/$/, "");
 }
