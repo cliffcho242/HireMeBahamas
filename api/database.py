@@ -25,6 +25,7 @@ from urllib.parse import urlparse, urlunparse
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 from sqlalchemy.exc import ArgumentError
+from sqlalchemy.engine.url import make_url
 from .db_url_utils import ensure_sslmode, validate_database_url_structure
 
 # Global engine (reused across invocations)
@@ -226,6 +227,20 @@ def get_engine():
                 logger.warning("Cannot create database engine: invalid or missing DATABASE_URL")
                 return None
             
+            # CRITICAL: Validate DATABASE_URL using SQLAlchemy make_url()
+            # This is the production-grade way to parse and validate database URLs
+            try:
+                validated_url = make_url(db_url)
+                # Log only driver name to avoid exposing sensitive connection details
+                logger.info(f"✅ DATABASE_URL validated successfully (driver: {validated_url.drivername})")
+            except Exception as url_error:
+                logger.error(
+                    f"❌ DATABASE_URL validation failed using make_url(): {url_error}. "
+                    f"Application will start but database operations will fail. "
+                    f"Required format: postgresql://user:password@host:port/database?sslmode=require"
+                )
+                return None
+            
             # Get configurable timeout values from environment
             # CRITICAL: 5s timeout for Railway cold starts and cloud database latency
             connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
@@ -234,21 +249,26 @@ def get_engine():
             max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "5"))  # Hard limit: prevents Neon exhaustion & Render OOM
             pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "300"))
             
-            # Production-safe engine configuration with SSL enforcement
-            # Note: sslmode=require is in the DATABASE_URL query string, not in connect_args
+            # CRITICAL: Production-safe engine configuration for Neon pooled connections
+            # NO startup DB options (statement_timeout, sslmode, or options in connect_args)
+            # Neon pooled connections (PgBouncer) do NOT support startup parameters
             _engine = create_async_engine(
                 db_url,
                 pool_pre_ping=True,            # Validate connections before use
                 pool_size=pool_size,           # Small pool for serverless
                 max_overflow=max_overflow,     # Limited overflow
                 pool_recycle=pool_recycle,     # Recycle connections every 5 minutes
+                # CRITICAL: Minimal connect_args for Neon compatibility
+                # NO sslmode (must be in URL query string)
+                # NO statement_timeout (not supported by PgBouncer)
+                # NO server_settings with startup options
                 connect_args={
                     "timeout": connect_timeout,  # Connection timeout (5s default for asyncpg)
                     "command_timeout": command_timeout,  # Query timeout (30s default)
                 },
                 echo=False,                    # Disable SQL logging in production
             )
-            logger.info("✅ Database engine initialized successfully")
+            logger.info("✅ Database engine initialized successfully (Neon-safe, no startup options)")
         except ArgumentError as e:
             # Catch SQLAlchemy ArgumentError specifically (URL parsing errors)
             logger.warning(

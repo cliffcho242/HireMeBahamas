@@ -63,6 +63,7 @@ if _project_root not in sys.path:
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import ArgumentError
+from sqlalchemy.engine.url import make_url
 
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
@@ -252,12 +253,11 @@ _engine_lock = threading.Lock()
 def get_engine():
     """Get or create database engine (lazy initialization for serverless).
     
-    ✅ GOOD PATTERN: Defers connection until first request.
-    This prevents connection issues on Vercel/Render where connections
-    at module import time can cause failures.
-    
-    Thread-safe: Uses a lock to ensure only one engine is created even
-    when accessed from multiple threads simultaneously.
+    ✅ PRODUCTION-GRADE PATTERN for Neon/Render/Vercel:
+    - Validates DATABASE_URL using SQLAlchemy's make_url() before engine creation
+    - NO startup DB options (compatible with Neon pooled/PgBouncer connections)
+    - Defers connection until first actual request
+    - Thread-safe with double-checked locking
     
     CRITICAL BEHAVIOR: Returns None if engine creation fails, allowing the
     application to start even with invalid DATABASE_URL configuration.
@@ -282,43 +282,49 @@ def get_engine():
                     return None
                 
                 try:
+                    # CRITICAL: Validate DATABASE_URL using SQLAlchemy make_url()
+                    # This is the production-grade way to parse and validate database URLs
+                    try:
+                        validated_url = make_url(DATABASE_URL)
+                        # Log only driver name to avoid exposing sensitive connection details
+                        logger.info(f"✅ DATABASE_URL validated successfully (driver: {validated_url.drivername})")
+                    except Exception as url_error:
+                        logger.error(
+                            f"❌ DATABASE_URL validation failed using make_url(): {url_error}. "
+                            f"Application will start but database operations will fail. "
+                            f"Required format: postgresql://user:password@host:port/database?sslmode=require"
+                        )
+                        _engine = None
+                        return None
+                    
+                    # CRITICAL: Create engine WITHOUT startup DB options
+                    # Neon pooled connections (PgBouncer) do NOT support startup parameters
+                    # like statement_timeout, options, or sslmode in connect_args
                     _engine = create_async_engine(
                         DATABASE_URL,
-                        # Pool configuration
+                        # Pool configuration - optimized for serverless
                         pool_size=POOL_SIZE,
                         max_overflow=MAX_OVERFLOW,
-                        pool_pre_ping=True,  # Validate connections before use (detects stale connections)
-                        pool_recycle=POOL_RECYCLE,  # Recycle connections (default: 300s for serverless)
+                        pool_pre_ping=True,  # Validate connections before use
+                        pool_recycle=POOL_RECYCLE,  # Recycle every 5 min (serverless-friendly)
                         pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
                         
                         # Echo SQL for debugging (disabled in production)
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
                         
-                        # asyncpg-specific connection arguments
-                        # NOTE: SSL is configured via DATABASE_URL query string (?sslmode=require), NOT here
-                        # If sslmode is not specified in the URL, asyncpg defaults to 'prefer' (secure if available, unencrypted if not)
-                        # For cloud deployments, always use ?sslmode=require to enforce encrypted connections
+                        # CRITICAL: Minimal connect_args for Neon compatibility
+                        # NO sslmode (must be in URL query string)
+                        # NO statement_timeout (not supported by PgBouncer)
+                        # NO server_settings with startup options
                         connect_args={
-                            # Connection timeout (5s for Railway cold starts)
+                            # Connection timeout (5s for cold starts)
                             "timeout": CONNECT_TIMEOUT,
                             
                             # Query timeout (30s per query)
                             "command_timeout": COMMAND_TIMEOUT,
-                            
-                            # PostgreSQL server settings
-                            "server_settings": {
-                                # CRITICAL: Disable JIT to prevent 60s+ first-query delays
-                                "jit": "off",
-                                # Application name for pg_stat_activity
-                                "application_name": "hiremebahamas",
-                                # NOTE: statement_timeout is NOT set here for compatibility with
-                                # Neon pooled connections (PgBouncer), which don't support startup
-                                # parameters. If needed, set it at the session level, e.g.:
-                                # conn.execute("SET statement_timeout = '30000ms'")
-                            },
                         }
                     )
-                    logger.info("✅ Database engine initialized successfully")
+                    logger.info("✅ Database engine initialized successfully (Neon-safe, no startup options)")
                     logger.info(
                         f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
                         f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
@@ -486,8 +492,10 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
       - Or via CI/CD pipeline
       - Or as a one-off job on deployment
     
+    ❌ NEVER use Base.metadata.create_all() in production
+    
     This function now only tests database connectivity to prevent race conditions.
-    Uses retry logic to handle Railway cold starts and transient failures.
+    Uses retry logic to handle cold starts and transient failures.
     
     CRITICAL BEHAVIOR: Returns False if database is not configured, allowing
     the application to start without a database connection. This fulfills
