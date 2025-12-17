@@ -1793,8 +1793,8 @@ def _get_connection_pool():
                         # FIX #2: jit=off prevents first-query timeout from JIT compilation
                         # NOTE: statement_timeout is NOT set in options for compatibility with
                         # Neon pooled connections (PgBouncer), which don't support startup
-                        # parameters. If needed, statement_timeout can be set at the
-                        # session level using: SET statement_timeout = '30s'
+                        # parameters. If needed, set it at the session level, e.g.:
+                        # cursor.execute("SET statement_timeout = '30000ms'")
                         options="-c jit=off",
                     )
                     keepalive_status = "enabled" if TCP_KEEPALIVE_ENABLED == 1 else "disabled"
@@ -2093,8 +2093,8 @@ def _create_direct_postgresql_connection(sslmode: str = None):
         # FIX #2: jit=off prevents first-query timeout from JIT compilation
         # NOTE: statement_timeout is NOT set in options for compatibility with
         # Neon pooled connections (PgBouncer), which don't support startup
-        # parameters. If needed, statement_timeout can be set at the
-        # session level using: SET statement_timeout = '30s'
+        # parameters. If needed, set it at the session level, e.g.:
+        # cursor.execute("SET statement_timeout = '30000ms'")
         options="-c jit=off",
     )
 

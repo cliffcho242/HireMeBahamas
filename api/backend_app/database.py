@@ -313,8 +313,8 @@ def get_engine():
                                 "application_name": "hiremebahamas",
                                 # NOTE: statement_timeout is NOT set here for compatibility with
                                 # Neon pooled connections (PgBouncer), which don't support startup
-                                # parameters. If needed, statement_timeout can be set at the
-                                # session level using: SET statement_timeout = '30s'
+                                # parameters. If needed, set it at the session level, e.g.:
+                                # conn.execute("SET statement_timeout = '30000ms'")
                             },
                         }
                     )
