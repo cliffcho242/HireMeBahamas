@@ -18,6 +18,8 @@
  * Note: HTTP URLs are only acceptable for local development. Production must use HTTPS.
  */
 
+import { apiUrl, getApiBase, isApiConfigured } from '../lib/api';
+
 interface BackendConfig {
   url: string;
   available: boolean;
@@ -42,20 +44,9 @@ validateBackendUrl();
 
 // Detect backend URL
 function getBackendConfig(): BackendConfig {
-  const envUrl = import.meta.env.VITE_API_URL;
-  
-  // If explicit URL is set in env, use it
-  if (envUrl) {
-    return {
-      url: envUrl,
-      available: true,
-    };
-  }
-  
-  // Otherwise, use same-origin (for Vercel deployments)
   return {
-    url: window.location.origin,
-    available: true,
+    url: getApiBase(),
+    available: isApiConfigured(),
   };
 }
 
@@ -63,18 +54,7 @@ function getBackendConfig(): BackendConfig {
  * Get the full URL for an API endpoint
  */
 export function getApiUrl(endpoint: string): string {
-  const config = getBackendConfig();
-  const baseUrl = config.url;
-  
-  // Ensure endpoint starts with /
-  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  
-  // Don't double up /api if endpoint already includes it
-  if (normalizedEndpoint.startsWith('/api/')) {
-    return `${baseUrl}${normalizedEndpoint}`;
-  } else {
-    return `${baseUrl}/api${normalizedEndpoint}`;
-  }
+  return apiUrl(endpoint);
 }
 
 /**
@@ -93,7 +73,7 @@ export async function testBackends(): Promise<{
   if (config.url) {
     try {
       const start = Date.now();
-      const response = await fetch(`${config.url}/api/health`, {
+      const response = await fetch(apiUrl('/api/health'), {
         method: 'GET',
         signal: AbortSignal.timeout(5000),
       });
