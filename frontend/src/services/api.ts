@@ -7,6 +7,7 @@ import { ENV_API } from '../config/env';
 import { refreshToken } from './auth';
 import { safeParseUrl } from '../lib/safeUrl';
 import { apiUrl, getApiBase } from '../lib/api';
+import { guardMutation, logDemoModeStatus } from '../config/demo';
 
 // Note: Backend URL validation happens automatically when backendRouter is imported
 // The validateBackendUrl() function is called at module load in backendRouter.ts
@@ -87,6 +88,11 @@ if (typeof window !== 'undefined' && import.meta.env.DEV) {
   console.log('ENV_API:', ENV_API || 'not set');
   console.log('Window Origin:', window.location.origin);
   console.log('========================');
+}
+
+// Log demo mode status on startup
+if (typeof window !== 'undefined') {
+  logDemoModeStatus();
 }
 
 // Create axios instance with retry logic
@@ -430,12 +436,20 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: async (credentials: { email: string; password: string }) => {
-    // Use extended timeout for login as backend may need to wake up
-    // and password verification can take time
-    const response = await api.post('/api/auth/login', credentials, {
-      timeout: BACKEND_WAKE_TIME, // 1 minute for cold start + password verification
-    });
-    return response.data;
+    return guardMutation(
+      async () => {
+        // Use extended timeout for login as backend may need to wake up
+        // and password verification can take time
+        const response = await api.post('/api/auth/login', credentials, {
+          timeout: BACKEND_WAKE_TIME, // 1 minute for cold start + password verification
+        });
+        return response.data;
+      },
+      {
+        message: 'login',
+        mockResponse: { success: true, token: 'demo-token', user: { id: 'demo-user', email: credentials.email } }
+      }
+    );
   },
 
   register: async (userData: {
@@ -447,17 +461,33 @@ export const authAPI = {
     location: string;
     phone?: string;
   }) => {
-    // Use extended timeout for registration as backend may need to wake up
-    // and password hashing can take time
-    const response = await api.post('/api/auth/register', userData, {
-      timeout: BACKEND_WAKE_TIME, // 1 minute for cold start + password hashing
-    });
-    return response.data;
+    return guardMutation(
+      async () => {
+        // Use extended timeout for registration as backend may need to wake up
+        // and password hashing can take time
+        const response = await api.post('/api/auth/register', userData, {
+          timeout: BACKEND_WAKE_TIME, // 1 minute for cold start + password hashing
+        });
+        return response.data;
+      },
+      {
+        message: 'register',
+        mockResponse: { success: true, token: 'demo-token', user: { id: 'demo-user', ...userData } }
+      }
+    );
   },
 
   refreshToken: async () => {
-    const response = await api.post('/api/auth/refresh');
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post('/api/auth/refresh');
+        return response.data;
+      },
+      {
+        message: 'refresh token',
+        mockResponse: { success: true, token: 'demo-token' }
+      }
+    );
   },
 
   verifySession: async () => {
@@ -471,16 +501,32 @@ export const authAPI = {
   },
 
   updateProfile: async (data: Partial<User>): Promise<User> => {
-    const response = await api.put('/api/auth/profile', data);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.put('/api/auth/profile', data);
+        return response.data;
+      },
+      {
+        message: 'update profile',
+        mockResponse: { ...data } as User
+      }
+    );
   },
 
   changePassword: async (data: {
     current_password: string;
     new_password: string;
   }) => {
-    const response = await api.put('/api/auth/change-password', data);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.put('/api/auth/change-password', data);
+        return response.data;
+      },
+      {
+        message: 'change password',
+        mockResponse: { success: true, message: 'Password changed successfully' }
+      }
+    );
   },
 
   getUserProfile: async (identifier: string | number): Promise<UserResponse> => {
@@ -495,21 +541,37 @@ export const authAPI = {
 
   // OAuth methods
   googleLogin: async (token: string, userType?: string) => {
-    const response = await api.post('/api/auth/oauth/google', {
-      token,
-      provider: 'google',
-      user_type: userType || 'user'
-    });
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post('/api/auth/oauth/google', {
+          token,
+          provider: 'google',
+          user_type: userType || 'user'
+        });
+        return response.data;
+      },
+      {
+        message: 'Google login',
+        mockResponse: { success: true, token: 'demo-token', user: { id: 'demo-user', provider: 'google' } }
+      }
+    );
   },
 
   appleLogin: async (token: string, userType?: string) => {
-    const response = await api.post('/api/auth/oauth/apple', {
-      token,
-      provider: 'apple',
-      user_type: userType || 'user'
-    });
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post('/api/auth/oauth/apple', {
+          token,
+          provider: 'apple',
+          user_type: userType || 'user'
+        });
+        return response.data;
+      },
+      {
+        message: 'Apple login',
+        mockResponse: { success: true, token: 'demo-token', user: { id: 'demo-user', provider: 'apple' } }
+      }
+    );
   },
 };
 
@@ -544,18 +606,42 @@ export const jobsAPI = {
     is_remote: boolean;
     skills?: string[];
   }) => {
-    const response = await api.post('/api/jobs', jobData);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post('/api/jobs', jobData);
+        return response.data;
+      },
+      {
+        message: 'create job',
+        mockResponse: { success: true, id: 'demo-job-id', ...jobData }
+      }
+    );
   },
 
   updateJob: async (id: string, data: Partial<Job>) => {
-    const response = await api.put(`/api/jobs/${id}`, data);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.put(`/api/jobs/${id}`, data);
+        return response.data;
+      },
+      {
+        message: 'update job',
+        mockResponse: { success: true, id, ...data }
+      }
+    );
   },
 
   deleteJob: async (id: string) => {
-    const response = await api.delete(`/api/jobs/${id}`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.delete(`/api/jobs/${id}`);
+        return response.data;
+      },
+      {
+        message: 'delete job',
+        mockResponse: { success: true, id }
+      }
+    );
   },
 
   applyToJob: async (
@@ -565,8 +651,16 @@ export const jobsAPI = {
       proposed_budget: number;
     }
   ) => {
-    const response = await api.post(`/api/jobs/${id}/apply`, applicationData);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post(`/api/jobs/${id}/apply`, applicationData);
+        return response.data;
+      },
+      {
+        message: 'apply to job',
+        mockResponse: { success: true, application_id: 'demo-app-id', job_id: id, ...applicationData }
+      }
+    );
   },
 
   getJobApplications: async (id: string) => {
@@ -585,8 +679,16 @@ export const jobsAPI = {
   },
 
   toggleJobStatus: async (id: string | number) => {
-    const response = await api.post(`/api/jobs/${id}/toggle`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post(`/api/jobs/${id}/toggle`);
+        return response.data;
+      },
+      {
+        message: 'toggle job status',
+        mockResponse: { success: true, id, status: 'toggled' }
+      }
+    );
   },
 };
 
@@ -598,10 +700,18 @@ export const messagesAPI = {
   },
 
   createConversation: async (participantId: string) => {
-    const response = await api.post('/api/messages/conversations', {
-      participant_id: participantId,
-    });
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post('/api/messages/conversations', {
+          participant_id: participantId,
+        });
+        return response.data;
+      },
+      {
+        message: 'create conversation',
+        mockResponse: { success: true, conversation_id: 'demo-conv-id', participant_id: participantId }
+      }
+    );
   },
 
   getConversationMessages: async (
@@ -616,16 +726,32 @@ export const messagesAPI = {
   },
 
   sendMessage: async (conversationId: string, content: string) => {
-    const response = await api.post(
-      `/api/messages/conversations/${conversationId}/messages`,
-      { content }
+    return guardMutation(
+      async () => {
+        const response = await api.post(
+          `/api/messages/conversations/${conversationId}/messages`,
+          { content }
+        );
+        return response.data;
+      },
+      {
+        message: 'send message',
+        mockResponse: { success: true, message_id: 'demo-msg-id', conversation_id: conversationId, content }
+      }
     );
-    return response.data;
   },
 
   markMessageRead: async (messageId: string) => {
-    const response = await api.put(`/api/messages/messages/${messageId}/read`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.put(`/api/messages/messages/${messageId}/read`);
+        return response.data;
+      },
+      {
+        message: 'mark message as read',
+        mockResponse: { success: true, message_id: messageId }
+      }
+    );
   },
 
   getUnreadCount: async () => {
@@ -642,8 +768,16 @@ export const reviewsAPI = {
     rating: number;
     comment?: string;
   }) => {
-    const response = await api.post('/api/reviews', reviewData);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post('/api/reviews', reviewData);
+        return response.data;
+      },
+      {
+        message: 'create review',
+        mockResponse: { success: true, review_id: 'demo-review-id', ...reviewData }
+      }
+    );
   },
 
   getUserReviews: async (
@@ -673,13 +807,29 @@ export const reviewsAPI = {
     reviewId: string,
     data: { rating?: number; comment?: string }
   ) => {
-    const response = await api.put(`/api/reviews/${reviewId}`, data);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.put(`/api/reviews/${reviewId}`, data);
+        return response.data;
+      },
+      {
+        message: 'update review',
+        mockResponse: { success: true, review_id: reviewId, ...data }
+      }
+    );
   },
 
   deleteReview: async (reviewId: string) => {
-    const response = await api.delete(`/api/reviews/${reviewId}`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.delete(`/api/reviews/${reviewId}`);
+        return response.data;
+      },
+      {
+        message: 'delete review',
+        mockResponse: { success: true, review_id: reviewId }
+      }
+    );
   },
 
   getUserReviewStats: async (userId: string) => {
@@ -691,41 +841,73 @@ export const reviewsAPI = {
 // Upload API
 export const uploadAPI = {
   uploadAvatar: async (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await api.post('/api/upload/avatar', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
+    return guardMutation(
+      async () => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await api.post('/api/upload/avatar', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+      },
+      {
+        message: 'upload avatar',
+        mockResponse: { success: true, url: 'https://demo-avatar.png', file_name: file.name }
+      }
+    );
   },
 
   uploadPortfolioImages: async (files: File[]) => {
-    const formData = new FormData();
-    files.forEach((file) => formData.append('files', file));
-    const response = await api.post('/api/upload/portfolio', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
+    return guardMutation(
+      async () => {
+        const formData = new FormData();
+        files.forEach((file) => formData.append('files', file));
+        const response = await api.post('/api/upload/portfolio', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+      },
+      {
+        message: 'upload portfolio images',
+        mockResponse: { success: true, urls: files.map((f, i) => `https://demo-portfolio-${i}.png`) }
+      }
+    );
   },
 
   deletePortfolioImage: async (fileUrl: string) => {
-    const formData = new FormData();
-    formData.append('file_url', fileUrl);
-    const response = await api.delete('/api/upload/portfolio', {
-      data: formData,
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
+    return guardMutation(
+      async () => {
+        const formData = new FormData();
+        formData.append('file_url', fileUrl);
+        const response = await api.delete('/api/upload/portfolio', {
+          data: formData,
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+      },
+      {
+        message: 'delete portfolio image',
+        mockResponse: { success: true, file_url: fileUrl }
+      }
+    );
   },
 
   uploadDocument: async (file: File, description?: string) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (description) formData.append('description', description);
-    const response = await api.post('/api/upload/document', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
+    return guardMutation(
+      async () => {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (description) formData.append('description', description);
+        const response = await api.post('/api/upload/document', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+      },
+      {
+        message: 'upload document',
+        mockResponse: { success: true, url: 'https://demo-document.pdf', file_name: file.name, description }
+      }
+    );
   },
 
   getMyFiles: async () => {
@@ -734,29 +916,60 @@ export const uploadAPI = {
   },
 
   deleteFile: async (fileId: string) => {
-    const response = await api.delete(`/api/upload/file/${fileId}`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.delete(`/api/upload/file/${fileId}`);
+        return response.data;
+      },
+      {
+        message: 'delete file',
+        mockResponse: { success: true, file_id: fileId }
+      }
+    );
   },
 };
 
 // Profile Pictures API
 export const profilePicturesAPI = {
   uploadPicture: async (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await api.post('/api/profile-pictures/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
+    return guardMutation(
+      async () => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await api.post('/api/profile-pictures/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+      },
+      {
+        message: 'upload profile picture',
+        mockResponse: { success: true, picture_id: 'demo-pic-id', url: 'https://demo-profile.png', file_name: file.name }
+      }
+    );
   },
 
   uploadMultiplePictures: async (files: File[]) => {
-    const formData = new FormData();
-    files.forEach((file) => formData.append('files', file));
-    const response = await api.post('/api/profile-pictures/upload-multiple', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
+    return guardMutation(
+      async () => {
+        const formData = new FormData();
+        files.forEach((file) => formData.append('files', file));
+        const response = await api.post('/api/profile-pictures/upload-multiple', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+      },
+      {
+        message: 'upload multiple profile pictures',
+        mockResponse: { 
+          success: true, 
+          pictures: files.map((f, i) => ({ 
+            id: `demo-pic-${i}`, 
+            url: `https://demo-profile-${i}.png`,
+            file_name: f.name 
+          })) 
+        }
+      }
+    );
   },
 
   listPictures: async () => {
@@ -765,13 +978,29 @@ export const profilePicturesAPI = {
   },
 
   setCurrentPicture: async (pictureId: number) => {
-    const response = await api.post(`/api/profile-pictures/${pictureId}/set-current`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post(`/api/profile-pictures/${pictureId}/set-current`);
+        return response.data;
+      },
+      {
+        message: 'set current profile picture',
+        mockResponse: { success: true, picture_id: pictureId }
+      }
+    );
   },
 
   deletePicture: async (pictureId: number) => {
-    const response = await api.delete(`/api/profile-pictures/${pictureId}`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.delete(`/api/profile-pictures/${pictureId}`);
+        return response.data;
+      },
+      {
+        message: 'delete profile picture',
+        mockResponse: { success: true, picture_id: pictureId }
+      }
+    );
   },
 };
 
@@ -792,23 +1021,55 @@ export const postsAPI = {
     image_url?: string;
     video_url?: string;
   }) => {
-    const response = await api.post('/api/posts', postData);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post('/api/posts', postData);
+        return response.data;
+      },
+      {
+        message: 'create post',
+        mockResponse: { success: true, post_id: 'demo-post-id', ...postData, likes: 0, comments: 0 }
+      }
+    );
   },
 
   likePost: async (postId: number) => {
-    const response = await api.post(`/api/posts/${postId}/like`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post(`/api/posts/${postId}/like`);
+        return response.data;
+      },
+      {
+        message: 'like post',
+        mockResponse: { success: true, post_id: postId, liked: true }
+      }
+    );
   },
 
   deletePost: async (postId: number) => {
-    const response = await api.delete(`/api/posts/${postId}`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.delete(`/api/posts/${postId}`);
+        return response.data;
+      },
+      {
+        message: 'delete post',
+        mockResponse: { success: true, post_id: postId }
+      }
+    );
   },
 
   updatePost: async (postId: number, postData: { content: string }) => {
-    const response = await api.put(`/api/posts/${postId}`, postData);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.put(`/api/posts/${postId}`, postData);
+        return response.data;
+      },
+      {
+        message: 'update post',
+        mockResponse: { success: true, post_id: postId, ...postData }
+      }
+    );
   },
 
   getComments: async (postId: number) => {
@@ -817,13 +1078,29 @@ export const postsAPI = {
   },
 
   createComment: async (postId: number, content: string) => {
-    const response = await api.post(`/api/posts/${postId}/comments`, { content });
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post(`/api/posts/${postId}/comments`, { content });
+        return response.data;
+      },
+      {
+        message: 'create comment',
+        mockResponse: { success: true, comment_id: 'demo-comment-id', post_id: postId, content }
+      }
+    );
   },
 
   deleteComment: async (postId: number, commentId: number) => {
-    const response = await api.delete(`/api/posts/${postId}/comments/${commentId}`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.delete(`/api/posts/${postId}/comments/${commentId}`);
+        return response.data;
+      },
+      {
+        message: 'delete comment',
+        mockResponse: { success: true, post_id: postId, comment_id: commentId }
+      }
+    );
   },
 };
 
@@ -836,8 +1113,16 @@ export const hireMeAPI = {
   },
 
   toggleAvailability: async () => {
-    const response = await api.post('/api/hireme/toggle');
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.post('/api/hireme/toggle');
+        return response.data;
+      },
+      {
+        message: 'toggle hire me availability',
+        mockResponse: { success: true, hire_me_enabled: true }
+      }
+    );
   },
 };
 
@@ -870,15 +1155,31 @@ function validateUserId(userId: number | string): string {
 // Users API
 export const usersAPI = {
   followUser: async (userId: number | string) => {
-    const id = validateUserId(userId);
-    const response = await api.post(`/api/users/follow/${id}`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const id = validateUserId(userId);
+        const response = await api.post(`/api/users/follow/${id}`);
+        return response.data;
+      },
+      {
+        message: 'follow user',
+        mockResponse: { success: true, user_id: userId, following: true }
+      }
+    );
   },
 
   unfollowUser: async (userId: number | string) => {
-    const id = validateUserId(userId);
-    const response = await api.post(`/api/users/unfollow/${id}`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const id = validateUserId(userId);
+        const response = await api.post(`/api/users/unfollow/${id}`);
+        return response.data;
+      },
+      {
+        message: 'unfollow user',
+        mockResponse: { success: true, user_id: userId, following: false }
+      }
+    );
   },
 
   getFollowers: async (): Promise<FollowersResponse> => {
@@ -929,13 +1230,29 @@ export const notificationsAPI = {
   },
 
   markAsRead: async (notificationId: number) => {
-    const response = await api.put(`/api/notifications/${notificationId}/read`);
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.put(`/api/notifications/${notificationId}/read`);
+        return response.data;
+      },
+      {
+        message: 'mark notification as read',
+        mockResponse: { success: true, notification_id: notificationId }
+      }
+    );
   },
 
   markAllAsRead: async () => {
-    const response = await api.put('/api/notifications/mark-all-read');
-    return response.data;
+    return guardMutation(
+      async () => {
+        const response = await api.put('/api/notifications/mark-all-read');
+        return response.data;
+      },
+      {
+        message: 'mark all notifications as read',
+        mockResponse: { success: true, marked_count: 0 }
+      }
+    );
   },
 };
 
