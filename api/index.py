@@ -421,6 +421,50 @@ app.add_middleware(
 )
 
 # ============================================================================
+# RATE LIMITING MIDDLEWARE (NO REDIS NEEDED)
+# ============================================================================
+# In-memory rate limiting: 100 requests per 60 seconds per IP
+# ✔ Protects DB
+# ✔ Protects auth
+# ✔ Facebook-safe
+RATE_LIMIT = {}
+
+@app.middleware("http")
+async def rate_limit(request: Request, call_next):
+    """Rate limiting middleware - 100 requests per 60 seconds per IP.
+    
+    Protects against abuse and DDoS attacks using in-memory storage.
+    No Redis required - works in serverless environments.
+    """
+    ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    
+    # Skip rate limiting for health check endpoints
+    if request.url.path in ["/health", "/health/ping", "/ready", "/status"]:
+        return await call_next(request)
+    
+    # Initialize rate limit tracking for this IP
+    RATE_LIMIT.setdefault(ip, [])
+    
+    # Remove timestamps older than 60 seconds
+    RATE_LIMIT[ip] = [t for t in RATE_LIMIT[ip] if now - t < 60]
+    
+    # Check if rate limit exceeded (100 requests per 60 seconds)
+    if len(RATE_LIMIT[ip]) >= 100:
+        logger.warning(f"Rate limit exceeded for IP: {ip}")
+        return Response(
+            content="Too Many Requests",
+            status_code=429,
+            headers={"Retry-After": "60"}
+        )
+    
+    # Add current request timestamp
+    RATE_LIMIT[ip].append(now)
+    
+    # Process request
+    return await call_next(request)
+
+# ============================================================================
 # CACHE CONTROL MIDDLEWARE
 # ============================================================================
 # Cache control configuration for different endpoint patterns
