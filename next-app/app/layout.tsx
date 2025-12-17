@@ -1,12 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
+// ✅ Font Optimization: Using next/font for automatic font optimization
+// This provides zero layout shift and self-hosted fonts
+const inter = Inter({ 
+  subsets: ["latin"],
+  display: "swap",
+  fallback: ["system-ui", "-apple-system", "sans-serif"]
+});
+
 export const metadata: Metadata = {
-  title: "HireMeBahamas - Find Jobs in the Bahamas",
-  description:
-    "The fastest job platform in the Bahamas. Find your dream job or hire the perfect candidate in seconds.",
+  title: "Hire Me Bahamas",
+  description: "Hire trusted professionals in the Bahamas",
   keywords: [
     "jobs",
     "bahamas",
@@ -15,6 +23,7 @@ export const metadata: Metadata = {
     "careers",
     "nassau",
     "freeport",
+    "professionals",
   ],
   authors: [{ name: "HireMeBahamas Team" }],
   creator: "HireMeBahamas",
@@ -23,30 +32,22 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "HireMeBahamas",
+    title: "Hire Me Bahamas",
   },
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://hiremebahamas.com",
-    siteName: "HireMeBahamas",
-    title: "HireMeBahamas - Find Jobs in the Bahamas",
-    description:
-      "The fastest job platform in the Bahamas. Find your dream job or hire the perfect candidate in seconds.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "HireMeBahamas",
-      },
-    ],
+    siteName: "Hire Me Bahamas",
+    title: "Hire Me Bahamas",
+    description: "Hire trusted professionals in the Bahamas",
+    images: ["/og.png"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "HireMeBahamas - Find Jobs in the Bahamas",
-    description: "The fastest job platform in the Bahamas.",
-    images: ["/og-image.png"],
+    title: "Hire Me Bahamas",
+    description: "Hire trusted professionals in the Bahamas",
+    images: ["/og.png"],
   },
   robots: {
     index: true,
@@ -81,12 +82,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -97,7 +92,7 @@ export default function RootLayout({
           content="black-translucent"
         />
       </head>
-      <body className="antialiased scroll-smooth">
+      <body className={`${inter.className} antialiased scroll-smooth`}>
         {children}
         <Analytics />
         <SpeedInsights />
