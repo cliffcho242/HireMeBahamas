@@ -592,7 +592,7 @@ def test_db_connection() -> tuple[bool, Optional[str]]:
         return False, error_msg
     
     try:
-        with engine.connect() as conn:
+        with actual_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         return True, None
     except Exception as e:
@@ -646,7 +646,7 @@ def get_pool_status() -> dict:
             "error": "Database engine not configured. Check DATABASE_URL configuration and network connectivity."
         }
     
-    pool = engine.pool
+    pool = actual_engine.pool
     return {
         "pool_size": pool.size() if hasattr(pool, 'size') else POOL_SIZE,
         "checked_in": pool.checkedin() if hasattr(pool, 'checkedin') else 0,
