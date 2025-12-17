@@ -57,7 +57,7 @@ def health():
     
     Render kills apps that fail health checks, so this must be instant.
     """
-    return {"ok": True}
+    return {"status": "ok"}
 
 
 # LIVENESS PROBE — Kubernetes/Render liveness check
@@ -701,7 +701,7 @@ def api_health():
     
     Render kills apps that fail health checks, so this must be instant.
     """
-    return {"ok": True}
+    return {"status": "ok"}
 
 
 # Detailed health check endpoint for monitoring
