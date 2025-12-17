@@ -222,8 +222,6 @@ def get_engine():
                         "server_settings": {
                             # CRITICAL: Disable JIT to prevent 60s+ first-query delays
                             "jit": "off",
-                            # Statement timeout in milliseconds
-                            "statement_timeout": str(STATEMENT_TIMEOUT_MS),
                             # Application name for pg_stat_activity
                             "application_name": "hiremebahamas",
                         },

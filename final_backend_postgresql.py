@@ -1791,8 +1791,7 @@ def _get_connection_pool():
                         # Works with keepalives for faster detection of broken connections
                         tcp_user_timeout=TCP_USER_TIMEOUT_MS,
                         # FIX #2: jit=off prevents first-query timeout from JIT compilation
-                        # Combined with statement_timeout for query execution limits
-                        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS} -c jit=off",
+                        options="-c jit=off",
                     )
                     keepalive_status = "enabled" if TCP_KEEPALIVE_ENABLED == 1 else "disabled"
                     user_timeout_sec = TCP_USER_TIMEOUT_MS // 1000
@@ -2088,7 +2087,7 @@ def _create_direct_postgresql_connection(sslmode: str = None):
         # Works with keepalives for faster detection of broken connections
         tcp_user_timeout=TCP_USER_TIMEOUT_MS,
         # FIX #2: jit=off prevents first-query timeout from JIT compilation
-        options=f"-c statement_timeout={STATEMENT_TIMEOUT_MS} -c jit=off",
+        options="-c jit=off",
     )
 
 

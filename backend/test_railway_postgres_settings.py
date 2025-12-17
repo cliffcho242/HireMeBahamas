@@ -37,11 +37,7 @@ def test_production_connection_settings():
         )
         print("✓ Test 2 passed: CONNECT_TIMEOUT_SECONDS=30 (NUCLEAR FIX)")
         
-        # Test 3: Verify statement_timeout is set  
-        assert database.STATEMENT_TIMEOUT_SECONDS == 30, (
-            f"Expected STATEMENT_TIMEOUT_SECONDS=30, got {database.STATEMENT_TIMEOUT_SECONDS}"
-        )
-        print("✓ Test 3 passed: STATEMENT_TIMEOUT_SECONDS=30")
+        # Test 3: (Removed - statement_timeout no longer configured for Neon compatibility)
         
         # Test 4: Verify IPv4 preference is enabled
         assert database.FORCE_IPV4 is True, (
@@ -73,11 +69,12 @@ def test_production_connection_settings():
         )
         print("✓ Test 7 passed: server_settings['jit']='off'")
         
-        # Test 8: Verify statement_timeout in server_settings
-        assert server_settings.get("statement_timeout") == "30000", (
-            f"Expected server_settings['statement_timeout']='30000', got {server_settings.get('statement_timeout')}"
+        # Test 8: Verify statement_timeout is NOT in server_settings (removed for Neon compatibility)
+        assert "statement_timeout" not in server_settings, (
+            f"Expected NO statement_timeout in server_settings (Neon compatibility), "
+            f"but found: {server_settings.get('statement_timeout')}"
         )
-        print("✓ Test 8 passed: server_settings['statement_timeout']='30000'")
+        print("✓ Test 8 passed: statement_timeout correctly NOT in server_settings (Neon compatible)")
         
         # Test 9: Verify pool_pre_ping is enabled
         assert database.engine_kwargs.get("pool_pre_ping") is True, (

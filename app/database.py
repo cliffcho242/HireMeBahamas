@@ -284,9 +284,8 @@ def get_engine():
                             # PostgreSQL application name for pg_stat_activity
                             "application_name": "hiremebahamas",
                             
-                            # PostgreSQL options for performance
-                            # STATEMENT_TIMEOUT_MS is in milliseconds (e.g., 30000), append 'ms' unit
-                            "options": f"-c statement_timeout={STATEMENT_TIMEOUT_MS}ms",
+                            # PostgreSQL options for performance (jit disabled for better first-query performance)
+                            "options": "-c jit=off",
                         }
                     )
                     logger.info("✅ Database engine initialized successfully (sync)")
