@@ -4,6 +4,7 @@ import re
 
 from app.api.auth import get_current_user
 from app.core.cache import get_cached, set_cached, invalidate_cache
+from app.core.memory_cache import cache_get, cache_set
 from app.core.background_tasks import notify_new_follower_task
 from app.database import get_db
 from app.models import Follow, Notification, NotificationType, User, Post
@@ -322,7 +323,7 @@ async def get_user(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get a specific user by ID or username
+    """Get a specific user by ID or username (with in-memory caching)
     
     Args:
         identifier: User ID (integer) or username (string)
@@ -334,6 +335,9 @@ async def get_user(
         
     Raises:
         HTTPException: 400 for invalid input, 404 if user not found
+        
+    Note:
+        Profile data is cached for 30 seconds (TTL ≤ 60s) for faster response times.
     """
     logger.info(f"User lookup requested by user_id={current_user.id} for identifier={identifier}")
     
@@ -353,6 +357,13 @@ async def get_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid identifier: too long (max 150 characters)"
         )
+    
+    # Try to get cached profile data (30s TTL)
+    cache_key = f"profile:{identifier}:{current_user.id}"
+    cached = cache_get(cache_key, ttl=30)
+    if cached is not None:
+        logger.debug(f"Cache hit for profile: {identifier}")
+        return cached
     
     # Validate username format if not a digit (alphanumeric, underscore, hyphen only)
     if not identifier.isdigit():
@@ -451,7 +462,7 @@ async def get_user(
     )
     posts_count = posts_result.scalar() or 0
 
-    return {
+    response = {
         "success": True,
         "user": {
             "id": user.id,
@@ -478,6 +489,11 @@ async def get_user(
             "following_count": following_count,
         },
     }
+    
+    # Cache the profile data for 30 seconds
+    cache_set(cache_key, response)
+    
+    return response
 
 
 @router.post("/follow/{user_id}")

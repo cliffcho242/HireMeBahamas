@@ -1,7 +1,16 @@
 from typing import List, Optional
 
 from app.core.security import get_current_user
+# Note: Maintaining both Redis (get_cached/set_cached/invalidate_cache) and 
+# in-memory cache (cache_get/cache_set/cache_invalidate_prefix) for backward 
+# compatibility and graceful migration.
+#
+# Migration Plan:
+# - Phase 1 (Current): Both caches active, in-memory cache serves requests
+# - Phase 2 (Future): Monitor performance, remove Redis dependencies if successful
+# - Timeline: Redis can be fully removed once in-memory cache proves stable in production
 from app.core.cache import get_cached, set_cached, invalidate_cache
+from app.core.memory_cache import cache_get, cache_set, cache_delete, cache_invalidate_prefix
 from app.core.cache_headers import CacheStrategy, handle_conditional_request, apply_performance_headers
 from app.core.pagination import paginate_auto, format_paginated_response
 from app.core.query_timeout import set_query_timeout
@@ -21,6 +30,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 router = APIRouter()
+
+
+async def invalidate_jobs_cache():
+    """
+    Helper function to invalidate both Redis and in-memory caches for jobs.
+    
+    This maintains backward compatibility while using the new in-memory cache.
+    """
+    # Invalidate Redis cache (if available)
+    await invalidate_cache("jobs:list:")
+    await invalidate_cache("jobs:stats:")
+    
+    # Invalidate in-memory cache
+    cache_invalidate_prefix("jobs:list:")
+    cache_invalidate_prefix("jobs:stats:")
 
 
 @router.post("/", response_model=JobResponse)
@@ -61,8 +85,7 @@ async def create_job(
     await db.commit()
     
     # Invalidate jobs cache after creating new job
-    await invalidate_cache("jobs:list:")
-    await invalidate_cache("jobs:stats:")
+    await invalidate_jobs_cache()
 
     return job_with_employer
 
@@ -86,25 +109,23 @@ async def get_jobs(
     status: Optional[str] = Query("active"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get jobs with dual pagination, HTTP caching, and filtering
+    """Get jobs with dual pagination, in-memory caching, and filtering
     
     Mobile API Optimization Features:
     - **Dual Pagination**: Cursor-based (mobile) or offset-based (web)
-    - **HTTP Caching**: ETag validation with stale-while-revalidate
+    - **In-Memory Caching**: TTL-based caching for fast response (≤60s)
     - **N+1 Prevention**: Eager loading of employer relationship
     
-    Performance: Cached for 3 minutes (180s) for sub-100ms response times.
+    Performance: Cached for 60 seconds (TTL ≤ 60s) for sub-100ms response times.
     """
     # Build cache key from all parameters
     cache_params = f"{cursor}:{skip}:{page}:{limit}:{direction}:{category}:{location}:{is_remote}:{budget_min}:{budget_max}:{search}:{status}"
     cache_key = f"jobs:list:{cache_params}"
     
-    # Try to get from cache first (sub-100ms cache hit)
-    cached_response = await get_cached(cache_key)
+    # Try to get from in-memory cache first (60s TTL)
+    cached_response = cache_get(cache_key, ttl=60)
     if cached_response is not None:
-        response = handle_conditional_request(request, cached_response, CacheStrategy.JOBS)
-        apply_performance_headers(response)
-        return response
+        return cached_response
     
     # Set query timeout for job listing (5s default)
     await set_query_timeout(db)
@@ -179,14 +200,10 @@ async def get_jobs(
 
     response = format_paginated_response(jobs_data, pagination_meta)
     
-    # Cache for 3 minutes (180s)
-    # Jobs don't change as frequently as posts, so longer TTL is acceptable
-    await set_cached(cache_key, response, ttl=180)
+    # Cache for 60 seconds (TTL ≤ 60s as per requirement)
+    cache_set(cache_key, response)
     
-    # Return with HTTP caching headers
-    json_response = handle_conditional_request(request, response, CacheStrategy.JOBS)
-    apply_performance_headers(json_response)
-    return json_response
+    return response
 
 
 @router.get("/{job_id}", response_model=JobResponse)
@@ -247,8 +264,7 @@ async def update_job(
     updated_job = result.scalar_one()
     
     # Invalidate jobs cache after updating job
-    await invalidate_cache("jobs:list:")
-    await invalidate_cache("jobs:stats:")
+    await invalidate_jobs_cache()
 
     return updated_job
 
@@ -278,8 +294,7 @@ async def delete_job(
     await db.commit()
     
     # Invalidate jobs cache after deleting job
-    await invalidate_cache("jobs:list:")
-    await invalidate_cache("jobs:stats:")
+    await invalidate_jobs_cache()
 
     return {"message": "Job deleted successfully"}
 
