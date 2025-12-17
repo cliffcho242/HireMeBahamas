@@ -41,6 +41,26 @@ Neon PostgreSQL (managed, scalable)
 - **[FINAL_SPEED_ARCHITECTURE.md](./FINAL_SPEED_ARCHITECTURE.md)** - Complete setup guide and deployment instructions
 - **[RENDER_DEPLOYMENT_CHECKLIST.md](./RENDER_DEPLOYMENT_CHECKLIST.md)** - Production deployment verification checklist
 - **[📖 ERROR_HANDLING_LOGGING_GUIDE.md](./ERROR_HANDLING_LOGGING_GUIDE.md)** - Central error handling and logging guide
+- **[📖 MIGRATIONS.md](./MIGRATIONS.md)** - **REQUIRED**: Database migrations guide (Alembic)
+
+### 🗄️ Database Migrations
+
+**⚠️ PRODUCTION REQUIREMENT**: This application uses Alembic for database schema management.
+
+**Never use `Base.metadata.create_all(engine)` in production** - it causes race conditions!
+
+```bash
+# Apply all pending migrations
+alembic upgrade head
+
+# Create new migration
+alembic revision --autogenerate -m "Description"
+
+# View migration history
+alembic history
+```
+
+**📖 [Complete Migration Guide: MIGRATIONS.md](./MIGRATIONS.md)** - Detailed instructions for creating and running migrations
 
 ⚠️ **Note**: Railway backend documentation in this repository is deprecated. Use **Render** for all new deployments.
 
