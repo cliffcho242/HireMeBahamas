@@ -46,6 +46,25 @@ export function LazyImage({
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
+  const loadImage = () => {
+    const img = new Image();
+    
+    img.onload = () => {
+      setImageSrc(src);
+      setIsLoaded(true);
+      setHasError(false);
+      onLoad?.();
+    };
+
+    img.onerror = () => {
+      setImageSrc(fallbackSrc);
+      setHasError(true);
+      onError?.();
+    };
+
+    img.src = src;
+  };
+
   useEffect(() => {
     if (!imageRef) return;
 
@@ -74,25 +93,6 @@ export function LazyImage({
       }
     };
   }, [imageRef, src, threshold, rootMargin]);
-
-  const loadImage = () => {
-    const img = new Image();
-    
-    img.onload = () => {
-      setImageSrc(src);
-      setIsLoaded(true);
-      setHasError(false);
-      onLoad?.();
-    };
-
-    img.onerror = () => {
-      setImageSrc(fallbackSrc);
-      setHasError(true);
-      onError?.();
-    };
-
-    img.src = src;
-  };
 
   return (
     <img
@@ -160,7 +160,7 @@ export function ProgressiveImage({
 /**
  * Responsive Image Component with srcset
  */
-interface ResponsiveImageProps extends LazyImageProps {
+interface ResponsiveImageProps extends Omit<LazyImageProps, 'srcSet'> {
   srcSet?: {
     '1x'?: string;
     '2x'?: string;
