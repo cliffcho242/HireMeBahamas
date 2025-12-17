@@ -8,11 +8,13 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Configure CORS
+# Configure CORS - Simple development server
+# ⚠️ WARNING: This is a simplified configuration for local development only
+# For production deployment, use api/index.py with secure CORS settings
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # Required when using wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )

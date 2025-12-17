@@ -239,21 +239,53 @@ DATABASE_URL = (
     os.getenv("POSTGRES_URL")
 )
 
-# CORS origins - Allow all origins for Vercel deployments
-# Vercel preview deployments have dynamic URLs, so we need to be permissive
-# In production, you can restrict this to specific domains
-ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "*")
-if ALLOWED_ORIGINS_ENV == "*":
-    ALLOWED_ORIGINS = ["*"]
-    # CRITICAL: When using wildcard origins (*), credentials MUST be False
-    # This is a CORS security requirement - browsers will block requests otherwise
-    ALLOW_CREDENTIALS = False
-    logger.info("CORS: Allowing all origins (wildcard), credentials disabled")
+# CORS origins - Production-safe configuration
+# 🚫 SECURITY: No wildcard (*) allowed in production
+# Production must use specific domains via ALLOWED_ORIGINS environment variable
+ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "")
+
+# Determine if running in production
+_is_production = is_production_mode()
+
+if _is_production:
+    # Production mode: strict domain whitelist only
+    if ALLOWED_ORIGINS_ENV and ALLOWED_ORIGINS_ENV != "*":
+        # Use specific origins from environment
+        ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
+        ALLOW_CREDENTIALS = True
+        logger.info(f"CORS: Production mode with specific origins: {ALLOWED_ORIGINS}")
+    else:
+        # Default production origins (no wildcard allowed)
+        ALLOWED_ORIGINS = [
+            "https://hiremebahamas.com",
+            "https://www.hiremebahamas.com",
+        ]
+        ALLOW_CREDENTIALS = True
+        logger.info(f"CORS: Production mode with default origins: {ALLOWED_ORIGINS}")
 else:
-    ALLOWED_ORIGINS = ALLOWED_ORIGINS_ENV.split(",")
-    # With specific origins, we can safely enable credentials
-    ALLOW_CREDENTIALS = True
-    logger.info(f"CORS: Allowing specific origins: {ALLOWED_ORIGINS}, credentials enabled")
+    # Development/preview mode: include localhost and preview URLs
+    if ALLOWED_ORIGINS_ENV == "*":
+        # Allow wildcard only in development
+        ALLOWED_ORIGINS = ["*"]
+        ALLOW_CREDENTIALS = False
+        logger.info("CORS: Development mode with wildcard origins (credentials disabled)")
+    elif ALLOWED_ORIGINS_ENV:
+        # Use custom origins if provided
+        ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
+        ALLOW_CREDENTIALS = True
+        logger.info(f"CORS: Development mode with custom origins: {ALLOWED_ORIGINS}")
+    else:
+        # Default development origins
+        ALLOWED_ORIGINS = [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://hiremebahamas.com",
+            "https://www.hiremebahamas.com",
+        ]
+        ALLOW_CREDENTIALS = True
+        logger.info(f"CORS: Development mode with default origins: {ALLOWED_ORIGINS}")
 
 # Mock user data for fallback
 MOCK_USERS = {
@@ -406,8 +438,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=ALLOW_CREDENTIALS,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # ============================================================================

@@ -3,10 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Test API")
 
+# Test app CORS configuration - for development/testing only
+# ⚠️ WARNING: This configuration is permissive for testing purposes
+# Production apps should use specific origins, methods, and headers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # Required when using wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )

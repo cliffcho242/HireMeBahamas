@@ -253,27 +253,24 @@ async def verify_jwt_token(
 # CORS CONFIGURATION
 # =============================================================================
 
-def get_cors_origins() -> list:
-    """Get list of allowed CORS origins"""
-    return [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-        "https://*.vercel.app",
-    ]
-
-
 def setup_cors(app: FastAPI) -> None:
-    """Configure CORS middleware"""
+    """Configure CORS middleware with production-safe settings.
+    
+    Security requirements:
+    - 🚫 No wildcard (*) in allow_origins for production
+    - ✅ Specific HTTP methods only
+    - ✅ Specific headers only (Authorization, Content-Type)
+    
+    Uses environment-aware get_cors_origins() from environment module.
+    """
+    from .environment import get_cors_origins
+    
     app.add_middleware(
         CORSMiddleware,
         allow_origins=get_cors_origins(),
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Authorization", "Content-Type"],
         expose_headers=["X-Request-ID"],
     )
 
