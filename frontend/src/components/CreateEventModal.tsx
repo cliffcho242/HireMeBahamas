@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { CreateEventRequest, DEFAULT_REMINDERS, EVENT_TYPES, VIDEO_PLATFORMS, Reminder } from '../types/event';
+import { isValidUrl } from '../utils/validation';
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -58,6 +59,12 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, on
   const handleSubmit = async () => {
     if (!title.trim() || !startDate || !startTime) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Validate meeting link URL if provided
+    if (meetingLink.trim() && !isValidUrl(meetingLink)) {
+      toast.error('Please enter a valid meeting link URL');
       return;
     }
 
@@ -356,7 +363,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, on
                         Meeting Link (Optional)
                       </label>
                       <input
-                        type="url"
+                        type="text"
                         value={meetingLink}
                         onChange={(e) => setMeetingLink(e.target.value)}
                         placeholder="https://zoom.us/j/..."
