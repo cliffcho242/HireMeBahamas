@@ -16,6 +16,7 @@
     "generate-assets": "node scripts/generate-pwa-assets.js",
     "generate-sitemap": "node scripts/generate-sitemap.js",
     "analyze-bundle": "node scripts/analyze-bundle.js",
+    "validate-seo": "node scripts/validate-seo.js",
     "optimize-images": "node scripts/optimize-images.js",
     "verify:user-page": "node verify-user-page-deps.js",
     "verify:types": "node verify-types.cjs"
