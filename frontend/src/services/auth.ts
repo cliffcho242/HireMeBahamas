@@ -72,9 +72,17 @@ export async function apiFetch(
   input: RequestInfo,
   init?: RequestInit
 ): Promise<Response> {
+  // Add authorization header if token exists
+  const token = localStorage.getItem('token');
+  const headers = {
+    ...init?.headers,
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+  };
+
   // First attempt
   const res = await fetch(input, {
     ...init,
+    headers,
     credentials: "include",
   });
 
@@ -83,9 +91,16 @@ export async function apiFetch(
     try {
       await refreshToken();
       
-      // Retry the original request with new token
+      // Get the new token and retry the original request
+      const newToken = localStorage.getItem('token');
+      const newHeaders = {
+        ...init?.headers,
+        ...(newToken ? { 'Authorization': `Bearer ${newToken}` } : {}),
+      };
+      
       return fetch(input, {
         ...init,
+        headers: newHeaders,
         credentials: "include",
       });
     } catch (error) {
