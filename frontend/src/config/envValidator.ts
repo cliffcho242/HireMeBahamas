@@ -7,6 +7,8 @@
  * Run this during build time to catch configuration errors early.
  */
 
+import { isValidUrl, isSecureUrl } from '../lib/safeUrl';
+
 interface ValidationResult {
   valid: boolean;
   errors: string[];
@@ -104,6 +106,49 @@ export function validateEnvironmentVariables(): ValidationResult {
         `   Either set VITE_API_URL or set VITE_REQUIRE_BACKEND_URL to 'false'.`
       );
       result.valid = false;
+    }
+  }
+
+  // Validate API URL format if set
+  if (import.meta.env.VITE_API_URL) {
+    const apiUrl = import.meta.env.VITE_API_URL;
+    
+    // Check if it's a valid URL
+    if (!isValidUrl(apiUrl)) {
+      result.valid = false;
+      result.errors.push(
+        `❌ INVALID URL FORMAT: VITE_API_URL="${apiUrl}"\n` +
+        `   URL must start with http:// or https://\n` +
+        `   Example: VITE_API_URL=https://api.yourdomain.com`
+      );
+    } else if (!isSecureUrl(apiUrl)) {
+      // Check if using HTTPS in production
+      result.valid = false;
+      result.errors.push(
+        `❌ INSECURE URL IN PRODUCTION: VITE_API_URL="${apiUrl}"\n` +
+        `   Production deployments must use HTTPS.\n` +
+        `   HTTP is only allowed for localhost in development.\n` +
+        `   Change to: VITE_API_URL=https://your-domain.com`
+      );
+    }
+  }
+
+  // Validate Socket URL if set
+  if (import.meta.env.VITE_SOCKET_URL) {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL;
+    
+    if (!isValidUrl(socketUrl)) {
+      result.valid = false;
+      result.errors.push(
+        `❌ INVALID URL FORMAT: VITE_SOCKET_URL="${socketUrl}"\n` +
+        `   URL must start with http:// or https://`
+      );
+    } else if (!isSecureUrl(socketUrl)) {
+      result.valid = false;
+      result.errors.push(
+        `❌ INSECURE URL IN PRODUCTION: VITE_SOCKET_URL="${socketUrl}"\n` +
+        `   Production deployments must use HTTPS.`
+      );
     }
   }
 

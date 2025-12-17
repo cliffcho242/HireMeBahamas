@@ -5,6 +5,7 @@ import { debugLog } from '../utils/debugLogger';
 import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
 import { ENV_API } from '../config/env';
 import { refreshToken } from './auth';
+import { safeParseUrl } from '../lib/safeUrl';
 
 // Note: Backend URL validation happens automatically when backendRouter is imported
 // The validateBackendUrl() function is called at module load in backendRouter.ts
@@ -215,9 +216,31 @@ api.interceptors.request.use((config) => {
     
     // Override the full URL (baseURL + url)
     // We need to extract just the endpoint part since getApiUrl returns the full URL
-    const urlObj = new URL(optimalUrl);
-    config.baseURL = urlObj.origin;
-    config.url = urlObj.pathname + urlObj.search;
+    // 🔒 SAFE URL PARSING: Use safeParseUrl to prevent "pattern mismatch" errors
+    const urlResult = safeParseUrl(optimalUrl, 'API Request');
+    
+    if (urlResult.success && urlResult.url) {
+      const urlObj = urlResult.url;
+      config.baseURL = urlObj.origin;
+      config.url = urlObj.pathname + urlObj.search;
+    } else {
+      // Log error in development, fail gracefully in production
+      const errorMsg = `Failed to parse API URL: ${urlResult.error}`;
+      if (import.meta.env.DEV) {
+        console.error('❌ URL Parsing Error:', errorMsg);
+      }
+      
+      // Throw error to prevent silent failures
+      throw new Error(
+        `API URL configuration error: ${urlResult.error}\n\n` +
+        `Please check your VITE_API_URL environment variable.\n` +
+        `Current value: ${optimalUrl}\n\n` +
+        `Valid examples:\n` +
+        `- Production: VITE_API_URL=https://api.yourdomain.com\n` +
+        `- Local dev: VITE_API_URL=http://localhost:8000\n` +
+        `- Vercel serverless: Leave VITE_API_URL unset`
+      );
+    }
   }
   
   // Enhanced logging for debugging (development only)
