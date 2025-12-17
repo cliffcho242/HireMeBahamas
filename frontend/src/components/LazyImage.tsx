@@ -8,7 +8,7 @@
  * - Responsive images with srcset
  * - Error handling with fallback
  */
-import React, { useState, useEffect, useRef, ImgHTMLAttributes } from 'react';
+import { useState, useEffect, ImgHTMLAttributes } from 'react';
 
 interface LazyImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   src: string;

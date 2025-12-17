@@ -21,7 +21,7 @@ export interface OptimisticUpdate<T> {
 export async function performOptimisticUpdate<T>(
   update: OptimisticUpdate<T>
 ): Promise<() => void> {
-  const { queryKey, updater, onError } = update;
+  const { queryKey, updater } = update;
 
   // Snapshot the previous value
   const previousData = queryClient.getQueryData<T>(queryKey);
