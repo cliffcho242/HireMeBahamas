@@ -4,31 +4,16 @@
 import axios from 'axios';
 import { User } from '../types/user';
 import { Job } from '../types/job';
+import { getApiBase, apiUrl } from '../lib/api';
 
 // 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
 if (import.meta.env.DEV) {
   console.log("API URL:", import.meta.env.VITE_API_URL);
 }
 
-// ✅ CORRECT: Get backend URL from environment variable (VITE_API_URL)
-// ❌ WRONG: Never hardcode localhost:8000 in production code
+// ✅ CORRECT: Use safe URL builder to get validated backend URL
 const getBackendUrl = (): string => {
-  // ✅ CORRECT: Use VITE_API_URL environment variable (properly exposed to browser by Vite)
-  const BACKEND_URL = import.meta.env.VITE_API_URL;
-  
-  if (BACKEND_URL) {
-    return BACKEND_URL;
-  }
-  
-  // If no explicit env var is set, use same-origin (for Vercel serverless)
-  // This works for both production and development when running on Vercel
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  
-  // ❌ WRONG: Never hardcode localhost in production fallback
-  // This should fail gracefully instead
-  throw new Error('Backend URL could not be determined. Set VITE_API_URL environment variable or ensure running in browser context.');
+  return getApiBase();
 };
 
 // AI Error Prevention: Multiple backend endpoints for redundancy
@@ -44,21 +29,25 @@ const BACKEND_ENDPOINTS = (() => {
 
 // Intelligent endpoint selection
 const selectBestEndpoint = async () => {
-  for (const endpoint of BACKEND_ENDPOINTS) {
-    try {
-      const response = await fetch(`${endpoint}/health`, { 
-        method: 'GET'
-      });
-      if (response.ok) {
-        console.log(`AI: Selected optimal endpoint: ${endpoint}`);
-        return endpoint;
-      }
-    } catch {
-      console.warn(`AI: Endpoint ${endpoint} unavailable`);
+  // Since we're using the safe URL builder which validates the configured endpoint,
+  // we check the health of the current configured endpoint
+  // Note: Multiple endpoints are managed through VITE_API_URL configuration
+  const currentEndpoint = BACKEND_ENDPOINTS[0];
+  try {
+    const healthUrl = apiUrl('/health');
+    const response = await fetch(healthUrl, { 
+      method: 'GET'
+    });
+    if (response.ok) {
+      console.log(`AI: Selected optimal endpoint: ${currentEndpoint}`);
+      return currentEndpoint;
     }
+  } catch {
+    console.warn(`AI: Endpoint ${currentEndpoint} unavailable`);
   }
   
-  // Default fallback
+  // Default fallback - return the configured endpoint even if unhealthy
+  // The circuit breaker will handle repeated failures
   console.warn('AI: Using default endpoint (may need manual restart)');
   return BACKEND_ENDPOINTS[0];
 };

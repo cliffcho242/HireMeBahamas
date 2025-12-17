@@ -1,12 +1,13 @@
 import axios from 'axios';
+import { getApiBase } from './apiUrl';
 
 // 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
 if (import.meta.env.DEV) {
   console.log("API URL:", import.meta.env.VITE_API_URL);
 }
 
-// Use environment variable or fall back to same-origin for serverless deployments
-const API_BASE_URL = import.meta.env.VITE_API_URL || window.location.origin;
+// Use safe URL builder to get validated API base URL
+const API_BASE_URL = getApiBase();
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

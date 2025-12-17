@@ -1,5 +1,5 @@
 /**
- * 🔒 SAFE URL BUILDER - VERCEL FOREVER FIX
+ * 🔒 SAFE URL BUILDER - Admin Panel
  * 
  * This utility provides a safe wrapper around URL construction that:
  * 1. Validates URLs before construction to prevent pattern errors
