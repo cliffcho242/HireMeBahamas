@@ -20,8 +20,9 @@ def validate_command(command: str, source: str) -> list[str]:
     if '\n' in command.strip():
         issues.append(f"{source}: Command spans multiple lines")
     
-    # Check 2: No backslashes (except in valid paths like app.main)
-    if '\\' in command.replace('app.main', '').replace('backend\\', ''):
+    # Check 2: No backslashes used for line continuation
+    # Look for backslash followed by whitespace (line continuation pattern)
+    if re.search(r'\\\s', command):
         issues.append(f"{source}: Contains backslash line continuations")
     
     # Check 3: Must specify worker-class
@@ -41,7 +42,8 @@ def validate_command(command: str, source: str) -> list[str]:
         issues.append(f"{source}: Not using $PORT variable for dynamic port")
     
     # Check 7: Workers should be 1
-    workers_match = re.search(r'--workers\s+(\d+)', command)
+    # Match both --workers 1 and --workers=1 formats
+    workers_match = re.search(r'--workers(?:\s+|=)(\d+)', command)
     if workers_match:
         workers = int(workers_match.group(1))
         if workers != 1:
@@ -61,8 +63,9 @@ def validate_command(command: str, source: str) -> list[str]:
     if '--timeout' not in command and 'timeout' not in command:
         issues.append(f"{source}: Missing --timeout argument")
     
-    # Check 11: No smart quotes
-    if '"' in command or '"' in command or ''' in command or ''' in command:
+    # Check 11: No smart quotes or other problematic characters
+    forbidden_quotes = ['"', '"', ''', ''']
+    if any(quote in command for quote in forbidden_quotes):
         issues.append(f"{source}: Contains smart quotes (use straight quotes)")
     
     return issues

@@ -77,14 +77,15 @@ def test_procfile_commands():
             continue
         
         # Verify requirements
+        import re
         checks = {
             "Single line": '\n' not in command,
-            "No backslashes": '\\' not in command.replace('app.main', '').replace('backend\\', ''),
+            "No backslash continuations": not re.search(r'\\\s', command),
             "Has worker-class": '--worker-class' in command,
             "Uses UvicornWorker": 'uvicorn.workers.UvicornWorker' in command,
             "Has bind": '--bind' in command,
             "Uses $PORT": '$PORT' in command,
-            "Workers = 1": '--workers 1' in command,
+            "Workers = 1": '--workers 1' in command or '--workers=1' in command,
             "Has app.main:app": 'app.main:app' in command,
         }
         
