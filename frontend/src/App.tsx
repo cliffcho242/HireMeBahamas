@@ -41,6 +41,7 @@ import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthGuard from './components/AuthGuard';
 import { AIErrorBoundary } from './components/AIErrorBoundary';
+import QueryErrorBoundary from './components/QueryErrorBoundary';
 import InstallPWA from './components/InstallPWA';
 import ConnectionStatus from './components/ConnectionStatus';
 
@@ -76,25 +77,33 @@ function App() {
     <>
       <AIMonitoringProvider>
         <AIErrorBoundary>
-          <QueryClientProvider client={queryClient}>
-            <Router>
-              <AuthProvider>
-                <SocketProvider>
-                  <MessageNotificationProvider>
-                    <AppLayout 
-                      enableCustomCursor={true}
-                      enableSmoothScroll={true}
-                      enablePageTransitions={true}
-                      defaultTheme="system"
-                    >
-                      <AppContent />
-                    </AppLayout>
-                    <SpeedInsightsWrapper />
-                  </MessageNotificationProvider>
-                </SocketProvider>
-              </AuthProvider>
-            </Router>
-          </QueryClientProvider>
+          {/* QueryErrorBoundary wraps QueryClientProvider for React Query v5 + Edge compatibility */}
+          <QueryErrorBoundary
+            onReset={() => {
+              // Reset query cache on error boundary reset
+              queryClient.clear();
+            }}
+          >
+            <QueryClientProvider client={queryClient}>
+              <Router>
+                <AuthProvider>
+                  <SocketProvider>
+                    <MessageNotificationProvider>
+                      <AppLayout 
+                        enableCustomCursor={true}
+                        enableSmoothScroll={true}
+                        enablePageTransitions={true}
+                        defaultTheme="system"
+                      >
+                        <AppContent />
+                      </AppLayout>
+                      <SpeedInsightsWrapper />
+                    </MessageNotificationProvider>
+                  </SocketProvider>
+                </AuthProvider>
+              </Router>
+            </QueryClientProvider>
+          </QueryErrorBoundary>
         </AIErrorBoundary>
       </AIMonitoringProvider>
       <Analytics />

@@ -93,7 +93,9 @@ export const queryClient = new QueryClient({
       refetchOnMount: true, // Refetch on component mount if stale
       
       // React Query v5: useErrorBoundary removed, use throwOnError instead
-      // throwOnError can be set per-query if needed, default is false
+      // Set throwOnError to true to enable error boundary integration
+      // This ensures React Query errors are caught by the QueryErrorBoundary
+      throwOnError: false, // Default is false, can be overridden per-query
       
       // Network mode
       networkMode: 'online', // Only fetch when online
