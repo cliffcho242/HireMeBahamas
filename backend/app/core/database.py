@@ -31,7 +31,7 @@
 import logging
 import threading
 from typing import Optional
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs, urlunparse, urlencode
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -47,6 +47,29 @@ logger = logging.getLogger(__name__)
 # Get database URL from settings (handles all validation and fallbacks)
 DATABASE_URL = settings.get_database_url()
 logger.info("Database URL configured from settings")
+
+# CRITICAL: Remove sslmode from URL for asyncpg compatibility
+# asyncpg does NOT accept sslmode in URL - it must be in connect_args
+# sslmode in URL causes: connect() got an unexpected keyword argument 'sslmode'
+if "sslmode=" in DATABASE_URL:
+    parsed_url = urlparse(DATABASE_URL)
+    # Parse query parameters
+    query_params = parse_qs(parsed_url.query)
+    # Remove sslmode parameter
+    if 'sslmode' in query_params:
+        del query_params['sslmode']
+        logger.info("Removed sslmode from DATABASE_URL (asyncpg requires SSL in connect_args)")
+    # Reconstruct query string
+    new_query = urlencode(query_params, doseq=True)
+    # Reconstruct URL
+    DATABASE_URL = urlunparse((
+        parsed_url.scheme,
+        parsed_url.netloc,
+        parsed_url.path,
+        parsed_url.params,
+        new_query,
+        parsed_url.fragment
+    ))
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
@@ -208,15 +231,20 @@ def get_engine():
                     echo=settings.DB_ECHO,
                     
                     # asyncpg-specific connection arguments
-                    # NOTE: SSL is configured via DATABASE_URL query string (?sslmode=require), NOT here
-                    # If sslmode is not specified in the URL, asyncpg defaults to 'prefer' (secure if available, unencrypted if not)
-                    # For cloud deployments, always use ?sslmode=require to enforce encrypted connections
+                    # NOTE: For asyncpg driver, SSL MUST be in connect_args, NOT in URL query string
+                    # sslmode in URL causes: connect() got an unexpected keyword argument 'sslmode'
+                    # For cloud deployments, use ssl='require' or ssl=True in connect_args
                     connect_args={
                         # Connection timeout (45s for Railway cold starts)
                         "timeout": CONNECT_TIMEOUT,
                         
                         # Query timeout (30s per query)
                         "command_timeout": COMMAND_TIMEOUT,
+                        
+                        # SSL configuration for asyncpg
+                        # Use 'require' to enforce SSL connections (recommended for production)
+                        # asyncpg does NOT accept sslmode in URL - it must be in connect_args
+                        "ssl": "require" if settings.ENVIRONMENT == "production" else True,
                         
                         # PostgreSQL server settings
                         "server_settings": {

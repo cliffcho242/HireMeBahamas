@@ -49,7 +49,7 @@ import os
 import logging
 import threading
 from typing import Optional
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs, urlunparse, urlencode
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -128,6 +128,29 @@ if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
+
+# CRITICAL: Remove sslmode from URL for asyncpg compatibility
+# asyncpg does NOT accept sslmode in URL - it must be in connect_args
+# sslmode in URL causes: connect() got an unexpected keyword argument 'sslmode'
+if "sslmode=" in DATABASE_URL:
+    parsed_url = urlparse(DATABASE_URL)
+    # Parse query parameters
+    query_params = parse_qs(parsed_url.query)
+    # Remove sslmode parameter
+    if 'sslmode' in query_params:
+        del query_params['sslmode']
+        logger.info("Removed sslmode from DATABASE_URL (asyncpg requires SSL in connect_args)")
+    # Reconstruct query string
+    new_query = urlencode(query_params, doseq=True)
+    # Reconstruct URL
+    DATABASE_URL = urlunparse((
+        parsed_url.scheme,
+        parsed_url.netloc,
+        parsed_url.path,
+        parsed_url.params,
+        new_query,
+        parsed_url.fragment
+    ))
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
@@ -308,7 +331,7 @@ def get_engine():
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
                         
                         # CRITICAL: Minimal connect_args for Neon compatibility
-                        # NO sslmode (must be in URL query string)
+                        # NO sslmode in URL (asyncpg doesn't accept it)
                         # NO statement_timeout (not supported by PgBouncer)
                         # NO server_settings with startup options
                         connect_args={
@@ -317,6 +340,10 @@ def get_engine():
                             
                             # Query timeout (30s per query)
                             "command_timeout": COMMAND_TIMEOUT,
+                            
+                            # SSL configuration for asyncpg
+                            # asyncpg does NOT accept sslmode in URL - it must be in connect_args
+                            "ssl": "require" if ENVIRONMENT == "production" else True,
                         }
                     )
                     logger.info("✅ Database engine initialized successfully (Neon-safe, no startup options)")
