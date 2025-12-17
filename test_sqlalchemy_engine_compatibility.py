@@ -14,7 +14,7 @@ Based on the problem statement:
     DATABASE_URL,
     pool_pre_ping=True,
     pool_size=5,
-    max_overflow=10,
+    max_overflow=5,  # Hard limit: prevents Neon exhaustion & Render OOM
     connect_args={
         "connect_timeout": 5,  # For psycopg2/psycopg3
         # OR
@@ -38,7 +38,7 @@ def test_engine_configuration_parameters():
     print("Required Parameters (from problem statement):")
     print("  - pool_pre_ping=True")
     print("  - pool_size=5")
-    print("  - max_overflow=10")
+    print("  - max_overflow=5 (hard limit)")
     print("  - connect_args with timeout (asyncpg: 'timeout', psycopg: 'connect_timeout')")
     print()
     
@@ -80,7 +80,7 @@ def test_engine_configuration_parameters():
         
         # Check 3: max_overflow configuration
         if 'max_overflow' in content and ('DB_MAX_OVERFLOW' in content or 'max_overflow=' in content):
-            print("  ✅ max_overflow configured (default: 10)")
+            print("  ✅ max_overflow configured (default: 5)")
         else:
             print("  ❌ max_overflow not configured")
             all_passed = False
@@ -161,7 +161,7 @@ def test_engine_configuration_parameters():
         print("Configuration benefits:")
         print("  • pool_pre_ping=True: Validates connections before use")
         print("  • pool_size=5: Adequate for production load")
-        print("  • max_overflow=10: Burst capacity for traffic spikes")
+        print("  • max_overflow=5: Hard limit prevents Neon exhaustion & Render OOM")
         print("  • timeout=5s: Handles cold starts and DNS stalls")
         return True
     else:
@@ -180,7 +180,7 @@ def test_configuration_consistency():
     # Expected default values
     expected = {
         "pool_size": "5",
-        "max_overflow": "10",
+        "max_overflow": "5",
         "connect_timeout": "5",
         "pool_recycle": "300",
     }

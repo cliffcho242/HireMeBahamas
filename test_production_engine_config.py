@@ -4,7 +4,7 @@ Test to verify production-grade SQLAlchemy engine configuration.
 
 This test verifies that all database engines are configured with production-ready settings:
 1. pool_size=5 (default) - Adequate for production load
-2. max_overflow=10 (default) - Burst capacity for traffic spikes
+2. max_overflow=5 (default) - Hard limit to prevent Neon exhaustion, Render OOM, and DB overload
 3. pool_pre_ping=True - Validate connections before use (prevents hanging requests)
 4. pool_recycle=300 - Recycle connections every 5 minutes (prevents dead connections)
 5. connect_timeout=5 - Handle cold starts and DNS stalls
@@ -61,11 +61,11 @@ def test_production_engine_config():
                 all_passed = False
             
             max_overflow_match = re.search(r'DB_MAX_OVERFLOW:\s*int\s*=\s*int\(os\.getenv\("DB_MAX_OVERFLOW",\s*"(\d+)"\)\)', content)
-            if max_overflow_match and max_overflow_match.group(1) == "10":
-                print("  ✅ DB_MAX_OVERFLOW=10 (default)")
+            if max_overflow_match and max_overflow_match.group(1) == "5":
+                print("  ✅ DB_MAX_OVERFLOW=5 (default)")
             else:
                 if max_overflow_match:
-                    print(f"  ❌ DB_MAX_OVERFLOW default is {max_overflow_match.group(1)}, expected 10")
+                    print(f"  ❌ DB_MAX_OVERFLOW default is {max_overflow_match.group(1)}, expected 5")
                 else:
                     print("  ❌ DB_MAX_OVERFLOW default not found")
                 all_passed = False
@@ -102,13 +102,13 @@ def test_production_engine_config():
                     print("  ❌ pool_size default not found")
                 all_passed = False
             
-            # Test 2: max_overflow default = 10 (handles both lowercase and UPPERCASE variable names)
+            # Test 2: max_overflow default = 5 (handles both lowercase and UPPERCASE variable names)
             max_overflow_match = re.search(r'(?:max_overflow|MAX_OVERFLOW)\s*=\s*int\(os\.getenv\("DB_(?:POOL_)?MAX_OVERFLOW",\s*"(\d+)"\)\)', content)
-            if max_overflow_match and max_overflow_match.group(1) == "10":
-                print("  ✅ max_overflow=10 (default)")
+            if max_overflow_match and max_overflow_match.group(1) == "5":
+                print("  ✅ max_overflow=5 (default)")
             else:
                 if max_overflow_match:
-                    print(f"  ❌ max_overflow default is {max_overflow_match.group(1)}, expected 10")
+                    print(f"  ❌ max_overflow default is {max_overflow_match.group(1)}, expected 5")
                 else:
                     print("  ❌ max_overflow default not found")
                 all_passed = False
@@ -180,7 +180,7 @@ Required Configuration (as per problem statement):
   engine = create_engine(
       DATABASE_URL,
       pool_size=5,              # Adequate for production load
-      max_overflow=10,          # Burst capacity for traffic spikes
+      max_overflow=5,           # Hard limit: prevents Neon exhaustion & Render OOM
       pool_pre_ping=True,       # Validate connections before use
       pool_recycle=300,         # Recycle connections every 5 minutes
       connect_args={
@@ -194,7 +194,7 @@ Benefits:
   ✓ Prevents DNS stalls
   ✓ Prevents dead connections
   ✓ Production-ready pool sizing
-  ✓ Burst capacity for traffic spikes
+  ✓ Prevents Neon exhaustion, Render OOM, and DB overload during traffic spikes
 """)
     print("=" * 80)
 
