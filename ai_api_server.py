@@ -290,10 +290,14 @@ def ai_chat():
             "I'm sorry, but the AI chat service is not available at the moment."
         )
 
-        # Try OpenAI first (Note: OpenAI client may need async wrapper)
+        # Try OpenAI first
         if orchestrator.openai_available:
             import openai
 
+            # TODO: Update to use current OpenAI SDK client pattern when available
+            # The openai.ChatCompletion.acreate() method is deprecated in newer versions
+            # Should be updated to: client.chat.completions.create() with the new client pattern
+            
             # Wrap async OpenAI call with asyncio.run()
             async def get_openai_response():
                 response = await openai.ChatCompletion.acreate(
