@@ -223,6 +223,32 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+# =============================================================================
+# PANIC SHIELD - GLOBAL EXCEPTION GUARD
+# =============================================================================
+@app.exception_handler(Exception)
+async def panic_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Global exception guard - catches all unhandled exceptions.
+    
+    This handler ensures that:
+    ✅ Users see a calm, friendly error message
+    ✅ You get detailed logs for debugging
+    ✅ The app never crashes from unhandled exceptions
+    
+    All exceptions are logged with request ID for traceability.
+    """
+    # Get request ID from request state (set by middleware or generate new one)
+    request_id = getattr(request.state, "id", None) or getattr(request.state, "request_id", str(uuid.uuid4())[:8])
+    
+    # Log the panic with full details
+    logger.error(f"PANIC {request_id}: {exc}", exc_info=True)
+    
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Temporary issue. Try again."}
+    )
+
 # GraphQL support (optional - gracefully degrades if strawberry not available)
 # Import after logger is configured
 HAS_GRAPHQL = False
