@@ -4,6 +4,10 @@ import App from './App'
 import './index.css'
 import './styles/mobile-responsive.css'
 
+// 🔒 FOREVER FIX: Validate environment variables at startup
+// This catches configuration errors early before they cause runtime issues
+import './config/envValidator'
+
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

@@ -2,8 +2,10 @@
 
 ## Quick Reference: Environment Variables for Vercel Frontend Deployment
 
-**Last Updated:** December 15, 2024  
+**Last Updated:** December 17, 2024  
 **Framework:** Vite (React) - NOT Next.js
+
+**🔒 FOREVER FIX:** See [FOREVER_FIX_ENV_VARIABLES.md](./FOREVER_FIX_ENV_VARIABLES.md) for the permanent law
 
 **📖 See Also:** [VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md](./VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md) - Comprehensive step-by-step guide
 

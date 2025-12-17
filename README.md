@@ -7,6 +7,29 @@ A modern, Facebook-inspired social platform designed specifically for profession
 
 ---
 
+## 🔒 **FOREVER FIX: Environment Variable Law**
+
+**⚠️ READ THIS FIRST** - Critical configuration requirement for Vercel deployments
+
+**📖 [FOREVER_FIX_ENV_VARIABLES.md](./FOREVER_FIX_ENV_VARIABLES.md)** - **MANDATORY READING** before deployment
+
+### Quick Summary
+
+**For Vite Frontend** (main app in `/frontend`):
+```bash
+# ✅ CORRECT - Vercel WILL expose these
+VITE_API_URL=https://your-backend.onrender.com
+
+# ❌ NEVER USE - Vercel will NOT expose these
+API_URL=...                    # Missing prefix
+DATABASE_URL=...               # Backend only, dangerous!
+NEXT_PUBLIC_API_URL=...        # Wrong framework (Next.js)
+```
+
+**Why this matters**: Variables without the correct prefix are invisible to your frontend, causing silent failures.
+
+---
+
 ## 🚀 **✅ CORRECT STACK (Industry Standard)**
 
 **The production-ready architecture for maximum performance and stability:**
