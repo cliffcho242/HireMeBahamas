@@ -54,8 +54,9 @@ function isValidUrl(url) {
 function isSecureUrl(url) {
   if (!url || typeof url !== 'string') return false;
   
-  // Allow HTTP for localhost in development
-  if (url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) {
+  // Allow HTTP for localhost in development (including IPv6 and custom ports)
+  const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?/;
+  if (localhostPattern.test(url)) {
     return true;
   }
   
@@ -176,10 +177,27 @@ function validateEnvironment() {
       console.log('📋 Configured frontend variables:');
       viteVars.forEach(key => {
         const value = process.env[key];
-        // Mask long values for security
-        const displayValue = typeof value === 'string' && value.length > 30
-          ? value.substring(0, 30) + '...'
-          : value;
+        let displayValue = value;
+        
+        // Mask sensitive values (tokens, secrets, keys)
+        const sensitivePatterns = /key|token|secret|password|auth/i;
+        if (sensitivePatterns.test(key)) {
+          displayValue = '[MASKED]';
+        } 
+        // For URLs, show only protocol and domain
+        else if (typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'))) {
+          try {
+            const urlObj = new URL(value);
+            displayValue = `${urlObj.protocol}//${urlObj.host}`;
+          } catch {
+            displayValue = value.substring(0, 30) + '...';
+          }
+        }
+        // Mask long values
+        else if (typeof value === 'string' && value.length > 30) {
+          displayValue = value.substring(0, 30) + '...';
+        }
+        
         console.log(`   ✓ ${key} = ${displayValue}`);
       });
       console.log('');
