@@ -4,6 +4,7 @@ import re
 
 from app.api.auth import get_current_user
 from app.core.user_cache import user_cache
+from app.core.query_logger import log_query_performance
 from app.database import get_db
 from app.models import Follow, Notification, NotificationType, User, Post
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -122,48 +123,53 @@ async def get_users(
         )
         query = query.where(search_filter)
 
-    # Get total count
-    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
-    total = count_result.scalar()
+    # Get total count with slow query logging
+    async with log_query_performance("users_list_count", warn_threshold=1.0):
+        count_result = await db.execute(select(func.count()).select_from(query.subquery()))
+        total = count_result.scalar()
 
-    # Apply pagination
+    # Apply pagination and fetch users with slow query logging
     query = query.offset(skip).limit(limit)
-    result = await db.execute(query)
-    users = result.scalars().all()
+    async with log_query_performance("users_list_fetch", warn_threshold=1.0):
+        result = await db.execute(query)
+        users = result.scalars().all()
 
     if not users:
         return {"success": True, "users": [], "total": 0}
 
     user_ids = [u.id for u in users]
 
-    # Bulk load follow status (single query)
-    follow_result = await db.execute(
-        select(Follow).where(
-            and_(
-                Follow.follower_id == current_user.id,
-                Follow.followed_id.in_(user_ids),
+    # Bulk load follow status (single query) with slow query logging
+    async with log_query_performance("users_list_follow_status", warn_threshold=1.0):
+        follow_result = await db.execute(
+            select(Follow).where(
+                and_(
+                    Follow.follower_id == current_user.id,
+                    Follow.followed_id.in_(user_ids),
+                )
             )
         )
-    )
-    following_ids = {f.followed_id for f in follow_result.scalars().all()}
+        following_ids = {f.followed_id for f in follow_result.scalars().all()}
 
-    # Bulk load followers counts (single query)
-    followers_count_query = (
-        select(Follow.followed_id, func.count().label('count'))
-        .where(Follow.followed_id.in_(user_ids))
-        .group_by(Follow.followed_id)
-    )
-    followers_result = await db.execute(followers_count_query)
-    followers_counts = {row[0]: row[1] for row in followers_result.all()}
+    # Bulk load followers counts (single query) with slow query logging
+    async with log_query_performance("users_list_followers_count", warn_threshold=1.0):
+        followers_count_query = (
+            select(Follow.followed_id, func.count().label('count'))
+            .where(Follow.followed_id.in_(user_ids))
+            .group_by(Follow.followed_id)
+        )
+        followers_result = await db.execute(followers_count_query)
+        followers_counts = {row[0]: row[1] for row in followers_result.all()}
 
-    # Bulk load following counts (single query)
-    following_count_query = (
-        select(Follow.follower_id, func.count().label('count'))
-        .where(Follow.follower_id.in_(user_ids))
-        .group_by(Follow.follower_id)
-    )
-    following_result = await db.execute(following_count_query)
-    following_counts = {row[0]: row[1] for row in following_result.all()}
+    # Bulk load following counts (single query) with slow query logging
+    async with log_query_performance("users_list_following_count", warn_threshold=1.0):
+        following_count_query = (
+            select(Follow.follower_id, func.count().label('count'))
+            .where(Follow.follower_id.in_(user_ids))
+            .group_by(Follow.follower_id)
+        )
+        following_result = await db.execute(following_count_query)
+        following_counts = {row[0]: row[1] for row in following_result.all()}
 
     # Build response with pre-loaded data
     users_data = []
