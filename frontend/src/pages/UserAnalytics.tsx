@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { API } from '../services/api';
+import { apiUrl } from '../lib/api';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import {
@@ -73,7 +73,7 @@ const UserAnalytics = () => {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/api/analytics/user-logins`, {
+      const response = await axios.get(apiUrl('/api/analytics/user-logins'), {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStats(response.data);
@@ -89,7 +89,7 @@ const UserAnalytics = () => {
     setLoadingInactive(true);
     try {
       const response = await axios.get(
-        `${API}/api/analytics/inactive-users?days=${inactiveDays}&limit=100`,
+        apiUrl(`/api/analytics/inactive-users?days=${inactiveDays}&limit=100`),
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setInactiveUsers(response.data.users);

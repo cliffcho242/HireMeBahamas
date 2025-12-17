@@ -3,6 +3,7 @@
 // AI Context uses dynamic types for AI responses - any types are intentional
 import { ReactNode, createContext, useCallback, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
+import { apiUrl } from '../lib/api';
 
 interface AdvancedAIContextType {
   // User Analysis
@@ -54,9 +55,7 @@ interface AdvancedAIProviderProps {
 
 export const AdvancedAIProvider = ({
   children,
-  apiBaseUrl = import.meta.env.VITE_API_URL 
-    ? `${import.meta.env.VITE_API_URL}/api/ai`
-    : (typeof window !== 'undefined' ? `${window.location.origin}/api/ai` : '/api/ai')
+  apiBaseUrl = apiUrl('/api/ai')
 }: AdvancedAIProviderProps) => {
   const [aiSystemHealth, setAISystemHealth] = useState<any>({});
   const [isAIOnline, setIsAIOnline] = useState(false);
