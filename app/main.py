@@ -34,11 +34,13 @@ def health():
     return {"ok": True}
 
 async def background_init():
-    from app.database import init_db, warmup_db
+    from app.database import init_db, warmup_db, engine
 
     try:
-        success = await init_db()
-        if success:
-            await warmup_db()
+        # init_db is now synchronous - returns the engine
+        engine_instance = init_db()
+        if engine_instance:
+            # warmup_db is now synchronous - needs the engine parameter
+            warmup_db(engine_instance)
     except Exception as e:
         logging.warning(f"Background init skipped: {e}")
