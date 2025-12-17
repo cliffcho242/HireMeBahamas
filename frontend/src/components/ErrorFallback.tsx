@@ -1,3 +1,5 @@
+import React from 'react';
+
 /**
  * User-Friendly Error Fallback Component
  * 
@@ -20,12 +22,14 @@ interface ErrorFallbackProps {
   onRetry: () => void;
 }
 
-export default function ErrorFallback({ onRetry }: ErrorFallbackProps) {
+const ErrorFallback: React.FC<ErrorFallbackProps> = ({ onRetry }) => {
   return (
-    <div style={{ textAlign: "center", padding: 32 }}>
+    <div className="text-center p-8">
       <h3>Network error</h3>
       <p>Please check your connection.</p>
       <button onClick={onRetry}>Try again</button>
     </div>
   );
-}
+};
+
+export default ErrorFallback;
