@@ -3,6 +3,7 @@
 /* eslint-disable react-refresh/only-export-components */
 // AI Monitoring uses dynamic window object access and complex hook dependencies
 import { ReactNode, createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { getApiBase, apiUrl } from '../lib/api';
 interface SystemHealth {
   frontend: boolean;
   backend: boolean;
@@ -42,7 +43,7 @@ interface AIMonitoringProviderProps {
 
 export const AIMonitoringProvider = ({
   children,
-  backendUrl = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : ''),
+  backendUrl = getApiBase(),
   checkInterval = 30000, // 30 seconds
   maxRecoveryAttempts = 3
 }: AIMonitoringProviderProps) => {
@@ -74,7 +75,8 @@ export const AIMonitoringProvider = ({
 
       // Check backend connectivity
       try {
-        const backendResponse = await fetch(`${backendUrl}/health`, {
+        const healthUrl = apiUrl('/health');
+        const backendResponse = await fetch(healthUrl, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
           signal: AbortSignal.timeout(5000) // 5 second timeout
@@ -206,7 +208,8 @@ export const AIMonitoringProvider = ({
       if (!health.backend) {
         console.log('🤖 AI Recovery: Testing backend connectivity...');
         try {
-          const response = await fetch(`${backendUrl}/health`, {
+          const healthUrl = apiUrl('/health');
+          const response = await fetch(healthUrl, {
             method: 'GET',
             cache: 'no-cache'
           });

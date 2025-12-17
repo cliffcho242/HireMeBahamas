@@ -2,6 +2,7 @@ import { ChangeEvent, useState, useEffect } from 'react';
 import { PlusIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
+import { apiUrl } from '../lib/api';
 
 interface Story {
   id: number;
@@ -38,8 +39,8 @@ const Stories = () => {
 
   const fetchStories = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
-      const response = await axios.get(`${apiUrl}/api/stories`);
+      const storiesUrl = apiUrl('/api/stories');
+      const response = await axios.get(storiesUrl);
       if (response.data.success) {
         setStories(response.data.stories);
       }
@@ -87,9 +88,9 @@ const Stories = () => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    const uploadUrl = apiUrl('/api/upload/story-file');
     const response = await axios.post(
-      `${apiUrl}/api/upload/story-file`,
+      uploadUrl,
       formData,
       {
         headers: {
@@ -144,9 +145,9 @@ const Stories = () => {
       }
 
       // Create story
-      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+      const createStoryUrl = apiUrl('/api/stories');
       const response = await axios.post(
-        `${apiUrl}/api/stories`,
+        createStoryUrl,
         {
           content: storyContent,
           image_path: imagePath,
