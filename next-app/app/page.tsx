@@ -4,8 +4,8 @@ import { JobFeedSkeleton } from "@/components/skeletons";
 import { JobCard } from "@/components/job-card";
 import { getLatestJobs } from "@/lib/db";
 
-// Revalidate every 60 seconds for fresh content
-export const revalidate = 60;
+// Revalidate every 30 seconds for fresh content (ISR)
+export const revalidate = 30;
 
 export default async function HomePage() {
   return (

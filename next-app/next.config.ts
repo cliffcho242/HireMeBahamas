@@ -23,15 +23,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**.vercel.app",
-      },
-      {
-        protocol: "https",
-        hostname: "hiremebahamas.com",
-      },
-      {
-        protocol: "https",
-        hostname: "www.hiremebahamas.com",
+        hostname: "**", // Allow all HTTPS images for maximum flexibility
       },
     ],
     formats: ["image/avif", "image/webp"],
