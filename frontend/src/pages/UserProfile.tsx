@@ -424,7 +424,7 @@ const UserProfile: React.FC = () => {
                     src={profile.avatar_url}
                     alt={`${profile.first_name} ${profile.last_name}`}
                     priority={true}
-                    className="w-full h-full rounded-full object-cover"
+                    className="w-full h-full rounded-full"
                   />
                 ) : (
                   <span className="text-white text-4xl font-bold">
@@ -629,7 +629,7 @@ const UserProfile: React.FC = () => {
                         <LazyImage
                           src={post.image_url}
                           alt="Post"
-                          className="w-full max-h-96 object-cover rounded-lg mb-4"
+                          className="w-full max-h-96 rounded-lg mb-4"
                         />
                       )}
                       <div className="flex items-center space-x-6 text-sm text-gray-500">
@@ -664,7 +664,7 @@ const UserProfile: React.FC = () => {
                           <LazyImage
                             src={post.image_url}
                             alt="Photo"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            className="w-full h-full group-hover:scale-105 transition-transform duration-200"
                           />
                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
                             <div className="opacity-0 group-hover:opacity-100 text-white text-sm space-x-4 transition-opacity duration-200">
@@ -790,7 +790,7 @@ const UserProfile: React.FC = () => {
                               <LazyImage
                                 src={follower.avatar_url}
                                 alt={`${follower.first_name} ${follower.last_name}`}
-                                className="w-full h-full rounded-full object-cover"
+                                className="w-full h-full rounded-full"
                               />
                             ) : (
                               <span>{follower.first_name?.[0]}{follower.last_name?.[0]}</span>
@@ -848,7 +848,7 @@ const UserProfile: React.FC = () => {
                               <LazyImage
                                 src={followed.avatar_url}
                                 alt={`${followed.first_name} ${followed.last_name}`}
-                                className="w-full h-full rounded-full object-cover"
+                                className="w-full h-full rounded-full"
                               />
                             ) : (
                               <span>{followed.first_name?.[0]}{followed.last_name?.[0]}</span>
