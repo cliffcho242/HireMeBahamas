@@ -7,11 +7,13 @@ for idempotent read operations in the HireMeBahamas application.
 ⚠️  CRITICAL SAFETY RULE: Only use db_retry on idempotent read operations.
 🚫 Never use on write operations (INSERT, UPDATE, DELETE).
 
+⚠️  NOTE: The db_retry decorator is designed for synchronous functions.
+For async database operations, use asyncio-native retry patterns.
+
 Author: Copilot
 Date: December 2025
 """
 
-import asyncio
 import logging
 
 # Note: Actual import paths depend on how you run the module:
@@ -19,9 +21,6 @@ import logging
 # - From project root: from backend.app.core.db_retry import db_retry
 # This example uses the "from backend directory" convention
 from app.core.db_retry import db_retry, retry_db_operation
-from app.database import get_db, AsyncSessionLocal
-from app.models import User
-from sqlalchemy import select
 
 # Configure logging to see retry attempts
 logging.basicConfig(
@@ -33,78 +32,87 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================================
-# ✅ EXAMPLE 1: Safe usage with decorator on read-only function
+# ✅ EXAMPLE 1: Safe usage with decorator on read-only function (SYNCHRONOUS)
 # ============================================================================
+# Note: This is a conceptual example. The actual HireMeBahamas codebase uses
+# async SQLAlchemy, but db_retry is designed for synchronous operations per
+# the problem statement requirements (uses time.sleep, not asyncio.sleep).
 
 @db_retry(retries=3, delay=1)
-async def get_user_by_email(email: str):
+def count_users_by_role(role: str) -> int:
     """
-    Get a user by email with automatic retry on transient failures.
+    Count users by role with automatic retry on transient failures.
     
     This is SAFE because:
-    - It's a read-only operation (SELECT)
+    - It's a read-only operation (COUNT/SELECT)
     - It's idempotent (same result when called multiple times)
     - No data modification occurs
     
     Args:
-        email: User email address
+        role: User role to count
         
     Returns:
-        User object or None if not found
+        Number of users with that role
+        
+    Note:
+        This is a synchronous example. For actual async database operations
+        in the HireMeBahamas codebase, use asyncio-native retry patterns.
     """
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(User).where(User.email == email)
-        )
-        return result.scalar_one_or_none()
+    # Conceptual synchronous database call
+    # In practice, with async SQLAlchemy, use different retry approach
+    from sqlalchemy import func, select
+    
+    # This would be: session.query(func.count(User.id)).filter(User.role == role).scalar()
+    # or similar synchronous ORM call
+    
+    # For demonstration purposes (would need actual sync session)
+    return 0  # Placeholder
 
 
 # ============================================================================
-# ✅ EXAMPLE 2: Safe usage with decorator on count operation
+# ✅ EXAMPLE 2: Safe usage for checking existence (SYNCHRONOUS)
 # ============================================================================
 
 @db_retry(retries=3, delay=1)
-async def count_active_users():
+def user_exists(email: str) -> bool:
     """
-    Count active users with retry logic.
+    Check if user exists with retry logic.
     
     This is SAFE because:
-    - It's a read-only operation (COUNT)
-    - It's idempotent
+    - It's a read-only operation (SELECT/EXISTS)
+    - It's idempotent (same answer each time)
     - No data modification
     
+    Args:
+        email: Email address to check
+        
     Returns:
-        Number of active users
+        True if user exists, False otherwise
     """
-    async with AsyncSessionLocal() as session:
-        from sqlalchemy import func
-        result = await session.execute(
-            select(func.count(User.id)).where(User.is_active == True)
-        )
-        return result.scalar()
+    # Conceptual synchronous database call
+    # Would be: session.query(exists().where(User.email == email)).scalar()
+    return False  # Placeholder
 
 
 # ============================================================================
-# ✅ EXAMPLE 3: Safe usage with retry_db_operation function
+# ✅ EXAMPLE 3: Safe usage with retry_db_operation function (SYNCHRONOUS)
 # ============================================================================
 
-async def get_users_by_role_with_retry(role: str):
+def get_user_stats_with_retry():
     """
-    Get users by role using inline retry logic.
+    Get user statistics using inline retry logic.
     
     This demonstrates using retry_db_operation() without a decorator.
     """
     
-    async def fetch_users():
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(
-                select(User).where(User.role == role)
-            )
-            return result.scalars().all()
+    def fetch_stats():
+        # Conceptual synchronous database call
+        # Would be: session.query(func.count(User.id)).scalar()
+        return {"total_users": 0, "active_users": 0}  # Placeholder
     
     # Use retry_db_operation for inline retry logic
-    return await retry_db_operation(
-        fetch_users,
+    return retry_db_operation(
+        fetch_stats,
         retries=3,
         delay=1.0
     )
@@ -118,7 +126,7 @@ async def get_users_by_role_with_retry(role: str):
 # This could lead to duplicate records, data corruption, or race conditions
 
 # @db_retry(retries=3, delay=1)  # ❌ DON'T DO THIS
-async def create_user_UNSAFE_EXAMPLE(user_data: dict):
+def create_user_UNSAFE_EXAMPLE(user_data: dict):
     """
     ❌ UNSAFE EXAMPLE - DO NOT USE RETRY ON WRITES
     
@@ -129,18 +137,16 @@ async def create_user_UNSAFE_EXAMPLE(user_data: dict):
     
     NEVER decorate write operations with @db_retry!
     """
-    async with AsyncSessionLocal() as session:
-        user = User(**user_data)
-        session.add(user)
-        await session.commit()
-        return user
+    # Conceptual write operation
+    # Would be: session.add(User(**user_data)); session.commit()
+    pass
 
 
 # ============================================================================
 # ✅ EXAMPLE 5: Correct approach for writes (no retry)
 # ============================================================================
 
-async def create_user_SAFE(user_data: dict):
+def create_user_SAFE(user_data: dict):
     """
     ✅ SAFE - Write operation without retry logic
     
@@ -149,16 +155,13 @@ async def create_user_SAFE(user_data: dict):
     - Implement idempotency tokens if needed
     - Use database constraints to prevent duplicates
     """
-    async with AsyncSessionLocal() as session:
-        try:
-            user = User(**user_data)
-            session.add(user)
-            await session.commit()
-            return user
-        except Exception as e:
-            await session.rollback()
-            logger.error(f"Failed to create user: {e}")
-            raise
+    try:
+        # Conceptual write operation
+        # Would be: session.add(User(**user_data)); session.commit()
+        pass
+    except Exception as e:
+        logger.error(f"Failed to create user: {e}")
+        raise
 
 
 # ============================================================================
@@ -166,77 +169,28 @@ async def create_user_SAFE(user_data: dict):
 # ============================================================================
 
 @db_retry(retries=5, delay=2.0)
-async def get_user_statistics():
+def get_table_row_count(table_name: str) -> int:
     """
-    Get user statistics with longer retry delays.
+    Get row count for a table with longer retry delays.
     
     Use higher retries and delays for:
     - Complex queries that might timeout
     - Operations during high load periods
     - Cold start scenarios
     
+    Args:
+        table_name: Name of the table to count
+        
     Returns:
-        Dictionary with user statistics
+        Number of rows in the table
     """
-    async with AsyncSessionLocal() as session:
-        from sqlalchemy import func
-        
-        total_users = await session.execute(
-            select(func.count(User.id))
-        )
-        active_users = await session.execute(
-            select(func.count(User.id)).where(User.is_active == True)
-        )
-        
-        return {
-            'total': total_users.scalar(),
-            'active': active_users.scalar(),
-        }
+    # Conceptual synchronous database call
+    # Would be: session.execute(text(f"SELECT COUNT(*) FROM {table_name}")).scalar()
+    return 0  # Placeholder
 
 
 # ============================================================================
-# Demo function to show retry in action
-# ============================================================================
-
-async def demo_retry_logic():
-    """
-    Demonstrate the retry logic with simulated failures.
-    
-    This shows what happens when database operations fail and retry.
-    """
-    print("=" * 70)
-    print("Database Retry Logic Demo")
-    print("=" * 70)
-    
-    # Simulate a failing database operation
-    attempt_count = {"value": 0}
-    
-    @db_retry(retries=3, delay=0.5)
-    async def flaky_database_operation():
-        """Simulates a database operation that fails sometimes."""
-        attempt_count["value"] += 1
-        print(f"\n→ Attempting database operation (attempt #{attempt_count['value']})")
-        
-        # Fail on first 2 attempts, succeed on 3rd
-        if attempt_count["value"] < 3:
-            print(f"  ✗ Simulated transient failure (attempt {attempt_count['value']})")
-            raise ConnectionError("Simulated database connection timeout")
-        
-        print(f"  ✓ Operation succeeded on attempt {attempt_count['value']}")
-        return {"status": "success", "attempts": attempt_count["value"]}
-    
-    try:
-        result = await flaky_database_operation()
-        print(f"\n✅ Final result: {result}")
-        print(f"   Total attempts needed: {result['attempts']}")
-    except Exception as e:
-        print(f"\n❌ Operation failed after all retries: {e}")
-    
-    print("=" * 70)
-
-
-# ============================================================================
-# Main execution
+# Main execution - Note about usage
 # ============================================================================
 
 if __name__ == "__main__":
@@ -247,14 +201,15 @@ if __name__ == "__main__":
 ║  This module demonstrates proper usage of the db_retry decorator    ║
 ║  for idempotent read operations only.                               ║
 ║                                                                      ║
-║  ✅ DO: Use on SELECT queries (reads)                               ║
+║  ✅ DO: Use on SELECT queries (reads) - synchronous operations      ║
 ║  🚫 DON'T: Use on INSERT/UPDATE/DELETE (writes)                     ║
+║                                                                      ║
+║  NOTE: db_retry is designed for synchronous functions.              ║
+║  For async operations, use asyncio-native retry patterns.           ║
 ╚══════════════════════════════════════════════════════════════════════╝
     """)
     
-    # Run the demo
-    asyncio.run(demo_retry_logic())
-    
-    print("\n✓ See the function examples in this file for proper usage patterns.")
-    print("✓ Read the docstrings for detailed explanations.")
+    print("✓ See backend/demo_db_retry_simple.py for a working demonstration")
+    print("✓ See the function examples in this file for usage patterns")
+    print("✓ Read the docstrings for detailed explanations")
     print("✓ Always follow the safety rules: reads only, never writes!\n")

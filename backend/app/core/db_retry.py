@@ -5,25 +5,28 @@ Provides a retry decorator for database operations with strict safety rules:
 ✅ Use only on idempotent reads
 🚫 Never retry writes automatically
 
-This module implements retry logic with exponential backoff for database operations
+This module implements retry logic with configurable delay for database operations
 that may fail due to transient network issues, connection timeouts, or database
 cold starts.
 
-Example usage:
+Note: This implementation uses linear delay (constant delay between retries),
+not exponential backoff, as specified in the requirements.
+
+Example usage (synchronous):
     from app.core.db_retry import db_retry
-    from sqlalchemy import select
     
-    # ✅ SAFE: Idempotent read operation (async)
+    # ✅ SAFE: Idempotent read operation (sync)
+    # Note: For async operations, use asyncio retry patterns
     @db_retry(retries=3, delay=1)
-    async def get_user_by_id(user_id: int):
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(select(User).where(User.id == user_id))
-            return result.scalar_one_or_none()
+    def get_user_count():
+        # Synchronous database call
+        with Session() as session:
+            return session.query(func.count(User.id)).scalar()
     
     # 🚫 UNSAFE: Write operation - DO NOT USE RETRY
     # Never use db_retry on writes (INSERT, UPDATE, DELETE)
     def create_user(user_data):
-        with get_db() as session:
+        with Session() as session:
             user = User(**user_data)
             session.add(user)
             session.commit()
@@ -79,19 +82,22 @@ def db_retry(
         Exception: The last exception encountered if all retries fail
     
     Example:
-        # Using decorator with default parameters (async)
+        # Using decorator with default parameters (sync)
         @db_retry
-        async def get_user(user_id: int):
-            async with AsyncSessionLocal() as session:
-                result = await session.execute(select(User).where(User.id == user_id))
-                return result.scalar_one_or_none()
+        def get_user_count():
+            with Session() as session:
+                return session.query(func.count(User.id)).scalar()
         
-        # Using decorator with custom parameters (async)
+        # Using decorator with custom parameters (sync)
         @db_retry(retries=5, delay=2.0)
-        async def get_users_list():
-            async with AsyncSessionLocal() as session:
-                result = await session.execute(select(User))
-                return result.scalars().all()
+        def check_user_exists(email: str):
+            with Session() as session:
+                return session.query(User).filter(User.email == email).first() is not None
+    
+    Note:
+        This decorator is designed for synchronous functions. For async database
+        operations, consider using asyncio-native retry patterns or wrapping the
+        async operation in asyncio.run() if calling from sync context.
     
     Note:
         - Logs a warning for each retry attempt with attempt number and error
@@ -190,17 +196,16 @@ def retry_db_operation(
         Exception: The last exception if all retries fail
     
     Example:
-        # For async operations, wrap in an async lambda or function
-        async def fetch_user():
-            async with AsyncSessionLocal() as session:
-                result = await session.execute(select(User).where(User.id == user_id))
-                return result.scalar_one_or_none()
-        
-        result = await retry_db_operation(
-            fetch_user,
+        # Synchronous operation
+        result = retry_db_operation(
+            lambda: session.query(User).filter(User.id == user_id).first(),
             retries=3,
             delay=1.0
         )
+    
+    Note:
+        This function is designed for synchronous operations. For async operations,
+        use asyncio-native retry patterns.
     """
     last_exception = None
     
