@@ -87,10 +87,21 @@ def check_no_coroutine_errors():
     with open("app/main.py", "r") as f:
         content = f.read()
     
-    # Check for the old incorrect pattern: engine = init_db()
-    if "engine = init_db()" in content and "await" not in content[:content.index("engine = init_db()")]:
-        print("✗ Found old pattern: engine = init_db() without await")
-        return False
+    # Check for the old incorrect pattern: engine = init_db() without await
+    lines = content.split('\n')
+    for line_num, line in enumerate(lines, 1):
+        # Skip comments and strings
+        stripped = line.strip()
+        if stripped.startswith('#'):
+            continue
+        
+        # Check if line contains "= init_db()" without await before it
+        if "= init_db()" in line:
+            # Check if this line has "await" keyword before the assignment
+            if "await" not in line:
+                print(f"✗ Found old pattern on line {line_num}: {line.strip()}")
+                print("   (init_db() should be awaited)")
+                return False
     
     print("✓ No old error patterns found")
     return True
