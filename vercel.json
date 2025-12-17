@@ -9,61 +9,15 @@
       "destination": "https://hire-me-bahamas.onrender.com/api/$1"
     }
   ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "headers": {
+        "Cache-Control": "no-store"
+      }
+    }
+  ],
   "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Strict-Transport-Security",
-          "value": "max-age=31536000; includeSubDomains; preload"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=(self), payment=()"
-        },
-        {
-          "key": "X-DNS-Prefetch-Control",
-          "value": "on"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=3600, stale-while-revalidate=86400"
-        },
-        {
-          "key": "Link",
-          "value": "</assets/vendor.js>; rel=preload; as=script, </assets/ui.js>; rel=preload; as=script"
-        }
-      ]
-    },
-    {
-      "source": "/index.html",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        },
-        {
-          "key": "Link",
-          "value": "</assets/vendor.js>; rel=preload; as=script, </assets/ui.js>; rel=preload; as=script"
-        }
-      ]
-    },
     {
       "source": "/assets/(.*)",
       "headers": [
@@ -104,41 +58,48 @@
       ]
     },
     {
-      "source": "/api/posts",
+      "source": "/index.html",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=60, stale-while-revalidate=300"
+          "value": "public, max-age=0, must-revalidate"
         },
         {
-          "key": "CDN-Cache-Control",
-          "value": "public, max-age=60"
+          "key": "Link",
+          "value": "</assets/vendor.js>; rel=preload; as=script, </assets/ui.js>; rel=preload; as=script"
         }
       ]
     },
     {
-      "source": "/api/jobs",
+      "source": "/(.*)",
       "headers": [
         {
-          "key": "Cache-Control",
-          "value": "public, max-age=180, stale-while-revalidate=900"
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
         },
         {
-          "key": "CDN-Cache-Control",
-          "value": "public, max-age=180"
-        }
-      ]
-    },
-    {
-      "source": "/api/users/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=300, stale-while-revalidate=1800"
+          "key": "X-Frame-Options",
+          "value": "DENY"
         },
         {
-          "key": "CDN-Cache-Control",
-          "value": "public, max-age=300"
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains; preload"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(self), payment=()"
+        },
+        {
+          "key": "X-DNS-Prefetch-Control",
+          "value": "on"
         }
       ]
     }
