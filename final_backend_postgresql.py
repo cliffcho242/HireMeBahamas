@@ -4086,7 +4086,6 @@ def get_connection_pool_stats():
             "connections_in_use": used_count,
             "connections_available": available_count,
             "pool_timeout_seconds": POOL_TIMEOUT_SECONDS,
-            "statement_timeout_ms": STATEMENT_TIMEOUT_MS,
         }
     except Exception as e:
         return {

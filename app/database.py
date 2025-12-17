@@ -762,5 +762,4 @@ __all__ = [
     "POOL_RECYCLE",
     "CONNECT_TIMEOUT",
     "COMMAND_TIMEOUT",
-    "STATEMENT_TIMEOUT_MS",
 ]
