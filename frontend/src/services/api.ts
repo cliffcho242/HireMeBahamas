@@ -3,6 +3,7 @@ import { User } from '../types/user';
 import { Job } from '../types/job';
 import { debugLog } from '../utils/debugLogger';
 import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
+import { ENV_API } from '../config/env';
 
 // Note: Backend URL validation happens automatically when backendRouter is imported
 // The validateBackendUrl() function is called at module load in backendRouter.ts
@@ -66,7 +67,7 @@ if (import.meta.env.DEV) {
 
 // Derive API base URL - using smart backend router
 // ✅ CORRECT: Use VITE_API_URL environment variable (exposed to browser by Vite)
-const BACKEND_URL = import.meta.env.VITE_API_URL;
+const BACKEND_URL = ENV_API;
 
 // Determine API base URL
 let API_BASE_URL: string;

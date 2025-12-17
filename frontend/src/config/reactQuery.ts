@@ -10,26 +10,27 @@
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
 
 // Cache time configurations (in milliseconds)
+// Note: React Query v5 renamed `cacheTime` to `gcTime` (garbage collection time)
 const CACHE_TIMES = {
   // Very stable data (rarely changes)
   STABLE: {
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
   },
   // Semi-stable data (jobs, user profiles)
   SEMI_STABLE: {
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 15 * 60 * 1000, // 15 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes (formerly cacheTime)
   },
   // Dynamic data (posts, feed)
   DYNAMIC: {
     staleTime: 30 * 1000, // 30 seconds
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
   },
   // Real-time data (messages, notifications)
   REALTIME: {
     staleTime: 0, // Always stale, refetch on focus
-    cacheTime: 60 * 1000, // 1 minute
+    gcTime: 60 * 1000, // 1 minute (formerly cacheTime)
   },
 };
 
@@ -80,7 +81,7 @@ export const queryClient = new QueryClient({
     queries: {
       // Use DYNAMIC cache times as default
       staleTime: CACHE_TIMES.DYNAMIC.staleTime,
-      cacheTime: CACHE_TIMES.DYNAMIC.cacheTime,
+      gcTime: CACHE_TIMES.DYNAMIC.gcTime, // React Query v5: renamed from cacheTime
       
       // Retry configuration
       retry: 2, // Retry failed requests 2 times
@@ -91,15 +92,16 @@ export const queryClient = new QueryClient({
       refetchOnReconnect: true, // Refetch on network reconnection
       refetchOnMount: true, // Refetch on component mount if stale
       
-      // Error handling
-      useErrorBoundary: false, // Handle errors at component level
+      // React Query v5: useErrorBoundary removed, use throwOnError instead
+      // throwOnError can be set per-query if needed, default is false
       
       // Network mode
       networkMode: 'online', // Only fetch when online
       
       // Performance optimization
       structuralSharing: true, // Prevent unnecessary re-renders
-      keepPreviousData: true, // Keep old data while fetching new
+      // React Query v5: keepPreviousData is now placeholderData: 'previousData'
+      // or use the new placeholderData option per-query
     },
     mutations: {
       // Retry failed mutations once
@@ -109,8 +111,9 @@ export const queryClient = new QueryClient({
       // Network mode
       networkMode: 'online',
       
-      // Error handling
-      useErrorBoundary: false,
+      // React Query v5: useErrorBoundary removed
+      // Use throwOnError: true if you want errors to throw to error boundaries
+      // Default behavior is to not throw (same as useErrorBoundary: false)
     },
   },
 });
