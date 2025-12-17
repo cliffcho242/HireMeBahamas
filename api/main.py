@@ -103,7 +103,7 @@ except ImportError as e:
         
         Render kills apps that fail health checks, so this must be instant.
         """
-        return JSONResponse({"ok": True}, status_code=200)
+        return JSONResponse({"status": "ok"}, status_code=200)
     
     @app.get("/health/ping", include_in_schema=False)
     def health_ping():
