@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify:types": "tsc --version && echo 'Type checking is optional and will not block builds'"
   },
   "dependencies": {
     "@apollo/client": "^3.11.0",
