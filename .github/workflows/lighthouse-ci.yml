@@ -92,6 +92,9 @@ jobs:
           path: lighthouse-reports/
           retention-days: 30
 
+      - name: Install jq for JSON parsing
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Check performance scores
         if: always()
         run: |
@@ -103,21 +106,18 @@ jobs:
             echo "✅ Lighthouse CI completed successfully" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             
-            # Try to extract actual scores from the manifest
-            if command -v jq &> /dev/null; then
-              # Use jq to parse scores if available
-              PERF_SCORE=$(jq -r '.[0].summary.performance // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
-              A11Y_SCORE=$(jq -r '.[0].summary.accessibility // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
-              BP_SCORE=$(jq -r '.[0].summary."best-practices" // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
-              SEO_SCORE=$(jq -r '.[0].summary.seo // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
-              
-              echo "**Scores:**" >> $GITHUB_STEP_SUMMARY
-              echo "- Performance: ${PERF_SCORE}" >> $GITHUB_STEP_SUMMARY
-              echo "- Accessibility: ${A11Y_SCORE}" >> $GITHUB_STEP_SUMMARY
-              echo "- Best Practices: ${BP_SCORE}" >> $GITHUB_STEP_SUMMARY
-              echo "- SEO: ${SEO_SCORE}" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-            fi
+            # Extract actual scores from the manifest using jq
+            PERF_SCORE=$(jq -r '.[0].summary.performance // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
+            A11Y_SCORE=$(jq -r '.[0].summary.accessibility // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
+            BP_SCORE=$(jq -r '.[0].summary."best-practices" // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
+            SEO_SCORE=$(jq -r '.[0].summary.seo // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
+            
+            echo "**Scores:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Performance: ${PERF_SCORE}" >> $GITHUB_STEP_SUMMARY
+            echo "- Accessibility: ${A11Y_SCORE}" >> $GITHUB_STEP_SUMMARY
+            echo "- Best Practices: ${BP_SCORE}" >> $GITHUB_STEP_SUMMARY
+            echo "- SEO: ${SEO_SCORE}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
             
             echo "**Performance targets:**" >> $GITHUB_STEP_SUMMARY
             echo "- 🎯 Target: 90+ for all categories" >> $GITHUB_STEP_SUMMARY
