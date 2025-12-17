@@ -12,13 +12,13 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.query_timeout import with_query_timeout
 from app.core.request_timeout import (
     with_timeout,
     with_upload_timeout,
     with_api_timeout,
     with_heavy_query_timeout,
 )
-from app.core.query_timeout import with_query_timeout
 from app.database import get_db
 from app.models import User, Post
 

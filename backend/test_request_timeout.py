@@ -28,7 +28,9 @@ from app.core.request_timeout import (
 )
 
 # Test constants for simulations
+# Simulates upload time: 0.5 seconds per MB (realistic for medium-speed connections)
 UPLOAD_SIMULATION_SECONDS_PER_MB = 0.5
+# Simulates query processing: 1000 rows per second (typical for complex queries)
 QUERY_SIMULATION_ROWS_PER_SECOND = 1000
 
 
