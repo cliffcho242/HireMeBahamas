@@ -698,7 +698,7 @@ const Profile: React.FC = () => {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {userPosts
-                      .filter(p => p.image_url)
+                      .filter((p): p is typeof p & { image_url: string } => !!p.image_url)
                       .map((post) => (
                         <motion.div
                           key={post.id}
