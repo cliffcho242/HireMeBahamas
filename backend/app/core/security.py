@@ -318,7 +318,7 @@ def get_user_id_optional(
 
 # Import here to avoid circular imports
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(None),  # Will be injected properly
 ):
     """Get current authenticated user"""

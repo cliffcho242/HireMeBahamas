@@ -11,7 +11,7 @@ hitting the database, providing 10-50x performance improvement.
 """
 import time
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt
 
 from app.core.security import (
@@ -100,7 +100,7 @@ class TestEdgeAuthFunctionality:
         """Test edge auth with expired token"""
         # Create an expired token
         user_id = "123"
-        expire = datetime.utcnow() - timedelta(minutes=1)  # Already expired
+        expire = datetime.now(timezone.utc) - timedelta(minutes=1)  # Already expired
         to_encode = {"sub": user_id, "exp": expire}
         token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         
@@ -178,7 +178,7 @@ class TestEdgeAuthVerifyExpiration:
         """Test that verify_exp is explicitly enabled"""
         # Create an expired token
         user_id = "123"
-        expire = datetime.utcnow() - timedelta(minutes=1)
+        expire = datetime.now(timezone.utc) - timedelta(minutes=1)
         to_encode = {"sub": user_id, "exp": expire}
         token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         
