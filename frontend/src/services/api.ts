@@ -191,10 +191,15 @@ const isBackendSleeping = (error: ApiErrorType): boolean => {
   return false;
 };
 
+// Helper to check if endpoint is an authentication endpoint
+const isAuthEndpoint = (url: string) =>
+  url.includes("/auth/login") || url.includes("/auth/register");
+
 // Add auth token to requests and apply smart backend routing
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) {
+  // Don't send auth header to authentication endpoints
+  if (token && !isAuthEndpoint(config.url || '')) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   
