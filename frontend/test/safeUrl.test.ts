@@ -8,10 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   safeParseUrl,
-  parseUrlOrThrow,
   isValidUrl,
-  isSecureUrl,
-  normalizeUrl,
 } from '../src/lib/safeUrl';
 
 describe('safeParseUrl', () => {
