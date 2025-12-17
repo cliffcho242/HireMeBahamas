@@ -57,14 +57,27 @@ def test_main_contains_fastapi_app():
     main_path = os.path.join(os.path.dirname(__file__), "backend", "app", "main.py")
     
     with open(main_path, 'r') as f:
-        content = f.read()
+        lines = f.readlines()
     
-    # Check for app = FastAPI( pattern (allowing for multiline initialization)
-    assert 'app = FastAPI(' in content, \
-        "main.py does not contain 'app = FastAPI()'"
+    # Look for the exact pattern: app = FastAPI( at the beginning of a line (excluding whitespace)
+    found = False
+    matched_line = None
+    for line in lines:
+        stripped = line.strip()
+        # Must start with 'app = FastAPI(' to avoid false positives
+        if stripped.startswith('app = FastAPI('):
+            found = True
+            matched_line = stripped
+            break
+    
+    assert found, \
+        "main.py does not contain 'app = FastAPI()' at the beginning of a line"
     
     print("✓ main.py contains 'app = FastAPI()'")
-    print("  Found: app = FastAPI(...)")
+    if matched_line:
+        # Show first 60 chars of the matched line
+        display_line = matched_line if len(matched_line) <= 60 else matched_line[:57] + "..."
+        print(f"  Found: {display_line}")
     return True
 
 
@@ -104,17 +117,17 @@ if __name__ == "__main__":
     print("=" * 70)
     
     try:
-        # Run all tests
-        all_passed = True
-        all_passed &= test_backend_directory_exists()
-        all_passed &= test_app_directory_exists()
-        all_passed &= test_init_file_exists()
-        all_passed &= test_main_file_exists()
-        all_passed &= test_main_contains_fastapi_app()
-        all_passed &= test_complete_structure()
+        # Run all tests - each test will raise AssertionError if it fails
+        test_backend_directory_exists()
+        test_app_directory_exists()
+        test_init_file_exists()
+        test_main_file_exists()
+        test_main_contains_fastapi_app()
+        test_complete_structure()
         
+        # If we reach here, all tests passed
         print("\n" + "=" * 70)
-        if all_passed:
+        if True:
             print("✓ ALL TESTS PASSED!")
             print("=" * 70)
             print("\nProject structure meets all requirements:")
