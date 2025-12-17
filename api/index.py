@@ -427,7 +427,8 @@ app.add_middleware(
 # ✔ Protects DB
 # ✔ Protects auth
 # ✔ Facebook-safe
-RATE_LIMIT = {}
+# Structure: {ip_address: [timestamp1, timestamp2, ...]}
+RATE_LIMIT: Dict[str, List[float]] = {}
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
@@ -436,7 +437,12 @@ async def rate_limit(request: Request, call_next):
     Protects against abuse and DDoS attacks using in-memory storage.
     No Redis required - works in serverless environments.
     """
-    ip = request.client.host if request.client else "unknown"
+    # Extract client IP from headers (for serverless/proxy environments)
+    ip = (
+        request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or
+        request.headers.get("X-Real-IP", "").strip() or
+        (request.client.host if request.client else "unknown")
+    )
     now = time.time()
     
     # Skip rate limiting for health check endpoints
@@ -451,7 +457,8 @@ async def rate_limit(request: Request, call_next):
     
     # Check if rate limit exceeded (100 requests per 60 seconds)
     if len(RATE_LIMIT[ip]) >= 100:
-        logger.warning(f"Rate limit exceeded for IP: {ip}")
+        # Log rate limit violation without exposing full IP for privacy
+        logger.warning(f"Rate limit exceeded for IP: {ip[:8]}***")
         return Response(
             content="Too Many Requests",
             status_code=429,
