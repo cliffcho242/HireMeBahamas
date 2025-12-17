@@ -23,8 +23,8 @@ except ImportError:
 
 # Upload configuration
 UPLOAD_DIR = "uploads"
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_MB = 10  # Maximum file size in MB (for easy configuration)
+MAX_FILE_SIZE = MAX_MB * 1024 * 1024  # 10MB in bytes (derived from MAX_MB)
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 ALLOWED_FILE_TYPES = {
     "image/jpeg",
@@ -79,7 +79,7 @@ def check_file_size_early(file: UploadFile) -> None:
         HTTPException(413): If file exceeds MAX_MB size limit
     """
     if file.size and file.size > MAX_MB * 1024 * 1024:
-        raise HTTPException(413, "File too large")
+        raise HTTPException(status_code=413, detail="File too large")
 
 
 def validate_file(file: UploadFile, allowed_types: set = None) -> None:
@@ -452,9 +452,11 @@ async def upload_to_gcs(file: UploadFile, folder: str = "hirebahamas") -> str:
             # Set content type
             content_type = file.content_type or "application/octet-stream"
             
-            # ✅ CRITICAL: For GCS, we need to read into memory due to API limitations
-            # However, we validate size early to prevent OOM on oversized files
-            # GCS Python SDK requires file-like object with full content
+            # ⚠️ NOTE: GCS Python SDK's upload_from_file() requires a file-like object
+            # and doesn't support chunked streaming in the same way as local uploads.
+            # MITIGATION: We validate size early (10MB max) to prevent OOM issues.
+            # For files ≤10MB, this approach is safe and acceptable.
+            # Alternative: Use resumable uploads for larger files (future enhancement)
             content = await file.read()
             file_obj = io.BytesIO(content)
 
