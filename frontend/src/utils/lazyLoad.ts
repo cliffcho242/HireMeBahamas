@@ -185,7 +185,7 @@ export function getChunkLoadStats() {
  * Prefetch chunks based on connection speed
  */
 export function prefetchBasedOnConnection() {
-  // @ts-ignore - navigator.connection is not in TypeScript types yet
+  // @ts-expect-error - navigator.connection is not in TypeScript types yet
   const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   
   if (!connection) {

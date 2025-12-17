@@ -80,7 +80,6 @@ export const AdvancedAIProvider: React.FC<AdvancedAIProviderProps> = ({
     // Initial check and set up polling
     // Note: checkAISystemHealth is stable (wrapped in useCallback) and this is a valid
     // subscription pattern for polling external APIs
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     checkAISystemHealth();
     
     // Set up polling interval for continuous health monitoring
