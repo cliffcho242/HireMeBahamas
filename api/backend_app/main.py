@@ -700,42 +700,37 @@ async def full_shutdown():
 
 
 # =============================================================================
-# GLOBAL EXCEPTION HANDLER - Catch all unhandled exceptions
+# PANIC SHIELD - Global Exception Handler
+# =============================================================================
+# 8️⃣ PANIC SHIELD (FAIL GRACEFULLY)
+# ✅ Global exception guard
+# ✔ Users see calm
+# ✔ You get logs
 # =============================================================================
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """Global exception handler to catch unhandled exceptions.
+async def panic_handler(request: Request, exc: Exception):
+    """Panic Shield - Global exception handler for graceful failure.
     
-    This prevents FastAPI from returning generic 500 errors and provides
-    meaningful error messages for debugging.
+    This catches all unhandled exceptions and returns a calm, user-friendly
+    message while logging the full error details for debugging.
     
     Args:
         request: The incoming request
         exc: The unhandled exception
         
     Returns:
-        JSON response with error details
+        JSON response with user-friendly error message
     """
-    import traceback
-    
-    # Get request ID if available
+    # Get request ID if available (from request logging middleware)
     request_id = getattr(request.state, 'request_id', 'unknown')
     
-    # Log the full exception with traceback
-    logger.error(
-        f"[{request_id}] Unhandled exception in {request.method} {request.url.path}: "
-        f"{type(exc).__name__}: {str(exc)}"
-    )
-    logger.error(f"[{request_id}] Traceback: {traceback.format_exc()}")
+    # Log the panic with request ID for debugging
+    logger.error(f"PANIC {request_id}: {exc}")
     
-    # Return a user-friendly error response
+    # Return a calm, user-friendly error response
     return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "detail": "An internal server error occurred. Please try again later.",
-            "error_type": type(exc).__name__,
-            "request_id": request_id,
-        }
+        status_code=500,
+        content={"error": "Temporary issue. Try again."}
     )
 
 
