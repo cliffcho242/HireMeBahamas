@@ -2,7 +2,12 @@
 
 ## Overview
 
-HireMeBahamas now includes Redis-based rate limiting to protect against DDoS attacks and API abuse. This implementation provides:
+HireMeBahamas includes **two rate limiting implementations** to protect against DDoS attacks and API abuse:
+
+1. **Serverless Rate Limiting** (Vercel) - In-memory, no Redis required
+2. **Backend Rate Limiting** (Railway/Render) - Redis-based with in-memory fallback
+
+Both implementations provide:
 
 - **DDoS Protection**: Limits requests per IP address to prevent overwhelming the database
 - **Configurable Limits**: Easily adjust rate limits via environment variables
@@ -14,6 +19,47 @@ HireMeBahamas now includes Redis-based rate limiting to protect against DDoS att
 - **Limit**: 100 requests per 60 seconds per IP address
 - **Response**: HTTP 429 (Too Many Requests) when limit exceeded
 - **Retry-After Header**: Indicates when the client can retry
+
+## Implementation 1: Serverless Rate Limiting (Vercel)
+
+**Location**: `api/index.py`
+
+Simple in-memory rate limiting for Vercel serverless functions. Perfect for serverless environments where Redis may not be available or is overkill.
+
+### Features
+- ✔ **No Redis Required**: Pure in-memory implementation
+- ✔ **Zero Dependencies**: Works out of the box in serverless
+- ✔ **Proxy-Aware**: Extracts real IP from X-Forwarded-For and X-Real-IP headers
+- ✔ **Privacy-Compliant**: Logs truncated IPs for GDPR compliance
+- ✔ **Type-Safe**: Full type annotations for better code quality
+
+### How It Works
+```python
+# Simple dictionary tracks requests per IP
+RATE_LIMIT: Dict[str, List[float]] = {}
+
+# On each request:
+# 1. Extract client IP (handles proxy headers)
+# 2. Remove timestamps older than 60 seconds
+# 3. Check if count >= 100
+# 4. Return 429 if exceeded, otherwise allow
+```
+
+### Testing
+Run serverless-specific tests:
+```bash
+python test_rate_limiting_vercel.py
+```
+
+### Benefits for Serverless
+- No external service dependencies
+- Works in cold starts
+- Minimal memory footprint
+- Compatible with Vercel's execution model
+
+---
+
+## Implementation 2: Backend Rate Limiting (Redis-Based)
 
 ## Environment Variables
 
@@ -204,11 +250,25 @@ done
 
 ## Implementation Details
 
+### Serverless Implementation
+- **Module**: `api/index.py` (lines 423-470)
+- **Tests**: `test_rate_limiting_vercel.py`
+- **Lines of Code**: ~48 lines
+- **Test Coverage**: 4 comprehensive tests, 100% pass rate
+
+### Backend Implementation
 - **Module**: `api/backend_app/core/rate_limiter.py`
 - **Integration**: `api/backend_app/main.py`
 - **Tests**: `test_rate_limiter.py`
 - **Lines of Code**: ~370 lines (including docs)
 - **Test Coverage**: 16 tests, 100% pass rate
+
+## Which Implementation Is Used?
+
+- **Vercel Serverless** (`/api/*`): Uses serverless rate limiting (api/index.py)
+- **Backend Server** (Railway/Render): Uses Redis-based rate limiting (backend_app/main.py)
+
+Both protect the same resources but are optimized for their respective deployment environments.
 
 ## Future Enhancements
 
