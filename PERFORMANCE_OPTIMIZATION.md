@@ -164,12 +164,7 @@ With these optimizations:
 ### Backend
 ```bash
 # Use Gunicorn with Uvicorn workers
-gunicorn app.main:app \
-  --workers 4 \
-  --worker-class uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:8000 \
-  --access-logfile - \
-  --error-logfile -
+gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --access-logfile - --error-logfile -
 
 # Enable Redis for caching
 redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru

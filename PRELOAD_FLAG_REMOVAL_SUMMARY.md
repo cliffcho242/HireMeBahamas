@@ -45,15 +45,12 @@ gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preloa
 
 **Before:**
 ```bash
-exec gunicorn final_backend_postgresql:application \
-    --config gunicorn.conf.py \
-    --preload
+exec gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
 ```
 
 **After:**
 ```bash
-exec gunicorn final_backend_postgresql:application \
-    --config gunicorn.conf.py
+exec gunicorn final_backend_postgresql:application --config gunicorn.conf.py
 ```
 
 ### 2. Enhanced gunicorn.conf.py with Safety Warnings

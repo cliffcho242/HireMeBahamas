@@ -98,14 +98,6 @@ Verify these environment variables are set correctly in your deployment platform
 
 ### ❌ Don't Do This
 
-**Multi-line commands in web forms:**
-```
-# WRONG - backslashes don't work in web form fields
-gunicorn app.main:app \
-  --workers 3 \
-  --bind 0.0.0.0:$PORT
-```
-
 **Using --preload on command line:**
 ```
 # WRONG - conflicts with gunicorn.conf.py
