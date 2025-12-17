@@ -15,6 +15,9 @@ jobs:
   lighthouse:
     name: Lighthouse Performance Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write  # Required for Lighthouse CI to comment on PRs
     defaults:
       run:
         working-directory: frontend
