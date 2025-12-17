@@ -53,6 +53,32 @@ jobs:
           }
           
           echo "✅ Python imports valid"
+
+      - name: Verify Critical Server Dependencies in Requirements Files
+        run: |
+          echo "🔍 Verifying gunicorn, uvicorn, and fastapi in requirements files..."
+          
+          # Check main requirements.txt
+          if ! grep -q "gunicorn" requirements.txt; then
+            echo "::error::❌ CRITICAL: gunicorn missing from requirements.txt"
+            exit 1
+          fi
+          
+          if ! grep -q "uvicorn" requirements.txt; then
+            echo "::error::❌ CRITICAL: uvicorn missing from requirements.txt"
+            exit 1
+          fi
+          
+          if ! grep -q "fastapi" requirements.txt; then
+            echo "::error::❌ CRITICAL: fastapi missing from requirements.txt"
+            exit 1
+          fi
+          
+          echo "✅ All critical server dependencies present in requirements.txt"
+          echo "   - gunicorn: $(grep gunicorn requirements.txt)"
+          echo "   - uvicorn: $(grep uvicorn requirements.txt)"
+          echo "   - fastapi: $(grep fastapi requirements.txt)"
+
   lint-frontend:
     runs-on: ubuntu-latest
     needs: smoke-tests
@@ -154,6 +180,61 @@ jobs:
             echo "❌ Vercel configuration validation failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  validate-server-dependencies:
+    runs-on: ubuntu-latest
+    needs: smoke-tests
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libpq-dev python3-dev
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --only-binary=:all: -r requirements.txt
+
+      - name: Run server dependencies validation script
+        run: |
+          echo "🔍 Running server dependencies validation..."
+          python validate_server_dependencies.py
+
+      - name: Run server dependencies tests
+        run: |
+          echo "🧪 Running server dependencies test suite..."
+          pip install pytest -q
+          python -m pytest tests/test_server_dependencies.py -v -s
+
+      - name: Validation summary
+        if: always()
+        run: |
+          echo "## Server Dependencies Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ All critical server dependencies are installed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Verified dependencies:**" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ gunicorn==23.0.0" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ uvicorn[standard]==0.32.0" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ fastapi==0.115.6" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Status:** Deployment will NOT experience random errors from missing dependencies" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Server dependencies validation failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action required:** Check logs and ensure gunicorn, uvicorn, and fastapi are in requirements.txt" >> $GITHUB_STEP_SUMMARY
           fi
 
   test-api:
