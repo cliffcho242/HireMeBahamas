@@ -192,8 +192,9 @@ const isBackendSleeping = (error: ApiErrorType): boolean => {
 };
 
 // Helper to check if endpoint is an authentication endpoint
+// Using regex to match exact paths, avoiding false positives
 const isAuthEndpoint = (url: string) =>
-  url.includes("/auth/login") || url.includes("/auth/register");
+  /\/auth\/(login|register)($|\?)/.test(url);
 
 // Add auth token to requests and apply smart backend routing
 api.interceptors.request.use((config) => {
