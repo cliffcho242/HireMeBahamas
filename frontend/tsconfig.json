@@ -16,7 +16,7 @@
     "noUnusedParameters": false,
 
     "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
 
