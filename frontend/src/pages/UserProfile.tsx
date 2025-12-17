@@ -653,7 +653,7 @@ const UserProfile: React.FC = () => {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {userPosts
-                      .filter(p => p.image_url)
+                      .filter((p): p is typeof p & { image_url: string } => !!p.image_url)
                       .map((post) => (
                         <motion.div
                           key={post.id}
@@ -662,7 +662,7 @@ const UserProfile: React.FC = () => {
                           className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer group"
                         >
                           <LazyImage
-                            src={post.image_url!}
+                            src={post.image_url}
                             alt="Photo"
                             className="w-full h-full group-hover:scale-105 transition-transform duration-200"
                           />
