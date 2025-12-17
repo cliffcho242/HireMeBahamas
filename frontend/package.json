@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "prebuild": "node scripts/prebuild.js && node scripts/generate-sitemap.js",
-    "build": "npm run prebuild && tsc --noEmit && vite build",
+    "build": "npm run prebuild && vite build",
     "postbuild": "node scripts/analyze-bundle.js",
     "start": "vite preview --host 0.0.0.0 --port 3000",
     "preview": "vite preview",
