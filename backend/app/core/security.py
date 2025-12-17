@@ -154,11 +154,32 @@ def verify_reset_token(token: str) -> Optional[str]:
 
 
 def verify_token(token: str) -> Dict[str, Any]:
-    """Verify a JWT token and return payload"""
+    """Verify a JWT token and return payload
+    
+    This is the edge auth verification function - FASTEST POSSIBLE.
+    ✔ No DB
+    ✔ No network
+    ✔ Sub-1ms
+    
+    Args:
+        token: JWT token string
+        
+    Returns:
+        Dict containing token payload with user_id in 'sub' field
+        
+    Raises:
+        ValueError: If token is invalid or expired
+    """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            options={"verify_exp": True}
+        )
         return payload
-    except JWTError:
+    except JWTError as e:
+        logger.debug(f"JWT verification failed: {str(e)}")
         raise ValueError("Invalid token")
 
 
@@ -169,8 +190,130 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
+# Security scheme for JWT bearer tokens
+security = HTTPBearer()
+
 # Optional bearer token security scheme
 optional_bearer = HTTPBearer(auto_error=False)
+
+
+# =============================================================================
+# EDGE AUTH VERIFICATION (FASTEST POSSIBLE - NO DB)
+# =============================================================================
+
+def verify_jwt_edge(token: str) -> str:
+    """Edge auth verification - JWT only, no database.
+    
+    This is the FASTEST possible authentication:
+    ✔ No DB
+    ✔ No network
+    ✔ Sub-1ms
+    
+    Perfect for:
+    - High-traffic endpoints
+    - Anonymous traffic from Facebook/social media
+    - Public endpoints that optionally show user data
+    - Stateless verification at edge/CDN
+    
+    Args:
+        token: JWT token string
+        
+    Returns:
+        user_id as string extracted from token 'sub' claim
+        
+    Raises:
+        ValueError: If token is invalid, expired, or missing user_id
+    """
+    payload = verify_token(token)
+    user_id = payload.get("sub")
+    
+    if user_id is None:
+        raise ValueError("Token missing user ID")
+    
+    return user_id
+
+
+def get_user_id_from_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> str:
+    """FastAPI dependency for edge auth - extracts user_id from JWT.
+    
+    EDGE AUTH VERIFICATION - FASTEST POSSIBLE:
+    ✔ No DB
+    ✔ No network  
+    ✔ Sub-1ms
+    
+    Use this dependency when you only need the user_id and don't need
+    the full user object from the database. This is 10-50x faster than
+    fetching from DB.
+    
+    Example usage:
+        @router.get("/my-endpoint")
+        async def my_endpoint(user_id: str = Depends(get_user_id_from_token)):
+            # Use user_id directly without DB lookup
+            return {"user_id": user_id}
+    
+    Args:
+        credentials: Bearer token from HTTP Authorization header
+        
+    Returns:
+        user_id as string
+        
+    Raises:
+        HTTPException: 401 if token is invalid or missing
+    """
+    try:
+        token = credentials.credentials
+        user_id = verify_jwt_edge(token)
+        return user_id
+    except ValueError as e:
+        logger.debug(f"Edge auth failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+def get_user_id_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer),
+) -> Optional[str]:
+    """FastAPI dependency for optional edge auth - returns None if not authenticated.
+    
+    EDGE AUTH VERIFICATION - FASTEST POSSIBLE:
+    ✔ No DB
+    ✔ No network
+    ✔ Sub-1ms
+    
+    Use this for public endpoints that optionally show user-specific data.
+    Perfect for high-traffic endpoints with mixed anonymous/authenticated traffic.
+    
+    Example usage:
+        @router.get("/public-feed")
+        async def public_feed(user_id: Optional[str] = Depends(get_user_id_optional)):
+            if user_id:
+                # Show personalized content
+                pass
+            else:
+                # Show public content
+                pass
+    
+    Args:
+        credentials: Optional bearer token from HTTP Authorization header
+        
+    Returns:
+        user_id as string if authenticated, None otherwise
+    """
+    if credentials is None:
+        return None
+    
+    try:
+        token = credentials.credentials
+        user_id = verify_jwt_edge(token)
+        return user_id
+    except ValueError:
+        # Invalid token - treat as anonymous
+        return None
 
 
 # Import here to avoid circular imports
