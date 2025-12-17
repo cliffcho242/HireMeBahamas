@@ -12,6 +12,8 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
 
+    // Deliberately disabled to prevent TS6133 (unused variables) from blocking builds
+    // Type checking is advisory only and runs separately via `npm run typecheck`
     "noUnusedLocals": false,
     "noUnusedParameters": false,
 

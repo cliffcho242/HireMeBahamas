@@ -5,6 +5,9 @@ import compression from 'vite-plugin-compression';
 import path from 'path';
 
 // https://vitejs.dev/config/
+// IMPORTANT: Vite build does NOT perform TypeScript type checking by default.
+// Type checking is separated into `npm run typecheck` to prevent TS errors from blocking production builds.
+// This ensures Vercel deployments always succeed even with TS warnings (e.g., TS6133 unused variables).
 export default defineConfig({
   resolve: {
     alias: {
