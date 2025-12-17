@@ -90,7 +90,7 @@ const ErrorFallback = ({
   showDetails = true,
   className = '',
   iconVariant = 'error',
-}): ErrorFallbackProps => {
+}: ErrorFallbackProps) => {
   const handleReload = () => {
     window.location.reload();
   };

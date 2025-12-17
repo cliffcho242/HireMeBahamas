@@ -227,7 +227,7 @@ const BannerContent = ({
  * This helps users understand that the app is still working during cold starts
  * (common with Render.com free tier) or network issues.
  */
-const ConnectionStatus = ({ show = true }): ConnectionStatusProps => {
+const ConnectionStatus = ({ show = true }: ConnectionStatusProps) => {
   const health = useBackendHealth();
   const [dismissed, setDismissed] = useState(false);
 

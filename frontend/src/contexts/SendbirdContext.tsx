@@ -28,7 +28,7 @@ interface SendbirdProviderProps {
   children: ReactNode;
 }
 
-export const SendbirdProvider = ({ children }): SendbirdProviderProps => {
+export const SendbirdProvider = ({ children }: SendbirdProviderProps) => {
   const [sdk, setSdk] = useState<SendbirdChat | null>(null);
   const [currentUser, setCurrentUser] = useState<SendbirdUser | null>(null);
   const [isConnected, setIsConnected] = useState(false);

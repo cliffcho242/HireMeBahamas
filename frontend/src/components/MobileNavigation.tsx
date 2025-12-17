@@ -24,7 +24,7 @@ interface MobileNavigationProps {
   className?: string;
 }
 
-const MobileNavigation = ({ className = '' }): MobileNavigationProps => {
+const MobileNavigation = ({ className = '' }: MobileNavigationProps) => {
   const location = useLocation();
   const { user } = useAuth();
   const { unreadCount: unreadMessages } = useMessageNotifications();

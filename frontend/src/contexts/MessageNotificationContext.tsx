@@ -84,7 +84,7 @@ interface MessageNotificationProviderProps {
   children: ReactNode;
 }
 
-export const MessageNotificationProvider = ({ children }): MessageNotificationProviderProps => {
+export const MessageNotificationProvider = ({ children }: MessageNotificationProviderProps) => {
   const { socket } = useSocket();
   const { user, isAuthenticated } = useAuth();
   

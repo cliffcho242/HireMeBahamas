@@ -6,7 +6,7 @@ interface ResponsiveLayoutProps {
   className?: string;
 }
 
-const ResponsiveLayout = ({ children, className = '' }): ResponsiveLayoutProps => {
+const ResponsiveLayout = ({ children, className = '' }: ResponsiveLayoutProps) => {
   useEffect(() => {
     // Prevent pull-to-refresh on mobile
     let lastTouchY = 0;

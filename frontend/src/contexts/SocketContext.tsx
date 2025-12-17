@@ -22,7 +22,7 @@ interface SocketProviderProps {
   children: ReactNode;
 }
 
-export const SocketProvider = ({ children }): SocketProviderProps => {
+export const SocketProvider = ({ children }: SocketProviderProps) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);

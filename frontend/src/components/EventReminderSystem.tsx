@@ -22,7 +22,7 @@ interface ReminderNotification {
   type: 'urgent' | 'warning' | 'info';
 }
 
-const EventReminderSystem = ({ events = [] }): EventReminderSystemProps => {
+const EventReminderSystem = ({ events = [] }: EventReminderSystemProps) => {
   const [activeReminders, setActiveReminders] = useState<ReminderNotification[]>([]);
   const [dismissedReminders, setDismissedReminders] = useState<Set<string>>(new Set());
 

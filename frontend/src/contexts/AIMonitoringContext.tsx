@@ -45,7 +45,7 @@ export const AIMonitoringProvider = ({
   backendUrl = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : ''),
   checkInterval = 30000, // 30 seconds
   maxRecoveryAttempts = 3
-}): AIMonitoringProviderProps => {
+}: AIMonitoringProviderProps) => {
   // 🔍 TEMP DEBUG: Check if API URL is properly configured
   if (import.meta.env.DEV) {
     console.log("API URL:", import.meta.env.VITE_API_URL);

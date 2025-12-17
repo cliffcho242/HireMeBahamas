@@ -200,7 +200,7 @@ class AIErrorBoundaryClass extends Component<Props, State> {
 }
 
 // Wrapper component to use the monitoring context
-export const AIErrorBoundary = (props) => {
+export const AIErrorBoundary = (props: any) => {
   const { reportError } = useAIMonitoring();
 
   return (

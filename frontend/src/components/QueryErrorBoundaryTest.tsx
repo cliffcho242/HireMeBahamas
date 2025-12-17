@@ -19,7 +19,7 @@ interface TestComponentProps {
 }
 
 // Component that throws an error when shouldThrow is true
-const ErrorThrowingComponent = ({ shouldThrow }): TestComponentProps => {
+const ErrorThrowingComponent = ({ shouldThrow }: TestComponentProps) => {
   if (shouldThrow) {
     throw new Error('Test error from QueryErrorBoundaryTest component');
   }

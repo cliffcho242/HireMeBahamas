@@ -33,7 +33,7 @@ const SmartSearchBar = ({
   placeholder = "Search for jobs, skills, or services (e.g., 'plumber in Nassau')...",
   showPopularSearches = true,
   className = ''
-}): SmartSearchBarProps => {
+}: SmartSearchBarProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestionsOverride, setShowSuggestionsOverride] = useState(false);
   

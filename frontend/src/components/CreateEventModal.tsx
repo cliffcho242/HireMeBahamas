@@ -22,7 +22,7 @@ interface CreateEventModalProps {
   onEventCreated?: () => void;
 }
 
-const CreateEventModal = ({ isOpen, onClose, onEventCreated }): CreateEventModalProps => {
+const CreateEventModal = ({ isOpen, onClose, onEventCreated }: CreateEventModalProps) => {
   const [step, setStep] = useState(1);
   const [isCreating, setIsCreating] = useState(false);
 

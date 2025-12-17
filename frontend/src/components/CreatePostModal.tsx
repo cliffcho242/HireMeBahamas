@@ -21,7 +21,7 @@ interface CreatePostModalProps {
   onPostCreated?: () => void;
 }
 
-const CreatePostModal = ({ isOpen, onClose, onPostCreated }): CreatePostModalProps => {
+const CreatePostModal = ({ isOpen, onClose, onPostCreated }: CreatePostModalProps) => {
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);

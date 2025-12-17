@@ -31,7 +31,7 @@ const LazyEmojiPicker = ({
   theme = Theme.LIGHT,
   width = 350,
   height = 400,
-}): LazyEmojiPickerProps => {
+}: LazyEmojiPickerProps) => {
   return (
     <Suspense fallback={<EmojiPickerSkeleton />}>
       <EmojiPicker
