@@ -69,3 +69,10 @@ export const isDev = import.meta.env.DEV;
  * Check if app is in production mode
  */
 export const isProd = import.meta.env.PROD;
+
+/**
+ * Demo mode flag for investor-safe demonstrations
+ * When enabled, all mutations are blocked to prevent accidental data changes
+ * Set VITE_DEMO_MODE=true to enable
+ */
+export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
