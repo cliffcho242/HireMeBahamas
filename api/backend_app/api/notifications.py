@@ -1,14 +1,16 @@
 from typing import Optional
+import logging
 
 from app.core.security import get_current_user
 from app.database import get_db
 from app.models import Notification, NotificationType, User
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/list")
@@ -157,3 +159,45 @@ async def mark_all_read(
         "success": True,
         "message": f"Marked {len(notifications)} notifications as read",
     }
+
+
+# ============================================================================
+# BACKGROUND TASKS DEMO ENDPOINT
+# ============================================================================
+
+async def send_notification():
+    """
+    Background task to simulate sending a notification.
+    
+    This demonstrates FastAPI's BackgroundTasks feature:
+    ✔ Zero blocking - returns immediately
+    ✔ No Redis - uses in-memory task queue
+    ✔ Render-safe - no external dependencies
+    """
+    import asyncio
+    
+    # Simulate some work (e.g., sending email, push notification, etc.)
+    logger.info("Starting background notification task...")
+    await asyncio.sleep(2)  # Simulate async work
+    logger.info("Background notification sent successfully!")
+
+
+@router.post("/notify")
+async def notify(bg: BackgroundTasks):
+    """
+    Demo endpoint showing FastAPI's BackgroundTasks in action.
+    
+    This endpoint demonstrates how to use FastAPI's built-in BackgroundTasks
+    to perform work after returning a response to the client.
+    
+    Features:
+    - Returns immediately without waiting for the background task
+    - No external dependencies (no Redis, Celery, etc.)
+    - Perfect for serverless/Render deployments
+    - Can be used for emails, notifications, logging, etc.
+    
+    Returns:
+        dict: Immediate response confirming task was scheduled
+    """
+    bg.add_task(send_notification)
+    return {"ok": True, "message": "Notification scheduled in background"}
