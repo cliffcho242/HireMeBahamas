@@ -6,9 +6,14 @@
 # =============================================================================
 import os
 import importlib
+import tracemalloc
 from typing import Optional, List, Dict, Union, Any
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+
+# Enable tracemalloc to track memory allocations for debugging
+# This prevents RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+tracemalloc.start()
 
 
 def inject_typing_exports(module):
