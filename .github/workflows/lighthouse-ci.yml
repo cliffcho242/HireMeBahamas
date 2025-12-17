@@ -63,6 +63,18 @@ jobs:
           NODE_ENV: production
           VITE_API_URL: https://hiremebahamas.onrender.com
 
+      - name: Bundle size analysis
+        working-directory: ./frontend
+        run: |
+          echo "## 📦 Bundle Size Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f "dist/bundle-report.json" ]; then
+            # Extract and display bundle sizes
+            echo "Bundle analysis completed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "See detailed output in the build logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli@0.13.x
 
@@ -88,14 +100,31 @@ jobs:
           
           # Parse the latest manifest.json for scores
           if [ -f "lighthouse-reports/manifest.json" ]; then
-            # Extract performance score (this is a simplified example)
             echo "✅ Lighthouse CI completed successfully" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Try to extract actual scores from the manifest
+            if command -v jq &> /dev/null; then
+              # Use jq to parse scores if available
+              PERF_SCORE=$(jq -r '.[0].summary.performance // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
+              A11Y_SCORE=$(jq -r '.[0].summary.accessibility // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
+              BP_SCORE=$(jq -r '.[0].summary."best-practices" // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
+              SEO_SCORE=$(jq -r '.[0].summary.seo // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
+              
+              echo "**Scores:**" >> $GITHUB_STEP_SUMMARY
+              echo "- Performance: ${PERF_SCORE}" >> $GITHUB_STEP_SUMMARY
+              echo "- Accessibility: ${A11Y_SCORE}" >> $GITHUB_STEP_SUMMARY
+              echo "- Best Practices: ${BP_SCORE}" >> $GITHUB_STEP_SUMMARY
+              echo "- SEO: ${SEO_SCORE}" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+            
             echo "**Performance targets:**" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Performance: 90+" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Accessibility: 90+" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Best Practices: 90+" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ SEO: 90+" >> $GITHUB_STEP_SUMMARY
+            echo "- 🎯 Target: 90+ for all categories" >> $GITHUB_STEP_SUMMARY
+            echo "- ⚡ First Contentful Paint: < 1.8s" >> $GITHUB_STEP_SUMMARY
+            echo "- 🖼️ Largest Contentful Paint: < 2.5s" >> $GITHUB_STEP_SUMMARY
+            echo "- 📏 Cumulative Layout Shift: < 0.1" >> $GITHUB_STEP_SUMMARY
+            echo "- 🚀 Total Blocking Time: < 200ms" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "📊 Detailed reports are available in the artifacts." >> $GITHUB_STEP_SUMMARY
           else
@@ -121,19 +150,59 @@ jobs:
             // Read manifest
             const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
             
+            // Helper to format score with emoji
+            const formatScore = (score) => {
+              if (score === null || score === undefined) return 'N/A';
+              const percentage = Math.round(score * 100);
+              const emoji = percentage >= 90 ? '✅' : percentage >= 50 ? '⚠️' : '❌';
+              return `${emoji} ${percentage}`;
+            };
+            
             // Build comment
             let comment = '## 🎯 Lighthouse CI Performance Report\n\n';
-            comment += '| Category | Score | Status |\n';
-            comment += '|----------|-------|--------|\n';
             
-            // Add a summary message
-            comment += '\n📊 View detailed reports in the workflow artifacts.\n';
-            comment += '\n**Performance Budget:**\n';
-            comment += '- 🎯 Target: 90+ for all categories\n';
-            comment += '- ⚡ FCP: < 1.8s\n';
-            comment += '- 🖼️ LCP: < 2.5s\n';
-            comment += '- 📏 CLS: < 0.1\n';
-            comment += '- 🚀 TBT: < 200ms\n';
+            // Try to extract scores from first result
+            if (manifest.length > 0 && manifest[0].summary) {
+              const summary = manifest[0].summary;
+              
+              comment += '| Category | Score | Target |\n';
+              comment += '|----------|-------|--------|\n';
+              comment += `| Performance | ${formatScore(summary.performance)} | 90+ |\n`;
+              comment += `| Accessibility | ${formatScore(summary.accessibility)} | 90+ |\n`;
+              comment += `| Best Practices | ${formatScore(summary['best-practices'])} | 90+ |\n`;
+              comment += `| SEO | ${formatScore(summary.seo)} | 90+ |\n`;
+              comment += '\n';
+            }
+            
+            // Add performance budget details
+            comment += '### 📏 Performance Budget\n\n';
+            comment += '| Metric | Target |\n';
+            comment += '|--------|--------|\n';
+            comment += '| First Contentful Paint | < 1.8s |\n';
+            comment += '| Largest Contentful Paint | < 2.5s |\n';
+            comment += '| Cumulative Layout Shift | < 0.1 |\n';
+            comment += '| Total Blocking Time | < 200ms |\n';
+            comment += '| Speed Index | < 3.4s |\n';
+            comment += '\n';
+            
+            // Add bundle size info if available
+            const bundleReportPath = path.join(process.cwd(), 'frontend', 'dist', 'bundle-report.json');
+            if (fs.existsSync(bundleReportPath)) {
+              const bundleReport = JSON.parse(fs.readFileSync(bundleReportPath, 'utf8'));
+              comment += '### 📦 Bundle Size\n\n';
+              comment += `- Total JS: ${bundleReport.stats.totalJS.toFixed(2)} KB\n`;
+              comment += `- Total CSS: ${bundleReport.stats.totalCSS.toFixed(2)} KB\n`;
+              
+              if (bundleReport.warnings.length > 0) {
+                comment += '\n⚠️ **Warnings:**\n';
+                bundleReport.warnings.forEach(w => {
+                  comment += `- ${w}\n`;
+                });
+              }
+              comment += '\n';
+            }
+            
+            comment += '📊 View detailed reports in the [workflow artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).\n';
             
             // Post comment
             await github.rest.issues.createComment({

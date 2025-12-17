@@ -59,6 +59,20 @@
       content="Connect. Share. Grow Your Career in the Bahamas"
     />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.hiremebahamas.com/" />
+    <meta property="og:image" content="https://www.hiremebahamas.com/pwa-512x512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="HireMeBahamas Logo" />
+    <meta property="og:site_name" content="HireMeBahamas" />
+    <meta property="og:locale" content="en_BS" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="HireMeBahamas - Caribbean Job Platform" />
+    <meta name="twitter:description" content="Connect. Share. Grow Your Career in the Bahamas" />
+    <meta name="twitter:image" content="https://www.hiremebahamas.com/pwa-512x512.png" />
+    <meta name="twitter:image:alt" content="HireMeBahamas Logo" />
 
     <!-- Performance & Cross-Browser Compatibility -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -112,6 +126,59 @@
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
+
+    <!-- Structured Data (JSON-LD) for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "HireMeBahamas",
+      "url": "https://www.hiremebahamas.com",
+      "description": "The official job board and career platform for The Bahamas. Connect employers with talented Bahamian professionals.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://www.hiremebahamas.com/jobs?search={search_term_string}",
+        "query-input": "required name=search_term_string"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "HireMeBahamas",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://www.hiremebahamas.com/pwa-512x512.png",
+          "width": 512,
+          "height": 512
+        }
+      },
+      "sameAs": [
+        "https://www.facebook.com/hiremebahamas",
+        "https://twitter.com/hiremebahamas",
+        "https://www.linkedin.com/company/hiremebahamas"
+      ],
+      "inLanguage": "en-BS",
+      "keywords": "Bahamas jobs, Caribbean careers, employment Bahamas, job search, hire Bahamas"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "HireMeBahamas",
+      "url": "https://www.hiremebahamas.com",
+      "logo": "https://www.hiremebahamas.com/pwa-512x512.png",
+      "description": "The official job board and career platform for The Bahamas",
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "BS",
+        "addressRegion": "New Providence"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "Customer Service",
+        "url": "https://www.hiremebahamas.com/contact"
+      }
+    }
+    </script>
 
     <!-- iOS Splash Screens -->
     <link

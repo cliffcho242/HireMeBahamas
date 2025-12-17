@@ -7,57 +7,65 @@
   <!-- Homepage -->
   <url>
     <loc>https://www.hiremebahamas.com/</loc>
-    <lastmod>2025-10-29</lastmod>
+    <lastmod>2025-12-17</lastmod>
     <changefreq>daily</changefreq>
-    <priority>1.0</priority>
+    <priority>1</priority>
   </url>
-  
-  <!-- Jobs Page -->
+  <!-- Social Feed -->
   <url>
-    <loc>https://www.hiremebahamas.com/jobs</loc>
-    <lastmod>2025-10-29</lastmod>
+    <loc>https://www.hiremebahamas.com/feed</loc>
+    <lastmod>2025-12-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
-  
+  <!-- Job Listings -->
+  <url>
+    <loc>https://www.hiremebahamas.com/jobs</loc>
+    <lastmod>2025-12-17</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
   <!-- Login Page -->
   <url>
     <loc>https://www.hiremebahamas.com/login</loc>
-    <lastmod>2025-10-29</lastmod>
+    <lastmod>2025-12-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
-  
-  <!-- Register Page -->
+  <!-- Registration Page -->
   <url>
     <loc>https://www.hiremebahamas.com/register</loc>
-    <lastmod>2025-10-29</lastmod>
+    <lastmod>2025-12-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
-  
-  <!-- About Page -->
+  <!-- User Profile -->
+  <url>
+    <loc>https://www.hiremebahamas.com/profile</loc>
+    <lastmod>2025-12-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <!-- Messages -->
+  <url>
+    <loc>https://www.hiremebahamas.com/messages</loc>
+    <lastmod>2025-12-17</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <!-- About Us -->
   <url>
     <loc>https://www.hiremebahamas.com/about</loc>
-    <lastmod>2025-10-29</lastmod>
+    <lastmod>2025-12-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
-  
-  <!-- Contact Page -->
+  <!-- Contact Us -->
   <url>
     <loc>https://www.hiremebahamas.com/contact</loc>
-    <lastmod>2025-10-29</lastmod>
+    <lastmod>2025-12-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  
-  <!-- Feed/Home Page -->
-  <url>
-    <loc>https://www.hiremebahamas.com/feed</loc>
-    <lastmod>2025-10-29</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
   </url>
 
 </urlset>
