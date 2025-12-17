@@ -177,6 +177,15 @@ const isAuthEndpoint = (url: string | undefined): boolean => {
   return url.endsWith('/auth/login') || url.endsWith('/auth/register');
 };
 
+// 🔒 LOCKED PATTERN: Future-safe helper for broader auth endpoint detection
+// Mark intentionally unused helpers to prevent accidental removal during refactoring
+// This signals: (1) You know it's unused, (2) Compiler won't block, (3) Future-safe
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const isAuthEndpointGeneral = (url: string | undefined): boolean => {
+  if (!url) return false;
+  return url.includes("/auth");
+};
+
 // Add auth token to requests and apply smart backend routing
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
