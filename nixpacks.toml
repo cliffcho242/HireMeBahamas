@@ -110,4 +110,4 @@ cmds = [
 # Use Poetry-managed Gunicorn with configuration file
 # Railway/Render will inject PORT environment variable
 # Working directory: backend/ where app/main.py and gunicorn.conf.py are located
-cmd = "cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py"
+cmd = "cd backend && poetry run gunicorn app.main:app --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --workers 1 --timeout 120"
