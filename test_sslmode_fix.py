@@ -22,7 +22,9 @@ os.environ['DB_CONNECT_TIMEOUT'] = '5'
 async def test_database_warmup():
     """Test that database warmup doesn't throw sslmode error."""
     # Need to change to backend directory for imports
-    sys.path.insert(0, '/home/runner/work/HireMeBahamas/HireMeBahamas/backend')
+    import os.path
+    backend_dir = os.path.join(os.path.dirname(__file__), 'backend')
+    sys.path.insert(0, backend_dir)
     
     from app.core.performance import warmup_database_connections, create_performance_indexes
     

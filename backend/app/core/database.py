@@ -31,7 +31,7 @@
 import logging
 import threading
 from typing import Optional
-from urllib.parse import urlparse, parse_qs, urlunparse, urlencode
+from urllib.parse import urlparse
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -51,25 +51,8 @@ logger.info("Database URL configured from settings")
 # CRITICAL: Remove sslmode from URL for asyncpg compatibility
 # asyncpg does NOT accept sslmode in URL - it must be in connect_args
 # sslmode in URL causes: connect() got an unexpected keyword argument 'sslmode'
-if "sslmode=" in DATABASE_URL:
-    parsed_url = urlparse(DATABASE_URL)
-    # Parse query parameters
-    query_params = parse_qs(parsed_url.query)
-    # Remove sslmode parameter
-    if 'sslmode' in query_params:
-        del query_params['sslmode']
-        logger.info("Removed sslmode from DATABASE_URL (asyncpg requires SSL in connect_args)")
-    # Reconstruct query string
-    new_query = urlencode(query_params, doseq=True)
-    # Reconstruct URL
-    DATABASE_URL = urlunparse((
-        parsed_url.scheme,
-        parsed_url.netloc,
-        parsed_url.path,
-        parsed_url.params,
-        new_query,
-        parsed_url.fragment
-    ))
+from .db_utils import strip_sslmode_from_url, get_ssl_config
+DATABASE_URL = strip_sslmode_from_url(DATABASE_URL)
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
@@ -244,7 +227,7 @@ def get_engine():
                         # SSL configuration for asyncpg
                         # Use 'require' to enforce SSL connections (recommended for production)
                         # asyncpg does NOT accept sslmode in URL - it must be in connect_args
-                        "ssl": "require" if settings.ENVIRONMENT == "production" else True,
+                        "ssl": get_ssl_config(settings.ENVIRONMENT),
                         
                         # PostgreSQL server settings
                         "server_settings": {
