@@ -59,6 +59,9 @@ function hasValidCommentUser(comment: Comment): comment is ValidComment {
   return comment.user != null && typeof comment.user.id === 'number';
 }
 
+// Number of posts that should load with priority (above-the-fold optimization)
+const PRIORITY_POSTS_COUNT = 3;
+
 const PostFeed: React.FC = () => {
   const [posts, setPosts] = useState<ValidPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -774,7 +777,7 @@ const PostFeed: React.FC = () => {
                     <LazyImage
                       src={post.image_url}
                       alt="Post image"
-                      priority={index < 3}
+                      priority={index < PRIORITY_POSTS_COUNT}
                       className="w-full h-auto max-h-96 image-fade-in gpu-accelerated"
                     />
                   </div>

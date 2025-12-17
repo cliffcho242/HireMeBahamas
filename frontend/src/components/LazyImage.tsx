@@ -38,7 +38,7 @@ export default function LazyImage({
       loading={priority ? "eager" : "lazy"}
       decoding="async"
       className={className}
-      style={{ objectFit: "cover", ...style }}
+      style={{ ...style, objectFit: style.objectFit || "cover" }}
     />
   );
 }
