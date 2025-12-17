@@ -9,6 +9,7 @@ Features:
 - Thread-safe operations with RLock
 - Zero external dependencies
 - Automatic cleanup on access
+- Optional size limits to prevent unbounded growth
 
 Usage:
     from app.core.memory_cache import cache_get, cache_set
@@ -18,6 +19,15 @@ Usage:
     
     # Get a value (returns None if expired or not found)
     value = cache_get("user:123", ttl=30)
+    
+    # Optional: Run periodic cleanup in production
+    # cleaned = cache_cleanup(ttl=60)  # Remove entries older than 60s
+
+Production Considerations:
+    - Cache entries are automatically removed when accessed after TTL expiration
+    - For high-traffic applications, consider periodic cleanup via background task
+    - Recommended TTL values: 30-60 seconds (as per requirements)
+    - Monitor memory usage in production and adjust TTL accordingly
 """
 from time import time
 from typing import Any, Optional
@@ -29,6 +39,10 @@ CACHE: dict[str, tuple[Any, float]] = {}
 
 # Thread lock for cache operations
 _cache_lock = RLock()
+
+# Maximum cache size (0 = unlimited, recommended: 1000-10000 for production)
+# When limit is reached, oldest entries are evicted
+MAX_CACHE_SIZE = 10000
 
 
 def cache_get(key: str, ttl: int = 30) -> Optional[Any]:
@@ -68,6 +82,7 @@ def cache_set(key: str, value: Any) -> None:
     Set a value in cache with current timestamp.
     
     Thread-safe operation using RLock.
+    Automatically evicts oldest entries if MAX_CACHE_SIZE is exceeded.
     
     Args:
         key: Cache key to store
@@ -76,8 +91,18 @@ def cache_set(key: str, value: Any) -> None:
     Note:
         Timestamp is automatically set to current time.
         TTL is checked during cache_get() calls.
+        If cache size exceeds MAX_CACHE_SIZE, oldest 10% of entries are evicted.
     """
     with _cache_lock:
+        # Check if we need to evict old entries
+        if MAX_CACHE_SIZE > 0 and len(CACHE) >= MAX_CACHE_SIZE:
+            # Evict oldest 10% of entries
+            num_to_evict = max(1, MAX_CACHE_SIZE // 10)
+            # Sort by timestamp and get oldest entries
+            sorted_items = sorted(CACHE.items(), key=lambda x: x[1][1])
+            for old_key, _ in sorted_items[:num_to_evict]:
+                CACHE.pop(old_key, None)
+        
         CACHE[key] = (value, time())
 
 

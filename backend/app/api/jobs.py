@@ -2,7 +2,13 @@ from typing import List, Optional
 
 from app.core.security import get_current_user
 # Note: Maintaining both Redis (get_cached/set_cached/invalidate_cache) and 
-# in-memory cache for backward compatibility and gradual migration
+# in-memory cache (cache_get/cache_set/cache_invalidate_prefix) for backward 
+# compatibility and graceful migration.
+#
+# Migration Plan:
+# - Phase 1 (Current): Both caches active, in-memory cache serves requests
+# - Phase 2 (Future): Monitor performance, remove Redis dependencies if successful
+# - Timeline: Redis can be fully removed once in-memory cache proves stable in production
 from app.core.cache import get_cached, set_cached, invalidate_cache
 from app.core.memory_cache import cache_get, cache_set, cache_delete, cache_invalidate_prefix
 from app.core.cache_headers import CacheStrategy, handle_conditional_request, apply_performance_headers

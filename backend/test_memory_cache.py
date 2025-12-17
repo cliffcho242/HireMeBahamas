@@ -320,6 +320,38 @@ def test_thread_safety():
     assert cache_get("post_test", ttl=30) == "value"
 
 
+def test_cache_size_limit():
+    """Test that cache respects MAX_CACHE_SIZE limit"""
+    from app.core.memory_cache import MAX_CACHE_SIZE
+    
+    # Skip test if MAX_CACHE_SIZE is unlimited
+    if MAX_CACHE_SIZE <= 0:
+        pytest.skip("MAX_CACHE_SIZE is unlimited")
+    
+    # Clear cache first
+    cache_clear()
+    
+    # Add entries up to the limit
+    for i in range(MAX_CACHE_SIZE + 100):
+        cache_set(f"size_test_{i}", f"value_{i}")
+    
+    # Cache size should not exceed MAX_CACHE_SIZE significantly
+    # (allowing for some buffer since we evict 10% at a time)
+    current_size = cache_size()
+    assert current_size <= MAX_CACHE_SIZE, \
+        f"Cache size {current_size} exceeds limit {MAX_CACHE_SIZE}"
+    
+    # Oldest entries should have been evicted
+    # First entry should be gone
+    result = cache_get("size_test_0", ttl=60)
+    assert result is None, "Oldest entries should be evicted"
+    
+    # Recent entries should still exist
+    recent_key = f"size_test_{MAX_CACHE_SIZE + 99}"
+    result = cache_get(recent_key, ttl=60)
+    assert result is not None, "Recent entries should still exist"
+
+
 if __name__ == "__main__":
     # Run tests
     pytest.main([__file__, "-v"])
