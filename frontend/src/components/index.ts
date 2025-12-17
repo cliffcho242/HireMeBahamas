@@ -51,7 +51,7 @@ export { default as ConnectionStatus } from './ConnectionStatus';
 export { default as InstallPWA } from './InstallPWA';
 export { default as ResourceHints } from './ResourceHints';
 export { default as EventReminderSystem } from './EventReminderSystem';
-export { AIErrorBoundary } from './AIErrorBoundary';
+export { AIErrorBoundary } from './AIErrorBoundary'; // Named export, not default
 export { default as AISystemStatus } from './AISystemStatus';
 
 // Sendbird components

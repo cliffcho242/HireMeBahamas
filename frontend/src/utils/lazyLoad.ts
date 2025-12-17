@@ -136,26 +136,20 @@ export function usePrefetchOnHover(
  * Using barrel exports for case-safe, cleaner imports
  */
 export const LazyComponents = {
-  // Image editor (doesn't exist - fallback to null)
-  ImageEditor: lazyWithRetry(() => import('../components').then(() => ({
+  // Image editor (doesn't exist - direct fallback without importing)
+  ImageEditor: lazyWithRetry(() => Promise.resolve({
     default: () => null // Component doesn't exist yet
-  })).catch(() => ({
-    default: () => null
-  }))),
+  })),
   
-  // Rich text editor (doesn't exist - fallback to null)
-  RichTextEditor: lazyWithRetry(() => import('../components').then(() => ({
+  // Rich text editor (doesn't exist - direct fallback without importing)
+  RichTextEditor: lazyWithRetry(() => Promise.resolve({
     default: () => null // Component doesn't exist yet
-  })).catch(() => ({
-    default: () => null
-  }))),
+  })),
   
-  // Video player (doesn't exist - fallback to null)
-  VideoPlayer: lazyWithRetry(() => import('../components').then(() => ({
+  // Video player (doesn't exist - direct fallback without importing)
+  VideoPlayer: lazyWithRetry(() => Promise.resolve({
     default: () => null // Component doesn't exist yet
-  })).catch(() => ({
-    default: () => null
-  }))),
+  })),
   
   // Charts/analytics - map to existing AIDashboard
   AnalyticsDashboard: lazyWithRetry(() => import('../components').then(m => ({ 
