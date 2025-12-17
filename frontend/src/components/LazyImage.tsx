@@ -8,11 +8,21 @@
  * - Responsive images with srcset
  * - Error handling with fallback
  */
-import React, { useState, useEffect, useRef, ImgHTMLAttributes } from 'react';
+import React, { useState, useEffect, ImgHTMLAttributes } from 'react';
 
-interface LazyImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
+// Union type for srcSet to support both string and object formats
+type SrcSet =
+  | string
+  | {
+      '1x'?: string;
+      '2x'?: string;
+      '3x'?: string;
+    };
+
+interface LazyImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'srcSet'> {
   src: string;
   alt: string;
+  srcSet?: SrcSet;
   placeholderSrc?: string;
   threshold?: number;
   rootMargin?: string;
@@ -30,6 +40,7 @@ const DEFAULT_FALLBACK = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/200
 export function LazyImage({
   src,
   alt,
+  srcSet,
   placeholderSrc,
   threshold = 0.1,
   rootMargin = '50px',
@@ -45,6 +56,15 @@ export function LazyImage({
   const [imageRef, setImageRef] = useState<HTMLImageElement | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+
+  // Convert srcSet to string format if it's an object
+  const srcSetString = srcSet
+    ? typeof srcSet === 'string'
+      ? srcSet
+      : Object.entries(srcSet)
+          .map(([density, url]) => `${url} ${density}`)
+          .join(', ')
+    : undefined;
 
   useEffect(() => {
     if (!imageRef) return;
@@ -99,6 +119,7 @@ export function LazyImage({
       ref={setImageRef}
       src={imageSrc}
       alt={alt}
+      srcSet={srcSetString}
       className={`${className} ${isLoaded ? 'loaded' : 'loading'} ${hasError ? 'error' : ''}`}
       width={width}
       height={height}
@@ -161,11 +182,6 @@ export function ProgressiveImage({
  * Responsive Image Component with srcset
  */
 interface ResponsiveImageProps extends LazyImageProps {
-  srcSet?: {
-    '1x'?: string;
-    '2x'?: string;
-    '3x'?: string;
-  };
   sizes?: string;
 }
 
@@ -179,6 +195,12 @@ export function ResponsiveImage({
   const buildSrcSet = () => {
     if (!srcSet) return undefined;
     
+    // If srcSet is already a string, return it as-is
+    if (typeof srcSet === 'string') {
+      return srcSet;
+    }
+    
+    // If srcSet is an object, build the srcSet string
     const srcSetString = Object.entries(srcSet)
       .map(([density, url]) => `${url} ${density}`)
       .join(', ');
