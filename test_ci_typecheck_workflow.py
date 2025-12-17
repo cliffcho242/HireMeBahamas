@@ -28,7 +28,7 @@ def test_ci_typecheck_configuration():
     type_check_job = jobs['type-check']
     
     # Verify the job has continue-on-error set to true (never blocks builds)
-    assert type_check_job.get('continue-on-error') == True, \
+    assert type_check_job.get('continue-on-error') is True, \
         "type-check job must have continue-on-error: true to never block builds"
     print("✅ type-check job has continue-on-error: true")
     
@@ -73,12 +73,27 @@ def test_ci_typecheck_configuration():
     assert typecheck_step is not None, "type-check job must have a type check step"
     assert 'npm run typecheck' in typecheck_step.get('run', ''), \
         "type-check step must run 'npm run typecheck'"
+    
+    # Verify the step has an id for outcome tracking
+    assert typecheck_step.get('id') is not None, \
+        "type-check step must have an id for outcome tracking"
+    
+    # Verify the step has continue-on-error at step level
+    assert typecheck_step.get('continue-on-error') is True, \
+        "type-check step should have continue-on-error: true"
+    
     print("✅ type-check job runs npm run typecheck")
     
     # Check for summary step
     summary_step = next((s for s in steps if 'summary' in s.get('name', '').lower()), None)
     assert summary_step is not None, "type-check job must have a summary step"
     assert summary_step.get('if') == 'always()', "Summary step should always run"
+    
+    # Verify the summary step uses steps.typecheck.outcome
+    summary_run = summary_step.get('run', '')
+    assert 'steps.typecheck.outcome' in summary_run, \
+        "Summary step should check steps.typecheck.outcome for status"
+    
     print("✅ type-check job has a summary step that always runs")
     
     # Verify that lint-frontend no longer has the type check step
