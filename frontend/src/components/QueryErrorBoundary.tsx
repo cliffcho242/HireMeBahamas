@@ -69,9 +69,6 @@ class QueryErrorBoundary extends Component<Props, State> {
       error: null,
       errorInfo: null,
     });
-
-    // Optionally reload the page as a last resort
-    // window.location.reload();
   };
 
   render() {
@@ -136,7 +133,14 @@ class QueryErrorBoundary extends Component<Props, State> {
                 </button>
 
                 <button
-                  onClick={() => window.location.href = '/'}
+                  onClick={() => {
+                    // Reset error state first
+                    this.handleReset();
+                    // Use History API to navigate without full reload
+                    window.history.pushState({}, '', '/');
+                    // Trigger popstate event for React Router to detect navigation
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
                   className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-6 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
                 >
                   Go to Home
