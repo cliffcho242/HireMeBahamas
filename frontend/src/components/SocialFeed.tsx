@@ -2,6 +2,7 @@
 // Social feed component with dynamic API responses
 import { useState, useEffect, useCallback } from 'react';
 import { API } from '../services/api';
+import LazyImage from './LazyImage';
 import './SocialFeed.css';
 
 // Enhanced API service with AI features
@@ -96,7 +97,11 @@ const Post = ({ post, onLike }: { post: any, onLike: any }) => {
         <div className="user-info">
           <div className="avatar">
             {post.author.avatar_url ? (
-              <img src={post.author.avatar_url} alt={post.author.full_name} />
+              <LazyImage 
+                src={post.author.avatar_url} 
+                alt={post.author.full_name}
+                priority={true}
+              />
             ) : (
               <div className="avatar-placeholder">
                 {post.author.full_name.charAt(0).toUpperCase()}
@@ -118,7 +123,10 @@ const Post = ({ post, onLike }: { post: any, onLike: any }) => {
         <p>{post.content}</p>
         {post.image_url && (
           <div className="post-image">
-            <img src={post.image_url} alt="Post content" />
+            <LazyImage 
+              src={post.image_url} 
+              alt="Post content"
+            />
           </div>
         )}
       </div>
@@ -178,7 +186,11 @@ const CreatePost = ({ onPostCreated, currentUser }: { onPostCreated: any, curren
       <div className="create-post-header">
         <div className="avatar">
           {currentUser?.avatar_url ? (
-            <img src={currentUser.avatar_url} alt={currentUser.full_name} />
+            <LazyImage 
+              src={currentUser.avatar_url} 
+              alt={currentUser.full_name}
+              priority={true}
+            />
           ) : (
             <div className="avatar-placeholder">
               {currentUser?.full_name?.charAt(0).toUpperCase() || 'U'}

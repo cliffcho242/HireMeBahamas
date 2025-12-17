@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import type { EmojiClickData } from 'emoji-picker-react';
 import LazyEmojiPicker from './LazyEmojiPicker';
+import LazyImage from './LazyImage';
 import {
   HeartIcon,
   ChatBubbleLeftIcon,
@@ -57,6 +58,9 @@ function hasValidUser(post: Post): post is ValidPost {
 function hasValidCommentUser(comment: Comment): comment is ValidComment {
   return comment.user != null && typeof comment.user.id === 'number';
 }
+
+// Number of posts that should load with priority (above-the-fold optimization)
+const PRIORITY_POSTS_COUNT = 3;
 
 const PostFeed: React.FC = () => {
   const [posts, setPosts] = useState<ValidPost[]>([]);
@@ -770,13 +774,11 @@ const PostFeed: React.FC = () => {
                 <p className="text-gray-900 whitespace-pre-wrap text-sm leading-relaxed text-render-5k">{post.content}</p>
                 {post.image_url && (
                   <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 hd-image-container">
-                    <img
+                    <LazyImage
                       src={post.image_url}
                       alt="Post image"
-                      className="w-full h-auto max-h-96 object-cover image-fade-in gpu-accelerated"
-                      loading="lazy"
-                      decoding="async"
-                      onLoad={(e) => e.currentTarget.classList.add('loaded')}
+                      priority={index < PRIORITY_POSTS_COUNT}
+                      className="w-full h-auto max-h-96 image-fade-in gpu-accelerated"
                     />
                   </div>
                 )}

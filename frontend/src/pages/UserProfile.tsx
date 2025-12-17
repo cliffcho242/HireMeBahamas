@@ -20,6 +20,7 @@ import toast from 'react-hot-toast';
 import { ApiError } from '../types';
 import { getApiErrorMessage } from '../utils/errorHandler';
 import { debugLog } from '../utils/debugLogger';
+import LazyImage from '../components/LazyImage';
 
 interface UserProfile {
   id: number;
@@ -419,10 +420,11 @@ const UserProfile: React.FC = () => {
             <div className="absolute -top-16 left-6">
               <div className="w-32 h-32 rounded-full border-4 border-white bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
                 {profile.avatar_url ? (
-                  <img
+                  <LazyImage
                     src={profile.avatar_url}
                     alt={`${profile.first_name} ${profile.last_name}`}
-                    className="w-full h-full rounded-full object-cover"
+                    priority={true}
+                    className="w-full h-full rounded-full"
                   />
                 ) : (
                   <span className="text-white text-4xl font-bold">
@@ -624,10 +626,10 @@ const UserProfile: React.FC = () => {
                     >
                       <p className="text-gray-900 mb-4">{post.content}</p>
                       {post.image_url && (
-                        <img
+                        <LazyImage
                           src={post.image_url}
                           alt="Post"
-                          className="w-full max-h-96 object-cover rounded-lg mb-4"
+                          className="w-full max-h-96 rounded-lg mb-4"
                         />
                       )}
                       <div className="flex items-center space-x-6 text-sm text-gray-500">
@@ -659,10 +661,10 @@ const UserProfile: React.FC = () => {
                           animate={{ opacity: 1, scale: 1 }}
                           className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer group"
                         >
-                          <img
+                          <LazyImage
                             src={post.image_url}
                             alt="Photo"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            className="w-full h-full group-hover:scale-105 transition-transform duration-200"
                           />
                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
                             <div className="opacity-0 group-hover:opacity-100 text-white text-sm space-x-4 transition-opacity duration-200">
@@ -785,10 +787,10 @@ const UserProfile: React.FC = () => {
                         >
                           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
                             {follower.avatar_url ? (
-                              <img
+                              <LazyImage
                                 src={follower.avatar_url}
                                 alt={`${follower.first_name} ${follower.last_name}`}
-                                className="w-full h-full rounded-full object-cover"
+                                className="w-full h-full rounded-full"
                               />
                             ) : (
                               <span>{follower.first_name?.[0]}{follower.last_name?.[0]}</span>
@@ -843,10 +845,10 @@ const UserProfile: React.FC = () => {
                         >
                           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
                             {followed.avatar_url ? (
-                              <img
+                              <LazyImage
                                 src={followed.avatar_url}
                                 alt={`${followed.first_name} ${followed.last_name}`}
-                                className="w-full h-full rounded-full object-cover"
+                                className="w-full h-full rounded-full"
                               />
                             ) : (
                               <span>{followed.first_name?.[0]}{followed.last_name?.[0]}</span>
