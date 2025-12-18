@@ -222,7 +222,9 @@ def worker_exit(server, worker):
                 if pending_tasks:
                     print(f"   Cancelling {len(pending_tasks)} pending tasks in worker {worker.pid}...", file=sys.stderr)
                     for task in pending_tasks:
-                        task.cancel()
+                        # Double-check task is still pending before cancelling (prevents race condition)
+                        if not task.done():
+                            task.cancel()
                     
                     # Give tasks a moment to cancel
                     # Note: Can't use asyncio.wait here since we're in a sync context
