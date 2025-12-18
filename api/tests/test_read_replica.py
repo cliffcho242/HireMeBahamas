@@ -327,7 +327,9 @@ class TestReadReplicaSecurityValidation:
         from backend_app.core.read_replica import DATABASE_URL_READ
         
         # Should accept different credentials for replica
-        assert "DIFFERENT_pass" in DATABASE_URL_READ or "****" in str(DATABASE_URL_READ)
+        # Check that URL contains the different password (may be URL-encoded)
+        assert "DIFFERENT_pass" in DATABASE_URL_READ, \
+            "Read replica should support different credentials from primary"
 
 
 if __name__ == "__main__":

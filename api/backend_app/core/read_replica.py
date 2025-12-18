@@ -107,11 +107,12 @@ def get_read_engine() -> Optional[AsyncEngine]:
                         # Echo SQL for debugging (disabled in production)
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
                         
-                        # Connection timeout
+                        # Connection timeout and SSL settings
                         connect_args={
                             "timeout": READ_CONNECT_TIMEOUT,
                             "command_timeout": 30,
-                            "ssl": "require" if "production" in os.getenv("ENVIRONMENT", "").lower() else True,
+                            # SSL configuration: require for production, prefer for development
+                            "ssl": "require" if os.getenv("ENVIRONMENT", "development").lower() in ["production", "prod"] else "prefer",
                         }
                     )
                     logger.info(

@@ -5,6 +5,7 @@ Simple Python job queue for push notifications and analytics processing
 
 Jobs are executed by RQ workers and run asynchronously.
 """
+import os
 import logging
 from typing import Optional, Dict, Any
 from datetime import datetime
@@ -356,13 +357,16 @@ def process_video_job(
         # - Google Transcoder API
         # - Cloudinary video transformations
         
+        # Get CDN URL from environment or use default
+        cdn_url = os.getenv("CDN_URL", "https://cdn.hiremebahamas.com")
+        
         result = {
             "success": True,
             "video_id": video_id,
             "outputs": {
-                "720p": "https://cdn.hiremebahamas.com/videos/video_720p.mp4",
-                "480p": "https://cdn.hiremebahamas.com/videos/video_480p.mp4",
-                "thumbnail": "https://cdn.hiremebahamas.com/videos/thumbnail.jpg"
+                "720p": f"{cdn_url}/videos/video_720p.mp4",
+                "480p": f"{cdn_url}/videos/video_480p.mp4",
+                "thumbnail": f"{cdn_url}/videos/thumbnail.jpg"
             },
             "processed_at": datetime.utcnow().isoformat()
         }
@@ -382,10 +386,13 @@ def generate_video_thumbnail_job(video_id: int, video_path: str, timestamp: str 
         
         # TODO: Implement thumbnail generation with FFmpeg
         
+        # Get CDN URL from environment or use default
+        cdn_url = os.getenv("CDN_URL", "https://cdn.hiremebahamas.com")
+        
         return {
             "success": True,
             "video_id": video_id,
-            "thumbnail_url": f"https://cdn.hiremebahamas.com/videos/{video_id}/thumbnail.jpg",
+            "thumbnail_url": f"{cdn_url}/videos/{video_id}/thumbnail.jpg",
             "generated_at": datetime.utcnow().isoformat()
         }
         

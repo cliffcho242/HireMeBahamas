@@ -160,7 +160,7 @@ def send_job_application_email(
                 </div>
                 
                 <p>
-                    <a href="https://hiremebahamas.com/jobs/{job_id}" 
+                    <a href="{os.getenv('BASE_URL', 'https://hiremebahamas.com')}/jobs/{job_id}" 
                        style="background: #00bcd4; color: white; padding: 12px 24px; 
                               text-decoration: none; border-radius: 5px; display: inline-block;">
                         View Application
@@ -204,7 +204,7 @@ def send_message_notification_email(
                 </div>
                 
                 <p>
-                    <a href="https://hiremebahamas.com/messages" 
+                    <a href="{os.getenv('BASE_URL', 'https://hiremebahamas.com')}/messages" 
                        style="background: #00bcd4; color: white; padding: 12px 24px; 
                               text-decoration: none; border-radius: 5px; display: inline-block;">
                         Read and Reply
@@ -225,7 +225,8 @@ def send_message_notification_email(
 @shared_task
 def send_password_reset_email(user_email: str, user_name: str, reset_token: str):
     """Send password reset email (Celery task)."""
-    reset_link = f"https://hiremebahamas.com/reset-password?token={reset_token}"
+    base_url = os.getenv('BASE_URL', 'https://hiremebahamas.com')
+    reset_link = f"{base_url}/reset-password?token={reset_token}"
     
     subject = "Reset Your HireMeBahamas Password"
     body = f"""
