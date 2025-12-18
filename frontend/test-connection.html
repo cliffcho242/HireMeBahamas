@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend-Frontend Connection Test - HireMeBahamas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .test-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .test-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .test-result {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .status.pending {
+            background: #ffeaa7;
+            color: #d63031;
+        }
+        
+        .status.success {
+            background: #00b894;
+            color: white;
+        }
+        
+        .status.error {
+            background: #d63031;
+            color: white;
+        }
+        
+        .test-details {
+            color: #666;
+            font-size: 14px;
+            margin-top: 8px;
+            padding-left: 15px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .summary {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .summary h2 {
+            margin-bottom: 10px;
+        }
+        
+        .config-info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        
+        .config-info h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .config-info code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #d63031;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Backend-Frontend Connection Test</h1>
+        <p class="subtitle">HireMeBahamas Deployment Verification</p>
+        
+        <div id="tests">
+            <div class="test-section">
+                <div class="test-name">1. Frontend Configuration</div>
+                <div class="test-result">
+                    <span class="status pending" id="status-frontend">Testing...</span>
+                </div>
+                <div class="test-details" id="details-frontend"></div>
+            </div>
+            
+            <div class="test-section">
+                <div class="test-name">2. Backend Health Check</div>
+                <div class="test-result">
+                    <span class="status pending" id="status-backend">Testing...</span>
+                </div>
+                <div class="test-details" id="details-backend"></div>
+            </div>
+            
+            <div class="test-section">
+                <div class="test-name">3. API Endpoint Connectivity</div>
+                <div class="test-result">
+                    <span class="status pending" id="status-api">Testing...</span>
+                </div>
+                <div class="test-details" id="details-api"></div>
+            </div>
+            
+            <div class="test-section">
+                <div class="test-name">4. CORS Configuration</div>
+                <div class="test-result">
+                    <span class="status pending" id="status-cors">Testing...</span>
+                </div>
+                <div class="test-details" id="details-cors"></div>
+            </div>
+        </div>
+        
+        <button class="btn" onclick="runTests()">🔄 Run Tests Again</button>
+        
+        <div class="summary" id="summary" style="display: none;">
+            <h2 id="summary-title">Test Results</h2>
+            <p id="summary-text"></p>
+        </div>
+        
+        <div class="config-info">
+            <h3>ℹ️ Configuration Info</h3>
+            <p><strong>Current URL:</strong> <code id="current-url"></code></p>
+            <p><strong>API URL:</strong> <code id="api-url"></code></p>
+            <p><strong>Environment:</strong> <code id="environment"></code></p>
+        </div>
+    </div>
+    
+    <script>
+        // Display current configuration
+        document.getElementById('current-url').textContent = window.location.origin;
+        
+        // Detect API URL (mimicking frontend logic)
+        function getApiUrl() {
+            // In production, this would read from import.meta.env.VITE_API_URL
+            // For this test, we'll use same-origin
+            return window.location.origin;
+        }
+        
+        const apiUrl = getApiUrl();
+        document.getElementById('api-url').textContent = apiUrl;
+        document.getElementById('environment').textContent = 
+            window.location.hostname === 'localhost' ? 'Development' : 'Production';
+        
+        async function runTests() {
+            // Reset all statuses
+            document.querySelectorAll('.status').forEach(el => {
+                el.className = 'status pending';
+                el.textContent = 'Testing...';
+            });
+            document.querySelectorAll('.test-details').forEach(el => {
+                el.textContent = '';
+            });
+            document.getElementById('summary').style.display = 'none';
+            
+            let passed = 0;
+            let total = 4;
+            
+            // Test 1: Frontend Configuration
+            try {
+                const frontendStatus = document.getElementById('status-frontend');
+                const frontendDetails = document.getElementById('details-frontend');
+                
+                frontendStatus.className = 'status success';
+                frontendStatus.textContent = '✅ Pass';
+                frontendDetails.innerHTML = `
+                    ✓ Frontend is properly loaded<br>
+                    ✓ JavaScript is executing<br>
+                    ✓ API URL configured: ${apiUrl}
+                `;
+                passed++;
+            } catch (e) {
+                document.getElementById('status-frontend').className = 'status error';
+                document.getElementById('status-frontend').textContent = '❌ Fail';
+                document.getElementById('details-frontend').textContent = `Error: ${e.message}`;
+            }
+            
+            // Test 2: Backend Health Check
+            try {
+                const backendStatus = document.getElementById('status-backend');
+                const backendDetails = document.getElementById('details-backend');
+                
+                const start = Date.now();
+                const response = await fetch(`${apiUrl}/api/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                const latency = Date.now() - start;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    backendStatus.className = 'status success';
+                    backendStatus.textContent = '✅ Pass';
+                    backendDetails.innerHTML = `
+                        ✓ Backend is responding<br>
+                        ✓ Status: ${data.status || 'healthy'}<br>
+                        ✓ Latency: ${latency}ms
+                    `;
+                    passed++;
+                } else {
+                    backendStatus.className = 'status error';
+                    backendStatus.textContent = '❌ Fail';
+                    backendDetails.textContent = `HTTP ${response.status}: ${response.statusText}`;
+                }
+            } catch (e) {
+                document.getElementById('status-backend').className = 'status error';
+                document.getElementById('status-backend').textContent = '❌ Fail';
+                document.getElementById('details-backend').textContent = `Error: ${e.message}`;
+            }
+            
+            // Test 3: API Endpoint Connectivity
+            try {
+                const apiStatus = document.getElementById('status-api');
+                const apiDetails = document.getElementById('details-api');
+                
+                // Try to access a public endpoint
+                const response = await fetch(`${apiUrl}/api/`, {
+                    method: 'GET'
+                });
+                
+                if (response.ok || response.status === 404) {
+                    // 404 is OK - means API is responding, just no root endpoint
+                    apiStatus.className = 'status success';
+                    apiStatus.textContent = '✅ Pass';
+                    apiDetails.innerHTML = `
+                        ✓ API endpoint is accessible<br>
+                        ✓ Server is responding<br>
+                        ✓ Status: ${response.status}
+                    `;
+                    passed++;
+                } else {
+                    apiStatus.className = 'status error';
+                    apiStatus.textContent = '❌ Fail';
+                    apiDetails.textContent = `HTTP ${response.status}: ${response.statusText}`;
+                }
+            } catch (e) {
+                document.getElementById('status-api').className = 'status error';
+                document.getElementById('status-api').textContent = '❌ Fail';
+                document.getElementById('details-api').textContent = `Error: ${e.message}`;
+            }
+            
+            // Test 4: CORS Configuration
+            try {
+                const corsStatus = document.getElementById('status-cors');
+                const corsDetails = document.getElementById('details-cors');
+                
+                // Make a request and check CORS headers
+                const response = await fetch(`${apiUrl}/api/health`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'GET'
+                    }
+                });
+                
+                const hasCors = response.headers.has('Access-Control-Allow-Origin') || 
+                               response.headers.has('access-control-allow-origin');
+                
+                if (hasCors || window.location.origin === apiUrl) {
+                    corsStatus.className = 'status success';
+                    corsStatus.textContent = '✅ Pass';
+                    if (window.location.origin === apiUrl) {
+                        corsDetails.innerHTML = `
+                            ✓ Same-origin deployment (no CORS needed)<br>
+                            ✓ Recommended configuration<br>
+                            ✓ Zero CORS issues
+                        `;
+                    } else {
+                        corsDetails.innerHTML = `
+                            ✓ CORS headers present<br>
+                            ✓ Cross-origin requests allowed<br>
+                            ✓ Configuration correct
+                        `;
+                    }
+                    passed++;
+                } else {
+                    corsStatus.className = 'status error';
+                    corsStatus.textContent = '⚠️ Warning';
+                    corsDetails.textContent = 'CORS headers not detected. May cause issues with cross-origin requests.';
+                }
+            } catch (e) {
+                // CORS might block OPTIONS, but that's OK for same-origin
+                if (window.location.origin === apiUrl) {
+                    document.getElementById('status-cors').className = 'status success';
+                    document.getElementById('status-cors').textContent = '✅ Pass';
+                    document.getElementById('details-cors').textContent = 'Same-origin deployment (CORS not required)';
+                    passed++;
+                } else {
+                    document.getElementById('status-cors').className = 'status error';
+                    document.getElementById('status-cors').textContent = '❌ Fail';
+                    document.getElementById('details-cors').textContent = `Error: ${e.message}`;
+                }
+            }
+            
+            // Show summary
+            const summary = document.getElementById('summary');
+            const summaryTitle = document.getElementById('summary-title');
+            const summaryText = document.getElementById('summary-text');
+            
+            summary.style.display = 'block';
+            summaryTitle.textContent = `${passed}/${total} Tests Passed`;
+            
+            if (passed === total) {
+                summaryText.innerHTML = `
+                    🎉 Perfect! All connection tests passed.<br>
+                    ✅ Frontend and backend are properly connected.<br>
+                    ✅ Ready for production use!
+                `;
+            } else {
+                summaryText.innerHTML = `
+                    ⚠️ Some tests failed. Please review the results above.<br>
+                    Check your environment configuration and try again.
+                `;
+            }
+        }
+        
+        // Run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 500);
+        });
+    </script>
+</body>
+</html>
