@@ -860,7 +860,7 @@ export const uploadAPI = {
       },
       {
         message: 'upload portfolio images',
-        mockResponse: { success: true, urls: files.map((f, i) => `https://demo-portfolio-${i}.png`) }
+        mockResponse: { success: true, urls: files.map((_f, i) => `https://demo-portfolio-${i}.png`) }
       }
     );
   },
