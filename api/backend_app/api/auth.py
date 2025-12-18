@@ -638,9 +638,13 @@ async def refresh_token(
     # Set secure cookies
     set_auth_cookies(response, access_token, new_refresh_token)
     
-    # Explicitly set Access-Control-Allow-Credentials header for cross-origin requests
-    # This ensures that browsers will include cookies in cross-origin requests
-    # Required for Safari/iPhone compatibility with SameSite=None cookies
+    # AUDIT REQUIREMENT: Explicitly set Access-Control-Allow-Credentials header
+    # While the global CORS middleware sets allow_credentials=True, we set this
+    # explicitly on the refresh endpoint to ensure it's present in all scenarios:
+    # 1. Defense-in-depth: Guarantees header is present even if middleware config changes
+    # 2. Safari/iPhone: Some browsers may require explicit header on cookie-setting responses
+    # 3. Proxy/CDN: Ensures header survives intermediate proxies
+    # 4. Audit compliance: Explicitly documented requirement for this endpoint
     response.headers["Access-Control-Allow-Credentials"] = "true"
     
     logger.info(f"Token refreshed for user: {user.email} (user_id={user.id})")
