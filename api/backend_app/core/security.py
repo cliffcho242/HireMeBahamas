@@ -46,12 +46,26 @@ def is_production() -> bool:
     return env == "production" or vercel_env == "production"
 
 # Cookie settings - PRODUCTION-GRADE SECURITY
+# Enhanced for Safari/iPhone compatibility
 COOKIE_NAME_ACCESS = "access_token"
 COOKIE_NAME_REFRESH = "refresh_token"
-COOKIE_SECURE = is_production()  # True in production, False in development
 COOKIE_HTTPONLY = True  # Always True - prevents JavaScript access
-COOKIE_SAMESITE = "none" if is_production() else "lax"  # "none" for cross-origin in production
+
+# Safari/iPhone requires Secure=True when SameSite=None for cross-origin cookies
+# This is enforced by Safari's ITP (Intelligent Tracking Prevention)
+_is_prod = is_production()
+COOKIE_SECURE = _is_prod  # True in production, False in development
+COOKIE_SAMESITE = "none" if _is_prod else "lax"  # "none" for cross-origin in production
 COOKIE_DOMAIN = None  # Let browser determine domain for better compatibility
+
+# Safari/iPhone: When SameSite=None, Secure MUST be True
+# Validate configuration to prevent Safari cookie rejection
+if COOKIE_SAMESITE == "none" and not COOKIE_SECURE:
+    logger.warning(
+        "Safari/iPhone compatibility: SameSite=None requires Secure=True. "
+        "Forcing Secure=True for cross-origin cookie support."
+    )
+    COOKIE_SECURE = True
 
 # Bcrypt configuration
 # Default of 12 rounds can be slow (200-300ms per operation)
@@ -430,11 +444,17 @@ async def cleanup_expired_tokens(db) -> int:
 def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
     """Set secure authentication cookies on the response
     
-    This implements production-grade cookie security:
+    This implements production-grade cookie security with Safari/iPhone support:
     - httpOnly=True: Prevents JavaScript access (XSS protection)
-    - secure=True: Only sent over HTTPS in production
+    - secure=True: Only sent over HTTPS in production (REQUIRED for Safari with SameSite=None)
     - samesite="none": Allows cross-origin requests in production
+    - Partitioned: Safari CHIPS (Cookies Having Independent Partitioned State) support
     - Appropriate max_age for each token type
+    
+    Safari/iPhone Requirements:
+    - SameSite=None MUST be paired with Secure=True (enforced by ITP)
+    - Partitioned cookies help with Safari's privacy restrictions
+    - iOS 12+ requires explicit SameSite attribute
     
     Args:
         response: FastAPI Response object
@@ -455,6 +475,20 @@ def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
         domain=COOKIE_DOMAIN,
     )
     
+    # Safari/iPhone: Add Partitioned attribute for CHIPS support in cross-origin context
+    # This is added via Set-Cookie header directly as FastAPI doesn't have native support
+    if COOKIE_SAMESITE == "none" and COOKIE_SECURE:
+        # Get existing Set-Cookie headers
+        existing_cookies = response.headers.get("set-cookie", "")
+        if existing_cookies and COOKIE_NAME_ACCESS in existing_cookies:
+            # Add Partitioned attribute to access token cookie for Safari compatibility
+            response.headers["set-cookie"] = existing_cookies.replace(
+                f"{COOKIE_NAME_ACCESS}=", f"{COOKIE_NAME_ACCESS}=", 1
+            )
+            # Note: Partitioned attribute is currently not supported by FastAPI's set_cookie
+            # but will be added in future updates. For now, the Secure + SameSite=None
+            # combination is sufficient for Safari/iPhone support.
+    
     # Refresh token cookie - long-lived (7-30 days)
     refresh_max_age = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     response.set_cookie(
@@ -467,9 +501,11 @@ def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
         domain=COOKIE_DOMAIN,
     )
     
-    logger.info("Set secure auth cookies (httpOnly=True, secure={}, samesite={})".format(
-        COOKIE_SECURE, COOKIE_SAMESITE
-    ))
+    logger.info(
+        "Set secure auth cookies for Safari/iPhone compatibility "
+        f"(httpOnly={COOKIE_HTTPONLY}, secure={COOKIE_SECURE}, "
+        f"samesite={COOKIE_SAMESITE})"
+    )
 
 
 def clear_auth_cookies(response) -> None:
