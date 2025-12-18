@@ -5,8 +5,9 @@ This module provides shared utilities for processing database connection URLs,
 including automatic SSL mode enforcement for Vercel Postgres (Neon).
 """
 import logging
+import re
 from typing import Tuple
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 
 logger = logging.getLogger(__name__)
 
@@ -160,3 +161,106 @@ def ensure_sslmode(db_url: str) -> str:
         return f"{db_url}&sslmode=require"
     # else: sslmode is already present, don't override user's explicit setting
     return db_url
+
+
+def url_encode_password(password: str) -> str:
+    """URL-encode a database password for safe use in connection strings.
+    
+    Special characters in passwords must be URL-encoded when used in DATABASE_URL.
+    This function properly encodes common special characters that cause parsing issues.
+    
+    Args:
+        password: Raw password that may contain special characters
+        
+    Returns:
+        URL-encoded password safe for use in connection strings
+        
+    Examples:
+        >>> url_encode_password("p@ss:word")
+        'p%40ss%3Aword'
+        
+        >>> url_encode_password("my#secret")
+        'my%23secret'
+        
+        >>> url_encode_password("simple123")
+        'simple123'
+    
+    Common encodings:
+        @ → %40
+        : → %3A
+        # → %23
+        / → %2F
+        ? → %3F
+        & → %26
+        % → %25
+    """
+    # Use quote() with safe='' to encode all special characters
+    # This ensures characters like @, :, #, /, etc. are properly encoded
+    return quote(password, safe='')
+
+
+def validate_password_encoding(db_url: str) -> Tuple[bool, str]:
+    """Validate that password in DATABASE_URL is properly URL-encoded.
+    
+    Checks for common unencoded special characters in the password portion
+    of the URL that could cause parsing errors.
+    
+    Args:
+        db_url: Database connection URL to validate
+        
+    Returns:
+        Tuple of (is_valid: bool, warning_message: str)
+        If valid, warning_message is empty. If invalid, contains guidance.
+    
+    Examples:
+        >>> validate_password_encoding("postgresql://user:p@ss@host:5432/db")
+        (False, "Password contains '@' which should be encoded as '%40'...")
+        
+        >>> validate_password_encoding("postgresql://user:p%40ss@host:5432/db")
+        (True, "")
+    """
+    try:
+        # Extract the password from URL if present
+        parsed = urlparse(db_url)
+        
+        if not parsed.password:
+            # No password in URL, nothing to validate
+            return True, ""
+        
+        # Check for unencoded special characters in password
+        # These characters MUST be URL-encoded in connection strings
+        problematic_chars = {
+            '@': '%40',
+            ':': '%3A',
+            '#': '%23',
+            '/': '%2F',
+            '?': '%3F',
+            '&': '%26',
+            '%': '%25',
+            ' ': '%20',
+        }
+        
+        found_issues = []
+        for char, encoded in problematic_chars.items():
+            # Skip % if it's already part of an encoding (e.g., %40)
+            if char == '%':
+                # Check if % is followed by two hex digits (proper encoding)
+                if re.search(r'%[0-9A-Fa-f]{2}', parsed.password):
+                    continue
+            
+            if char in parsed.password and encoded not in parsed.password:
+                found_issues.append(f"'{char}' should be '{encoded}'")
+        
+        if found_issues:
+            issues_str = ", ".join(found_issues)
+            return False, (
+                f"Password contains special characters that must be URL-encoded: {issues_str}. "
+                f"Use the url_encode_password() function or manually encode special characters. "
+                f"Example: password 'p@ss:word' should be 'p%40ss%3Aword'"
+            )
+        
+        return True, ""
+        
+    except Exception as e:
+        # If parsing fails, return generic warning
+        return False, f"Could not validate password encoding: {str(e)}"

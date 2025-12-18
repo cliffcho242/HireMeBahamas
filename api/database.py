@@ -26,7 +26,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 from sqlalchemy.exc import ArgumentError
 from sqlalchemy.engine.url import make_url
-from .db_url_utils import ensure_sslmode, validate_database_url_structure
+from .db_url_utils import ensure_sslmode, validate_database_url_structure, validate_password_encoding
 
 # Global engine (reused across invocations)
 _engine = None
@@ -74,6 +74,14 @@ def get_database_url():
     if not db_url:
         logger.warning("DATABASE_URL environment variable not set")
         return None
+    
+    # Check for password encoding issues early
+    is_encoded, encoding_warning = validate_password_encoding(db_url)
+    if not is_encoded:
+        logger.warning(
+            f"⚠️  DATABASE_URL password encoding issue: {encoding_warning}. "
+            f"This may cause connection failures. Please URL-encode special characters in password."
+        )
     
     # Validate basic URL structure before processing
     # PostgreSQL connection string should match pattern: postgresql://[user[:password]@]host[:port][/dbname][?param=value]
@@ -182,16 +190,17 @@ def get_database_url():
     is_valid, error_msg = validate_database_url_structure(db_url)
     if not is_valid:
         logger.warning(
-            f"DATABASE_URL validation failed: {error_msg}. "
+            f"❌ DATABASE_URL validation failed: {error_msg}. "
             f"Database connections will fail. "
-            f"Required format: postgresql://user:pass@hostname:port/dbname?sslmode=require"
+            f"Required format: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
         )
         # In production, this is a critical error but we still return the URL
         # to allow health checks and diagnostics to run
         if ENV == "production":
             logger.error(
                 "⚠️  PRODUCTION DATABASE MISCONFIGURED - connections will fail! "
-                "See error above for required format."
+                f"Error: {error_msg}. "
+                "REQUIRED: postgresql://user:ENCODED_PASSWORD@ep-dawn-cloud-a4rbrgox.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
             )
     
     return db_url
