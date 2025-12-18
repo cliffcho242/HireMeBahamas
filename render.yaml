@@ -137,16 +137,18 @@ services:
       - key: PYTHONPATH
         value: backend
       # ==========================================================================
-      # NEON POSTGRESQL CONNECTION SETTINGS
+      # NEON POSTGRESQL CONNECTION SETTINGS - ENTERPRISE HARDENING
       # ==========================================================================
       # Neon provides serverless PostgreSQL with connection pooling
       # Connection string format for Neon:
       # postgresql://user:password@ep-xxxxx.region.aws.neon.tech/dbname?sslmode=require
       # 
-      # Required settings for Neon:
-      # - sslmode=require: Neon requires SSL/TLS connections
-      # - Connection pooling: Neon handles pooling automatically
-      # - TCP connection: Direct TCP+SSL connection to Neon
+      # Enterprise hardening settings:
+      # - pool_pre_ping=True: detect dead connections (configured in code)
+      # - pool_recycle=1800: recycle every 30 min (prevents Neon idle disconnects)
+      # - pool_size=5: keep small on Render
+      # - max_overflow=10: burst safely (avoids connection storms)
+      # - application_name: track connections in pg_stat_activity
       #
       # Set DATABASE_URL in Render Dashboard Environment Variables:
       # Example: postgresql://user:pass@ep-xxxxx.us-east-1.aws.neon.tech:5432/hiremebahamas?sslmode=require
@@ -158,7 +160,7 @@ services:
       - key: DB_POOL_TIMEOUT
         value: "30"
       - key: DB_POOL_RECYCLE
-        value: "3600"
+        value: "1800"
       - key: DB_ECHO
         value: "false"
       # ==========================================================================

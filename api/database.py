@@ -259,18 +259,19 @@ def get_engine():
             connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
             command_timeout = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))
             pool_size = int(os.getenv("DB_POOL_SIZE", "5"))
-            max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "5"))  # Hard limit: prevents Neon exhaustion & Render OOM
-            pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "300"))
+            max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "10"))  # Burst safely
+            pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "1800"))  # Recycle every 30 min
             
             # CRITICAL: Production-safe engine configuration for Neon pooled connections
             # NO startup DB options (statement_timeout, sslmode, or options in connect_args)
             # Neon pooled connections (PgBouncer) do NOT support startup parameters
             _engine = create_async_engine(
                 db_url,
-                pool_pre_ping=True,            # Validate connections before use
-                pool_size=pool_size,           # Small pool for serverless
-                max_overflow=max_overflow,     # Limited overflow
-                pool_recycle=pool_recycle,     # Recycle connections every 5 minutes
+                # Enterprise hardening for Render + Neon
+                pool_pre_ping=True,            # detect dead connections
+                pool_recycle=pool_recycle,     # recycle every 30 min
+                pool_size=pool_size,           # keep small on Render
+                max_overflow=max_overflow,     # burst safely
                 # CRITICAL: Minimal connect_args for Neon compatibility
                 # NO sslmode (must be in URL query string)
                 # NO statement_timeout (not supported by PgBouncer)
