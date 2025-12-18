@@ -68,160 +68,19 @@ DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@invalid.local
 
 # Check if we're in production mode
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-# Also check ENV for consistency with api/database.py
 ENV = os.getenv("ENV", "development")
 
-# Get database URL - only DATABASE_URL is supported
+# Get DATABASE_URL from environment
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Strip whitespace from DATABASE_URL to prevent connection errors
+# Strip whitespace to prevent connection errors
 if DATABASE_URL:
     DATABASE_URL = DATABASE_URL.strip()
 
-# =============================================================================
-# PRODUCTION SAFETY: WARN IF POSTGRES NOT CONFIGURED (PRODUCTION-SAFE)
-# =============================================================================
-# This prevents silent SQLite usage in production while allowing app to start
-# Check both ENV and ENVIRONMENT variables for consistency across the application
+# Production safety check
 if (ENV == "production" or ENVIRONMENT == "production") and not DATABASE_URL:
-    logger.warning(
-        "DATABASE_URL is required in production. "
-        "Please set DATABASE_URL environment variable with your Neon PostgreSQL connection string. "
-        "Format: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME"
-    )
-    # Use placeholder to prevent crashes, connections will fail gracefully
-    DATABASE_URL = DB_PLACEHOLDER_URL
-elif not DATABASE_URL:
-    # Use local development default only in development mode
-    DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
-    logger.warning("Using default local development database URL. Set DATABASE_URL for production.")
+    raise RuntimeError("DATABASE_URL is required in production")
 # =============================================================================
-
-# Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
-# This handles cases where the 'p' is missing from "postgresql"
-if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("ostgresql", "postgresql")
-    logger.info("✓ Auto-fixed DATABASE_URL typo: 'ostgresql' → 'postgresql' (update env var to fix permanently)")
-
-# Convert sync PostgreSQL URLs to async driver format
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-    logger.info("Converted DATABASE_URL to asyncpg driver format")
-
-# Ensure explicit port in DATABASE_URL (required for cloud deployments)
-# Parse URL and add port if missing
-try:
-    from urllib.parse import urlparse, urlunparse, quote
-    parsed = urlparse(DATABASE_URL)
-    if parsed.hostname and not parsed.port:
-        # Add default PostgreSQL port using URL-safe components
-        # Note: urlparse handles URL-encoded passwords correctly
-        # We reconstruct the netloc with the port added
-        if parsed.username and parsed.password:
-            # Properly encode credentials if needed
-            user = quote(parsed.username, safe='')
-            password = quote(parsed.password, safe='')
-            new_netloc = f"{user}:{password}@{parsed.hostname}:5432"
-        elif parsed.username:
-            user = quote(parsed.username, safe='')
-            new_netloc = f"{user}@{parsed.hostname}:5432"
-        else:
-            new_netloc = f"{parsed.hostname}:5432"
-        
-        DATABASE_URL = urlunparse((
-            parsed.scheme,
-            new_netloc,
-            parsed.path,
-            parsed.params,
-            parsed.query,
-            parsed.fragment
-        ))
-        logger.info("Added explicit port :5432 to DATABASE_URL")
-except Exception as e:
-    # Don't log exception details to avoid exposing sensitive URL information
-    logger.warning("Could not parse DATABASE_URL for port validation")
-
-# Strip whitespace from database name in the URL path
-# This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
-try:
-    parsed_url = urlparse(DATABASE_URL)
-    if parsed_url.path:
-        # Strip leading slash and whitespace from database name
-        db_name = parsed_url.path.lstrip('/').strip()
-        if db_name and db_name != parsed_url.path.lstrip('/'):
-            # Reconstruct URL with cleaned database name only if it was changed
-            new_path = '/' + db_name
-            DATABASE_URL = urlunparse((
-                parsed_url.scheme,
-                parsed_url.netloc,
-                new_path,
-                parsed_url.params,
-                parsed_url.query,
-                parsed_url.fragment
-            ))
-            logger.info(f"✓ Auto-stripped whitespace from database name in URL")
-except Exception as e:
-    # If URL parsing fails, log warning but continue with original URL
-    logger.warning(f"Could not parse DATABASE_URL for database name sanitization: {e}")
-
-# NOTE: SQLAlchemy's create_async_engine() automatically handles URL decoding for
-# special characters in username/password. No manual decoding is needed here.
-# For example, passwords with '@' or '%' are automatically decoded from URL-encoded form.
-
-# Validate DATABASE_URL format - ensure all required fields are present
-# Parse and validate required fields using production-safe validation
-# Only validate if DATABASE_URL is actually configured (not placeholder or local dev default)
-if DATABASE_URL and DATABASE_URL != DB_PLACEHOLDER_URL:
-    parsed = urlparse(DATABASE_URL)
-    missing_fields = []
-    if not parsed.username:
-        missing_fields.append("username")
-    if not parsed.password:
-        missing_fields.append("password")
-    if not parsed.hostname:
-        missing_fields.append("hostname")
-    if not parsed.port:
-        # Port should have been auto-fixed by ensure_port_in_url()
-        # If we still don't have a port here, check why
-        if not parsed.hostname:
-            missing_fields.append("port (requires hostname first, explicit port required, e.g., :5432)")
-        else:
-            missing_fields.append("port (auto-fix failed, explicit port required, e.g., :5432)")
-    if not parsed.path or len(parsed.path) <= 1:
-        # path should be /database_name, so length > 1
-        missing_fields.append("database name in path (e.g., /mydatabase)")
-
-    if missing_fields:
-        # Production-safe: log warning instead of raising exception
-        # This allows the app to start for health checks and diagnostics
-        logger.warning(
-            f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}. "
-            f"Required format: postgresql://user:password@host:5432/database"
-        )
-
-# Log which database URL we're using (mask password for security)
-def _mask_database_url(url: str) -> str:
-    """Mask the password in a database URL for logging.
-    
-    Args:
-        url: Database connection URL
-        
-    Returns:
-        URL with password replaced by ****
-    """
-    if "@" not in url:
-        return url
-    try:
-        # Split at @ to get auth and host parts
-        auth_part, host_part = url.rsplit("@", 1)
-        # Split auth part at last : to get user and password
-        user_part = auth_part.rsplit(":", 1)[0]
-        return f"{user_part}:****@{host_part}"
-    except (ValueError, IndexError):
-        return url
-
-_masked_url = _mask_database_url(DATABASE_URL)
-logger.info(f"Database URL: {_masked_url}")
 
 # =============================================================================
 # POOL CONFIGURATION - OPTIMIZED FOR PRODUCTION (Dec 2025)
@@ -277,15 +136,8 @@ _engine_lock = threading.Lock()
 def get_engine():
     """Get or create database engine (lazy initialization for serverless).
     
-    ✅ PRODUCTION-GRADE PATTERN for Neon/Render/Vercel:
-    - Validates DATABASE_URL using SQLAlchemy's make_url() before engine creation
-    - NO startup DB options (compatible with Neon pooled/PgBouncer connections)
-    - Defers connection until first actual request
-    - Thread-safe with double-checked locking
-    
-    CRITICAL BEHAVIOR: Returns None if engine creation fails, allowing the
-    application to start even with invalid DATABASE_URL configuration.
-    This fulfills the "apps must boot without the database" requirement.
+    Defers connection until first actual request.
+    Thread-safe with double-checked locking.
     
     Returns:
         AsyncEngine | None: Database engine instance or None if creation fails
@@ -297,71 +149,23 @@ def get_engine():
         with _engine_lock:
             # Check again inside the lock in case another thread created it
             if _engine is None:
-                # Check if DATABASE_URL is the placeholder (invalid config)
-                if DATABASE_URL == DB_PLACEHOLDER_URL:
-                    logger.warning(
-                        "Database engine not created: DATABASE_URL is placeholder. "
-                        "Application will start but database operations will fail."
-                    )
+                if not DATABASE_URL:
+                    logger.warning("Database engine not created: DATABASE_URL not set")
                     return None
                 
                 try:
-                    # CRITICAL: Validate DATABASE_URL using SQLAlchemy make_url()
-                    # This is the production-grade way to parse and validate database URLs
-                    try:
-                        validated_url = make_url(DATABASE_URL)
-                        # Log only driver name to avoid exposing sensitive connection details
-                        logger.info(f"✅ DATABASE_URL validated successfully (driver: {validated_url.drivername})")
-                    except Exception as url_error:
-                        logger.error(
-                            f"❌ DATABASE_URL validation failed using make_url(): {url_error}. "
-                            f"Application will start but database operations will fail. "
-                            f"Required format: postgresql+asyncpg://user:password@host:5432/database"
-                        )
-                        _engine = None
-                        return None
-                    
-                    # CRITICAL: Create engine for Neon pooler compatibility
-                    # Neon pooled connections (PgBouncer) do NOT support:
-                    # - sslmode in URL or connect_args
-                    # - statement_timeout
-                    # - server_settings
-                    # - startup options
                     _engine = create_async_engine(
                         DATABASE_URL,
-                        # Pool configuration - optimized for serverless
                         pool_size=POOL_SIZE,
                         max_overflow=MAX_OVERFLOW,
-                        pool_pre_ping=True,  # Validate connections before use (ONLY pool option needed)
-                        pool_recycle=POOL_RECYCLE,  # Recycle every 5 min (serverless-friendly)
-                        pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
-                        
-                        # Echo SQL for debugging (disabled in production)
+                        pool_pre_ping=True,
+                        pool_recycle=POOL_RECYCLE,
+                        pool_timeout=POOL_TIMEOUT,
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
                     )
-                    logger.info("✅ Database engine initialized successfully (Neon-safe, no startup options)")
-                    logger.info(
-                        f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
-                        f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
-                    )
-                except ArgumentError as e:
-                    # Catch SQLAlchemy ArgumentError specifically (URL parsing errors)
-                    logger.warning(
-                        f"SQLAlchemy ArgumentError: Could not parse DATABASE_URL. "
-                        f"The URL format is invalid or empty. "
-                        f"Error: {str(e)}. "
-                        f"Application will start but database operations will fail. "
-                        f"Required format: postgresql+asyncpg://user:password@host:5432/database"
-                    )
-                    _engine = None
-                    return None
+                    logger.info("Database engine initialized successfully")
                 except Exception as e:
-                    # Log warning instead of raising exception - allows app to start
-                    logger.warning(
-                        f"Failed to create database engine: {type(e).__name__}: {e}. "
-                        f"Application will start but database operations will fail. "
-                        f"Check your DATABASE_URL configuration."
-                    )
+                    logger.warning(f"Failed to create database engine: {e}")
                     _engine = None
                     return None
     
