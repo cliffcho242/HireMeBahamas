@@ -124,28 +124,34 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, [refreshTokenInternal]);
 
   // Initialize auth from session manager with getSession bootstrap
+  // ✅ STEP 5: Frontend Auth Bootstrap - Call getSession() on app startup
+  // This provides production-grade session restoration that is:
+  // ✔ Page refresh safe
+  // ✔ Safari safe (credentials: 'include')
+  // ✔ Vercel safe (works with serverless deployments)
   useEffect(() => {
     const initializeAuth = async () => {
+      const isDev = import.meta.env.DEV;
+      
       try {
-        // ✅ STEP 5: Frontend Auth Bootstrap - Call getSession() on app startup
-        // This provides production-grade session restoration that is:
-        // ✔ Page refresh safe
-        // ✔ Safari safe (credentials: 'include')
-        // ✔ Vercel safe (works with serverless deployments)
-        console.log('[Auth Bootstrap] Initializing session...');
+        if (isDev) console.log('[Auth Bootstrap] Initializing session...');
         
         // First, try to get session from backend (the official way)
         const sessionUser = await getSession();
         
         if (sessionUser) {
           // Session exists on backend - this is the source of truth
-          console.log('[Auth Bootstrap] Session restored from backend:', sessionUser.email);
+          if (isDev) console.log('[Auth Bootstrap] Session restored from backend:', sessionUser.email);
           setUser(sessionUser);
           
           // Get stored token for API calls (if available)
           const storedToken = localStorage.getItem('token');
           if (storedToken) {
             setToken(storedToken);
+            
+            // Check if we have a saved session to get the original rememberMe preference
+            const savedSession = sessionManager.loadSession();
+            const rememberMePreference = savedSession?.rememberMe ?? true; // Default to true if backend session exists
             
             // Save/update session in session manager
             const expiresAt = sessionManager.getTokenExpiration(storedToken);
@@ -154,17 +160,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               user: sessionUser,
               lastActivity: Date.now(),
               expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
-              rememberMe: true, // Backend session exists, so remember
+              rememberMe: rememberMePreference,
             });
-            setRememberMeState(true);
+            setRememberMeState(rememberMePreference);
           } else {
             // Backend has session but we don't have token locally
             // This can happen after browser restart with cookies
-            console.log('[Auth Bootstrap] Backend session exists but no local token - will refresh');
+            if (isDev) console.log('[Auth Bootstrap] Backend session exists but no local token - will refresh');
           }
         } else {
           // No backend session - try local session manager as fallback
-          console.log('[Auth Bootstrap] No backend session, checking local session...');
+          if (isDev) console.log('[Auth Bootstrap] No backend session, checking local session...');
           const savedSession = sessionManager.loadSession();
           
           if (savedSession) {
@@ -172,13 +178,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setToken(savedSession.token);
             setUser(savedSession.user);
             setRememberMeState(savedSession.rememberMe);
-            console.log('[Auth Bootstrap] Local session restored:', savedSession.user.email);
+            if (isDev) console.log('[Auth Bootstrap] Local session restored:', savedSession.user.email);
           } else {
             // Final fallback: check for bare token in localStorage
             const storedToken = localStorage.getItem('token');
             if (storedToken) {
               try {
-                console.log('[Auth Bootstrap] Attempting profile fetch with stored token...');
+                if (isDev) console.log('[Auth Bootstrap] Attempting profile fetch with stored token...');
                 const userData = await authAPI.getProfile();
                 setUser(userData);
                 setToken(storedToken);
@@ -192,7 +198,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                   expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
                   rememberMe: false,
                 });
-                console.log('[Auth Bootstrap] Token migration successful:', userData.email);
+                if (isDev) console.log('[Auth Bootstrap] Token migration successful:', userData.email);
               } catch (error) {
                 console.error('[Auth Bootstrap] Profile fetch failed:', error);
                 // Only clear session if it's a genuine auth error, not a network error
@@ -204,14 +210,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                   // Genuine auth failure - clear invalid session
                   localStorage.removeItem('token');
                   sessionManager.clearSession();
-                  console.log('[Auth Bootstrap] Invalid token cleared');
+                  if (isDev) console.log('[Auth Bootstrap] Invalid token cleared');
                 } else {
                   // Network error - keep session for retry
-                  console.warn('[Auth Bootstrap] Network error - keeping session for retry');
+                  if (isDev) console.warn('[Auth Bootstrap] Network error - keeping session for retry');
                 }
               }
             } else {
-              console.log('[Auth Bootstrap] No session found - user is not authenticated');
+              if (isDev) console.log('[Auth Bootstrap] No session found - user is not authenticated');
             }
           }
         }
@@ -219,7 +225,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         console.error('[Auth Bootstrap] Failed to initialize auth:', error);
       } finally {
         setIsLoading(false);
-        console.log('[Auth Bootstrap] Initialization complete');
+        if (isDev) console.log('[Auth Bootstrap] Initialization complete');
       }
     };
 
