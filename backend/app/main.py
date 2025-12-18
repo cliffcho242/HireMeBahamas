@@ -585,12 +585,10 @@ async def startup():
         - No event loop coordination needed
         - Startup function returns instantly (<5ms)
         """
-        import threading
         bg_start = time.time()
         logger.info(f"📦 Background initialization started (thread: {threading.current_thread().name})")
         
         # Create new event loop for this thread
-        import asyncio
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
@@ -662,7 +660,6 @@ async def startup():
     
     # Start background initialization in daemon thread
     # Returns IMMEDIATELY - startup completes in <1ms
-    import threading
     thread = threading.Thread(target=background_init, daemon=True, name="BackgroundInit")
     thread.start()
     
