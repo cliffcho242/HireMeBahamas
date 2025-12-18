@@ -575,6 +575,9 @@ async def refresh_token(
     
     This provides better security by ensuring refresh tokens are single-use.
     
+    CORS: Explicitly sets Access-Control-Allow-Credentials header to ensure
+    cross-origin requests can include credentials (cookies).
+    
     Returns:
         New access token, new refresh token, and user data
     """
@@ -634,6 +637,15 @@ async def refresh_token(
     
     # Set secure cookies
     set_auth_cookies(response, access_token, new_refresh_token)
+    
+    # AUDIT REQUIREMENT: Explicitly set Access-Control-Allow-Credentials header
+    # While the global CORS middleware sets allow_credentials=True, we set this
+    # explicitly on the refresh endpoint to ensure it's present in all scenarios:
+    # 1. Defense-in-depth: Guarantees header is present even if middleware config changes
+    # 2. Safari/iPhone: Some browsers may require explicit header on cookie-setting responses
+    # 3. Proxy/CDN: Ensures header survives intermediate proxies
+    # 4. Audit compliance: Explicitly documented requirement for this endpoint
+    response.headers["Access-Control-Allow-Credentials"] = "true"
     
     logger.info(f"Token refreshed for user: {user.email} (user_id={user.id})")
     
