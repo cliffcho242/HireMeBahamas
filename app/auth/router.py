@@ -64,9 +64,22 @@ def login(response: Response):
 def logout(response: Response):
     """
     Logout endpoint that clears authentication cookies.
+    
+    CRITICAL: Uses delete_cookie() with path="/" to ensure proper cookie removal
+    and prevent "ghost login" issues.
     """
-    response.delete_cookie("access_token", samesite="None", secure=True)
-    response.delete_cookie("refresh_token", samesite="None", secure=True)
+    response.delete_cookie(
+        "access_token",
+        path="/",
+        samesite="None",
+        secure=True
+    )
+    response.delete_cookie(
+        "refresh_token",
+        path="/",
+        samesite="None",
+        secure=True
+    )
     
     return {"status": "logged_out"}
 

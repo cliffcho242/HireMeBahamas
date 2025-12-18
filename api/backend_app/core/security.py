@@ -511,36 +511,34 @@ def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
 def clear_auth_cookies(response) -> None:
     """Clear authentication cookies on logout
     
-    Sets cookies to empty with immediate expiration.
+    Uses response.delete_cookie() to properly remove cookies.
+    This is critical for preventing "ghost login" issues.
     
     Args:
         response: FastAPI Response object
     """
     from fastapi import Response
     
-    # Clear access token cookie
-    response.set_cookie(
+    # Delete access token cookie
+    # Using delete_cookie() instead of set_cookie() with max_age=0
+    # to ensure proper cookie removal across all browsers, especially Safari/iOS
+    response.delete_cookie(
         key=COOKIE_NAME_ACCESS,
-        value="",
-        max_age=0,
-        httponly=COOKIE_HTTPONLY,
-        secure=COOKIE_SECURE,
+        path="/",
         samesite=COOKIE_SAMESITE,
-        domain=COOKIE_DOMAIN,
+        secure=COOKIE_SECURE,
     )
     
-    # Clear refresh token cookie
-    response.set_cookie(
+    # Delete refresh token cookie
+    # CRITICAL: Must properly clear refresh token to prevent "ghost login"
+    response.delete_cookie(
         key=COOKIE_NAME_REFRESH,
-        value="",
-        max_age=0,
-        httponly=COOKIE_HTTPONLY,
-        secure=COOKIE_SECURE,
+        path="/",
         samesite=COOKIE_SAMESITE,
-        domain=COOKIE_DOMAIN,
+        secure=COOKIE_SECURE,
     )
     
-    logger.info("Cleared auth cookies")
+    logger.info("Deleted auth cookies (access_token and refresh_token)")
 
 
 def get_token_from_cookie_or_header(request, cookie_name: str, header_prefix: str = "Bearer ") -> Optional[str]:
