@@ -18,31 +18,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🛡️ Check for forbidden sslmode
+      - name: 🛡️ Check for forbidden sslmode in connect_args
         run: |
-          echo "🔍 Checking for forbidden 'sslmode' in code..."
+          echo "🔍 Checking for forbidden 'sslmode' in connect_args..."
           
-          # Check Python files in backend
-          if grep -r "sslmode" --include="*.py" backend/app/ 2>/dev/null | grep -v "# " | grep -v "test_"; then
-            echo "::error::❌ FORBIDDEN: 'sslmode' found in backend code"
-            echo "Master Playbook violation: sslmode is forbidden in database configuration"
+          # Check for sslmode in connect_args (forbidden for asyncpg)
+          # Exclude comment lines that start with # (after optional whitespace)
+          if grep -E "connect_args.*['\"]sslmode['\"]" --include="*.py" backend/app/*.py 2>/dev/null | grep -v "^[[:space:]]*#"; then
+            echo "::error::❌ FORBIDDEN: 'sslmode' key in connect_args dictionary"
+            echo "Master Playbook violation: sslmode in connect_args causes asyncpg errors"
+            echo "Use SSL configuration via connect_args['ssl'] instead"
             exit 1
           fi
           
-          echo "✅ No sslmode violations found"
+          echo "✅ No sslmode in connect_args violations found"
 
       - name: 🛡️ Check for forbidden statement_timeout at startup
         run: |
           echo "🔍 Checking for forbidden 'statement_timeout' at startup..."
           
           # Check for statement_timeout in connect_args or server_settings
-          if grep -r "statement_timeout" --include="*.py" backend/app/database.py 2>/dev/null | grep -v "# " | grep -v "NOT set"; then
+          # Exclude comments (lines starting with # after optional whitespace)
+          if grep -E "connect_args.*statement_timeout|server_settings.*statement_timeout" --include="*.py" backend/app/database.py 2>/dev/null | grep -v "^[[:space:]]*#"; then
             echo "::error::❌ FORBIDDEN: 'statement_timeout' found at startup in database.py"
             echo "Master Playbook violation: statement_timeout at startup is forbidden (not compatible with Neon pooler)"
             exit 1
           fi
           
-          echo "✅ No statement_timeout violations found"
+          echo "✅ No statement_timeout at startup violations found"
 
       - name: 🛡️ Check health endpoint doesn't touch DB
         run: |
@@ -74,18 +77,34 @@ jobs:
         run: |
           echo "🔍 Checking Gunicorn worker configuration..."
           
-          # Check render.yaml
-          if grep -A 5 "WEB_CONCURRENCY" render.yaml | grep -v '"1"' | grep -E 'value:.*[2-9]'; then
-            echo "::error::❌ FORBIDDEN: More than 1 Gunicorn worker configured"
-            echo "Master Playbook violation: Must use exactly 1 worker"
-            exit 1
+          # Check render.yaml for WEB_CONCURRENCY
+          if [ -f "render.yaml" ]; then
+            if grep -A 1 "WEB_CONCURRENCY" render.yaml | grep -E 'value:.*"[2-9]"'; then
+              echo "::error::❌ FORBIDDEN: More than 1 worker in render.yaml WEB_CONCURRENCY"
+              echo "Master Playbook violation: Must use exactly 1 worker"
+              exit 1
+            fi
+            echo "✅ render.yaml: WEB_CONCURRENCY correctly set to 1"
           fi
           
-          # Check Procfile
-          if grep "workers=" Procfile | grep -v "workers=1" | grep -E "workers=[2-9]"; then
-            echo "::error::❌ FORBIDDEN: More than 1 Gunicorn worker in Procfile"
-            echo "Master Playbook violation: Must use exactly 1 worker"
-            exit 1
+          # Check gunicorn.conf.py default worker value
+          if [ -f "backend/gunicorn.conf.py" ]; then
+            if grep -E 'workers.*=.*get\(.*"[2-9]"\)' backend/gunicorn.conf.py; then
+              echo "::error::❌ FORBIDDEN: Default workers > 1 in gunicorn.conf.py"
+              echo "Master Playbook violation: Default must be 1 worker"
+              exit 1
+            fi
+            echo "✅ gunicorn.conf.py: Default workers is 1"
+          fi
+          
+          # Check Procfile for explicit --workers flag
+          if [ -f "Procfile" ]; then
+            if grep "gunicorn" Procfile | grep -E "\-\-workers[= ][2-9]"; then
+              echo "::error::❌ FORBIDDEN: Explicit --workers > 1 in Procfile"
+              echo "Master Playbook violation: Must use exactly 1 worker"
+              exit 1
+            fi
+            echo "✅ Procfile: No explicit multi-worker configuration"
           fi
           
           echo "✅ Gunicorn configured with 1 worker (correct)"

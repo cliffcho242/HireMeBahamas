@@ -4,16 +4,19 @@
 # Stack: FastAPI + Gunicorn + Render + Neon Postgres (POOLED)
 # 
 # ABSOLUTE LAWS (NEVER BREAK):
-# ❌ NEVER use sslmode in URL or connect_args
-# ❌ NEVER use statement_timeout at startup
+# ❌ NEVER use sslmode in connect_args (causes Neon pooler issues)
+# ❌ NEVER use statement_timeout at startup (incompatible with PgBouncer)
 # ❌ NEVER touch DB in /health endpoint
 # ❌ NEVER use Base.metadata.create_all() in prod
 # ❌ NEVER use more than 1 Gunicorn worker
 # ❌ NEVER have hardcoded ports
 #
-# ✅ ALWAYS use Neon pooled URL
+# ✅ ALWAYS use Neon pooled URL (asyncpg driver)
 # ✅ ALWAYS use non-blocking DB boot
 # ✅ ALWAYS lazy initialize engine
+#
+# NOTE: For asyncpg driver specifically, sslmode in URL must be stripped
+# and SSL configured via connect_args instead. See db_utils.strip_sslmode_from_url()
 # =============================================================================
 
 import os
@@ -32,6 +35,9 @@ def init_engine():
     
     Returns None if DATABASE_URL is missing or invalid.
     Application will start but database operations will fail.
+    
+    NOTE: This is a simplified template. Production code in database.py
+    includes additional sslmode handling for asyncpg compatibility.
     """
     global engine
     
@@ -41,9 +47,9 @@ def init_engine():
         logger.warning("DATABASE_URL missing — DB disabled")
         return None
     
-    # CRITICAL: Reject forbidden database options
-    if "sslmode" in raw.lower() or "options=" in raw.lower():
-        raise RuntimeError("FATAL: Forbidden DB options detected (sslmode or options)")
+    # CRITICAL: Reject forbidden database startup options
+    if "options=" in raw.lower():
+        raise RuntimeError("FATAL: Forbidden DB options detected (options parameter)")
     
     try:
         engine = create_engine(

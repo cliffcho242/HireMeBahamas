@@ -50,15 +50,27 @@ export async function apiFetch<T>(path: string): Promise<T> {
 
 
 /**
- * Query Error Boundary Component
- * Wraps React Query or other data fetching
+ * Query Error Boundary Example
+ * 
+ * Note: This is a placeholder. Real error boundaries require class components.
+ * 
+ * For production, use:
+ * - react-error-boundary package
+ * - Class component with componentDidCatch
+ * - React Query's error handling with ErrorBoundary
+ * 
+ * @example
+ * import { ErrorBoundary } from 'react-error-boundary';
+ * 
+ * <ErrorBoundary fallback={<ErrorFallback />}>
+ *   <YourComponent />
+ * </ErrorBoundary>
  */
 export function QueryErrorBoundary({ 
   children 
 }: { 
   children: React.ReactNode 
 }) {
-  // In production, you'd add actual error boundary logic
-  // For now, just pass through
+  // Placeholder - implement with react-error-boundary in production
   return <>{children}</>;
 }

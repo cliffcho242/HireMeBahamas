@@ -16,9 +16,11 @@
 
 ### ❌ NEVER
 
-1. **sslmode** in URL or connect_args
-   - Reason: Neon pooler doesn't support it
-   - Alternative: SSL configured automatically
+1. **sslmode in connect_args** (for asyncpg driver)
+   - Reason: asyncpg doesn't accept sslmode parameter in connect_args
+   - Causes: `connect() got an unexpected keyword argument 'sslmode'`
+   - Alternative: Strip sslmode from URL and configure SSL via connect_args['ssl']
+   - Note: sslmode in URL is OK for psycopg2, but must be stripped for asyncpg
 
 2. **statement_timeout** at startup
    - Reason: Not compatible with PgBouncer/Neon pooler
@@ -97,7 +99,9 @@ def init_engine():
         logging.warning("DATABASE_URL missing — DB disabled")
         return None
 
-    if "sslmode" in raw.lower() or "options=" in raw.lower():
+    # NOTE: For asyncpg, sslmode must be stripped from URL
+    # See app/core/db_utils.strip_sslmode_from_url()
+    if "options=" in raw.lower():
         raise RuntimeError("FATAL: Forbidden DB options detected")
 
     try:
