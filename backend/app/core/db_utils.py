@@ -117,7 +117,7 @@ def get_ssl_config(environment: str) -> str:
         "get_ssl_config() is deprecated and should not be used. "
         "Configure SSL in DATABASE_URL: postgresql://...?sslmode=require"
     )
-    raise DeprecationWarning(
+    raise RuntimeError(
         "get_ssl_config() is deprecated. "
         "Use DATABASE_URL with ?sslmode=require instead."
     )

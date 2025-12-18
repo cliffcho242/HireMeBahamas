@@ -45,8 +45,13 @@ logger = logging.getLogger(__name__)
 # DATABASE URL CONFIGURATION
 # =============================================================================
 # Get database URL from settings (handles all validation and fallbacks)
-DATABASE_URL = settings.get_database_url()
-logger.info("Database URL configured from settings")
+DATABASE_URL = settings.DATABASE_URL
+if not DATABASE_URL:
+    # Fallback to local development database
+    DATABASE_URL = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
+    logger.warning("DATABASE_URL not set, using local development database")
+else:
+    logger.info("Database URL configured from settings")
 
 # Database URL is used as-is
 # sslmode should be included in the DATABASE_URL query string if needed
@@ -216,7 +221,7 @@ def get_engine():
                 logger.info("✅ Database engine initialized successfully")
                 logger.info(
                     f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
-                    f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
+                    f"pool_recycle={POOL_RECYCLE}s"
                 )
     
     return _engine
@@ -269,7 +274,7 @@ engine = LazyEngine()
 # Log database configuration (engine will be created on first use)
 logger.info(
     f"Database configured (lazy init): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
-    f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"
+    f"pool_recycle={POOL_RECYCLE}s"
 )
 
 # =============================================================================

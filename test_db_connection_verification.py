@@ -32,10 +32,10 @@ def test_engine_creation():
     database_url = os.getenv("DATABASE_URL")
     
     if not database_url:
-        print("⚠️  DATABASE_URL not set - using test URL")
+        print("⚠️  DATABASE_URL not set - using placeholder URL")
         print("   This test verifies the engine configuration pattern only.")
         print("   For actual connection testing, set DATABASE_URL environment variable.")
-        database_url = "postgresql://test:test@localhost:5432/test?sslmode=require"
+        database_url = "postgresql://placeholder:placeholder@invalid.local:5432/placeholder?sslmode=require"
     else:
         print(f"✅ DATABASE_URL configured")
     
