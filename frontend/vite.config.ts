@@ -229,10 +229,10 @@ export default defineConfig({
     },
   },
   build: {
-    target: 'es2015',
+    target: 'es2020',
     minify: 'terser',
     cssCodeSplit: true,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 600,
     sourcemap: false,
     // Enable module preload for HTTP/2 multiplexing benefits
     modulePreload: {

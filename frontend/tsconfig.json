@@ -22,7 +22,13 @@
 
     // ✅ MASTER PLAYBOOK: React JSX (not default import)
     "jsx": "react-jsx",
-    "noEmit": true
+    "noEmit": true,
+
+    // Path aliases
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src"]
 }

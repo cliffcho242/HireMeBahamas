@@ -66,11 +66,3 @@ export async function apiFetch<T>(path: string): Promise<T> {
  *   <YourComponent />
  * </ErrorBoundary>
  */
-export function QueryErrorBoundary({ 
-  children 
-}: { 
-  children: React.ReactNode 
-}) {
-  // Placeholder - implement with react-error-boundary in production
-  return <>{children}</>;
-}
