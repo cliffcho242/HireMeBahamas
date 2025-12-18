@@ -698,6 +698,87 @@ All mutations are protected in demo mode:
 - Posts & Social (create, update, delete, like, comment)
 - Jobs (create, update, delete, apply)
 - Messages (send, mark read)
+
+---
+
+## 💰 **Monetization System - Multi-Stream Revenue**
+
+**HireMeBahamas includes a comprehensive monetization system with 5 revenue streams:**
+
+### Revenue Streams
+
+| Stream | Monthly Potential | Features |
+|--------|------------------|----------|
+| 💎 Subscriptions | $20k–$200k | Tiered plans (Free, Basic, Professional, Business, Enterprise) |
+| 📋 Job Postings | $10k–$100k | Pay-per-post packages (5, 20, 50 posts) |
+| 🚀 Boosted Posts | $5k–$50k | Local, National, and Featured boosts |
+| 📢 Advertisements | $5k–$30k | Banner, sidebar, and sponsored posts |
+| 🏢 Enterprise | $50k+ | Custom contracts with unlimited features |
+
+### Subscription Tiers
+
+#### Free Plan - $0/month
+- Basic profile and job applications
+- 1 job post per month
+- Standard support
+
+#### Professional Plan - $49.99/month ⭐ Most Popular
+- Premium profile with verification badge
+- 20 job posts per month
+- Featured profile in search
+- Advanced analytics
+- Priority support
+
+#### Enterprise Plan - Custom Pricing 👑
+- Unlimited job posts and team members
+- Custom branding and white-label options
+- Dedicated account manager
+- API access and custom integrations
+
+### Quick Access
+
+```bash
+# View pricing page
+https://your-app.com/pricing
+
+# API endpoints
+GET  /api/monetization/pricing              # Get all pricing info
+GET  /api/monetization/subscriptions/me     # Get user subscription
+POST /api/monetization/boosted-posts        # Boost a post
+GET  /api/monetization/ads/active           # Get active ads
+```
+
+### For Developers
+
+**Backend Models:**
+- `Subscription` - User subscription management
+- `JobPostingPackage` - Job posting credits
+- `BoostedPost` - Post boosting with analytics
+- `Advertisement` - Platform advertisements
+- `EnterpriseAccount` - Enterprise contracts
+
+**Frontend Components:**
+- `Pricing` page - Complete pricing display
+- `SubscriptionStatus` - Dashboard widget
+- `BoostPostModal` - Post boosting interface
+
+**Database Migration:**
+```bash
+# Apply monetization tables
+alembic upgrade head
+
+# Or manually run migration
+python -c "from alembic.command import upgrade; from alembic.config import Config; cfg = Config('alembic.ini'); upgrade(cfg, 'head')"
+```
+
+### Payment Integration (Coming Soon)
+
+The system is designed with payment webhooks ready for:
+- Stripe integration
+- PayPal support
+- Local payment processors
+
+All endpoints accept `payment_provider` and `payment_provider_transaction_id` for tracking.
 - User interactions (follow, uploads, profile updates)
 - Reviews, notifications, and more
 
