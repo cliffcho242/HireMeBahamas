@@ -20,7 +20,7 @@ def test_auth_me_endpoint_schema():
     
     Verifies that the UserMeResponse schema only includes id, email, and role fields.
     """
-    from backend.app.schemas.auth import UserMeResponse
+    from app.schemas.auth import UserMeResponse
     from pydantic import ValidationError
     
     # Test valid minimal response
@@ -51,7 +51,7 @@ def test_auth_me_endpoint_schema():
 
 def test_auth_me_response_schema_validation():
     """Test that UserMeResponse validates fields correctly."""
-    from backend.app.schemas.auth import UserMeResponse
+    from app.schemas.auth import UserMeResponse
     from pydantic import ValidationError
     
     # Test with missing required field
@@ -75,7 +75,7 @@ def test_auth_me_response_schema_validation():
 
 def test_auth_me_response_schema_types():
     """Test that UserMeResponse enforces correct types."""
-    from backend.app.schemas.auth import UserMeResponse
+    from app.schemas.auth import UserMeResponse
     
     # Valid types
     response = UserMeResponse(id=1, email="test@example.com", role="user")
