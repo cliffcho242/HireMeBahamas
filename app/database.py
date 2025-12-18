@@ -227,16 +227,16 @@ _masked_url = _mask_database_url(DATABASE_URL)
 logger.info(f"Database URL: {_masked_url}")
 
 # =============================================================================
-# POOL CONFIGURATION - OPTIMIZED FOR PRODUCTION (Dec 2025)
+# POOL CONFIGURATION - ENTERPRISE HARDENING (Render + Neon)
 # =============================================================================
-# CRITICAL: pool_recycle=300 prevents connection issues by recycling connections
-# before they become stale. This is serverless-friendly and prevents SSL EOF errors.
-# MAX_OVERFLOW=5 (hard limit) prevents Neon exhaustion, Render OOM, and DB overload during traffic spikes
+# CRITICAL: pool_recycle=1800 prevents Neon idle disconnects (30 min recycle)
+# MAX_OVERFLOW=10 allows safe burst traffic handling without connection storms
+# pool_pre_ping=True detects dead connections before use
 # =============================================================================
-POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))  # Minimum connections (5 = production-ready)
-MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "5"))  # Hard limit: prevents Neon exhaustion & Render OOM
+POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))  # Keep small on Render
+MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "10"))  # Burst safely
 POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for connection
-POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (serverless-friendly)
+POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "1800"))  # Recycle every 30 min
 
 # =============================================================================
 # CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RAILWAY
@@ -382,12 +382,12 @@ def get_engine():
                 try:
                     _engine = create_engine(
                         DATABASE_URL,
-                        # Pool configuration
-                        pool_size=POOL_SIZE,
-                        max_overflow=MAX_OVERFLOW,
-                        pool_pre_ping=True,  # Validate connections before use (detects stale connections)
-                        pool_recycle=POOL_RECYCLE,  # Recycle connections (default: 300s for serverless)
-                        pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
+                        # Enterprise hardening for Render + Neon
+                        pool_pre_ping=True,           # detect dead connections
+                        pool_recycle=POOL_RECYCLE,    # recycle every 30 min
+                        pool_size=POOL_SIZE,          # keep small on Render
+                        max_overflow=MAX_OVERFLOW,    # burst safely
+                        pool_timeout=POOL_TIMEOUT,    # Wait max 30s for connection from pool
                         
                         # Echo SQL for debugging (disabled in production)
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
@@ -400,7 +400,7 @@ def get_engine():
                             # Using 'connect_timeout' which is the standard psycopg2 parameter
                             "connect_timeout": CONNECT_TIMEOUT,
                             
-                            # PostgreSQL application name for pg_stat_activity
+                            # PostgreSQL application name for tracking in pg_stat_activity
                             "application_name": "hiremebahamas",
                             
                             # NOTE: statement_timeout is NOT set in options for compatibility with
