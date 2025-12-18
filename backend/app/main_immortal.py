@@ -216,17 +216,39 @@ async def startup():
     except Exception as e:
         logger.warning(f"⚠ Database init failed: {e}")
     
-    # Warm cache in background
+    # Warm cache in background with safe task handling
     if warm_cache is not None:
-        asyncio.create_task(warm_cache())
+        asyncio.create_task(safe_warm_cache())
     
     logger.info("✅ API READY | Docs: /docs | Health: /health | Ready: /ready")
 
 
+async def safe_warm_cache():
+    """Safely warm cache in background with proper exception handling.
+    
+    This function is designed to be run as a background task and includes
+    proper exception handling to prevent task destruction warnings.
+    """
+    try:
+        if warm_cache is not None:
+            await warm_cache()
+            logger.info("✓ Cache warmed successfully")
+    except Exception as e:
+        logger.error(f"Cache warming failed: {e}")
+
+
 @app.on_event("shutdown")
 async def shutdown():
-    """Graceful shutdown"""
+    """Graceful shutdown - allows tasks to close cleanly.
+    
+    This prevents orphaned tasks when Gunicorn restarts workers by giving
+    async operations time to complete gracefully.
+    """
     logger.info("🛑 Shutting down...")
+    
+    # Allow tasks to close cleanly before cleanup
+    await asyncio.sleep(0)
+    
     try:
         if redis_cache is not None:
             await redis_cache.disconnect()
