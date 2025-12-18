@@ -33,6 +33,7 @@ const UserProfile = lazy(() => import('./pages/UserProfile'));
 const UserAnalytics = lazy(() => import('./pages/UserAnalytics'));
 const Download = lazy(() => import('./pages/Download'));
 const DownloadTest = lazy(() => import('./pages/DownloadTest'));
+const Pricing = lazy(() => import('./pages/Pricing'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Components
@@ -155,6 +156,9 @@ function AppContent() {
             {/* Download Page - Public route for app installation */}
             <Route path="/download" element={<Download />} />
             <Route path="/download-test" element={<DownloadTest />} />
+
+            {/* Pricing Page - Public route */}
+            <Route path="/pricing" element={<Pricing />} />
 
             {/* Protected Routes - Everything else requires authentication */}
             <Route

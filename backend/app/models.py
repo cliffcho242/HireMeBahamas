@@ -323,3 +323,138 @@ class LoginAttempt(Base):
     
     # Relationships
     user = relationship("User", foreign_keys=[user_id])
+
+
+# =============================================================================
+# MONETIZATION MODELS - MULTI-STREAM REVENUE SYSTEM
+# =============================================================================
+
+
+class SubscriptionTier(str, enum.Enum):
+    """Subscription tier levels"""
+    FREE = "free"
+    BASIC = "basic"
+    PROFESSIONAL = "professional"
+    BUSINESS = "business"
+    ENTERPRISE = "enterprise"
+
+
+class Subscription(Base):
+    """User subscription management for tiered access"""
+    __tablename__ = "subscriptions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    tier = Column(SQLEnum(SubscriptionTier), nullable=False, default=SubscriptionTier.FREE)
+    price_paid = Column(Float, nullable=True)  # Amount paid for current subscription
+    starts_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)  # Null for free tier
+    is_active = Column(Boolean, default=True)
+    auto_renew = Column(Boolean, default=True)
+    payment_provider = Column(String(50), nullable=True)  # stripe, paypal, etc
+    payment_provider_subscription_id = Column(String(255), nullable=True)  # External subscription ID
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    user = relationship("User")
+
+
+class JobPostingPackage(Base):
+    """Job posting credits and packages"""
+    __tablename__ = "job_posting_packages"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    package_name = Column(String(100), nullable=False)  # e.g., "5 Job Posts", "20 Job Posts"
+    credits_purchased = Column(Integer, nullable=False)
+    credits_remaining = Column(Integer, nullable=False)
+    price_paid = Column(Float, nullable=False)
+    purchased_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)  # Optional expiry
+    payment_provider = Column(String(50), nullable=True)
+    payment_provider_transaction_id = Column(String(255), nullable=True)
+
+    # Relationships
+    user = relationship("User")
+
+
+class BoostedPost(Base):
+    """Boosted posts for increased visibility"""
+    __tablename__ = "boosted_posts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    boost_type = Column(String(50), nullable=False)  # local, national, featured
+    price_paid = Column(Float, nullable=False)
+    impressions_target = Column(Integer, nullable=True)  # Target number of impressions
+    impressions_actual = Column(Integer, default=0)  # Actual impressions delivered
+    starts_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    is_active = Column(Boolean, default=True)
+    payment_provider = Column(String(50), nullable=True)
+    payment_provider_transaction_id = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    post = relationship("Post")
+    user = relationship("User")
+
+
+class Advertisement(Base):
+    """Platform advertisements for businesses"""
+    __tablename__ = "advertisements"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # Advertiser
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    image_url = Column(String(500), nullable=True)
+    link_url = Column(String(500), nullable=False)  # Where ad clicks go
+    ad_type = Column(String(50), nullable=False)  # banner, sidebar, sponsored_post
+    targeting_location = Column(String(200), nullable=True)  # Target specific locations
+    targeting_category = Column(String(100), nullable=True)  # Target job categories
+    budget_total = Column(Float, nullable=False)
+    budget_spent = Column(Float, default=0.0)
+    cost_per_click = Column(Float, nullable=True)
+    cost_per_impression = Column(Float, nullable=True)
+    impressions = Column(Integer, default=0)
+    clicks = Column(Integer, default=0)
+    starts_at = Column(DateTime(timezone=True), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    is_active = Column(Boolean, default=True)
+    is_approved = Column(Boolean, default=False)  # Admin approval required
+    payment_provider = Column(String(50), nullable=True)
+    payment_provider_transaction_id = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    user = relationship("User")
+
+
+class EnterpriseAccount(Base):
+    """Enterprise-level accounts with custom features"""
+    __tablename__ = "enterprise_accounts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    company_name = Column(String(200), nullable=False)
+    contract_value = Column(Float, nullable=False)  # Annual contract value
+    starts_at = Column(DateTime(timezone=True), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    max_job_posts = Column(Integer, nullable=True)  # Unlimited if null
+    max_users = Column(Integer, nullable=True)  # Team members allowed
+    dedicated_support = Column(Boolean, default=True)
+    custom_branding = Column(Boolean, default=True)
+    api_access = Column(Boolean, default=True)
+    analytics_access = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)
+    account_manager = Column(String(200), nullable=True)  # Assigned account manager
+    notes = Column(Text, nullable=True)  # Internal notes
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    user = relationship("User")

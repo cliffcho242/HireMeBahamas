@@ -35,6 +35,9 @@ export { default as DownloadTest } from './DownloadTest';
 // Error pages
 export { default as NotFound } from './NotFound';
 
+// Monetization pages
+export { default as Pricing } from './Pricing';
+
 // Aliases for components that are referenced differently
 // Feed is actually the Home page with the feed
 export { default as Feed } from './Home';
