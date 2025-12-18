@@ -59,18 +59,11 @@ T = TypeVar('T')
 # Redis configuration with flexible options
 def _build_redis_url() -> str:
     """Build Redis URL from environment variables with multiple configuration options."""
-    # First priority: Full Redis URL
-    redis_url = config("REDIS_URL", default="")
-    if redis_url:
-        return redis_url
-    
-    redis_url = config("REDIS_PRIVATE_URL", default="")
-    if redis_url:
-        return redis_url
-    
-    redis_url = config("UPSTASH_REDIS_REST_URL", default="")
-    if redis_url:
-        return redis_url
+    # First priority: Full Redis URL (check multiple sources)
+    for env_var in ["REDIS_URL", "REDIS_PRIVATE_URL", "UPSTASH_REDIS_REST_URL"]:
+        redis_url = config(env_var, default="")
+        if redis_url:
+            return redis_url
     
     # Second priority: Component-based configuration
     redis_host = config("REDIS_HOST", default="")

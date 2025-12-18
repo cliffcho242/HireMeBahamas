@@ -66,13 +66,10 @@ T = TypeVar('T')
 
 def _build_redis_url() -> str:
     """Build Redis URL from environment variables."""
-    # First priority: Full Redis URL
-    if url := os.getenv("REDIS_URL"):
-        return url
-    if url := os.getenv("REDIS_PRIVATE_URL"):
-        return url
-    if url := os.getenv("UPSTASH_REDIS_REST_URL"):
-        return url
+    # First priority: Full Redis URL (check multiple sources)
+    for env_var in ["REDIS_URL", "REDIS_PRIVATE_URL", "UPSTASH_REDIS_REST_URL"]:
+        if url := os.getenv(env_var):
+            return url
     
     # Second priority: Component-based configuration
     redis_host = os.getenv("REDIS_HOST")

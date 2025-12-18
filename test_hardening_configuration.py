@@ -14,7 +14,27 @@ Usage:
 import os
 import sys
 import asyncio
+import importlib
 import importlib.util
+
+
+def reload_module_safely(module_name: str):
+    """
+    Helper function to safely reload a module.
+    
+    Args:
+        module_name: Name of the module to reload
+        
+    Returns:
+        The reloaded module or None if not loaded
+    """
+    if module_name in sys.modules:
+        try:
+            return importlib.reload(sys.modules[module_name])
+        except Exception:
+            # If reload fails, remove and let it be reimported
+            del sys.modules[module_name]
+    return None
 
 
 def test_gunicorn_config():
@@ -203,9 +223,8 @@ async def test_redis_host_configuration():
         
         # Import and check
         try:
-            # Force reimport
-            if 'app.core.redis_cache' in sys.modules:
-                del sys.modules['app.core.redis_cache']
+            # Safely reload module to pick up new env vars
+            reload_module_safely('app.core.redis_cache')
             
             from app.core.redis_cache import _build_redis_url
             url = _build_redis_url()
@@ -221,10 +240,11 @@ async def test_redis_host_configuration():
         
         # Test 2: REDIS_HOST with password
         os.environ['REDIS_PASSWORD'] = 'secret123'
-        if 'app.core.redis_cache' in sys.modules:
-            del sys.modules['app.core.redis_cache']
         
         try:
+            # Safely reload module again
+            reload_module_safely('app.core.redis_cache')
+            
             from app.core.redis_cache import _build_redis_url
             url = _build_redis_url()
             
