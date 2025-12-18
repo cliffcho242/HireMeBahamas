@@ -1,27 +1,21 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "allowJs": false,
-    "skipLibCheck": true,
-
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-
-    // ✅ MASTER PLAYBOOK: Strict TypeScript
+    "target": "ES2020",
+    "lib": ["DOM", "ES2020"],
+    "jsx": "react-jsx",
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "useDefineForClassFields": true,
+    "allowJs": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-
     "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-
-    // ✅ MASTER PLAYBOOK: React JSX (not default import)
-    "jsx": "react-jsx",
     "noEmit": true
   },
   "include": ["src"]

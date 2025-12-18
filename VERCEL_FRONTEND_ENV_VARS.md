@@ -67,7 +67,7 @@ VITE_SOCKET_URL=https://your-backend.onrender.com
 - ✅ Using Render PostgreSQL database
 
 **Example URLs:**
-- Backend: `https://hiremebahamas.onrender.com`
+- Backend: `https://hire-me-bahamas.onrender.com`
 - Frontend: `https://hiremebahamas.vercel.app`
 
 ---

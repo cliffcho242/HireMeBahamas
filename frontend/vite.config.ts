@@ -229,7 +229,7 @@ export default defineConfig({
     },
   },
   build: {
-    target: 'es2015',
+    target: 'es2020',
     minify: 'terser',
     cssCodeSplit: true,
     chunkSizeWarningLimit: 1000,
