@@ -102,7 +102,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false, // Must be false with wildcard CORS
+  withCredentials: true, // 🔐 CRITICAL: Enable credentials for cookie-based auth
 });
 
 // Retry configuration - optimized to prevent excessive timing
