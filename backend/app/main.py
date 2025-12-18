@@ -647,16 +647,24 @@ async def startup():
             # ==========================================================================
             try:
                 from .core.performance import run_all_performance_optimizations
-                # Schedule in the background thread's event loop
-                asyncio.create_task(run_all_performance_optimizations())
+                # Run performance optimizations in the background thread's event loop
+                # Note: This is a fire-and-forget operation that runs after other initialization
+                loop.create_task(run_all_performance_optimizations())
                 logger.info("✅ Performance optimizations scheduled")
             except Exception as e:
                 logger.debug(f"Performance optimizations skipped: {e}")
             
             bg_duration = time.time() - bg_start
             logger.info(f"✅ Background initialization completed in {bg_duration:.2f}s")
+        except Exception as e:
+            # Catch any unexpected errors to ensure event loop is always closed
+            logger.error(f"Background initialization error: {e}", exc_info=True)
         finally:
-            loop.close()
+            # Always close the event loop, even if an error occurred
+            try:
+                loop.close()
+            except Exception as e:
+                logger.error(f"Error closing event loop: {e}")
     
     # Start background initialization in daemon thread
     # Returns IMMEDIATELY - startup completes in <1ms

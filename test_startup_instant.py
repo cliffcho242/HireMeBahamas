@@ -97,7 +97,8 @@ def test_background_initialization():
     
     for thread in threads:
         print(f"   Thread: {thread.name} (daemon={thread.daemon})")
-        if "BackgroundInit" in thread.name or thread.name.startswith("Thread-"):
+        # Only match the exact BackgroundInit thread name
+        if thread.name == "BackgroundInit":
             background_thread = thread
     
     if background_thread:
