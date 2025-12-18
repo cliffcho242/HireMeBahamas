@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '../config/axios';
+import api from '../services/api';
 
 interface PlanFeature {
   name: string;
