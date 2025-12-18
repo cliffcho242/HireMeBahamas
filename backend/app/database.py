@@ -1,48 +1,30 @@
 # =============================================================================
-# DATABASE ENGINE CONFIGURATION - CORRECT & PORTABLE (Dec 2025)
+# DATABASE ENGINE CONFIGURATION - NEON SAFE MODE (Dec 2025)
 # =============================================================================
 #
-# ⚠️  DEPRECATION NOTICE (Dec 2025):
-# This module is DEPRECATED. All database configuration has been consolidated
-# into a single source of truth at app/database.py (in the project root).
+# ✅ NEON POOLER COMPATIBILITY - ZERO EXTRA FLAGS
 #
-# **NEW CODE MUST IMPORT FROM app.database**
+# CRITICAL RULES FOR NEON:
+# 1. DATABASE_URL format: postgresql+asyncpg://USER:PASSWORD@HOST:5432/DATABASE
+#    - ❌ NO sslmode in URL
+#    - ❌ NO statement_timeout
+#    - ❌ NO pooler params
+# 2. SQLAlchemy Engine: create_async_engine with ONLY pool_pre_ping=True
+#    - ❌ NO connect_args with sslmode
+#    - ❌ NO server_settings
+#    - ❌ NO startup options
 #
-#     # ✅ CORRECT - Use single source of truth
-#     from app.database import get_engine, get_db, init_db
+# This configuration is specifically designed for Neon Serverless Postgres
+# and works with PgBouncer connection pooling.
 #
-#     # ❌ DEPRECATED - Don't use this module
-#     from backend.app.database import get_engine
-#
-# This module is maintained for backward compatibility only.
-# It will be removed in a future version.
-#
-# =============================================================================
-#
-# ✅ RULE: For PostgreSQL + SQLAlchemy with asyncpg, SSL belongs in the URL — NOT in connect_args
-# (This rule applies specifically to asyncpg. Other drivers may differ.)
-#
-# This configuration works on:
-# - Render
-# - Railway
-# - Neon
-# - psycopg2
-# - psycopg (v3)
-# - SQLAlchemy 1.4 / 2.0
-#
-# DATABASE_URL FORMAT (copy-paste):
-# postgresql+asyncpg://user:password@host:5432/database?sslmode=require
-#
-# ENV VARS (for Railway/Render/Vercel deployment):
-# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
+# ENV VARS (for Neon/Railway/Render deployment):
+# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
 # DB_POOL_RECYCLE=300
 #
 # Key improvements:
-# 1. SSL configured via URL query string (?sslmode=require) - portable across platforms
-# 2. pool_recycle=300 - prevents stale connections
-# 3. pool_pre_ping=True - validates connections before use
-# 4. JIT=off - prevents first-query compilation delays
-# 5. connect_timeout=5 - handles cold starts
+# 1. pool_pre_ping=True - validates connections before use
+# 2. pool_recycle=300 - prevents stale connections (serverless-friendly)
+# 3. Minimal connect_args - Neon pooler compatible
 # =============================================================================
 
 import os
@@ -130,19 +112,38 @@ if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
 
-# CRITICAL: Remove sslmode from URL for asyncpg compatibility
-# asyncpg does NOT accept sslmode in URL - it must be in connect_args
-# sslmode in URL causes: connect() got an unexpected keyword argument 'sslmode'
-import sys
-backend_dir = os.path.dirname(os.path.dirname(__file__))
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
-from app.core.db_utils import strip_sslmode_from_url, get_ssl_config, ensure_port_in_url
-DATABASE_URL = strip_sslmode_from_url(DATABASE_URL)
-
 # Ensure explicit port in DATABASE_URL (required for cloud deployments)
-# This prevents socket-based connections and ensures proper TCP connections
-DATABASE_URL = ensure_port_in_url(DATABASE_URL)
+# Parse URL and add port if missing
+try:
+    from urllib.parse import quote
+    parsed = urlparse(DATABASE_URL)
+    if parsed.hostname and not parsed.port:
+        # Add default PostgreSQL port using URL-safe components
+        # Note: urlparse handles URL-encoded passwords correctly
+        # We reconstruct the netloc with the port added
+        if parsed.username and parsed.password:
+            # Properly encode credentials if needed
+            user = quote(parsed.username, safe='')
+            password = quote(parsed.password, safe='')
+            new_netloc = f"{user}:{password}@{parsed.hostname}:5432"
+        elif parsed.username:
+            user = quote(parsed.username, safe='')
+            new_netloc = f"{user}@{parsed.hostname}:5432"
+        else:
+            new_netloc = f"{parsed.hostname}:5432"
+        
+        DATABASE_URL = urlunparse((
+            parsed.scheme,
+            new_netloc,
+            parsed.path,
+            parsed.params,
+            parsed.query,
+            parsed.fragment
+        ))
+        logger.info("Added explicit port :5432 to DATABASE_URL")
+except Exception as e:
+    # Don't log exception details to avoid exposing sensitive URL information
+    logger.warning("Could not parse DATABASE_URL for port validation")
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
@@ -238,11 +239,11 @@ COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
 STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
 
 # =============================================================================
-# SSL CONFIGURATION
+# SSL CONFIGURATION - NEON SAFE MODE
 # =============================================================================
-# SSL is configured via the DATABASE_URL query string parameter: ?sslmode=require
-# This is the correct and portable way to configure SSL for PostgreSQL connections.
-# No additional SSL configuration is needed in connect_args.
+# ❌ NO sslmode in URL (Neon pooler does NOT support it)
+# ❌ NO SSL configuration in connect_args
+# Neon manages SSL automatically through its connection pooler
 # =============================================================================
 
 # =============================================================================
@@ -315,36 +316,23 @@ def get_engine():
                         _engine = None
                         return None
                     
-                    # CRITICAL: Create engine WITHOUT startup DB options
-                    # Neon pooled connections (PgBouncer) do NOT support startup parameters
-                    # like statement_timeout, options, or sslmode in connect_args
+                    # CRITICAL: Create engine for Neon pooler compatibility
+                    # Neon pooled connections (PgBouncer) do NOT support:
+                    # - sslmode in URL or connect_args
+                    # - statement_timeout
+                    # - server_settings
+                    # - startup options
                     _engine = create_async_engine(
                         DATABASE_URL,
                         # Pool configuration - optimized for serverless
                         pool_size=POOL_SIZE,
                         max_overflow=MAX_OVERFLOW,
-                        pool_pre_ping=True,  # Validate connections before use
+                        pool_pre_ping=True,  # Validate connections before use (ONLY pool option needed)
                         pool_recycle=POOL_RECYCLE,  # Recycle every 5 min (serverless-friendly)
                         pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
                         
                         # Echo SQL for debugging (disabled in production)
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
-                        
-                        # CRITICAL: Minimal connect_args for Neon compatibility
-                        # NO sslmode in URL (asyncpg doesn't accept it)
-                        # NO statement_timeout (not supported by PgBouncer)
-                        # NO server_settings with startup options
-                        connect_args={
-                            # Connection timeout (5s for cold starts)
-                            "timeout": CONNECT_TIMEOUT,
-                            
-                            # Query timeout (30s per query)
-                            "command_timeout": COMMAND_TIMEOUT,
-                            
-                            # SSL configuration for asyncpg
-                            # asyncpg does NOT accept sslmode in URL - it must be in connect_args
-                            "ssl": get_ssl_config(ENVIRONMENT),
-                        }
                     )
                     logger.info("✅ Database engine initialized successfully (Neon-safe, no startup options)")
                     logger.info(
