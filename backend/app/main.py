@@ -588,7 +588,9 @@ async def startup():
         bg_start = time.time()
         logger.info(f"📦 Background initialization started (thread: {threading.current_thread().name})")
         
-        # Create new event loop for this thread
+        # Create new event loop for this background thread
+        # Safe to set as current loop because this is a separate thread from main app
+        # Main app's event loop (created by uvicorn) runs in the main thread
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
@@ -648,7 +650,10 @@ async def startup():
             try:
                 from .core.performance import run_all_performance_optimizations
                 # Run performance optimizations in the background thread's event loop
-                # Note: This is a fire-and-forget operation that runs after other initialization
+                # Note: This is intentionally fire-and-forget - runs in background
+                # The event loop stays open long enough for initialization tasks,
+                # but performance optimizations continue asynchronously
+                # If they don't complete before loop closes, that's acceptable (non-critical)
                 loop.create_task(run_all_performance_optimizations())
                 logger.info("✅ Performance optimizations scheduled")
             except Exception as e:

@@ -131,6 +131,9 @@ def api_health():
     ✅ NO DATABASE - instant response
     ✅ NO IO - instant response
     ✅ NO async/await - synchronous function for fastest response
+    
+    Note: HEAD method automatically returns same response as GET but with no body.
+    FastAPI handles this automatically - no special logic needed.
     """
     return {
         "status": "ok",
