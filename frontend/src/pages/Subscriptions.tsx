@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
@@ -31,7 +30,6 @@ export default function Subscriptions() {
   const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchPlans();
