@@ -1,0 +1,133 @@
+name: Master Playbook - Security Guards
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  master-playbook-guards:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🛡️ Check for forbidden sslmode
+        run: |
+          echo "🔍 Checking for forbidden 'sslmode' in code..."
+          
+          # Check Python files in backend
+          if grep -r "sslmode" --include="*.py" backend/app/ 2>/dev/null | grep -v "# " | grep -v "test_"; then
+            echo "::error::❌ FORBIDDEN: 'sslmode' found in backend code"
+            echo "Master Playbook violation: sslmode is forbidden in database configuration"
+            exit 1
+          fi
+          
+          echo "✅ No sslmode violations found"
+
+      - name: 🛡️ Check for forbidden statement_timeout at startup
+        run: |
+          echo "🔍 Checking for forbidden 'statement_timeout' at startup..."
+          
+          # Check for statement_timeout in connect_args or server_settings
+          if grep -r "statement_timeout" --include="*.py" backend/app/database.py 2>/dev/null | grep -v "# " | grep -v "NOT set"; then
+            echo "::error::❌ FORBIDDEN: 'statement_timeout' found at startup in database.py"
+            echo "Master Playbook violation: statement_timeout at startup is forbidden (not compatible with Neon pooler)"
+            exit 1
+          fi
+          
+          echo "✅ No statement_timeout violations found"
+
+      - name: 🛡️ Check health endpoint doesn't touch DB
+        run: |
+          echo "🔍 Checking /health endpoint doesn't access database..."
+          
+          # Look for database calls in health endpoint
+          if grep -A 20 '@app.get("/health"' backend/app/main.py | grep -E "(get_db|session|query|execute|select)"; then
+            echo "::error::❌ FORBIDDEN: /health endpoint touches database"
+            echo "Master Playbook violation: /health must be instant, no DB access"
+            exit 1
+          fi
+          
+          echo "✅ Health endpoint is database-free"
+
+      - name: 🛡️ Check for Base.metadata.create_all in production
+        run: |
+          echo "🔍 Checking for Base.metadata.create_all()..."
+          
+          # Check for create_all in non-test files
+          if grep -r "Base.metadata.create_all" --include="*.py" backend/app/ 2>/dev/null | grep -v "test_" | grep -v "# "; then
+            echo "::error::❌ FORBIDDEN: Base.metadata.create_all() found in production code"
+            echo "Master Playbook violation: Use Alembic migrations, never create_all in prod"
+            exit 1
+          fi
+          
+          echo "✅ No create_all violations found"
+
+      - name: 🛡️ Check Gunicorn worker count
+        run: |
+          echo "🔍 Checking Gunicorn worker configuration..."
+          
+          # Check render.yaml
+          if grep -A 5 "WEB_CONCURRENCY" render.yaml | grep -v '"1"' | grep -E 'value:.*[2-9]'; then
+            echo "::error::❌ FORBIDDEN: More than 1 Gunicorn worker configured"
+            echo "Master Playbook violation: Must use exactly 1 worker"
+            exit 1
+          fi
+          
+          # Check Procfile
+          if grep "workers=" Procfile | grep -v "workers=1" | grep -E "workers=[2-9]"; then
+            echo "::error::❌ FORBIDDEN: More than 1 Gunicorn worker in Procfile"
+            echo "Master Playbook violation: Must use exactly 1 worker"
+            exit 1
+          fi
+          
+          echo "✅ Gunicorn configured with 1 worker (correct)"
+
+      - name: 🛡️ Check frontend uses VITE_ not NEXT_PUBLIC_
+        run: |
+          echo "🔍 Checking frontend environment variable naming..."
+          
+          # Check for NEXT_PUBLIC_ in frontend code (wrong framework)
+          if grep -r "NEXT_PUBLIC_" --include="*.ts" --include="*.tsx" frontend/src/ 2>/dev/null | grep -v "// " | grep -v "Wrong"; then
+            echo "::warning::⚠️ Found NEXT_PUBLIC_ prefix in frontend code"
+            echo "This project uses Vite, not Next.js. Use VITE_ prefix instead."
+            echo "Note: This is a warning, not blocking the build."
+          fi
+          
+          echo "✅ Frontend environment variable check complete"
+
+      - name: 🛡️ Check for hardcoded ports
+        run: |
+          echo "🔍 Checking for hardcoded ports..."
+          
+          # Check for hardcoded port 5432 (PostgreSQL) in HTTP bind config
+          if grep -r "bind.*5432" --include="*.py" backend/ 2>/dev/null; then
+            echo "::error::❌ FORBIDDEN: Hardcoded port 5432 in HTTP configuration"
+            echo "Master Playbook violation: Port 5432 is for PostgreSQL, not HTTP"
+            exit 1
+          fi
+          
+          echo "✅ No hardcoded port violations found"
+
+      - name: 📊 Summary
+        if: success()
+        run: |
+          echo ""
+          echo "✅ All Master Playbook security guards PASSED"
+          echo ""
+          echo "Verified:"
+          echo "  ✓ No sslmode in code"
+          echo "  ✓ No statement_timeout at startup"
+          echo "  ✓ /health endpoint is DB-free"
+          echo "  ✓ No Base.metadata.create_all() in prod"
+          echo "  ✓ Gunicorn uses 1 worker only"
+          echo "  ✓ No hardcoded ports"
+          echo ""
+          echo "🎉 Code is Master Playbook compliant!"
