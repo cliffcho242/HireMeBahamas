@@ -1,6 +1,6 @@
 """
 Test to verify that the database configuration correctly prioritizes DATABASE_PRIVATE_URL
-over DATABASE_URL to avoid Railway egress fees.
+over DATABASE_URL for optimal performance.
 """
 
 import os
@@ -16,8 +16,8 @@ def test_database_url_priority():
     
     try:
         # Test 1: When both are set, DATABASE_PRIVATE_URL should be used
-        private_url = "postgresql+asyncpg://user:pass@private.railway.internal:5432/db"
-        public_url = "postgresql+asyncpg://user:pass@public.railway.app:5432/db"
+        private_url = "postgresql+asyncpg://user:pass@private.internal:5432/db"
+        public_url = "postgresql+asyncpg://user:pass@public.render.com:5432/db"
         
         os.environ["DATABASE_PRIVATE_URL"] = private_url
         os.environ["DATABASE_URL"] = public_url
@@ -70,7 +70,7 @@ def test_database_url_priority():
         print("✓ Test 3 passed: Default local database URL is used when neither variable is set")
         
         print("\n✅ All database URL priority tests passed!")
-        print("✅ Configuration correctly avoids Railway egress fees by preferring DATABASE_PRIVATE_URL")
+        print("✅ Configuration correctly uses DATABASE_PRIVATE_URL for optimal performance")
         
     finally:
         # Restore original values

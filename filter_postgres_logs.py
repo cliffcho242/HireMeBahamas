@@ -4,7 +4,7 @@ PostgreSQL Log Filter and Categorizer
 ======================================
 
 This script filters and properly categorizes PostgreSQL log messages,
-correcting the issue where Railway's managed PostgreSQL logs informational
+correcting the issue where Render's managed PostgreSQL logs informational
 messages with "error" level.
 
 Usage:

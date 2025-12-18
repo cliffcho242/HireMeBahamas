@@ -17,7 +17,7 @@
 
 2. **Updated Configuration Files**
    - `api/backend_app/core/environment.py` - Primary Vercel backend
-   - `backend/app/core/environment.py` - Railway/Render backend
+   - `backend/app/core/environment.py` - Render/Render backend
    - `api/main.py` - Vercel serverless handler fallback
    - `api/backend_app/main.py` - Socket.IO configuration
 

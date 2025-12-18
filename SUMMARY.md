@@ -108,12 +108,12 @@ Without force push capability, automated conflict resolution is impossible.
 ### Priority 1: Review Status Report
 📖 Read `PR_STATUS_REPORT.md` for detailed analysis
 
-### Priority 2: Resolve PR #20 (Critical - Railway Deployment)
+### Priority 2: Resolve PR #20 (Critical - Render Deployment)
 ```bash
 git fetch origin
 git checkout copilot/fix-procfile-application-error
 git rebase origin/main
-# Resolve conflicts in: Procfile, railway.json, nixpacks.toml, gunicorn.conf.py
+# Resolve conflicts in: Procfile, render.json, nixpacks.toml, gunicorn.conf.py
 git add <resolved-files>
 git rebase --continue
 git push --force-with-lease origin copilot/fix-procfile-application-error

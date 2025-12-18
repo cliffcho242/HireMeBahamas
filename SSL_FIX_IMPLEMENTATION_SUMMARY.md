@@ -32,7 +32,7 @@ Removed the custom SSL context from `connect_args` and rely solely on the `sslmo
 #### 2. Simplified connect_args:
 ```python
 connect_args={
-    # Connection timeout (5s for Railway cold starts)
+    # Connection timeout (5s for Render cold starts)
     "timeout": CONNECT_TIMEOUT,
     
     # Query timeout (30s per query)
@@ -97,7 +97,7 @@ def init_db():
 ### 1. Portability
 Works across all major PostgreSQL hosting platforms:
 - ✅ Render
-- ✅ Railway
+- ✅ Render
 - ✅ Neon
 - ✅ Supabase
 - ✅ Vercel Postgres
@@ -257,9 +257,9 @@ If you experience SSL connection issues after this update:
    DATABASE_URL=postgresql+asyncpg://user:pass@ep-xxx.region.aws.neon.tech:5432/db?sslmode=require
    ```
 
-3. **For Railway:**
+3. **For Render:**
    ```bash
-   DATABASE_URL=postgresql+asyncpg://user:pass@containers-us-west-123.railway.app:5432/railway?sslmode=require
+   DATABASE_URL=postgresql+asyncpg://user:pass@containers-us-west-123.render.app:5432/render?sslmode=require
    ```
 
 4. **For Render:**

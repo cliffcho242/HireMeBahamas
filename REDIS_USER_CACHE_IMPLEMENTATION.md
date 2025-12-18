@@ -262,7 +262,7 @@ health = await redis_cache.health_check()
 ```bash
 # Redis connection
 REDIS_URL=redis://localhost:6379/0
-# Or use Railway/Upstash
+# Or use Render/Upstash
 REDIS_PRIVATE_URL=redis://...
 
 # Cache configuration (optional)

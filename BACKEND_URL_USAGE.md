@@ -14,8 +14,8 @@ The `BACKEND_URL` environment variable is used to configure the backend API URL 
 # For development (local backend)
 export BACKEND_URL=http://localhost:8000
 
-# For Railway deployment
-export BACKEND_URL=https://hiremebahamas-backend.railway.app
+# For Render deployment
+export BACKEND_URL=https://hiremebahamas-backend.render.app
 
 # For Vercel deployment
 export BACKEND_URL=https://hiremebahamas.vercel.app
@@ -127,10 +127,10 @@ See `.env.example` for complete configuration options.
 
 ### Deployment Platforms
 
-#### Railway
+#### Render
 ```bash
-# Set in Railway Dashboard → Your Service → Variables
-BACKEND_URL=https://your-app.up.railway.app
+# Set in Render Dashboard → Your Service → Variables
+BACKEND_URL=https://your-app.up.render.app
 ```
 
 #### Vercel
@@ -149,7 +149,7 @@ BACKEND_URL=https://your-app.onrender.com
 ```yaml
 # Set in workflow file or repository secrets
 env:
-  BACKEND_URL: https://your-app.up.railway.app
+  BACKEND_URL: https://your-app.up.render.app
 ```
 
 ## Common Use Cases

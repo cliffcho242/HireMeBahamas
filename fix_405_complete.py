@@ -4,10 +4,10 @@ HireMeBahamas 405 Error Fix - Complete Solution
 Uses IntelliSense and automated fixes to resolve login/signup 405 errors
 
 DEPRECATED: This script was created for Render deployment issues.
-After migrating to Vercel + Railway, 405 errors should not occur.
+After migrating to Vercel + Render, 405 errors should not occur.
 
 If you're experiencing 405 errors, check:
-1. VITE_API_URL points to correct backend (Railway or Vercel)
+1. VITE_API_URL points to correct backend (Render or Vercel)
 2. Backend is deployed and accessible
 3. CORS is properly configured in backend
 """

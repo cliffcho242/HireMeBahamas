@@ -7,7 +7,7 @@ Write-Host "║                                                               �
 Write-Host "╚═══════════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
 Write-Host "This script will:" -ForegroundColor Yellow
-Write-Host "  1. Get your Railway backend URL" -ForegroundColor White
+Write-Host "  1. Get your Render backend URL" -ForegroundColor White
 Write-Host "  2. Update Vercel frontend configuration" -ForegroundColor White
 Write-Host "  3. Redeploy frontend with backend connected" -ForegroundColor White
 Write-Host "  4. Test the connection`n" -ForegroundColor White
@@ -15,8 +15,8 @@ Write-Host "  4. Test the connection`n" -ForegroundColor White
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`n" -ForegroundColor Gray
 
 # Get backend URL
-Write-Host "📝 Enter your Railway backend URL:" -ForegroundColor Yellow
-Write-Host "   (Example: https://hiremebahamas-production.up.railway.app)`n" -ForegroundColor Gray
+Write-Host "📝 Enter your Render backend URL:" -ForegroundColor Yellow
+Write-Host "   (Example: https://hiremebahamas-production.up.render.app)`n" -ForegroundColor Gray
 
 $backendURL = Read-Host "Backend URL"
 
@@ -57,7 +57,7 @@ try {
     }
 } catch {
     Write-Host "   ⚠️  Warning: Could not connect to backend" -ForegroundColor Yellow
-    Write-Host "   This might be normal if Railway is still deploying" -ForegroundColor Gray
+    Write-Host "   This might be normal if Render is still deploying" -ForegroundColor Gray
     Write-Host "   Continuing anyway...`n" -ForegroundColor Gray
 }
 
@@ -170,7 +170,7 @@ Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 🌐 FRONTEND (Vercel):
 https://hiremebahamas-backend-earawsqiw-cliffs-projects-a84c76c9.vercel.app
 
-🔧 BACKEND (Railway):
+🔧 BACKEND (Render):
 $backendURL
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

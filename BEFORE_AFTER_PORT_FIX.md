@@ -87,7 +87,7 @@ $ docker run -p 8080:8080 hiremebahamas:latest
 
 ### On Deployment Platforms
 - **Render**: Automatically sets PORT, app uses it ✅
-- **Railway**: Automatically sets PORT, app uses it ✅
+- **Render**: Automatically sets PORT, app uses it ✅
 - **Heroku**: Automatically sets PORT, app uses it ✅
 - **Google Cloud Run**: Automatically sets PORT, app uses it ✅
 

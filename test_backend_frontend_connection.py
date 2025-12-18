@@ -260,12 +260,12 @@ def print_deployment_guide() -> None:
    - Let frontend use same-origin (automatic)
    - API available at /api/* (proxied by vercel.json)
 
-2️⃣  SEPARATE BACKEND (Railway/Render)
+2️⃣  SEPARATE BACKEND (Render/Render)
    ✅ Dedicated backend server
    ✅ Better for heavy workloads
    
    Configuration:
-   - In Vercel Dashboard: Set VITE_API_URL=https://your-backend.railway.app
+   - In Vercel Dashboard: Set VITE_API_URL=https://your-backend.render.app
    - Or set in frontend/.env for local dev
    - Ensure backend has CORS configured
 

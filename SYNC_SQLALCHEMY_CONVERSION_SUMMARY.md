@@ -79,7 +79,7 @@ All backward compatibility aliases maintained:
 - SSL via URL: `?sslmode=require`
 
 ### Platform Compatibility
-- ✅ Railway
+- ✅ Render
 - ✅ Render
 - ✅ Vercel Postgres (Neon)
 - ✅ Other PostgreSQL providers

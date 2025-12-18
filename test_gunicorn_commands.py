@@ -169,7 +169,7 @@ def main():
         print("✅ All gunicorn commands passed validation!")
         print()
         print("Note: If you're still seeing 'unrecognized arguments' errors:")
-        print("1. Check your deployment platform dashboard (Railway/Render)")
+        print("1. Check your deployment platform dashboard (Render/Render)")
         print("2. Look for environment variables with extra text")
         print("3. Verify no custom start commands in the platform settings")
         return 0

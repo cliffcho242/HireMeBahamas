@@ -263,7 +263,7 @@ git ls-files | grep requirements.txt
 
 # Should show:
 # api/requirements.txt
-# requirements.txt (optional, for Railway/local dev)
+# requirements.txt (optional, for Render/local dev)
 ```
 
 ## Technical Details

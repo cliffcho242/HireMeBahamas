@@ -14,7 +14,7 @@ def test_authentication_endpoints():
     """Test authentication endpoints for 405 errors"""
     print("Testing authentication endpoints...")
 
-    api_base = "https://hiremebahamas-backend.railway.app"
+    api_base = "https://hiremebahamas-backend.render.app"
     endpoints = ["/api/auth/login", "/auth/login", "/api/auth/register"]
 
     test_data = {"email": "admin@hiremebahamas.com", "password": "AdminPass123!"}

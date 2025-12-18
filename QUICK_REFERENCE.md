@@ -98,7 +98,7 @@ SECRET_KEY=<random-32-byte-token>
 DATABASE_URL=postgresql://...
 PORT=5000
 
-# Deploy backend (Railway/Heroku)
+# Deploy backend (Render/Heroku)
 gunicorn final_backend:application
 
 # Deploy frontend (Vercel/Netlify)

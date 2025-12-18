@@ -181,16 +181,16 @@ Override these in your deployment platform:
 
 ### Monitoring Commands
 
-**Railway:**
+**Render:**
 ```bash
 # View recent logs
-railway logs --tail 100
+render logs --tail 100
 
 # Search for SIGTERM
-railway logs --tail 200 | grep SIGTERM
+render logs --tail 200 | grep SIGTERM
 
 # Search for SIGABRT (critical)
-railway logs --tail 200 | grep SIGABRT
+render logs --tail 200 | grep SIGABRT
 ```
 
 **Render:**
@@ -237,7 +237,7 @@ railway logs --tail 200 | grep SIGABRT
 3. **Only as Last Resort: Increase Timeout**
    ```bash
    # Set GUNICORN_TIMEOUT environment variable
-   railway variables set GUNICORN_TIMEOUT=120
+   render variables set GUNICORN_TIMEOUT=120
    ```
    **Note:** This masks the problem, doesn't fix it!
 

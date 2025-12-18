@@ -230,7 +230,7 @@ Return validation result
 
 #### ✅ Backward Compatibility Tests (6 test cases)
 - Valid Neon URL
-- Valid Railway URL
+- Valid Render URL
 - Localhost rejection
 - Missing port rejection
 - Missing SSL mode rejection

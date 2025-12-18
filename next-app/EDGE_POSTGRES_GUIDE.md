@@ -71,7 +71,7 @@ Vercel automatically injects these environment variables:
 
 #### Option B: Use Existing Postgres (Any Provider)
 
-You can use any Postgres database (AWS RDS, Railway, Neon, Supabase, etc.):
+You can use any Postgres database (AWS RDS, Render, Neon, Supabase, etc.):
 
 ```bash
 # In Vercel Dashboard → Project → Settings → Environment Variables

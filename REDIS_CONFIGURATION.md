@@ -28,7 +28,7 @@ This is **NOT an error** - the application works fine with in-memory cache, but 
 | Provider | Free Tier | Setup Time | Best For |
 |----------|-----------|------------|----------|
 | **Upstash** ⭐ | ✅ 10K commands/day | 5 min | Serverless, global CDN |
-| **Railway** | ❌ Usage-based | 2 min | Same platform as backend |
+| **Render** | ❌ Usage-based | 2 min | Same platform as backend |
 | **Render** | ✅ 25MB storage | 5 min | Free tier available |
 
 **For Local Development:**
@@ -53,10 +53,10 @@ rediss://:password@hostname:port
 3. Copy the connection string from the dashboard
 4. Format: `rediss://:password@global.upstash.io:6379`
 
-#### Railway
+#### Render
 
-1. In Railway Dashboard → Click "+" → Database → Redis
-2. Railway automatically creates `REDIS_URL` variable
+1. In Render Dashboard → Click "+" → Database → Redis
+2. Render automatically creates `REDIS_URL` variable
 3. Copy the value (starts with `redis://` or `rediss://`)
 
 #### Render
@@ -69,17 +69,17 @@ rediss://:password@hostname:port
 
 Choose your deployment platform:
 
-#### For Railway
+#### For Render
 
-**Option A: Use Railway Redis Plugin (Automatic)**
+**Option A: Use Render Redis Plugin (Automatic)**
 ```bash
-# Railway automatically sets REDIS_URL when you add Redis service
+# Render automatically sets REDIS_URL when you add Redis service
 # No manual configuration needed!
 ```
 
 **Option B: Use External Redis (Manual)**
 ```bash
-# In Railway Dashboard → Variables → Add Variable
+# In Render Dashboard → Variables → Add Variable
 REDIS_URL=rediss://:your-password@your-host:6379
 ```
 

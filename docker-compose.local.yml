@@ -7,17 +7,17 @@
 # This file is EXCLUSIVELY for LOCAL DEVELOPMENT on your personal computer!
 # 
 # ❌ DO NOT USE THIS FILE ON:
-#    - Railway (use managed PostgreSQL database service)
+#    - Render (use managed PostgreSQL database service)
 #    - Render (use managed PostgreSQL database service)
 #    - Vercel (use Vercel Postgres)
 #    - ANY cloud platform
 # 
 # ⚠️ RAILWAY USERS: If you see "root execution not permitted" error:
-#    You are trying to deploy this file to Railway. This is WRONG!
+#    You are trying to deploy this file to Render. This is WRONG!
 #    Read: RAILWAY_SETUP_REQUIRED.md for the correct setup.
 # 
 # 📖 Documentation:
-#    - Railway setup: RAILWAY_POSTGRESQL_SETUP.md
+#    - Render setup: RAILWAY_POSTGRESQL_SETUP.md
 #    - High availability: docs/HIGH_AVAILABILITY.md
 # 
 # 💻 Usage (LOCAL DEVELOPMENT ONLY):
@@ -34,8 +34,8 @@ services:
     image: postgres:16-alpine
     user: postgres  # CRITICAL: Run as postgres user, not root
                     # - Prevents security vulnerabilities
-                    # - Required for Railway (root execution not permitted)
-                    # - Railway doesn't support PostgreSQL init as root then switch user
+                    # - Required for Render (root execution not permitted)
+                    # - Render doesn't support PostgreSQL init as root then switch user
     environment:
       POSTGRES_DB: hiremebahamas
       POSTGRES_USER: hiremebahamas_user
@@ -65,7 +65,7 @@ services:
     # - log_destination=stderr: Send logs to stderr (captured by Docker)
     # - client_min_messages=notice: Only send NOTICE and above to clients
     #
-    # Note for Railway users: Railway's managed PostgreSQL may categorize PostgreSQL
+    # Note for Render users: Render's managed PostgreSQL may categorize PostgreSQL
     # LOG-level messages as "error" in their log aggregation system. This is expected
     # behavior and does not indicate actual errors. See RAILWAY_POSTGRES_LOG_LEVEL_FIX.md
     command: >

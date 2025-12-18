@@ -19,7 +19,7 @@ class Frontend405Diagnostics:
     def __init__(self):
         self.workspace_root = Path(".")
         self.frontend_dir = self.workspace_root / "frontend"
-        self.api_base = "https://hiremebahamas-backend.railway.app"
+        self.api_base = "https://hiremebahamas-backend.render.app"
 
         # Setup logging
         logging.basicConfig(level=logging.INFO)

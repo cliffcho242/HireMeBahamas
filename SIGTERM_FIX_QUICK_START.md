@@ -36,7 +36,7 @@ Handles SIGTERM/SIGINT signals to provide clear diagnostics:
 
 ## Deploy Now
 
-**Railway:**
+**Render:**
 ```bash
 git push origin main
 ```
@@ -81,12 +81,12 @@ git push origin main
 
 2. **Check memory usage:**
    ```bash
-   railway logs --tail 100 | grep -i "memory\|oom"
+   render logs --tail 100 | grep -i "memory\|oom"
    ```
 
 3. **Check for slow requests:**
    ```bash
-   railway logs --tail 100 | grep -i "timeout\|slow"
+   render logs --tail 100 | grep -i "timeout\|slow"
    ```
 
 4. **Monitor platform resources:**

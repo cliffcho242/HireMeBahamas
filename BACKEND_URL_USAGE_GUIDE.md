@@ -66,10 +66,10 @@ fetch(`${BACKEND_URL}//api/auth/me`);
 # Frontend will automatically use same-origin (/api/* routing)
 ```
 
-### Option B: Separate Backend (Railway/Render)
+### Option B: Separate Backend (Render/Render)
 ```bash
 # Set VITE_API_URL to your backend URL
-VITE_API_URL=https://your-app.up.railway.app
+VITE_API_URL=https://your-app.up.render.app
 ```
 
 ### Option C: Local Development

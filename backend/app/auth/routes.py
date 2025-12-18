@@ -250,7 +250,7 @@ async def login(
     # Set refresh token as HTTP-only cookie
     # ✅ HttpOnly: Prevents JavaScript access (XSS protection)
     # ✅ Secure: HTTPS only (required for Safari with SameSite=None)
-    # ✅ SameSite=None: Cross-origin support (Vercel frontend ↔ Railway/Render backend)
+    # ✅ SameSite=None: Cross-origin support (Vercel frontend ↔ Render backend)
     # ❗ CRITICAL: SameSite=None is MANDATORY for cross-origin authentication
     #             If SameSite=Lax, Safari login will fail silently!
     response.set_cookie(

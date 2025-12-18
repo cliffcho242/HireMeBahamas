@@ -180,6 +180,6 @@ If you can't connect to PostgreSQL:
 For production deployments, see:
 - [Deployment Guide](./DEPLOYMENT_CONNECTION_GUIDE.md)
 - [Vercel Setup](./VERCEL_POSTGRES_SETUP.md)
-- [Railway Setup](./RAILWAY_DATABASE_SETUP.md)
+- [Render Setup](./RAILWAY_DATABASE_SETUP.md)
 
 **Important:** Never commit `.env` files with real secrets to version control!

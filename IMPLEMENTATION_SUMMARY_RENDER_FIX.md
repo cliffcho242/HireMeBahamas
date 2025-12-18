@@ -220,4 +220,4 @@ After deployment, monitor:
 
 ---
 
-*This fix provides backward compatibility for Render deployments. For new projects, consider the recommended Vercel + Railway architecture documented in RENDER_TO_VERCEL_MIGRATION.md*
+*This fix provides backward compatibility for Render deployments. For new projects, consider the recommended Vercel + Render architecture documented in RENDER_TO_VERCEL_MIGRATION.md*

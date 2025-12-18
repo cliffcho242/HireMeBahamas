@@ -74,7 +74,7 @@ conn = engine.connect()  # Blocks app startup & requests
 1. **No startup failures**: App can start even if database is temporarily unavailable
 2. **Serverless-friendly**: Connections created only when needed (not during cold start)
 3. **Resource efficient**: No idle connections during module import
-4. **Railway/Vercel compatible**: Works with serverless platforms and managed databases
+4. **Render/Vercel compatible**: Works with serverless platforms and managed databases
 
 ## Request Timeout Protection
 
@@ -128,7 +128,7 @@ response = requests.get("http://api.example.com/endpoint")
 - `/api/database.py` - API database configuration
 
 ### Request Timeouts
-- `/check_deployed.py` - Railway deployment checker
+- `/check_deployed.py` - Render deployment checker
 - `/start_app_automated.py` - Application launcher
 - `/backend_monitor.py` - Backend health monitor
 - `/scripts/check_pr_status.py` - GitHub PR status checker
@@ -170,7 +170,7 @@ except requests.Timeout:
 
 These patterns are especially important for:
 - **GitHub Actions**: Workflows start fresh environments
-- **Railway/Vercel**: Serverless functions with cold starts  
+- **Render/Vercel**: Serverless functions with cold starts  
 - **Docker containers**: May start before database is ready
 - **Health checks**: Need fast timeouts to detect issues quickly
 

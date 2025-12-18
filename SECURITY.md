@@ -417,7 +417,7 @@ BCRYPT_ROUNDS=10
 3. Enable Edge Middleware (if needed)
 4. Configure cron jobs for health checks
 
-#### Railway Deployment
+#### Render Deployment
 
 1. Use DATABASE_PRIVATE_URL for zero egress fees
 2. Configure health checks

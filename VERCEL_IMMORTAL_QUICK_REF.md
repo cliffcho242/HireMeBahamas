@@ -50,9 +50,9 @@ Expected: `{"status":"healthy","platform":"vercel-serverless",...}`
    - ✅ Configured connection pooling: pool_size=1, max_overflow=0
    - ✅ Added pool_pre_ping=True, timeout=5s
 
-5. ❌ **Railway/Render logs only**
+5. ❌ **Render/Render logs only**
    - ✅ Full Vercel serverless deployment
-   - ✅ No Railway/Render dependencies
+   - ✅ No Render/Render dependencies
 
 ---
 

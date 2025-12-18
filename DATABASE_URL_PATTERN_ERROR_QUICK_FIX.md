@@ -112,9 +112,9 @@ Common issues:
 postgresql+asyncpg://username:password@ep-xxxxx.region.neon.tech:5432/database?sslmode=require
 ```
 
-### Railway PostgreSQL
+### Render PostgreSQL
 ```
-postgresql+asyncpg://postgres:password@containers-us-west-xxx.railway.app:5432/railway?sslmode=require
+postgresql+asyncpg://postgres:password@containers-us-west-xxx.render.app:5432/render?sslmode=require
 ```
 
 ### Render PostgreSQL

@@ -1,6 +1,6 @@
 # 🚀 Quick Deployment Reference - HireMeBahamas
 
-**One-page quick reference for deploying to Vercel, Railway, and Render.**
+**One-page quick reference for deploying to Vercel, Render, and Render.**
 
 ---
 
@@ -9,7 +9,7 @@
 | Platform | Dashboard | New Project | Documentation |
 |----------|-----------|-------------|---------------|
 | **Vercel** | [Dashboard](https://vercel.com/dashboard) | [New Project](https://vercel.com/new) | [Docs](https://vercel.com/docs) |
-| **Railway** | [Dashboard](https://railway.app/dashboard) | [New Project](https://railway.app/new) | [Docs](https://docs.railway.app) |
+| **Render** | [Dashboard](https://render.app/dashboard) | [New Project](https://render.app/new) | [Docs](https://docs.render.app) |
 | **Render** | [Dashboard](https://dashboard.render.com) | [New Service](https://dashboard.render.com/select-repo) | [Docs](https://docs.render.com) |
 
 ---
@@ -30,14 +30,14 @@ vercel --prod
 # That's it! ✅
 ```
 
-### Railway Backend
+### Render Backend
 ```bash
 # 1. Push to GitHub
 git push origin main
 
-# 2. Railway auto-deploys from GitHub
+# 2. Render auto-deploys from GitHub
 # 3. Add database: Click "+ New" → "Database" → "PostgreSQL"
-# 4. Set environment variables in Railway dashboard
+# 4. Set environment variables in Render dashboard
 
 # Done! ✅
 ```
@@ -70,16 +70,16 @@ git push origin main
 postgresql://default:PASSWORD@ep-xxxxx.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require
 ```
 
-### Railway Postgres
+### Render Postgres
 ```bash
-# In Railway Project:
+# In Render Project:
 # 1. Click "+ New" → Database → PostgreSQL
 # 2. Wait 1-2 minutes
 # 3. DATABASE_PRIVATE_URL is auto-created ✅
 # 4. App uses it automatically (no egress fees!)
 
 # Connection string format:
-postgresql://postgres:password@postgres.railway.internal:5432/railway
+postgresql://postgres:password@postgres.render.internal:5432/render
 ```
 
 ### Render Postgres
@@ -119,9 +119,9 @@ JWT_SECRET_KEY=your-jwt-secret-32-chars
 ENVIRONMENT=production
 ```
 
-### Railway Backend
+### Render Backend
 ```bash
-DATABASE_PRIVATE_URL=postgresql://postgres:password@postgres.railway.internal:5432/railway
+DATABASE_PRIVATE_URL=postgresql://postgres:password@postgres.render.internal:5432/render
 SECRET_KEY=your-secret-key-32-chars
 JWT_SECRET_KEY=your-jwt-secret-32-chars
 ENVIRONMENT=production
@@ -141,8 +141,8 @@ PORT=10000
 
 ### Vercel Frontend (when using separate backend)
 ```bash
-VITE_API_URL=https://your-backend.up.railway.app
-VITE_SOCKET_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
+VITE_SOCKET_URL=https://your-backend.up.render.app
 ```
 
 ---
@@ -170,7 +170,7 @@ curl https://your-app.vercel.app/api/health
 ### "Database not connecting"
 ```bash
 # Solution: Wait 30-60 seconds for cold start
-# Or visit: https://your-app.railway.app/api/database/wakeup
+# Or visit: https://your-app.render.app/api/database/wakeup
 ```
 
 ### "CORS error"
@@ -214,24 +214,24 @@ vercel ls
 vercel logs
 ```
 
-### Railway CLI
+### Render CLI
 ```bash
 # Install
-npm i -g @railway/cli
+npm i -g @render/cli
 
 # Login
-railway login
+render login
 
 # Deploy
-railway up
+render up
 
 # Check status
-railway status
+render status
 ```
 
 ### Git Push Deploy (Auto)
 ```bash
-# Both Railway and Render auto-deploy on push
+# Both Render and Render auto-deploy on push
 git add .
 git commit -m "Deploy updates"
 git push origin main
@@ -246,7 +246,7 @@ git push origin main
 | Platform | Free Tier | Paid Tier | Database | Cold Starts |
 |----------|-----------|-----------|----------|-------------|
 | **Vercel** | ✅ Generous | $20/mo | $0 (0.5GB) | ❌ None |
-| **Railway** | ✅ 500hrs | $5 base | Included | ❌ None |
+| **Render** | ✅ 500hrs | $5 base | Included | ❌ None |
 | **Render** | ✅ 750hrs | $7/mo | $7/mo | ⚠️ Yes (free) |
 
 **Recommendation**: Start with Vercel full stack for best performance and lowest cost.
@@ -261,9 +261,9 @@ Browser → Vercel Edge → Vercel Serverless → Vercel Postgres
          (Frontend)      (Backend API)        (Database)
 ```
 
-### Pattern 2: Vercel + Railway (Scalable)
+### Pattern 2: Vercel + Render (Scalable)
 ```
-Browser → Vercel Edge → Railway Container → Railway Postgres
+Browser → Vercel Edge → Render Container → Render Postgres
          (Frontend)     (Backend API)        (Database)
 ```
 
@@ -285,8 +285,8 @@ HireMeBahamas/
 ├── frontend/            # React frontend
 │   ├── src/
 │   └── dist/           # Build output
-├── Dockerfile          # Railway/Render deployment
-├── railway.json        # Railway configuration
+├── Dockerfile          # Render/Render deployment
+├── render.json        # Render configuration
 ├── vercel.json         # Vercel configuration
 ├── requirements.txt    # Python dependencies
 └── .env.example        # Environment template
@@ -298,22 +298,22 @@ HireMeBahamas/
 
 ### Deploy Now
 - **Vercel**: [vercel.com/new](https://vercel.com/new)
-- **Railway**: [railway.app/new](https://railway.app/new)
+- **Render**: [render.app/new](https://render.app/new)
 - **Render**: [dashboard.render.com/select-repo](https://dashboard.render.com/select-repo)
 
 ### Add Database
 - **Vercel**: Dashboard → Storage → Create Database
-- **Railway**: Project → + New → Database → PostgreSQL
+- **Render**: Project → + New → Database → PostgreSQL
 - **Render**: Dashboard → New + → PostgreSQL
 
 ### View Logs
 - **Vercel**: Dashboard → Deployments → View Function Logs
-- **Railway**: Project → Service → Deployments → View Logs
+- **Render**: Project → Service → Deployments → View Logs
 - **Render**: Dashboard → Service → Logs
 
 ### Environment Variables
 - **Vercel**: Dashboard → Settings → Environment Variables
-- **Railway**: Project → Service → Variables
+- **Render**: Project → Service → Variables
 - **Render**: Dashboard → Service → Environment
 
 ---
@@ -344,7 +344,7 @@ curl https://your-app.vercel.app/api/health | grep "connected"
 
 - **Full Guide**: [DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)
 - **Vercel Setup**: [VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md)
-- **Railway Setup**: [RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)
+- **Render Setup**: [RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)
 - **README**: [README.md](./README.md)
 - **GitHub Issues**: [Open an Issue](https://github.com/cliffcho242/HireMeBahamas/issues)
 

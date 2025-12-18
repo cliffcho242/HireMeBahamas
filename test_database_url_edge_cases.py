@@ -104,10 +104,10 @@ def test_edge_cases():
             "pass word"
         ),
         
-        # Test 8: Complex Railway-style password
+        # Test 8: Complex Render-style password
         (
-            "Complex Railway password",
-            "postgresql://postgres:G%23kL9%40mX%24pR8%26nT5%21qW2@containers-us-west-1.railway.app:5432/railway",
+            "Complex Render password",
+            "postgresql://postgres:G%23kL9%40mX%24pR8%26nT5%21qW2@containers-us-west-1.render.app:5432/render",
             "G#kL9@mX$pR8&nT5!qW2"
         ),
         

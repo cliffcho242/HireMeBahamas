@@ -64,7 +64,7 @@ Added prominent warnings at the top of both render.yaml files:
 # 
 # ✅ NEXT STEPS:
 # 1. See RENDER_TO_VERCEL_MIGRATION.md for complete migration guide
-# 2. For Railway setup: See RAILWAY_DATABASE_SETUP.md
+# 2. For Render setup: See RAILWAY_DATABASE_SETUP.md
 # 3. For Vercel Postgres: See VERCEL_POSTGRES_SETUP.md
 ```
 
@@ -126,19 +126,19 @@ If you're seeing the DATABASE_URL placeholder error:
 ### ⛔ DON'T Deploy to Render
 The Render deployment is deprecated. Please migrate to:
 - **Frontend**: Vercel
-- **Backend**: Railway  
-- **Database**: Railway PostgreSQL
+- **Backend**: Render  
+- **Database**: Render PostgreSQL
 
 ### ✅ DO Follow Migration Guides
 
 1. **Complete Migration**: See `RENDER_TO_VERCEL_MIGRATION.md`
-2. **Railway Setup**: See `RAILWAY_DATABASE_SETUP.md`
+2. **Render Setup**: See `RAILWAY_DATABASE_SETUP.md`
 3. **Vercel Postgres**: See `VERCEL_POSTGRES_SETUP.md`
 
 ### How to Get Your Real DATABASE_URL
 
-#### For Railway:
-1. Go to https://railway.app/
+#### For Render:
+1. Go to https://render.app/
 2. Navigate to your project
 3. Click on your PostgreSQL service
 4. Click the "Variables" tab
@@ -161,7 +161,7 @@ The Render deployment is deprecated. Please migrate to:
 
 - `DATABASE_URL_PLACEHOLDER_FIX.md` - Original placeholder validation implementation
 - `RENDER_TO_VERCEL_MIGRATION.md` - Complete migration guide
-- `RAILWAY_DATABASE_SETUP.md` - Railway-specific setup
+- `RAILWAY_DATABASE_SETUP.md` - Render-specific setup
 - `VERCEL_POSTGRES_SETUP.md` - Vercel Postgres setup
 - `.env.example` - Environment variable examples
 

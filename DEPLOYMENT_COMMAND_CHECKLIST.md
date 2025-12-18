@@ -16,7 +16,7 @@ python3 validate_deployment_config.py  # if available
 
 ### 2. Check Configuration Files
 
-#### Procfile (Heroku/Railway)
+#### Procfile (Heroku/Render)
 - [ ] Commands are on a single line
 - [ ] No backslashes (`\`) for line continuation
 - [ ] No `--preload` flag (conflicts with gunicorn.conf.py)
@@ -40,7 +40,7 @@ web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-3} --worker-class uvicor
 startCommand: cd backend && gunicorn app.main:app --workers ${WEB_CONCURRENCY:-3} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --log-level info
 ```
 
-#### railway.toml (Railway)
+#### render.toml (Render)
 - [ ] `startCommand` uses correct syntax
 - [ ] Path to app module is correct
 - [ ] No conflicting settings
@@ -62,7 +62,7 @@ startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 
 Verify these environment variables are set correctly in your deployment platform:
 
-- [ ] `PORT` - Should be set by platform (Railway/Render sets this automatically)
+- [ ] `PORT` - Should be set by platform (Render/Render sets this automatically)
 - [ ] `DATABASE_URL` - Must be valid PostgreSQL connection string
 - [ ] `SECRET_KEY` - Must be a secure random string
 - [ ] `JWT_SECRET_KEY` - Must be a secure random string  
@@ -83,10 +83,10 @@ Verify these environment variables are set correctly in your deployment platform
 3. [ ] Verify it matches render.yaml OR is empty (to use render.yaml)
 4. [ ] No multi-line commands with backslashes
 
-#### Railway Dashboard  
+#### Render Dashboard  
 1. [ ] Go to service → Settings
 2. [ ] Check "Custom Start Command" (if set)
-3. [ ] Verify it matches railway.toml OR is empty (to use railway.toml)
+3. [ ] Verify it matches render.toml OR is empty (to use render.toml)
 4. [ ] Check "Environment Variables" tab for correctness
 
 #### Heroku Dashboard

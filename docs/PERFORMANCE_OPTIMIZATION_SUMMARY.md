@@ -102,7 +102,7 @@ idx_notifications_user_unread -- Badge count
 
 ### 1. Deploy Database Indexes
 ```bash
-# SSH into Railway/Render or run locally against production DB
+# SSH into Render/Render or run locally against production DB
 python backend/create_database_indexes.py
 ```
 
@@ -166,7 +166,7 @@ ORDER BY mean_time DESC LIMIT 20;
 |---------|------|------------|
 | Render Web | Starter | $7 |
 | Render Cron (x2) | Free | $0 |
-| Railway Postgres | Hobby | ~$5 |
+| Render Postgres | Hobby | ~$5 |
 | Upstash Redis | Free tier | $0 |
 | Vercel Frontend | Hobby | $0 |
 | **Total** | | **~$12/month** |

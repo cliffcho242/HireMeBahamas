@@ -105,7 +105,7 @@ Implemented automatic SSL mode enforcement that:
 
 Works with:
 - ✅ Vercel Postgres (Neon)
-- ✅ Railway PostgreSQL
+- ✅ Render PostgreSQL
 - ✅ Render PostgreSQL
 - ✅ Supabase
 - ✅ Any PostgreSQL database with SSL support

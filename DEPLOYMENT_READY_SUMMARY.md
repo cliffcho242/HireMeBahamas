@@ -202,12 +202,12 @@ JWT_SECRET_KEY=your-jwt-secret
 
 ### Alternative: Separate Backend
 
-If you want to use a separate backend (Railway/Render):
+If you want to use a separate backend (Render/Render):
 
 **Configuration:**
 ```bash
 # In Vercel Dashboard → Settings → Environment Variables
-VITE_API_URL=https://your-backend.railway.app
+VITE_API_URL=https://your-backend.render.app
 ```
 
 **Update vercel.json:**
@@ -216,7 +216,7 @@ VITE_API_URL=https://your-backend.railway.app
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://your-backend.railway.app/api/$1"
+      "destination": "https://your-backend.render.app/api/$1"
     }
   ]
 }

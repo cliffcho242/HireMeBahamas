@@ -22,7 +22,7 @@
 ### ⏳ What's Pending
 
 **Backend API (Flask + Python)** - Next step!
-- Deploy to Railway.app (10 minutes)
+- Deploy to Render.app (10 minutes)
 - Use the automated script: `DEPLOYMENT_MASTER.bat`
 
 ---
@@ -38,16 +38,16 @@
 ```
 
 Then select:
-- **Option 1**: Deploy Backend to Railway (Guided)
+- **Option 1**: Deploy Backend to Render (Guided)
 - **Option 2**: Connect Frontend to Backend
 - **Option 3**: Test Everything
 
-### Path B: Manual Railway Deployment 🚂
+### Path B: Manual Render Deployment 🚂
 
-1. Visit: https://railway.app/new
+1. Visit: https://render.app/new
 2. Click "Deploy from GitHub repo"
 3. Select "HireMeBahamas"
-4. Railway auto-detects Flask
+4. Render auto-detects Flask
 5. Click "Deploy"
 6. Copy backend URL
 7. Run: `.\CONNECT_FRONTEND_TO_BACKEND.ps1`

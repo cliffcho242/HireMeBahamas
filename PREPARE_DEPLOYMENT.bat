@@ -13,7 +13,7 @@ echo This script will:
 echo  1. Create all deployment configuration files
 echo  2. Generate environment variables
 echo  3. Create privacy policy and terms pages
-echo  4. Prepare for Railway and Vercel deployment
+echo  4. Prepare for Render and Vercel deployment
 echo.
 echo Press any key to start...
 pause > nul
@@ -37,7 +37,7 @@ echo Next steps:
 echo  1. Review the generated files
 echo  2. Update .env with your settings
 echo  3. Run DEPLOY.bat to push to GitHub
-echo  4. Deploy to Railway and Vercel
+echo  4. Deploy to Render and Vercel
 echo.
 echo Read DEPLOYMENT_READY.md for full instructions
 echo.

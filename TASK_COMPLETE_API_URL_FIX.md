@@ -118,7 +118,7 @@ API URL: undefined
 | Output | Meaning | Action |
 |--------|---------|--------|
 | `undefined` | ✅ Using same-origin (window.location.origin) | No action needed - correct for Vercel serverless |
-| `https://backend.railway.app` | ✅ Using explicit backend URL | Verify URL is correct |
+| `https://backend.render.app` | ✅ Using explicit backend URL | Verify URL is correct |
 | `empty string` or `""` | ❌ Configuration error | Check .env file |
 | `malformed URL` | ❌ Invalid URL format | Fix VITE_API_URL value |
 
@@ -138,10 +138,10 @@ VITE_API_URL=http://localhost:8000
 # App automatically uses same-origin (window.location.origin)
 ```
 
-### Railway/Render Backend
+### Render/Render Backend
 ```bash
 # Set in Vercel dashboard → Environment Variables
-VITE_API_URL=https://your-app.up.railway.app
+VITE_API_URL=https://your-app.up.render.app
 ```
 
 ---

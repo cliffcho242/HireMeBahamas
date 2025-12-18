@@ -157,7 +157,7 @@ Action Required:
 1. Add CNAME record:
    Type: CNAME
    Name: api
-   Value: hiremebahamas-backend-production.up.railway.app
+   Value: hiremebahamas-backend-production.up.render.app
    TTL: Auto
 """
         )

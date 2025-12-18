@@ -56,7 +56,7 @@ def main():
     host_tests = [
         ("Valid remote host", "postgresql://u:p@db.example.com:5432/db?sslmode=require", True),
         ("Valid Neon host", "postgresql://u:p@ep-xxx.neon.tech:5432/db?sslmode=require", True),
-        ("Valid Railway host", "postgresql://u:p@db.railway.internal:5432/db?sslmode=require", True),
+        ("Valid Render host", "postgresql://u:p@db.render.internal:5432/db?sslmode=require", True),
         ("Empty host (socket usage)", "postgresql://u:p@/db?sslmode=require", False),
         ("localhost host", "postgresql://u:p@localhost:5432/db?sslmode=require", False),
         ("127.0.0.1 host", "postgresql://u:p@127.0.0.1:5432/db?sslmode=require", False),

@@ -335,7 +335,7 @@ curl https://your-api.com/health/cache
 
 ### Recommended Providers
 1. **Upstash Redis** (serverless, recommended)
-2. Railway Redis (usage-based)
+2. Render Redis (usage-based)
 3. Render Redis (free tier available)
 
 ## 💡 Best Practices

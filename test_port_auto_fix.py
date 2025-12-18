@@ -85,9 +85,9 @@ def test_port_auto_fix():
             "Neon URL without port"
         ),
         (
-            "postgresql://user:password@containers-us-west-1.railway.app/railway",
-            "postgresql://user:password@containers-us-west-1.railway.app:5432/railway",
-            "Railway URL without port"
+            "postgresql://user:password@containers-us-west-1.render.app/render",
+            "postgresql://user:password@containers-us-west-1.render.app:5432/render",
+            "Render URL without port"
         ),
         (
             "postgresql://user:p%40ssw0rd@host/database",

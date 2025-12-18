@@ -32,10 +32,10 @@ ACTIVE DNS RECORDS:
 3. API SUBDOMAIN
    Type: CNAME
    Host: api
-   Value: hiremebahamas-backend.railway.app
-   Purpose: Points API subdomain to Railway (backend)
+   Value: hiremebahamas-backend.render.app
+   Purpose: Points API subdomain to Render (backend)
    Status: ✅ ACTIVE
-   Result: https://api.hiremebahamas.com → Railway backend
+   Result: https://api.hiremebahamas.com → Render backend
    IP Resolved: 34.107.141.139
 
 NAMESERVERS:
@@ -85,7 +85,7 @@ COMPLETE DNS TABLE:
 |-------|--------|-------------------------------------|------|-----------|
 | A     | @      | 76.76.21.21                        | Auto | ✅ Active |
 | CNAME | www    | cname.vercel-dns.com               | Auto | ✅ Active |
-| CNAME | api    | hiremebahamas-backend.railway.app  | Auto | ✅ Active |
+| CNAME | api    | hiremebahamas-backend.render.app  | Auto | ✅ Active |
 | CNAME | admin  | hiremebahamas.vercel.app           | Auto | Optional  |
 | NS    | @      | dns1.registrar-servers.com         | Auto | ✅ Active |
 | NS    | @      | dns2.registrar-servers.com         | Auto | ✅ Active |
@@ -96,14 +96,14 @@ DNS PROPAGATION CHECK:
 All DNS records are propagated and working correctly:
 ✅ hiremebahamas.com → 76.76.21.21 (Vercel)
 ✅ www.hiremebahamas.com → Vercel CDN (76.76.21.93, 66.33.60.130)
-✅ api.hiremebahamas.com → Railway (34.107.141.139)
+✅ api.hiremebahamas.com → Render (34.107.141.139)
 
 SSL/HTTPS STATUS:
 =================
 
 ✅ Root domain: https://hiremebahamas.com (Vercel SSL)
 ✅ WWW subdomain: https://www.hiremebahamas.com (Vercel SSL)
-✅ API subdomain: https://api.hiremebahamas.com (Railway SSL)
+✅ API subdomain: https://api.hiremebahamas.com (Render SSL)
 
 All domains have valid SSL certificates automatically managed by the platforms.
 
@@ -173,7 +173,7 @@ SUMMARY:
 ✅ All DNS records properly configured
 ✅ Root domain points to Vercel frontend
 ✅ WWW subdomain points to Vercel frontend
-✅ API subdomain points to Railway backend
+✅ API subdomain points to Render backend
 ✅ SSL certificates active on all domains
 ✅ DNS propagation complete worldwide
 
@@ -202,7 +202,7 @@ print(
 │  │   Root (@)     │  │   www          │  │   api           │ │
 │  │   A Record     │  │   CNAME        │  │   CNAME         │ │
 │  │                │  │                │  │                 │ │
-│  │  Vercel        │  │  Vercel        │  │  Railway        │ │
+│  │  Vercel        │  │  Vercel        │  │  Render        │ │
 │  │  Frontend      │  │  Frontend      │  │  Backend        │ │
 │  │  76.76.21.21   │  │  CDN           │  │  34.107.141.139 │ │
 │  └────────────────┘  └────────────────┘  └─────────────────┘ │
@@ -214,7 +214,7 @@ print(
 URL Structure:
 - https://hiremebahamas.com        → React Frontend (Vercel)
 - https://www.hiremebahamas.com    → React Frontend (Vercel)
-- https://api.hiremebahamas.com    → Flask Backend (Railway)
+- https://api.hiremebahamas.com    → Flask Backend (Render)
 """
 )
 print("=" * 70)

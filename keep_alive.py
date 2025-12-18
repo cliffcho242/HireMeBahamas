@@ -1,23 +1,23 @@
 """
 =============================================================================
-DEPRECATED: KEEP-ALIVE WORKER (No longer needed after Vercel + Railway migration)
+DEPRECATED: KEEP-ALIVE WORKER (No longer needed after Vercel + Render migration)
 =============================================================================
 This file was used for Render Background Service to prevent cold starts.
 
-After migrating to Vercel + Railway:
+After migrating to Vercel + Render:
 - Vercel Edge: No cold starts (edge functions are always warm)
-- Railway: Use GitHub Actions workflows for keepalive (keep-database-awake.yml)
+- Render: Use GitHub Actions workflows for keepalive (keep-database-awake.yml)
 
 This file is kept for historical reference only.
 
-For Railway keepalive, use:
+For Render keepalive, use:
 - .github/workflows/keep-database-awake.yml (runs every 2 minutes)
 - .github/workflows/scheduled-ping.yml (runs every 10 minutes)
 
 For external monitoring services:
   1. UptimeRobot (free monitoring + pings)
   2. Cron-job.org (free scheduled pings)
-  3. Railway built-in health checks
+  3. Render built-in health checks
 =============================================================================
 """
 import os

@@ -8,7 +8,7 @@ Deployment was failing with "gunicorn: error: unrecognized arguments"
 
 The error occurred because:
 
-1. **Multi-line commands with backslashes** from documentation or shell scripts were copied into a deployment platform's web dashboard (Render, Railway, or Heroku)
+1. **Multi-line commands with backslashes** from documentation or shell scripts were copied into a deployment platform's web dashboard (Render, Render, or Heroku)
 
 2. **Backslashes treated as literals**: In shell scripts, backslashes (`\`) indicate line continuation. However, when pasted into web dashboard fields, the backslashes and extra whitespace are treated as **literal characters** in the command string
 
@@ -26,7 +26,7 @@ Created comprehensive documentation to prevent and fix this issue:
 - Added critical warnings about command format differences
 - Clearly distinguished between single-line commands (for dashboards) and multi-line commands (for shell scripts)
 - Provided both formats with clear labels:
-  - **"For Deployment Dashboards (Render, Railway, Heroku) - SINGLE LINE:"**
+  - **"For Deployment Dashboards (Render, Render, Heroku) - SINGLE LINE:"**
   - **"For Shell Scripts - Multi-line (with backslashes):"**
 - Added troubleshooting section for common errors
 - Clarified recommended entry points
@@ -35,7 +35,7 @@ Created comprehensive documentation to prevent and fix this issue:
 - Complete troubleshooting guide for this specific error
 - Step-by-step fix instructions for each platform:
   - Render Dashboard
-  - Railway Dashboard
+  - Render Dashboard
   - Heroku Dashboard
 - Platform-specific navigation instructions
 - Verification steps after fixing
@@ -54,7 +54,7 @@ The solution emphasizes:
 
 1. **Use configuration files** (recommended approach):
    - `render.yaml` for Render
-   - `railway.toml` for Railway
+   - `render.toml` for Render
    - `Procfile` for Heroku
    - Already configured correctly in the repository
 
@@ -77,7 +77,7 @@ All configuration files were verified and confirmed to be correctly configured:
 startCommand: cd backend && gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info
 ```
 
-### railway.toml ✅
+### render.toml ✅
 ```toml
 startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 ```
@@ -121,7 +121,7 @@ If you must use manual configuration in the dashboard:
 cd backend && gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info
 ```
 
-**For Railway:**
+**For Render:**
 ```
 uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
@@ -190,7 +190,7 @@ All necessary documentation has been created and all configuration files have be
 
 ### Verified (no changes needed):
 - `render.yaml` ✅
-- `railway.toml` ✅
+- `render.toml` ✅
 - `nixpacks.toml` ✅
 - `Procfile` ✅
 - `backend/Procfile` ✅

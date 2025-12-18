@@ -13,7 +13,7 @@ This warning appeared even after other DATABASE_URL fixes were applied (asyncpg 
 
 The DATABASE_URL validation logic detected missing ports but did not automatically fix them. This is problematic because:
 
-1. **Cloud Database URLs**: Many cloud database providers (Neon, Railway, Vercel) sometimes provide URLs without explicit ports
+1. **Cloud Database URLs**: Many cloud database providers (Neon, Render, Vercel) sometimes provide URLs without explicit ports
 2. **Socket Connections**: Missing ports can cause the PostgreSQL client to attempt Unix socket connections instead of TCP connections
 3. **Connection Failures**: Cloud deployments require explicit ports for TCP connections to remote databases
 
@@ -61,7 +61,7 @@ Created comprehensive test suite covering all scenarios:
 - ✅ AsyncPG URL without port
 - ✅ URL with port already present (no change)
 - ✅ Neon URL without port
-- ✅ Railway URL without port
+- ✅ Render URL without port
 - ✅ URL with encoded password without port
 - ✅ URL with query parameters but no port
 - ✅ URL with non-standard port (no change)
@@ -80,7 +80,7 @@ Created comprehensive test suite covering all scenarios:
 - ✅ URL without port (auto-fixed)
 - ✅ URL without port but with sslmode (auto-fixed)
 - ✅ Neon URL without port (auto-fixed)
-- ✅ Railway URL without port (auto-fixed)
+- ✅ Render URL without port (auto-fixed)
 - ✅ Complete URL with port and sslmode (passes)
 - ✅ No warnings about missing port after auto-fix
 
@@ -94,10 +94,10 @@ Input:  postgresql://user:password@ep-xxxx.us-east-1.aws.neon.tech/database
 Output: postgresql+asyncpg://user:password@ep-xxxx.us-east-1.aws.neon.tech:5432/database
 ```
 
-### Example 2: Railway URL
+### Example 2: Render URL
 ```
-Input:  postgresql://user:password@containers-us-west-1.railway.app/railway?sslmode=require
-Output: postgresql+asyncpg://user:password@containers-us-west-1.railway.app:5432/railway
+Input:  postgresql://user:password@containers-us-west-1.render.app/render?sslmode=require
+Output: postgresql+asyncpg://user:password@containers-us-west-1.render.app:5432/render
 ```
 
 ### Example 3: Generic URL

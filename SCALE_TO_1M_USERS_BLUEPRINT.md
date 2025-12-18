@@ -37,7 +37,7 @@
                                         ▼
                         ┌───────────────────────────┐
                         │  API LOAD BALANCER        │
-                        │  (Render/Railway)         │
+                        │  (Render/Render)         │
                         │  • Health checks          │
                         │  • Auto-scaling           │
                         │  • SSL termination        │

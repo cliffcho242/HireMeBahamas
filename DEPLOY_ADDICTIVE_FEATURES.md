@@ -30,10 +30,10 @@ web-push generate-vapid-keys --json
 
 ### Step 2: Set Environment Variables
 
-**Railway (Backend):**
+**Render (Backend):**
 ```bash
-# Add these in Railway dashboard > Variables
-REDIS_URL=redis://default:xxx@redis-xxx.railway.app:6379
+# Add these in Render dashboard > Variables
+REDIS_URL=redis://default:xxx@redis-xxx.render.app:6379
 VAPID_PUBLIC_KEY=your_public_key
 VAPID_PRIVATE_KEY=your_private_key
 VAPID_SUBJECT=mailto:admin@hiremebahamas.com
@@ -48,7 +48,7 @@ VITE_VAPID_PUBLIC_KEY=your_public_key
 
 ### Step 3: Deploy Backend
 ```bash
-# Push to trigger Railway deployment
+# Push to trigger Render deployment
 git add .
 git commit -m "Deploy addictive features"
 git push origin main

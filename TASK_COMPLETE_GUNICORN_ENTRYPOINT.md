@@ -42,7 +42,7 @@ All deployment configuration files checked and confirmed correct:
 | `render.yaml` | ✅ CORRECT | `cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py` |
 | `Procfile` (root) | ✅ CORRECT | `cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py` |
 | `backend/Procfile` | ✅ CORRECT | `poetry run gunicorn app.main:app --config gunicorn.conf.py` |
-| `railway.toml` | ✅ CORRECT | `cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py` |
+| `render.toml` | ✅ CORRECT | `cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py` |
 | `nixpacks.toml` | ✅ CORRECT | `cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py` |
 
 **Note:** `backend/Procfile` doesn't need `cd backend &&` because it's already in the backend directory.
@@ -154,7 +154,7 @@ cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py
 1. `render.yaml` - ✅ Already correct
 2. `Procfile` - ✅ Already correct
 3. `backend/Procfile` - ✅ Already correct
-4. `railway.toml` - ✅ Already correct
+4. `render.toml` - ✅ Already correct
 5. `nixpacks.toml` - ✅ Already correct
 
 ---

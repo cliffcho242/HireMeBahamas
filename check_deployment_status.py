@@ -9,11 +9,11 @@ import time
 
 
 def check_backend_deployment():
-    """Check if Railway backend is responding"""
-    print("🔍 Checking Railway Backend Deployment...")
+    """Check if Render backend is responding"""
+    print("🔍 Checking Render Backend Deployment...")
     print("=" * 60)
 
-    backend_url = "https://hiremebahamas-backend.railway.app"
+    backend_url = "https://hiremebahamas-backend.render.app"
 
     endpoints = {
         "Health": "/health",
@@ -143,13 +143,13 @@ def main():
         print("✅ All services are operational!")
         print("\n🌐 Access your application:")
         print("   Frontend: https://hiremebahamas.vercel.app")
-        print("   Backend:  https://hiremebahamas-backend.railway.app")
+        print("   Backend:  https://hiremebahamas-backend.render.app")
         if domain_ok:
             print("   Domain:   https://hiremebahamas.com")
     else:
         print("⚠️ Some services may still be deploying...")
-        print("   Railway deployments can take 3-5 minutes")
-        print("   Check Railway dashboard for build status")
+        print("   Render deployments can take 3-5 minutes")
+        print("   Check Render dashboard for build status")
 
     print("=" * 60)
 

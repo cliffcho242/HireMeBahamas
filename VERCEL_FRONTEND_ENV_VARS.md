@@ -36,20 +36,20 @@ This project uses **Vite (React)**, NOT Next.js.
 
 Choose the option that matches your deployment architecture:
 
-#### Option A: Railway Backend ⭐ Recommended for Separate Backend
+#### Option A: Render Backend ⭐ Recommended for Separate Backend
 
 ```bash
-VITE_API_URL=https://your-backend.up.railway.app
-VITE_SOCKET_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
+VITE_SOCKET_URL=https://your-backend.up.render.app
 ```
 
 **Use when:**
-- ✅ Backend is deployed to Railway
+- ✅ Backend is deployed to Render
 - ✅ Frontend is deployed to Vercel
-- ✅ Using Railway PostgreSQL database
+- ✅ Using Render PostgreSQL database
 
 **Example URLs:**
-- Backend: `https://hiremebahamas-production.up.railway.app`
+- Backend: `https://hiremebahamas-production.up.render.app`
 - Frontend: `https://hiremebahamas.vercel.app`
 
 ---
@@ -108,7 +108,7 @@ VITE_SOCKET_URL=https://your-backend.onrender.com
 3. **Add New Variable**
    - Click **"Add New"** button
    - Enter **Name**: `VITE_API_URL`
-   - Enter **Value**: Your backend URL (e.g., `https://your-app.up.railway.app`)
+   - Enter **Value**: Your backend URL (e.g., `https://your-app.up.render.app`)
    - Select **All** environments:
      - ✅ Production
      - ✅ Preview  
@@ -127,7 +127,7 @@ VITE_SOCKET_URL=https://your-backend.onrender.com
 │ Add Environment Variable                │
 ├─────────────────────────────────────────┤
 │ Name:  VITE_API_URL                     │
-│ Value: https://your-app.up.railway.app  │
+│ Value: https://your-app.up.render.app  │
 │                                         │
 │ Environments:                           │
 │ ☑ Production                           │
@@ -154,7 +154,7 @@ curl https://your-frontend.vercel.app
 Open your Vercel frontend URL in browser and check console:
 ```
 === API CONFIGURATION ===
-API Base URL: https://your-backend.up.railway.app
+API Base URL: https://your-backend.up.render.app
 Source: Environment Variable
 ========================
 ```
@@ -162,7 +162,7 @@ Source: Environment Variable
 #### 3. Test API Connection
 ```bash
 # If using separate backend:
-curl https://your-backend.up.railway.app/api/health
+curl https://your-backend.up.render.app/api/health
 
 # If using Vercel serverless:
 curl https://your-frontend.vercel.app/api/health
@@ -185,19 +185,19 @@ curl https://your-frontend.vercel.app/api/health
 ### ❌ Mistake #1: Using Next.js Environment Variable Names
 ```bash
 # WRONG - This will NOT work:
-NEXT_PUBLIC_BACKEND_URL=https://your-backend.up.railway.app
+NEXT_PUBLIC_BACKEND_URL=https://your-backend.up.render.app
 
 # CORRECT - Use VITE_ prefix:
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 ```
 
 ### ❌ Mistake #2: Missing VITE_ Prefix
 ```bash
 # WRONG - Variables without VITE_ are not exposed to frontend:
-API_URL=https://your-backend.up.railway.app
+API_URL=https://your-backend.up.render.app
 
 # CORRECT:
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 ```
 
 ### ❌ Mistake #3: Forgetting to Redeploy
@@ -209,10 +209,10 @@ Adding environment variables doesn't automatically redeploy. You MUST:
 ### ❌ Mistake #4: Using http:// Instead of https://
 ```bash
 # WRONG - Production should use HTTPS:
-VITE_API_URL=http://your-backend.up.railway.app
+VITE_API_URL=http://your-backend.up.render.app
 
 # CORRECT:
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 ```
 
 ### ❌ Mistake #5: Setting VITE_API_URL for Vercel Serverless
@@ -273,7 +273,7 @@ VITE_API_URL=https://your-frontend.vercel.app
 - **[VERCEL_FRONTEND_BACKEND_SETUP.md](./VERCEL_FRONTEND_BACKEND_SETUP.md)** - Detailed frontend-backend connection
 - **[DIRECT_LINKS_WHERE_TO_CONFIGURE.md](./DIRECT_LINKS_WHERE_TO_CONFIGURE.md)** - All configuration links
 - **[frontend/.env.example](./frontend/.env.example)** - Environment variable template
-- **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Railway backend setup
+- **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Render backend setup
 - **[README.md](./README.md)** - Main project documentation
 
 ---
@@ -285,10 +285,10 @@ VITE_API_URL=https://your-frontend.vercel.app
 ```
 Do you want to deploy backend separately?
 │
-├─ YES → Choose Option A (Railway) or Option B (Render)
+├─ YES → Choose Option A (Render) or Option B (Render)
 │   │
-│   ├─ Railway Backend
-│   │   └─ Set: VITE_API_URL=https://your-app.up.railway.app
+│   ├─ Render Backend
+│   │   └─ Set: VITE_API_URL=https://your-app.up.render.app
 │   │
 │   └─ Render Backend
 │       └─ Set: VITE_API_URL=https://your-app.onrender.com
@@ -305,15 +305,15 @@ Do you want to deploy backend separately?
 
 | Configuration | VITE_API_URL | Benefits |
 |--------------|--------------|----------|
-| **Railway Backend** | `https://your-app.up.railway.app` | Separate deployment, more control |
+| **Render Backend** | `https://your-app.up.render.app` | Separate deployment, more control |
 | **Render Backend** | `https://your-app.onrender.com` | Separate deployment, alternative host |
 | **Vercel Serverless** | Leave unset | Same-origin, no CORS, fastest |
 
 **Most Common Setup:**
 - Frontend: Vercel
-- Backend: Railway
-- Database: Railway PostgreSQL
-- Environment Variable: `VITE_API_URL=https://your-app.up.railway.app`
+- Backend: Render
+- Database: Render PostgreSQL
+- Environment Variable: `VITE_API_URL=https://your-app.up.render.app`
 
 ---
 

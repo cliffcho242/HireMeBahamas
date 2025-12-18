@@ -44,7 +44,7 @@ docker run -d -p 6379:6379 redis:7-alpine
 **Production:**
 - Use managed Redis service:
   - Upstash Redis (recommended for Vercel)
-  - Railway Redis
+  - Render Redis
   - Redis Cloud
   - AWS ElastiCache
 
@@ -319,9 +319,9 @@ volumes:
   redis_data:
 ```
 
-### Railway
+### Render
 
-1. Add Redis service in Railway dashboard
+1. Add Redis service in Render dashboard
 2. Add worker services:
    - Celery Worker: `celery -A backend_app.core.celery_app worker --loglevel=info -Q emails`
    - RQ Worker: `rq worker notifications analytics --url $REDIS_URL`
@@ -332,7 +332,7 @@ For serverless deployment:
 
 1. Create Upstash Redis database
 2. Add REDIS_URL to Vercel environment variables
-3. Deploy workers on separate platform (Railway, Render, or AWS Lambda)
+3. Deploy workers on separate platform (Render, Render, or AWS Lambda)
 
 ## Monitoring
 

@@ -50,18 +50,18 @@ postgresql://default:abc123@ep-xxxxx.us-east-1.aws.neon.tech:5432/verceldb?sslmo
 
 ---
 
-## 🚂 Railway Configuration
+## 🚂 Render Configuration
 
 ### 1️⃣ Backend Service Environment Variables
 
-**Direct Link**: https://railway.app/dashboard → Select your project → Click your **backend service** → **Variables** tab
+**Direct Link**: https://render.app/dashboard → Select your project → Click your **backend service** → **Variables** tab
 
-**Or use this URL pattern**: `https://railway.app/project/[project-id]/service/[service-id]` then click **Variables**
+**Or use this URL pattern**: `https://render.app/project/[project-id]/service/[service-id]` then click **Variables**
 
 **What to add (if not already there):**
 ```bash
-DATABASE_PRIVATE_URL = [Auto-created by Railway when you add PostgreSQL]
-DATABASE_URL = [Auto-created by Railway when you add PostgreSQL]
+DATABASE_PRIVATE_URL = [Auto-created by Render when you add PostgreSQL]
+DATABASE_URL = [Auto-created by Render when you add PostgreSQL]
 SECRET_KEY = [Generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"]
 JWT_SECRET_KEY = [Generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"]
 ENVIRONMENT = production
@@ -74,11 +74,11 @@ PORT = 8000
 2. Enter **Variable Name** (e.g., `SECRET_KEY`)
 3. Enter **Value**
 4. Click **Add**
-5. Railway auto-deploys when variables change
+5. Render auto-deploys when variables change
 
 ### 2️⃣ PostgreSQL Service (Database Already Connected)
 
-**Direct Link**: https://railway.app/dashboard → Select your project → Click **PostgreSQL** service → **Variables** tab
+**Direct Link**: https://render.app/dashboard → Select your project → Click **PostgreSQL** service → **Variables** tab
 
 **To view your database connection strings:**
 - `DATABASE_URL` - Public connection (has egress fees)
@@ -88,7 +88,7 @@ PORT = 8000
 
 ### 3️⃣ Connect PostgreSQL to Backend Service
 
-**Direct Link**: https://railway.app/dashboard → Select your project
+**Direct Link**: https://render.app/dashboard → Select your project
 
 **If database shows "Available" but not connected:**
 1. Click your **backend service**
@@ -98,15 +98,15 @@ PORT = 8000
 5. Select **DATABASE_PRIVATE_URL** (recommended)
 6. Click **Add**
 
-**Railway automatically shares database variables between services in the same project.**
+**Render automatically shares database variables between services in the same project.**
 
 ### 4️⃣ Get Backend URL for Frontend
 
-**Direct Link**: https://railway.app/dashboard → Select your project → Click **backend service** → **Settings** tab
+**Direct Link**: https://render.app/dashboard → Select your project → Click **backend service** → **Settings** tab
 
 **Find your public URL:**
 - Scroll to **"Networking"** section
-- Copy the **"Public Domain"**: `https://your-app.up.railway.app`
+- Copy the **"Public Domain"**: `https://your-app.up.render.app`
 - Use this URL for `VITE_API_URL` in Vercel frontend
 
 ---
@@ -191,7 +191,7 @@ PORT = 10000
 
 **IMPORTANT:** Environment variables must use `VITE_` prefix, not `NEXT_PUBLIC_`.
 
-### If Using Separate Backend (Railway or Render)
+### If Using Separate Backend (Render or Render)
 
 **Direct Link**: https://vercel.com/dashboard → Select your **frontend project** → **Settings** → **Environment Variables**
 
@@ -199,15 +199,15 @@ PORT = 10000
 
 **What to add:**
 ```bash
-VITE_API_URL = [Your Railway or Render backend URL]
+VITE_API_URL = [Your Render or Render backend URL]
 VITE_SOCKET_URL = [Same as VITE_API_URL]
 ```
 
 **Examples:**
 ```bash
-# For Railway backend
-VITE_API_URL = https://your-app.up.railway.app
-VITE_SOCKET_URL = https://your-app.up.railway.app
+# For Render backend
+VITE_API_URL = https://your-app.up.render.app
+VITE_SOCKET_URL = https://your-app.up.render.app
 
 # For Render backend  
 VITE_API_URL = https://your-app.onrender.com
@@ -244,10 +244,10 @@ VITE_SOCKET_URL = https://your-app.onrender.com
 | **Storage (Databases)** | Dashboard → Project → Storage |
 | **Deployments** | Dashboard → Project → Deployments |
 
-### Railway
+### Render
 | What | Direct Link |
 |------|-------------|
-| **Dashboard** | https://railway.app/dashboard |
+| **Dashboard** | https://render.app/dashboard |
 | **Project Variables** | Dashboard → Project → Service → Variables |
 | **PostgreSQL Variables** | Dashboard → Project → PostgreSQL → Variables |
 | **Service Settings** | Dashboard → Project → Service → Settings |
@@ -272,8 +272,8 @@ After configuring everything, verify with these commands:
 # Test Vercel backend
 curl https://your-app.vercel.app/api/health
 
-# Test Railway backend
-curl https://your-app.up.railway.app/health
+# Test Render backend
+curl https://your-app.up.render.app/health
 
 # Test Render backend
 curl https://your-app.onrender.com/health
@@ -291,7 +291,7 @@ curl https://your-app.onrender.com/health
 
 ## 🎯 Your Specific Situation
 
-**You said: "Postgre database is already connected to render service is marked available its on railway also"**
+**You said: "Postgre database is already connected to render service is marked available its on render also"**
 
 ### For Render (Database already connected):
 
@@ -301,19 +301,19 @@ curl https://your-app.onrender.com/health
 4. 📝 **Add other variables**: `SECRET_KEY`, `JWT_SECRET_KEY`, `ENVIRONMENT=production`
 5. 🚀 **Save Changes** - Render will auto-deploy
 
-### For Railway (Database marked as available):
+### For Render (Database marked as available):
 
 1. ✅ **Your database is available** - Great!
-2. 📝 **Check if it's shared**: https://railway.app/dashboard → Project → Backend Service → Variables
+2. 📝 **Check if it's shared**: https://render.app/dashboard → Project → Backend Service → Variables
 3. ✅ **If you see `DATABASE_PRIVATE_URL` or `DATABASE_URL`** - Already connected!
 4. ❌ **If you don't see them** - Click "+ New Variable" → "Add Reference" → Select PostgreSQL → Select `DATABASE_PRIVATE_URL`
 5. 📝 **Add other variables**: `SECRET_KEY`, `JWT_SECRET_KEY`, `ENVIRONMENT=production`, `FRONTEND_URL`
-6. 🚀 **Variables auto-save** - Railway will auto-deploy
+6. 🚀 **Variables auto-save** - Render will auto-deploy
 
 ### For Vercel:
 
 1. 📝 **If using Vercel Full Stack**: https://vercel.com/dashboard → Project → Settings → Environment Variables → Add `DATABASE_URL`, `SECRET_KEY`, `JWT_SECRET_KEY`
-2. 📝 **If using separate backend**: Add `VITE_API_URL` (Railway or Render URL) to frontend environment variables
+2. 📝 **If using separate backend**: Add `VITE_API_URL` (Render or Render URL) to frontend environment variables
 
 ---
 
@@ -339,12 +339,12 @@ If something doesn't work:
 
 1. **Check platform status**:
    - Vercel: https://www.vercel-status.com
-   - Railway: https://status.railway.app
+   - Render: https://status.render.app
    - Render: https://status.render.com
 
 2. **Check logs**:
    - Vercel: Dashboard → Project → Deployments → Latest → View Function Logs
-   - Railway: Dashboard → Project → Service → Deployments → View Logs
+   - Render: Dashboard → Project → Service → Deployments → View Logs
    - Render: Dashboard → Web Service → Logs
 
 3. **Verify environment variables are set**:

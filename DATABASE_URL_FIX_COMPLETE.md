@@ -11,7 +11,7 @@ This fix addresses **4 critical issues** with DATABASE_URL configuration:
 ❌ WRONG: postgresql://user:password@host/database
 ```
 
-PostgreSQL requires an explicit port in production URLs. Without `:5432`, Render/Railway/Neon will fail with:
+PostgreSQL requires an explicit port in production URLs. Without `:5432`, Render/Render/Neon will fail with:
 - "Could not parse DATABASE_URL for port validation"
 - "The string did not match the expected pattern"
 - Connection timeouts and refused connections
@@ -138,9 +138,9 @@ postgresql://default:ABCxyz123@ep-dawn-cloud-a4rbrgox.us-east-1.aws.neon.tech:54
 postgresql://user:MyP%40ss%3A2024%21@ep-cool-sound-12345.us-east-1.aws.neon.tech:5432/dbname?sslmode=require
 ```
 
-**Railway:**
+**Render:**
 ```
-postgresql://postgres:secretpass123@containers-us-west-abc.railway.app:5432/railway?sslmode=require
+postgresql://postgres:secretpass123@containers-us-west-abc.render.app:5432/render?sslmode=require
 ```
 
 **Local Development:**
@@ -154,7 +154,7 @@ postgresql://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebaha
 
 From your database provider:
 - **Neon**: Console → Connection Details → Copy
-- **Railway**: Dashboard → PostgreSQL → Connect → Copy
+- **Render**: Dashboard → PostgreSQL → Connect → Copy
 - **Vercel Postgres**: Dashboard → Storage → Postgres → .env.local
 - **Render**: Dashboard → Database → Connection String
 
@@ -180,7 +180,7 @@ print(f"Encoded: {encoded}")
 
 ### Step 4: Update Environment Variable
 
-**For Railway/Render:**
+**For Render/Render:**
 1. Go to your project settings
 2. Find `DATABASE_URL` variable
 3. Update with correct format

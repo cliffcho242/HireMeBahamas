@@ -36,7 +36,7 @@ pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r
 "installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r api/requirements.txt"
 ```
 
-### Railway / Docker
+### Render / Docker
 ```dockerfile
 RUN pip install --upgrade pip && \
     pip install --only-binary=:all: -r requirements.txt

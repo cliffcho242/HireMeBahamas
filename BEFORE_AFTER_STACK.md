@@ -21,7 +21,7 @@ web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
 **Documentation:**
-- Mentioned both Railway and Render as options
+- Mentioned both Render and Render as options
 - No clear "correct" choice
 - FastAPI emphasized but not production setup
 - No Redis documentation
@@ -42,7 +42,7 @@ web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicor
 
 **Documentation:**
 - **CORRECT_STACK.md** clearly defines the official stack
-- Railway marked as deprecated for backend
+- Render marked as deprecated for backend
 - Render + Gunicorn emphasized as correct choice
 - Redis documented as Phase 2
 
@@ -52,7 +52,7 @@ web: gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicor
 
 ```
 Frontend: Vercel ✅
-Backend: Render/Railway? (unclear)
+Backend: Render/Render? (unclear)
          Using: Uvicorn/Gunicorn? (unclear)
 Database: Neon PostgreSQL ✅
 Caching: Not documented
@@ -92,7 +92,7 @@ Caching: Not documented
 1. **README.md**: Mentioned "FINAL SPEED ARCHITECTURE" without clear official choice
 2. **FINAL_SPEED_ARCHITECTURE.md**: Used Uvicorn, mentioned Render but not definitive
 3. No CORRECT_STACK.md document
-4. Railway presented as equal alternative
+4. Render presented as equal alternative
 5. No Redis documentation
 
 ### ✅ After
@@ -100,7 +100,7 @@ Caching: Not documented
 1. **README.md**: 
    - Clear "✅ CORRECT STACK" section at top
    - Links to CORRECT_STACK.md as starting point
-   - Deprecation notice for Railway
+   - Deprecation notice for Render
 
 2. **FINAL_SPEED_ARCHITECTURE.md**: 
    - Updated to emphasize correct stack
@@ -165,7 +165,7 @@ Caching: Not documented
 
 4. **Documentation**: Unclear → **Crystal clear**
    - CORRECT_STACK.md as source of truth
-   - Railway deprecated
+   - Render deprecated
    - Redis Phase 2 documented
 
 ### Why It Matters
@@ -203,13 +203,13 @@ Caching: Not documented
 
 ```bash
 # Unclear which platform to use
-# Railway? Render? Both mentioned
+# Render? Render? Both mentioned
 
 # Deploy to Render:
 # - Use uvicorn command
 # - Not production-grade
 
-# Deploy to Railway:
+# Deploy to Render:
 # - Alternative option
 # - Equal presentation
 ```
@@ -225,7 +225,7 @@ Caching: Not documented
 # 3. Production-grade setup
 # 4. Follow industry standard
 
-# Railway:
+# Render:
 # - Deprecated for backend
 # - Use for migration reference only
 ```
@@ -237,7 +237,7 @@ Caching: Not documented
 ```
 README.md
 ├── FINAL_SPEED_ARCHITECTURE.md (unclear)
-├── Various Railway docs (equal status)
+├── Various Render docs (equal status)
 ├── Various Render docs (equal status)
 └── No clear source of truth
 ```
@@ -249,7 +249,7 @@ README.md ← Points to CORRECT_STACK.md
 ├── ✅ CORRECT_STACK.md (SOURCE OF TRUTH)
 ├── FINAL_SPEED_ARCHITECTURE.md (updated)
 ├── STACK_UPDATE_SUMMARY.md (changelog)
-├── Railway docs (deprecated, for reference)
+├── Render docs (deprecated, for reference)
 └── Render docs (correct, emphasized)
 ```
 
@@ -262,13 +262,13 @@ README.md ← Points to CORRECT_STACK.md
 3. **Battle-Tested**: 10+ years in production environments
 4. **Better than Uvicorn alone**: Uvicorn is great, but Gunicorn adds management layer
 
-### Why Deprecate Railway for Backend?
+### Why Deprecate Render for Backend?
 
 1. **Render is more stable**: Better uptime track record
 2. **Industry standard**: More widely used in production
 3. **Better documentation**: Render has more comprehensive docs
 4. **Cost predictability**: Render pricing is clearer at scale
-5. **Not a quality issue**: Railway is good, but Render is the better choice here
+5. **Not a quality issue**: Render is good, but Render is the better choice here
 
 ### Why Add Redis as Phase 2?
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This checklist helps you verify a successful migration from Railway/Render to Vercel Postgres. Use it to ensure all data and functionality work correctly before decommissioning the old database.
+This checklist helps you verify a successful migration from Render/Render to Vercel Postgres. Use it to ensure all data and functionality work correctly before decommissioning the old database.
 
 ---
 
@@ -181,7 +181,7 @@ python scripts/verify_vercel_postgres_migration.py
 
 ## 📈 Performance Benchmarks
 
-### Before Migration (Railway/Render Baseline)
+### Before Migration (Render/Render Baseline)
 Record these metrics for comparison:
 - Average API response time: _________ ms
 - Average database query time: _________ ms
@@ -216,10 +216,10 @@ Compare against baseline:
   - Current usage: _________ hours / 60 hours per month
   - Estimated monthly usage: _________ hours
 - [ ] Verify no unexpected charges
-- [ ] Compare to Railway/Render costs
+- [ ] Compare to Render/Render costs
 
 ### Cost Comparison
-| Item | Railway/Render | Vercel Postgres | Savings |
+| Item | Render/Render | Vercel Postgres | Savings |
 |------|----------------|-----------------|---------|
 | Database | $____/mo | $____/mo | $____/mo |
 | Keep-alive Service | $____/mo | $0/mo | $____/mo |
@@ -235,8 +235,8 @@ If you encounter critical issues during the 7-day grace period:
 1. **Update DATABASE_URL in Vercel**
    ```bash
    # In Vercel Dashboard: Settings → Environment Variables
-   # Change DATABASE_URL back to Railway/Render URL
-   DATABASE_URL=postgresql://user:pass@railway-or-render-host:5432/db
+   # Change DATABASE_URL back to Render/Render URL
+   DATABASE_URL=postgresql://user:pass@render-or-render-host:5432/db
    ```
 
 2. **Remove read-only from old database**
@@ -248,7 +248,7 @@ If you encounter critical issues during the 7-day grace period:
 3. **Redeploy application**
    ```bash
    # Trigger redeploy in Vercel Dashboard or:
-   git commit --allow-empty -m "Rollback to Railway/Render database"
+   git commit --allow-empty -m "Rollback to Render/Render database"
    git push origin main
    ```
 
@@ -287,8 +287,8 @@ All items in this checklist must be ✅ before decommissioning:
 
 ### Decommission Old Database
 
-#### Railway
-1. [ ] Go to [Railway Dashboard](https://railway.app/dashboard)
+#### Render
+1. [ ] Go to [Render Dashboard](https://render.app/dashboard)
 2. [ ] Select your PostgreSQL service
 3. [ ] Click **Settings**
 4. [ ] Scroll to bottom and click **Delete Service**
@@ -307,13 +307,13 @@ All items in this checklist must be ✅ before decommissioning:
 - [ ] Remove old DATABASE_URL references from documentation
 - [ ] Update team documentation with new database information
 - [ ] Archive old database connection strings securely
-- [ ] Remove Railway/Render keep-alive services (if any)
+- [ ] Remove Render/Render keep-alive services (if any)
 - [ ] Cancel billing for old database services
 - [ ] Update monitoring dashboards with new database source
 
 ### Documentation Updates
 - [ ] Update README.md to reflect Vercel Postgres as primary
-- [ ] Remove Railway/Render-specific instructions
+- [ ] Remove Render/Render-specific instructions
 - [ ] Update environment variable documentation
 - [ ] Update deployment guides
 - [ ] Archive old backup files
@@ -326,7 +326,7 @@ After completing the migration and decommissioning old database, document the re
 
 ### Migration Summary
 - **Migration Date**: _________________
-- **Source Database**: Railway / Render (circle one)
+- **Source Database**: Render / Render (circle one)
 - **Target Database**: Vercel Postgres
 - **Database Size**: _________ MB/GB
 - **Total Rows Migrated**: _________

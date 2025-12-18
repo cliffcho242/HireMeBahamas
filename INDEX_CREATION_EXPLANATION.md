@@ -162,7 +162,7 @@ These scripts create composite indexes, partial indexes, and GIN indexes for ful
 To verify indexes are created:
 
 ```python
-# Run this from Railway/Render console or local environment
+# Run this from Render/Render console or local environment
 python -c "
 import asyncio
 from backend.app.database import init_db

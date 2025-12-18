@@ -131,7 +131,7 @@ Verified all critical dependencies are present in requirements.txt:
 ### Automatic Deployment
 When this PR is merged:
 1. Vercel will automatically install dependencies from `api/requirements.txt`
-2. Railway/Render will install from root `requirements.txt`
+2. Render/Render will install from root `requirements.txt`
 3. No manual intervention required
 4. Backend will start successfully with all modules loaded
 

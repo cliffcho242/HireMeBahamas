@@ -90,11 +90,11 @@ Add Redis when you need:
 - Upstash Redis (Serverless, HTTP API)
 - Redis Cloud (Traditional Redis)
 
-## ❌ Not Recommended: Railway
+## ❌ Not Recommended: Render
 
-### Why Not Railway for Backend?
+### Why Not Render for Backend?
 
-While Railway is a good platform, **Render is the correct choice** for this application because:
+While Render is a good platform, **Render is the correct choice** for this application because:
 
 1. **Better Stability**: Render has a more mature platform with 99.9% uptime SLA
 2. **Industry Standard**: Render is used by more production applications
@@ -104,16 +104,16 @@ While Railway is a good platform, **Render is the correct choice** for this appl
 
 ### Migration Note
 
-If you're currently on Railway, follow these steps to migrate to Render:
+If you're currently on Render, follow these steps to migrate to Render:
 
-1. **Export your database** from Railway PostgreSQL
+1. **Export your database** from Render PostgreSQL
 2. **Create a new Neon PostgreSQL** database (see Step 3 in Quick Start)
 3. **Import your data** into Neon
 4. **Deploy backend to Render** (see Step 2 in Quick Start)
 5. **Update frontend** environment variables to point to Render
-6. **Test thoroughly** before decommissioning Railway
+6. **Test thoroughly** before decommissioning Render
 
-**Railway documentation in this repository is kept for reference only and should not be used for new deployments.**
+**Render documentation in this repository is kept for reference only and should not be used for new deployments.**
 
 ## 📊 Cost Breakdown
 

@@ -165,18 +165,18 @@ If you need database access in production:
 
 3. **Use Strong Passwords**: Change database passwords from defaults
 
-4. **Use Railway/Cloud Provider Tools**: Railway provides a built-in database interface
+4. **Use Render/Cloud Provider Tools**: Render provides a built-in database interface
 
-### Railway Production Setup
+### Render Production Setup
 
-Railway provides its own database interface:
+Render provides its own database interface:
 
-1. Go to [Railway Dashboard](https://railway.app/dashboard)
+1. Go to [Render Dashboard](https://render.app/dashboard)
 2. Click on your PostgreSQL service
 3. Click **"Data"** tab to view/query tables
 4. No additional setup required!
 
-For Railway deployments, you don't need to deploy Adminer separately.
+For Render deployments, you don't need to deploy Adminer separately.
 
 ---
 
@@ -279,11 +279,11 @@ volumes:
 
 Access at: http://localhost:8082
 
-### Railway Database Interface
+### Render Database Interface
 
-For production deployments on Railway:
+For production deployments on Render:
 1. No additional setup needed
-2. Built-in database viewer in Railway dashboard
+2. Built-in database viewer in Render dashboard
 3. More secure than exposing Adminer publicly
 
 ---

@@ -131,13 +131,13 @@
 2. ✅ Enable PostgreSQL SSL/TLS (already configured)
 3. ✅ Monitor keepalive status via health endpoint
 4. ✅ Review logs regularly for failures
-5. ✅ Keep Railway PostgreSQL updated
+5. ✅ Keep Render PostgreSQL updated
 
 ### For Monitoring
 1. ✅ Check `/api/health` endpoint regularly
 2. ✅ Alert on consecutive_failures >= 3
 3. ✅ Monitor seconds_since_last_ping
-4. ✅ Review Railway dashboard logs
+4. ✅ Review Render dashboard logs
 
 ## Conclusion
 

@@ -9,7 +9,7 @@ A **deployment guide window** has opened that will walk you through deploying Hi
 ## 🚀 Active Deployment: DEPLOY_MANUAL_GUIDE.bat
 
 ### **What It Does:**
-- ✅ Opens Railway.app for backend deployment
+- ✅ Opens Render.app for backend deployment
 - ✅ Opens Vercel.com for frontend deployment  
 - ✅ Provides step-by-step instructions
 - ✅ Pauses to wait for you at each step
@@ -24,14 +24,14 @@ A **deployment guide window** has opened that will walk you through deploying Hi
 
 ## 📋 What You'll Do
 
-### **Part 1: Railway Backend (10 minutes)**
+### **Part 1: Render Backend (10 minutes)**
 
-1. Sign up / Login to Railway with GitHub
+1. Sign up / Login to Render with GitHub
 2. Create new repository: HireMeBahamas
-3. Railway automatically deploys your backend
+3. Render automatically deploys your backend
 4. Add SECRET_KEY environment variable (script provides it)
 5. Generate domain to get your backend URL
-6. **Result:** Backend API live at `https://your-backend.railway.app`
+6. **Result:** Backend API live at `https://your-backend.render.app`
 
 ### **Part 2: Vercel Frontend (10 minutes)**
 
@@ -61,9 +61,9 @@ If you prefer other methods, I've created these too:
 - Time: 15 minutes
 
 ### **3. DEPLOY_BACKEND_AUTO.bat**
-- Uses Railway CLI
+- Uses Render CLI
 - Command line deployment
-- Requires: Railway CLI
+- Requires: Render CLI
 - Time: 10 minutes
 
 ---
@@ -75,7 +75,7 @@ If you prefer other methods, I've created these too:
 - ✅ No command line knowledge required
 - ✅ Visual, point-and-click interface
 - ✅ Perfect for beginners
-- ✅ Railway and Vercel handle everything
+- ✅ Render and Vercel handle everything
 
 ### **You Just:**
 - Follow the prompts in the deployment window
@@ -90,7 +90,7 @@ If you prefer other methods, I've created these too:
 ### **You'll Have:**
 
 ✅ **Live Website:** `https://hiremebahamas.vercel.app`  
-✅ **Backend API:** `https://your-backend.railway.app`  
+✅ **Backend API:** `https://your-backend.render.app`  
 ✅ **Privacy Policy:** Your-site/privacy-policy.html  
 ✅ **Terms of Service:** Your-site/terms-of-service.html  
 ✅ **Admin Access:** admin@hiremebahamas.com / AdminPass123!  
@@ -144,11 +144,11 @@ If you prefer other methods, I've created these too:
 
 ### **Troubleshooting:**
 
-**Railway deployment fails?**
-- Check that you authorized Railway
+**Render deployment fails?**
+- Check that you authorized Render
 - Verify SECRET_KEY was added
 - Wait 2-3 minutes for build to complete
-- Check deployment logs in Railway dashboard
+- Check deployment logs in Render dashboard
 
 **Vercel deployment fails?**
 - Verify root directory is set to `frontend`
@@ -172,7 +172,7 @@ If you prefer other methods, I've created these too:
 ## 💰 Cost Breakdown
 
 ### **Free Forever:**
-- **Railway Backend:** FREE (500 hours/month = always on)
+- **Render Backend:** FREE (500 hours/month = always on)
 - **Vercel Frontend:** FREE (unlimited bandwidth)
 - **HTTPS/SSL:** FREE (automatic on both platforms)
 - **Database:** FREE (SQLite included)
@@ -180,7 +180,7 @@ If you prefer other methods, I've created these too:
 ### **Total:** **$0/month** 🎉
 
 ### **When You Scale (100s of users):**
-- Railway: $5/month for more resources
+- Render: $5/month for more resources
 - Vercel: Still free!
 - Custom domain: $12/year (optional)
 
@@ -190,7 +190,7 @@ If you prefer other methods, I've created these too:
 
 ### **Professional Features:**
 - ✅ Secure HTTPS/SSL encryption
-- ✅ Automatic backups (Railway)
+- ✅ Automatic backups (Render)
 - ✅ CDN delivery (Vercel)
 - ✅ Automatic scaling
 - ✅ 99.9% uptime

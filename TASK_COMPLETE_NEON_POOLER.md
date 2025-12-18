@@ -145,7 +145,7 @@ connect_args={
 | Database Provider | Pooler | statement_timeout in options/server_settings | Current Status |
 |------------------|--------|---------------------------------------------|----------------|
 | **Neon** | PgBouncer | ❌ NOT SUPPORTED | ✅ **Compatible** |
-| **Railway** | Direct | ✅ Supported | ✅ Compatible |
+| **Render** | Direct | ✅ Supported | ✅ Compatible |
 | **Render** | Direct | ✅ Supported | ✅ Compatible |
 | **Supabase** | Supavisor/PgBouncer | ❌ NOT SUPPORTED | ✅ **Compatible** |
 | **Direct PostgreSQL** | None | ✅ Supported | ✅ Compatible |
@@ -205,7 +205,7 @@ Set default `statement_timeout` at the database or role level in Neon's console.
 ### Current Deployments
 All current deployments are already compatible:
 - ✅ Neon pooled connections work correctly
-- ✅ Railway direct connections work correctly
+- ✅ Render direct connections work correctly
 - ✅ Render direct connections work correctly
 - ✅ Vercel serverless functions work correctly
 
@@ -213,7 +213,7 @@ All current deployments are already compatible:
 
 1. **NEON_POOLED_CONNECTION_FIX_SUMMARY.md** - Original fix documentation
 2. **test_neon_pooled_connection.py** - Automated verification tests
-3. **backend/test_railway_postgres_settings.py** - Railway/Render settings tests
+3. **backend/test_render_postgres_settings.py** - Render/Render settings tests
 
 ## Conclusion
 

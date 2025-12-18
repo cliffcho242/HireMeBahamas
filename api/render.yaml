@@ -3,7 +3,7 @@
 # ============================================================================
 # ⚠️  THIS CONFIGURATION IS DEPRECATED AND SHOULD NOT BE USED
 # ⚠️  
-# ⚠️  CURRENT DEPLOYMENT: Vercel (frontend + serverless backend) + Railway PostgreSQL
+# ⚠️  CURRENT DEPLOYMENT: Vercel (frontend + serverless backend) + Render PostgreSQL
 # ⚠️  
 # ⚠️  If you're setting up HireMeBahamas, use Vercel deployment instead.
 # ⚠️  See: DEPLOYMENT_CONNECTION_GUIDE.md or START_HERE_DEPLOYMENT.md
@@ -13,7 +13,7 @@
 # ⚠️  
 # ⚠️  NEXT STEPS:
 # ⚠️  1. See RENDER_TO_VERCEL_MIGRATION.md for complete migration guide
-# ⚠️  2. For Railway setup: See RAILWAY_DATABASE_SETUP.md
+# ⚠️  2. For Render setup: See .env.example for database configuration
 # ⚠️  3. For Vercel Postgres: See VERCEL_POSTGRES_SETUP.md
 # ⚠️  
 # ⚠️  This file is kept for reference and backward compatibility only.

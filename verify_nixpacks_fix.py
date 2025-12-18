@@ -37,7 +37,7 @@ def test_nixpacks_plan():
 
     except FileNotFoundError:
         print("⚠️ nixpacks CLI not installed locally (this is OK)")
-        print("   Railway will use the configuration files we pushed")
+        print("   Render will use the configuration files we pushed")
         return True
     except Exception as e:
         print(f"⚠️ Could not test nixpacks: {e}")
@@ -119,12 +119,12 @@ def main():
     if git_ok and admin_ok:
         print("✅ Configuration fix is complete!")
         print("\n🚀 Next steps:")
-        print("1. Railway should auto-deploy with the new configuration")
-        print("2. Or manually trigger deployment in Railway dashboard")
+        print("1. Render should auto-deploy with the new configuration")
+        print("2. Or manually trigger deployment in Render dashboard")
         print(
             "3. The 'EOF while parsing admin_panel/package.json' error should be resolved"
         )
-        print("\n⏱️ Railway deployment may take 2-5 minutes to pick up changes")
+        print("\n⏱️ Render deployment may take 2-5 minutes to pick up changes")
     else:
         print("⚠️ Some issues detected - check the output above")
 

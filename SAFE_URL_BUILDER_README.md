@@ -35,7 +35,7 @@ fetch(apiUrl("/api/auth/refresh"), {
 - ✅ Validates `VITE_API_URL` at runtime
 - ✅ Clear error messages for misconfiguration
 - ✅ Automatic URL normalization
-- ✅ Works with same-origin (Vercel) or separate backend (Railway)
+- ✅ Works with same-origin (Vercel) or separate backend (Render)
 - ✅ Type-safe with TypeScript
 
 ## Files Changed
@@ -97,8 +97,8 @@ Set the `VITE_API_URL` environment variable:
 # Development
 VITE_API_URL=http://localhost:8000
 
-# Production (Railway)
-VITE_API_URL=https://your-app.up.railway.app
+# Production (Render)
+VITE_API_URL=https://your-app.up.render.app
 
 # Vercel Serverless
 # Leave unset - uses same-origin automatically

@@ -189,7 +189,7 @@ stats = user_cache.get_stats()
 ### Step 1: Redis Provider
 Choose a Redis provider:
 - **Upstash Redis** (recommended for serverless)
-- Railway Redis
+- Render Redis
 - Render Redis  
 - Any Redis-compatible service
 

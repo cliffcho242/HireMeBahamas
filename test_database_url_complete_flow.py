@@ -107,9 +107,9 @@ def test_complete_flow():
             "Neon URL without port (should be auto-fixed)"
         ),
         (
-            "postgresql://user:password@containers-us-west-1.railway.app/railway?sslmode=require",
+            "postgresql://user:password@containers-us-west-1.render.app/render?sslmode=require",
             True,
-            "Railway URL without port (should be auto-fixed)"
+            "Render URL without port (should be auto-fixed)"
         ),
         (
             "postgresql://user:password@host:5432/database?sslmode=require",

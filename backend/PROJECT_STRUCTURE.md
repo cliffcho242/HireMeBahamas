@@ -76,7 +76,7 @@ def health():
 
 **Key Features:**
 - Async SQLAlchemy engine configuration
-- Connection pooling with Railway/Vercel optimization
+- Connection pooling with Render/Vercel optimization
 - SSL/TLS configuration for PostgreSQL
 - Session factory (`get_db()` dependency)
 - Database initialization with retry logic

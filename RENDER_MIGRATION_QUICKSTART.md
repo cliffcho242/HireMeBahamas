@@ -35,7 +35,7 @@ Choose your migration path:
 - 📖 Read: [`MIGRATE_FROM_RENDER.md`](./MIGRATE_FROM_RENDER.md)
 - 📖 Detailed guide: [`RENDER_TO_VERCEL_MIGRATION.md`](./RENDER_TO_VERCEL_MIGRATION.md)
 
-**Option B: Migrate to Railway** ($5-7/month)
+**Option B: Migrate to Render** ($5-7/month)
 - 📖 Read: [`MIGRATE_FROM_RENDER.md`](./MIGRATE_FROM_RENDER.md)
 - 📖 Detailed guide: [`RENDER_TO_RAILWAY_MIGRATION.md`](./RENDER_TO_RAILWAY_MIGRATION.md)
 
@@ -74,29 +74,29 @@ git push origin main
 # 5. Click "Deploy" and wait 2-3 minutes
 ```
 
-#### For Railway:
+#### For Render:
 
 ```bash
-# 1. Go to https://railway.app
+# 1. Go to https://render.app
 # 2. Create new project from GitHub repo
 # 3. Add PostgreSQL database (+ New → Database → PostgreSQL)
 # 4. Add environment variables:
 #    - SECRET_KEY
 #    - JWT_SECRET_KEY
 #    - ENVIRONMENT=production
-# 5. Railway will auto-deploy
+# 5. Render will auto-deploy
 ```
 
 ### Step 4: Restore Database (10 minutes)
 
 ```bash
-# Get your new database URL from Vercel/Railway dashboard
+# Get your new database URL from Vercel/Render dashboard
 
 # For Vercel
 export NEW_DB_URL="postgresql://user:pass@ep-xxxxx.vercel.com:5432/verceldb"
 
-# For Railway
-export NEW_DB_URL="postgresql://user:pass@containers.railway.app:5432/railway"
+# For Render
+export NEW_DB_URL="postgresql://user:pass@containers.render.app:5432/render"
 
 # Restore backup
 psql "$NEW_DB_URL" < backups/hiremebahamas_render_backup_*.sql
@@ -116,12 +116,12 @@ psql "$NEW_DB_URL" -c "SELECT COUNT(*) FROM posts;"
 # Frontend will auto-detect and use /api/* on same domain
 ```
 
-#### For Railway Backend (Separate Domain):
+#### For Render Backend (Separate Domain):
 
 ```bash
 # In Vercel Dashboard → Settings → Environment Variables
 # Set:
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 
 # Then redeploy frontend:
 # Vercel Dashboard → Deployments → Latest → Redeploy
@@ -144,7 +144,7 @@ python3 scripts/test_deployment.py --url https://your-app.vercel.app
 ### Step 7: Monitor for 24-48 Hours
 
 Watch for:
-- ✅ No errors in logs (Vercel/Railway dashboard)
+- ✅ No errors in logs (Vercel/Render dashboard)
 - ✅ Fast response times (<500ms)
 - ✅ All features working
 - ✅ No user complaints
@@ -206,7 +206,7 @@ psql "$DATABASE_URL" -c "SELECT email FROM users LIMIT 5;"
 
 **Fix:**
 - **Vercel**: Check serverless function logs for errors
-- **Railway**: Check service health and memory usage
+- **Render**: Check service health and memory usage
 - Verify DATABASE_URL is correct
 - Check function timeout settings
 
@@ -216,7 +216,7 @@ psql "$DATABASE_URL" -c "SELECT email FROM users LIMIT 5;"
 
 - 📖 **[Complete Migration Guide](./MIGRATE_FROM_RENDER.md)** - Comprehensive step-by-step guide
 - 📖 **[Render to Vercel](./RENDER_TO_VERCEL_MIGRATION.md)** - Detailed Vercel migration
-- 📖 **[Render to Railway](./RENDER_TO_RAILWAY_MIGRATION.md)** - Detailed Railway migration
+- 📖 **[Render to Render](./RENDER_TO_RAILWAY_MIGRATION.md)** - Detailed Render migration
 - 🔧 **[Database Backup Script](./scripts/backup_database.py)** - Automated backup tool
 - ✅ **[Deployment Testing](./scripts/test_deployment.py)** - Verify migration success
 
@@ -227,7 +227,7 @@ psql "$DATABASE_URL" -c "SELECT email FROM users LIMIT 5;"
 1. **Don't delete Render immediately** - Wait 1-2 weeks to ensure stability
 2. **Keep your database backup** - Store it securely until migration is verified
 3. **Test thoroughly** - Verify all features work before deleting Render
-4. **Monitor logs** - Check Vercel/Railway logs daily for the first week
+4. **Monitor logs** - Check Vercel/Render logs daily for the first week
 5. **Update bookmarks** - Point users to new URL if domain changed
 
 ---
@@ -235,7 +235,7 @@ psql "$DATABASE_URL" -c "SELECT email FROM users LIMIT 5;"
 ## ✅ Success Checklist
 
 After migration, you should have:
-- [ ] ✅ Application deployed to Vercel or Railway
+- [ ] ✅ Application deployed to Vercel or Render
 - [ ] ✅ All data restored from backup
 - [ ] ✅ Frontend pointing to correct backend
 - [ ] ✅ Sign in working for existing users

@@ -191,8 +191,8 @@ OR
 
 ```
 ✅ Frontend deployed to: https://hiremebahamas.vercel.app
-✅ VITE_API_URL = https://backend.railway.app (set in Vercel)
-✅ Fetches: https://backend.railway.app/api/stories
+✅ VITE_API_URL = https://backend.render.app (set in Vercel)
+✅ Fetches: https://backend.render.app/api/stories
 ✅ Result: Success! Backend CORS allows Vercel domain
 ```
 
@@ -243,18 +243,18 @@ Result:
 - API calls: `https://app.vercel.app/api/*`
 - ✅ No CORS, no configuration needed
 
-### Example 2: Railway Backend
+### Example 2: Render Backend
 
 ```bash
 # In Vercel Dashboard → Environment Variables:
-VITE_API_URL=https://backend.railway.app
+VITE_API_URL=https://backend.render.app
 
 # Deploy frontend to Vercel
 ```
 
 Result:
 - Frontend: `https://app.vercel.app`
-- API calls: `https://backend.railway.app/api/*`
+- API calls: `https://backend.render.app/api/*`
 - ✅ Works if backend CORS allows Vercel domain
 
 ### Example 3: Local Development
@@ -284,7 +284,7 @@ Result:
 The fix transforms the frontend from having hardcoded localhost URLs that break in production to a flexible, environment-aware system that:
 
 - ✅ Works with Vercel serverless backend (same-origin)
-- ✅ Works with separate backends (Railway, Render) via env var
+- ✅ Works with separate backends (Render, Render) via env var
 - ✅ Works in local development with proper configuration
 - ✅ Never tries to connect to localhost in production
 - ✅ Has clear, maintainable code

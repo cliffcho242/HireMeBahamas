@@ -213,7 +213,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1  # 10% of transactions
 ⚠️ **Note**: Redis is optional and not required for basic operation.
 
 ```env
-# For Railway/Render with Redis addon
+# For Render/Render with Redis addon
 REDIS_URL=redis://localhost:6379/0
 
 # Or separate components
@@ -344,7 +344,7 @@ sudo systemctl start redis
 docker run -d -p 6379:6379 redis:7-alpine
 ```
 
-#### Railway/Render
+#### Render/Render
 Add a Redis service through your platform's dashboard and use the provided `REDIS_URL`.
 
 **Note**: If Redis is not available, the application will function without caching features.
@@ -395,7 +395,7 @@ Error: Connection refused (Redis)
 **Solution:**
 - Ensure Redis is running: `redis-cli ping` should return `PONG`
 - Check `REDIS_URL` in your `.env` file
-- For Railway/Render, ensure Redis addon is provisioned
+- For Render/Render, ensure Redis addon is provisioned
 
 #### 2. Import Errors After Installing Dependencies
 ```
@@ -476,9 +476,9 @@ npm install --legacy-peer-deps
 
 ## Compatibility Notes
 
-### Railway & Vercel Deployment
-All dependencies are compatible with Railway and Vercel deployments:
-- ✅ Railway supports all backend dependencies
+### Render & Vercel Deployment
+All dependencies are compatible with Render and Vercel deployments:
+- ✅ Render supports all backend dependencies
 - ✅ Vercel optimized for frontend/admin-panel
 - ✅ Docker-compose setup available for local development
 

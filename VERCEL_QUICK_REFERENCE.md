@@ -56,7 +56,7 @@ Set these in **Vercel Dashboard** → **Settings** → **Environment Variables**
 
 | Variable | When to Set | Example |
 |----------|-------------|---------|
-| `VITE_API_URL` | **Only** if using separate backend | `https://your-backend.railway.app` |
+| `VITE_API_URL` | **Only** if using separate backend | `https://your-backend.render.app` |
 | `VITE_CLOUDINARY_CLOUD_NAME` | If using Cloudinary | `your-cloud-name` |
 | `VITE_SENDBIRD_APP_ID` | If using Sendbird | `your-app-id` |
 | `VITE_GOOGLE_CLIENT_ID` | If using Google OAuth | `your-google-client-id` |
@@ -78,7 +78,7 @@ Set these in **Vercel Dashboard** → **Settings** → **Environment Variables**
 - Automatically uses `window.location.origin` for API calls
 - API available at `/api/*` on same domain
 
-### Scenario 2: Separate Backend (Railway, etc.)
+### Scenario 2: Separate Backend (Render, etc.)
 
 **Configuration:**
 - ✅ Set all backend variables on backend service
@@ -88,9 +88,9 @@ Set these in **Vercel Dashboard** → **Settings** → **Environment Variables**
 **Example:**
 ```bash
 # In Vercel Dashboard
-VITE_API_URL=https://hiremebahamas.up.railway.app
+VITE_API_URL=https://hiremebahamas.up.render.app
 
-# In Railway/Backend
+# In Render/Backend
 # Add Vercel domain to CORS settings
 ```
 

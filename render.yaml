@@ -22,7 +22,7 @@
 # 
 # ⚡ SINGLE BACKEND PLATFORM - RENDER ONLY:
 # - Frontend: Vercel (CDN, Edge, static & dynamic UI)
-# - Backend API: Render (ONLY backend platform, NO Railway, NO others)
+# - Backend API: Render (ONLY backend platform, NO Render, NO others)
 # - Database: Neon PostgreSQL (managed, scalable)
 # 
 # ABSOLUTE PROHIBITIONS:
@@ -31,7 +31,7 @@
 # ❌ psycopg.connect(... sslmode=...) with URL
 # ❌ Health endpoint touching DB
 # ❌ Backend on more than one platform
-# ❌ Railway + Render together
+# ❌ Render + Render together
 #
 # Configuration:
 # - Standard plan ($25/mo) with 1GB RAM for Always On

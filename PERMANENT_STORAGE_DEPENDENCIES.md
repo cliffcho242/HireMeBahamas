@@ -388,4 +388,4 @@ sudo apt-get install --reinstall <package-name>
 **Verified For:**
 - Ubuntu 20.04, 22.04, 24.04
 - Debian 11, 12
-- Compatible with Railway, Render, AWS, Azure, GCP
+- Compatible with Render, Render, AWS, Azure, GCP

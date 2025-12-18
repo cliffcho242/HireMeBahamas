@@ -50,7 +50,7 @@ or database performance.
 
 ## Deployment Instructions
 
-### For Existing Deployments (Railway, Render, etc.)
+### For Existing Deployments (Render, Render, etc.)
 
 1. **Update Environment Variables** (recommended):
    ```bash

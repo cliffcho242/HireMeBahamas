@@ -99,7 +99,7 @@ python test_db_connection_verification.py
 
 ## Environment Variable Setup
 
-### Standard PostgreSQL (Railway/Render/Vercel)
+### Standard PostgreSQL (Render/Render/Vercel)
 ```bash
 DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
 DB_POOL_RECYCLE=300

@@ -63,7 +63,7 @@ https://vercel.com/[your-team]/[project-name]/settings/environment-variables
 
 ### Step 2: Add Environment Variables
 
-#### Option A: Separate Backend (Railway/Render) ⭐ RECOMMENDED
+#### Option A: Separate Backend (Render/Render) ⭐ RECOMMENDED
 
 If your backend is deployed separately:
 
@@ -72,7 +72,7 @@ If your backend is deployed separately:
 VITE_API_URL=https://your-backend-url
 
 # Examples:
-# Railway: VITE_API_URL=https://hiremebahamas-production.up.railway.app
+# Render: VITE_API_URL=https://hiremebahamas-production.up.render.app
 # Render:  VITE_API_URL=https://hiremebahamas.onrender.com
 ```
 
@@ -165,14 +165,14 @@ curl https://your-backend.onrender.com/health
 
 ## 🛠️ Backend URL Examples
 
-### For Railway Backend
+### For Render Backend
 
 ```bash
-VITE_API_URL=https://hiremebahamas-production.up.railway.app
+VITE_API_URL=https://hiremebahamas-production.up.render.app
 ```
 
-**How to find your Railway URL:**
-1. Go to: https://railway.app/dashboard
+**How to find your Render URL:**
+1. Go to: https://render.app/dashboard
 2. Select your project
 3. Click your backend service
 4. Click **Settings** tab
@@ -262,7 +262,7 @@ Use this checklist to ensure everything is configured correctly:
 - [ ] **Verified project uses Vite** (not Next.js)
 - [ ] **Opened Vercel Dashboard** → Project → Settings → Environment Variables
 - [ ] **Added VITE_API_URL** (NOT NEXT_PUBLIC_API_URL)
-- [ ] **Set correct backend URL** (Railway or Render URL with https://)
+- [ ] **Set correct backend URL** (Render or Render URL with https://)
 - [ ] **Selected all environments:**
   - [ ] Production ✅
   - [ ] Preview ✅
@@ -373,7 +373,7 @@ After completing this guide, you should have:
 
 ✅ **VITE_API_URL** set in Vercel Dashboard  
 ✅ All three environments configured (Production, Preview, Development)  
-✅ Correct backend URL (Railway or Render with https://)  
+✅ Correct backend URL (Render or Render with https://)  
 ✅ Application redeployed with new variables  
 ✅ Browser console shows correct API URL  
 ✅ API calls successfully reaching backend  

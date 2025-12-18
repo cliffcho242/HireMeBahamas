@@ -95,7 +95,7 @@ If build fails locally, fix errors before pushing.
 
 **Fix:**
 1. Verify `DATABASE_URL` is set in Vercel
-2. Check database is running (Railway/Render)
+2. Check database is running (Render/Render)
 3. Verify connection string format:
    ```
    postgresql://user:pass@host:5432/db?sslmode=require

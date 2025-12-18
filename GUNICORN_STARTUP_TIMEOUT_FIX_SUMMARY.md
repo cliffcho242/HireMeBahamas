@@ -126,9 +126,9 @@ CodeQL Security Analysis
 ### No Configuration Changes Required
 The fix is entirely in application code. Existing deployment configurations work unchanged:
 
-**Railway:**
+**Render:**
 ```bash
-git push origin main  # Auto-deploys via railway.toml
+git push origin main  # Auto-deploys via render.toml
 ```
 
 **Render:**

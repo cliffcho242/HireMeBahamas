@@ -298,7 +298,7 @@ All code includes:
    - Free tier: 10,000 commands/day
    - SSL/TLS by default
 
-2. **Railway Redis**
+2. **Render Redis**
    - Usage-based pricing
    - Private networking
    - Easy integration

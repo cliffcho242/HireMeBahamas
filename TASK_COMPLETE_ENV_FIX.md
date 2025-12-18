@@ -88,7 +88,7 @@ Comprehensive tests covering:
 - Malformed URLs
 - Protocol validation
 - Security checks (HTTPS enforcement)
-- Real-world deployment URLs (Vercel, Railway, Render)
+- Real-world deployment URLs (Vercel, Render, Render)
 - Prevention of "pattern mismatch" scenario
 
 ## Quality Assurance

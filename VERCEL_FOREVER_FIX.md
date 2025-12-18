@@ -77,12 +77,12 @@ The frontend will automatically use same-origin routing:
 
 Vercel's `vercel.json` rewrites handle routing to backend.
 
-### For Separate Backend (Railway/Render)
+### For Separate Backend (Render/Render)
 
 Set in **Vercel Dashboard → Settings → Environment Variables**:
 
 ```bash
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 ```
 
 ⚠️ **CRITICAL**: Must use `VITE_` prefix for frontend variables!

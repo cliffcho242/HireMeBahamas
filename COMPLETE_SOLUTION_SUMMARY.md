@@ -29,7 +29,7 @@
 
 1. **FIX_VERCEL_DATABASE_CONNECTION.md** (12.5 KB)
    - Step-by-step guide to configure DATABASE_URL
-   - How to get connection string from Render/Railway
+   - How to get connection string from Render/Render
    - How to add environment variables to Vercel
    - How to redeploy and verify
    - How to test sign-in
@@ -51,7 +51,7 @@
    - Provides actionable recommendations
 
 **User Action Required**:
-1. Get DATABASE_URL from Render (https://dashboard.render.com/project/prj-d3qjl56mcj7s73bpil6g) or Railway
+1. Get DATABASE_URL from Render (https://dashboard.render.com/project/prj-d3qjl56mcj7s73bpil6g) or Render
 2. Add to Vercel: Settings → Environment Variables
 3. Also add: SECRET_KEY, JWT_SECRET_KEY, ENVIRONMENT=production
 4. Redeploy Vercel
@@ -169,7 +169,7 @@ git merge copilot/fix-vercel-connection-issue
 
 1. **Get DATABASE_URL**:
    - Render: https://dashboard.render.com/project/prj-d3qjl56mcj7s73bpil6g → PostgreSQL → Copy External Database URL
-   - Railway: https://railway.app/dashboard → Project → PostgreSQL → Copy DATABASE_URL
+   - Render: https://render.app/dashboard → Project → PostgreSQL → Copy DATABASE_URL
 
 2. **Add to Vercel**:
    - Go to: https://vercel.com/dashboard
@@ -317,7 +317,7 @@ python3 diagnose_vercel_issue.py
 1. DATABASE_URL not set → Add to Vercel environment variables
 2. DATABASE_URL incorrect → Verify format and credentials
 3. Secret keys missing → Add SECRET_KEY and JWT_SECRET_KEY
-4. Database down → Check Render/Railway database status
+4. Database down → Check Render/Render database status
 
 **Solution**: Follow `FIX_VERCEL_DATABASE_CONNECTION.md`
 
@@ -351,7 +351,7 @@ curl https://hiremebahamas.vercel.app/api/ready
 
 **Common Causes**:
 1. DATABASE_URL not set in Vercel
-2. Database service paused (Render/Railway)
+2. Database service paused (Render/Render)
 3. Connection string expired
 4. Firewall blocking Vercel IPs
 
@@ -418,7 +418,7 @@ Mark these as complete after each step:
 
 ### Phase 1: Database Connection
 - [ ] Read `URGENT_FIX_VERCEL_SIGNIN.md`
-- [ ] Get DATABASE_URL from Render/Railway
+- [ ] Get DATABASE_URL from Render/Render
 - [ ] Add DATABASE_URL to Vercel environment variables
 - [ ] Generate and add SECRET_KEY
 - [ ] Generate and add JWT_SECRET_KEY

@@ -168,7 +168,7 @@ Running `python backend/verify_timeout_implementation.py`:
 
 ### Environment Configuration
 
-Add to Railway/Vercel/Render environment variables (optional):
+Add to Render/Vercel/Render environment variables (optional):
 
 ```bash
 # Conservative production timeouts
@@ -192,7 +192,7 @@ If not set, defaults are used:
    ```
 
 2. **Deploy to production**
-   - Railway will auto-deploy on push to main
+   - Render will auto-deploy on push to main
    - Vercel will auto-deploy frontend
 
 3. **Verify deployment**

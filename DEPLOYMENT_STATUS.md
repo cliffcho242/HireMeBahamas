@@ -17,7 +17,7 @@
 ### Configuration Files Created
 - ✅ `.env` - Production environment variables
 - ✅ `vercel.json` - Frontend deployment config
-- ✅ `railway.json` - Backend deployment config
+- ✅ `render.json` - Backend deployment config
 - ✅ `requirements.txt` - Python dependencies
 - ✅ `Procfile` - Backend startup command
 - ✅ `privacy-policy.html` - App store requirement
@@ -27,24 +27,24 @@
 
 ### Backend Deployment (Choose ONE option)
 
-#### Option 1: Railway.app (Recommended) 🚂
+#### Option 1: Render.app (Recommended) 🚂
 **Best for**: Flask/Python backends
 **Free Tier**: 500 hours/month
 
 **Steps**:
-1. Visit https://railway.app/new
+1. Visit https://render.app/new
 2. Click "Deploy from GitHub repo"
 3. Authenticate with GitHub
 4. Select "HireMeBahamas" repository
-5. Railway will auto-detect Flask from `requirements.txt`
+5. Render will auto-detect Flask from `requirements.txt`
 6. Click "Deploy"
-7. Copy the backend URL (e.g., `https://hiremebahamas-production.up.railway.app`)
+7. Copy the backend URL (e.g., `https://hiremebahamas-production.up.render.app`)
 
 **Configuration**:
-- Railway automatically detects:
+- Render automatically detects:
   - `requirements.txt` (Python dependencies)
   - `Procfile` (Start command)
-  - `railway.json` (Settings)
+  - `render.json` (Settings)
 - No manual configuration needed!
 
 #### Option 2: Render.com 🎨
@@ -88,7 +88,7 @@ After deploying backend, update frontend to use the backend URL:
 2. Go to your project → Settings → Environment Variables
 3. Add:
    - Key: `VITE_API_URL`
-   - Value: `https://your-backend-url.com` (from Railway/Render)
+   - Value: `https://your-backend-url.com` (from Render/Render)
    - Environment: Production
 4. Redeploy frontend: `vercel --prod`
 
@@ -146,10 +146,10 @@ After deploying backend, update frontend to use the backend URL:
 
 ## 🚀 Quick Deploy Commands
 
-### If you choose Railway (Recommended):
+### If you choose Render (Recommended):
 ```powershell
-# Just visit the Railway website - no CLI needed!
-# https://railway.app/new
+# Just visit the Render website - no CLI needed!
+# https://render.app/new
 ```
 
 ### If you choose Vercel for backend:
@@ -170,7 +170,7 @@ vercel --prod
 | Service | Platform | URL | Status |
 |---------|----------|-----|--------|
 | Frontend | Vercel | https://hiremebahamas-backend-earawsqiw-cliffs-projects-a84c76c9.vercel.app | ✅ LIVE |
-| Backend | Railway/Render | Pending deployment | ⏳ TODO |
+| Backend | Render/Render | Pending deployment | ⏳ TODO |
 | Privacy Policy | Vercel | /privacy-policy.html | ✅ LIVE |
 | Terms of Service | Vercel | /terms-of-service.html | ✅ LIVE |
 
@@ -178,10 +178,10 @@ vercel --prod
 
 ## 💡 Tips
 
-1. **Railway is easiest** - Just connect GitHub and click deploy!
-2. **Free tiers are generous** - Railway gives 500 hrs/month free
+1. **Render is easiest** - Just connect GitHub and click deploy!
+2. **Free tiers are generous** - Render gives 500 hrs/month free
 3. **Auto-deploy** - Both platforms auto-deploy on GitHub push
-4. **Environment variables** - Set these in platform dashboard (Railway/Vercel)
+4. **Environment variables** - Set these in platform dashboard (Render/Vercel)
 5. **CORS is configured** - Backend already has CORS enabled for your frontend
 
 ---
@@ -194,7 +194,7 @@ vercel --prod
 - Verify CORS is enabled (already done ✅)
 
 ### Backend crashes
-- Check logs in Railway/Render dashboard
+- Check logs in Render/Render dashboard
 - Verify all environment variables are set
 - Check `requirements.txt` dependencies
 
@@ -209,7 +209,7 @@ vercel --prod
 
 If you need help:
 1. Check platform documentation:
-   - Railway: https://docs.railway.app
+   - Render: https://docs.render.app
    - Render: https://render.com/docs
    - Vercel: https://vercel.com/docs
 2. Check deployment logs in platform dashboard
@@ -220,7 +220,7 @@ If you need help:
 ## 🎯 What to Do Right Now
 
 1. **Deploy Backend** (10 minutes)
-   - Go to https://railway.app/new
+   - Go to https://render.app/new
    - Click "Deploy from GitHub repo"
    - Select "HireMeBahamas"
    - Wait for deployment

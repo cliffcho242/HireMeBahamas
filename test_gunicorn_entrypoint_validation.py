@@ -50,7 +50,7 @@ def test_config_files():
         "render.yaml",
         "Procfile", 
         "backend/Procfile",
-        "railway.toml",
+        "render.toml",
         "nixpacks.toml"
     ]
     
@@ -92,7 +92,7 @@ def test_working_directory():
     config_files = {
         "render.yaml": "startCommand",
         "Procfile": "web:",
-        "railway.toml": "startCommand",
+        "render.toml": "startCommand",
         "nixpacks.toml": "cmd"
     }
     
@@ -126,7 +126,7 @@ def test_poetry_usage():
         "render.yaml",
         "Procfile",
         "backend/Procfile", 
-        "railway.toml",
+        "render.toml",
         "nixpacks.toml"
     ]
     

@@ -176,7 +176,7 @@ This works because:
 - ✅ Models import without errors
 - ✅ Tables created automatically
 - ✅ Application fully functional with Neon
-- ✅ Works with all PostgreSQL providers (Railway, Render, Vercel, Neon, etc.)
+- ✅ Works with all PostgreSQL providers (Render, Render, Vercel, Neon, etc.)
 
 ## Related Documentation
 
@@ -188,7 +188,7 @@ This works because:
 
 This fix maintains compatibility with:
 - ✅ Neon pooled connections (primary target)
-- ✅ Railway PostgreSQL
+- ✅ Render PostgreSQL
 - ✅ Render PostgreSQL
 - ✅ Vercel Postgres
 - ✅ Direct PostgreSQL connections (no pooler)

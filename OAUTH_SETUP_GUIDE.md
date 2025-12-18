@@ -117,7 +117,7 @@ npm run dev
 
 1. Ensure environment variables are set in:
    - Vercel (for frontend): Dashboard → Settings → Environment Variables
-   - Railway/Render (for backend): Dashboard → Settings → Environment Variables
+   - Render/Render (for backend): Dashboard → Settings → Environment Variables
 
 2. Deploy both frontend and backend
 

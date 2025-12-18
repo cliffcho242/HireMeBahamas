@@ -8,24 +8,24 @@ This test validates that the following ABSOLUTE PROHIBITIONS are enforced:
 ❌ psycopg.connect(... sslmode=...) with URL
 ❌ Health endpoint touching DB
 ❌ Backend on more than one platform
-❌ Railway + Render together
+❌ Render + Render together
 """
 import os
 import json
 import re
 
 
-def test_no_railway_config():
-    """Verify Railway configuration files are removed."""
-    print("\n1. Testing: No Railway configuration files")
+def test_no_render_config():
+    """Verify Render configuration files are removed."""
+    print("\n1. Testing: No Render configuration files")
     
-    # Check railway.toml doesn't exist
-    assert not os.path.exists("railway.toml"), "❌ railway.toml should be removed"
+    # Check render.toml doesn't exist
+    assert not os.path.exists("render.toml"), "❌ render.toml should be removed"
     
-    # Check railway.json doesn't exist
-    assert not os.path.exists("railway.json"), "❌ railway.json should be removed"
+    # Check render.json doesn't exist
+    assert not os.path.exists("render.json"), "❌ render.json should be removed"
     
-    print("   ✅ Railway config files removed")
+    print("   ✅ Render config files removed")
 
 
 def test_single_gunicorn_worker():
@@ -212,7 +212,7 @@ def main():
     print("=" * 70)
     
     try:
-        test_no_railway_config()
+        test_no_render_config()
         test_single_gunicorn_worker()
         test_health_endpoints_no_db()
         test_no_db_calls_at_import()

@@ -121,7 +121,7 @@ The configuration is implemented in:
 2. **`api/backend_app/database.py`**
    - Alternative backend configuration
    - Uses `create_async_engine` with asyncpg
-   - Includes SSL context for Railway/Render
+   - Includes SSL context for Render/Render
 
 3. **`backend/app/core/database.py`**
    - Main backend configuration
@@ -152,7 +152,7 @@ This configuration provides:
    - Automatic connection retry logic
 
 4. **Cloud Compatibility**
-   - Works with Neon, Render, Railway
+   - Works with Neon, Render, Render
    - SSL support (`sslmode=require`)
    - Compatible with multiple drivers
 

@@ -66,7 +66,7 @@ All database configurations follow security best practices:
 
 ### Database Provider Compatibility
 - ✅ Neon (PgBouncer pooling) - COMPATIBLE
-- ✅ Railway (Direct connections) - COMPATIBLE
+- ✅ Render (Direct connections) - COMPATIBLE
 - ✅ Render (Direct connections) - COMPATIBLE
 - ✅ Supabase (Supavisor/PgBouncer) - COMPATIBLE
 - ✅ Direct PostgreSQL - COMPATIBLE

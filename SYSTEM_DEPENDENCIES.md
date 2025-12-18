@@ -372,8 +372,8 @@ redis-cli ping
 
 ## Platform-Specific Notes
 
-### Railway/Render
-When deploying to Railway or Render, system dependencies are handled automatically through:
+### Render/Render
+When deploying to Render or Render, system dependencies are handled automatically through:
 - Docker base images (recommended)
 - Nixpacks build system
 - Platform-provided buildpacks

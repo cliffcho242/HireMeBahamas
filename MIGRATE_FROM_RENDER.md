@@ -1,4 +1,4 @@
-# 🚀 Migrating from Render to Vercel/Railway
+# 🚀 Migrating from Render to Vercel/Render
 
 ## ⚠️ Are You Currently on Render?
 
@@ -25,7 +25,7 @@ We have comprehensive guides for your migration path:
 - Best for: Full-stack deployment with frontend + serverless backend
 - Cost: Free tier covers most use cases
 
-**Option B: Migrate to Railway (Alternative - $5-7/month)**
+**Option B: Migrate to Render (Alternative - $5-7/month)**
 - 📖 Read: [`RENDER_TO_RAILWAY_MIGRATION.md`](./RENDER_TO_RAILWAY_MIGRATION.md)
 - Best for: Traditional backend deployment with PostgreSQL
 - Cost: $5 for backend + $5 for PostgreSQL (starter plan)
@@ -72,7 +72,7 @@ python3 scripts/backup_database.py --source render --output ./backups/
 - Keep the backup until you verify the migration was successful
 - Test the backup by restoring to a test database if possible
 
-### ✅ Step 3: Deploy to Vercel or Railway
+### ✅ Step 3: Deploy to Vercel or Render
 
 Choose your target platform and follow the deployment guide:
 
@@ -110,11 +110,11 @@ Choose your target platform and follow the deployment guide:
 
 📖 **Complete Vercel Guide**: [`VERCEL_DEPLOYMENT_GUIDE.md`](./VERCEL_DEPLOYMENT_GUIDE.md)
 
-#### Deploy to Railway
+#### Deploy to Render
 
 **Quick Steps:**
-1. **Create Railway Account**
-   - Go to https://railway.app
+1. **Create Render Account**
+   - Go to https://render.app
    - Sign in with GitHub
 
 2. **Create New Project**
@@ -124,7 +124,7 @@ Choose your target platform and follow the deployment guide:
 
 3. **Add PostgreSQL Database**
    - Click "+ New" → "Database" → "Add PostgreSQL"
-   - Railway will automatically set `DATABASE_URL`
+   - Render will automatically set `DATABASE_URL`
 
 4. **Configure Environment Variables**
    - Go to your backend service
@@ -138,11 +138,11 @@ Choose your target platform and follow the deployment guide:
    ```
 
 5. **Deploy!**
-   - Railway will automatically deploy
+   - Render will automatically deploy
    - Get your backend URL from the "Settings" tab
-   - Note: `https://your-app.up.railway.app`
+   - Note: `https://your-app.up.render.app`
 
-📖 **Complete Railway Guide**: [`RAILWAY_DATABASE_SETUP.md`](./RAILWAY_DATABASE_SETUP.md)
+📖 **Complete Render Guide**: [`RAILWAY_DATABASE_SETUP.md`](./RAILWAY_DATABASE_SETUP.md)
 
 ### ✅ Step 4: Restore Your Database Backup
 
@@ -166,15 +166,15 @@ psql "$VERCEL_DB_URL" -c "SELECT COUNT(*) FROM users;"
 psql "$VERCEL_DB_URL" -c "SELECT COUNT(*) FROM posts;"
 ```
 
-#### Restore to Railway Postgres
+#### Restore to Render Postgres
 
 ```bash
-# 1. Get your Railway Postgres connection string
-# Go to: Railway Dashboard → Your PostgreSQL Service → Connect
+# 1. Get your Render Postgres connection string
+# Go to: Render Dashboard → Your PostgreSQL Service → Connect
 # Copy the connection string
 
 # 2. Set environment variable
-export RAILWAY_DB_URL="postgresql://user:password@containers.railway.app:5432/railway"
+export RAILWAY_DB_URL="postgresql://user:password@containers.render.app:5432/render"
 
 # 3. Restore backup
 psql "$RAILWAY_DB_URL" < hiremebahamas_render_backup_YYYYMMDD.sql
@@ -198,15 +198,15 @@ If you deployed the backend to Vercel serverless functions:
 # The frontend will automatically use /api/* on the same domain
 ```
 
-#### Option B: Using Separate Backend (Railway/Render)
+#### Option B: Using Separate Backend (Render/Render)
 
-If you deployed the backend to Railway or another platform:
+If you deployed the backend to Render or another platform:
 
 ```bash
 # In Vercel Dashboard → Your Project → Settings → Environment Variables
 # Add this variable:
 
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 
 # Or if still using Render temporarily:
 VITE_API_URL=https://your-app.onrender.com
@@ -271,9 +271,9 @@ If you have a custom domain (e.g., hiremebahamas.com):
 4. Wait 5-10 minutes for DNS propagation
 5. Verify: Visit your custom domain
 
-#### For Railway (Backend Only):
+#### For Render (Backend Only):
 
-1. Go to Railway Dashboard → Your Service → Settings
+1. Go to Render Dashboard → Your Service → Settings
 2. Click "Generate Domain" or "Custom Domain"
 3. Add your domain (e.g., api.hiremebahamas.com)
 4. Update DNS records as instructed
@@ -288,8 +288,8 @@ After migration, monitor your application:
 - Check for errors in the Logs tab
 - Monitor response times
 
-**Railway Monitoring:**
-- Go to Railway Dashboard → Your Service → Metrics
+**Render Monitoring:**
+- Go to Render Dashboard → Your Service → Metrics
 - Check CPU and memory usage
 - Monitor database connections
 
@@ -331,13 +331,13 @@ After migration, monitor your application:
 **Problem**: Your app can't connect to the database after migration.
 
 **Solution**:
-1. Verify `DATABASE_URL` is set correctly in Vercel/Railway
+1. Verify `DATABASE_URL` is set correctly in Vercel/Render
 2. Check that `?sslmode=require` is in the DATABASE_URL
 3. Test connection:
    ```bash
    psql "$DATABASE_URL" -c "SELECT 1;"
    ```
-4. If using Railway, try the `DATABASE_PRIVATE_URL` instead
+4. If using Render, try the `DATABASE_PRIVATE_URL` instead
 
 ### "Frontend shows blank page"
 
@@ -362,7 +362,7 @@ After migration, monitor your application:
 2. Check that `SECRET_KEY` and `JWT_SECRET_KEY` match your old values
    - If you changed these, users need to re-authenticate
 3. Clear browser cookies and try again
-4. Check Vercel/Railway logs for authentication errors
+4. Check Vercel/Render logs for authentication errors
 
 ### "Some data is missing"
 
@@ -392,7 +392,7 @@ After migration, monitor your application:
   - Serverless function logs for errors
   - Database connection string is correct
   - Function timeout isn't being exceeded (max 30s)
-- **On Railway**: Check:
+- **On Render**: Check:
   - Service health in dashboard
   - Memory/CPU usage (upgrade plan if needed)
   - Database connection pool settings
@@ -403,9 +403,9 @@ After migration, monitor your application:
 
 ### Documentation
 - [`RENDER_TO_VERCEL_MIGRATION.md`](./RENDER_TO_VERCEL_MIGRATION.md) - Detailed Vercel migration guide
-- [`RENDER_TO_RAILWAY_MIGRATION.md`](./RENDER_TO_RAILWAY_MIGRATION.md) - Detailed Railway migration guide
+- [`RENDER_TO_RAILWAY_MIGRATION.md`](./RENDER_TO_RAILWAY_MIGRATION.md) - Detailed Render migration guide
 - [`VERCEL_DEPLOYMENT_GUIDE.md`](./VERCEL_DEPLOYMENT_GUIDE.md) - Complete Vercel deployment guide
-- [`RAILWAY_DATABASE_SETUP.md`](./RAILWAY_DATABASE_SETUP.md) - Railway database configuration
+- [`RAILWAY_DATABASE_SETUP.md`](./RAILWAY_DATABASE_SETUP.md) - Render database configuration
 - [`DEPLOYMENT_CONNECTION_GUIDE.md`](./DEPLOYMENT_CONNECTION_GUIDE.md) - All deployment platforms
 
 ### Support
@@ -418,7 +418,7 @@ After migration, monitor your application:
 ## ✅ Migration Complete!
 
 After following all steps, you should have:
-- ✅ Application deployed to Vercel or Railway
+- ✅ Application deployed to Vercel or Render
 - ✅ All data migrated from Render
 - ✅ Frontend pointing to new backend
 - ✅ Custom domain configured (if applicable)

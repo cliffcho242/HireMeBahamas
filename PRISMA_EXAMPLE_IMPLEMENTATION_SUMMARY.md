@@ -94,7 +94,7 @@ npm run dev
 - Setup instructions matching problem statement exactly
 - Detailed explanations of each setup step
 - Prisma commands reference
-- Deployment guides for Vercel and Railway
+- Deployment guides for Vercel and Render
 
 ## Implementation Details
 
@@ -201,7 +201,7 @@ After completing this example, users can:
 1. **Customize the schema** - Add more models and relationships
 2. **Add API routes** - Create Next.js API routes for CRUD operations
 3. **Implement authentication** - Add user authentication with NextAuth.js
-4. **Deploy** - Deploy to Vercel or Railway with environment variables
+4. **Deploy** - Deploy to Vercel or Render with environment variables
 5. **Scale** - Use Prisma Accelerate for global edge caching
 
 ## Success Criteria

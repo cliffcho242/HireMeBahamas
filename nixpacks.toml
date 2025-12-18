@@ -6,13 +6,13 @@ providers = ["python"]
 # ❌ BAD:  [variables]
 # ❌ BAD:  SECRET_KEY = "my-secret"          # This gets baked into image layers!
 # ❌ BAD:  JWT_SECRET_KEY = "jwt-secret"     # Visible in image history!
-# ✅ GOOD: Configure secrets in Railway dashboard as environment variables
+# ✅ GOOD: Configure secrets in your deployment platform's dashboard as environment variables
 # ✅ GOOD: They will be injected at runtime, not build time
 [variables]
 NIXPACKS_NO_MUSL = "1"
 PYTHON_VERSION = "3.12"
 
-# Security: Sensitive variables should only be available at runtime via Railway's environment injection
+# Security: Sensitive variables should only be available at runtime via platform environment injection
 # The phases configuration ensures packages are installed without exposing secrets
 [phases.setup]
 # Comprehensive system packages for production deployment with PostgreSQL
@@ -20,14 +20,14 @@ PYTHON_VERSION = "3.12"
 # ⚠️ CRITICAL WARNING ABOUT POSTGRESQL:
 # -----------------------------------
 # We install postgresql-client and libpq-dev for DATABASE CONNECTIVITY ONLY.
-# These are CLIENT libraries to CONNECT to Railway's managed PostgreSQL database.
+# These are CLIENT libraries to CONNECT to managed PostgreSQL databases (Neon, Render, etc.).
 # 
 # DO NOT INSTALL: postgresql, postgresql-16, postgresql-server, or any PostgreSQL server packages
-# DO NOT DEPLOY: PostgreSQL as a container on Railway
+# DO NOT DEPLOY: PostgreSQL as a container on the same service as the backend
 # 
-# Railway provides managed PostgreSQL databases. See RAILWAY_SETUP_REQUIRED.md for setup instructions.
+# Use managed PostgreSQL databases (Neon, Render, etc.). See .env.example for database setup instructions.
 # If you see "root execution of the PostgreSQL server is not permitted" error,
-# you have misconfigured Railway. Read RAILWAY_SETUP_REQUIRED.md immediately.
+# you have misconfigured your deployment. Use a managed database service instead.
 #
 aptPkgs = [
     # Build tools (required for compiling Python packages)
@@ -37,9 +37,9 @@ aptPkgs = [
     "make",
     "pkg-config",
     
-    # PostgreSQL CLIENT libraries ONLY (for connecting to Railway's managed database)
+    # PostgreSQL CLIENT libraries ONLY (for connecting to managed databases)
     # ⚠️ These are NOT server packages - they're client libraries for database connectivity
-    # Railway's managed PostgreSQL service handles the actual database server
+    # Managed PostgreSQL services (Neon, Render, etc.) handle the actual database server
     "postgresql-client",
     "libpq-dev",
     "libpq5",
@@ -95,7 +95,7 @@ aptPkgs = [
 
 # Secrets should be configured via platform environment variables, NOT in Dockerfile
 # Do not use ARG or ENV for: SECRET_KEY, JWT_SECRET_KEY, API keys, passwords, etc.
-# Platform services (Railway, Render, etc.) inject secrets at runtime
+# Platform services (Render, Vercel, etc.) inject secrets at runtime
 
 # Explicitly install Python dependencies using Poetry (STEP 18)
 [phases.install]
@@ -106,11 +106,11 @@ cmds = [
 ]
 
 [start]
-# NEON SAFE GUNICORN CONFIGURATION (Railway)
+# NEON SAFE GUNICORN CONFIGURATION (Render)
 # ✅ Correct command for FastAPI with Neon Postgres:
 # - app.main:app - FastAPI application entry point  
 # - -k uvicorn.workers.UvicornWorker - ASGI worker for async FastAPI
-# - --bind 0.0.0.0:$PORT - Bind to all interfaces (Railway provides PORT)
+# - --bind 0.0.0.0:$PORT - Bind to all interfaces (Render provides PORT)
 # - --workers 2 - Two workers for production
 # - --timeout 120 - Prevents premature worker termination
 # ❌ NO extra flags (no sslmode, no statement_timeout)

@@ -10,13 +10,13 @@ This branch (`copilot/fix-merge-issues-pr-349`) contains all the changes from PR
 
 ### 1. `frontend/src/services/api.ts`
 - **Conflict**: Different backend URL configurations
-- **Resolution**: Keep Railway backend URL with environment variable fallback
-- **Final**: `const DEFAULT_PROD_API = import.meta.env.VITE_API_URL || 'https://hiremebahamas-backend.up.railway.app';`
+- **Resolution**: Keep Render backend URL with environment variable fallback
+- **Final**: `const DEFAULT_PROD_API = import.meta.env.VITE_API_URL || 'https://hiremebahamas-backend.up.render.app';`
 
 ### 2. `frontend/src/graphql/client.ts`
 - **Conflict**: Different backend URL configurations  
-- **Resolution**: Keep Railway backend URL with environment variable fallback
-- **Final**: `const DEFAULT_PROD_API = ENV_API || 'https://hiremebahamas-backend.up.railway.app';`
+- **Resolution**: Keep Render backend URL with environment variable fallback
+- **Final**: `const DEFAULT_PROD_API = ENV_API || 'https://hiremebahamas-backend.up.render.app';`
 
 ### 3. `vercel.json`
 - **Conflict**: Hardcoded `VITE_API_URL` in env section

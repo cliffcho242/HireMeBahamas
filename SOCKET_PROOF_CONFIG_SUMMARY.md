@@ -83,7 +83,7 @@ The following files already had the correct socket-proof configuration:
 
 **Benefits:**
 - Prevents connections from becoming stale
-- Works around server-side timeouts (e.g., Railway drops idle connections after 5 minutes)
+- Works around server-side timeouts (e.g., Render drops idle connections after 5 minutes)
 - Serverless-friendly (low enough to prevent issues, high enough to avoid overhead)
 
 ### 3. connect_args={"sslmode": "require"}
@@ -97,7 +97,7 @@ The following files already had the correct socket-proof configuration:
 **Benefits:**
 - Guarantees encrypted connections in production
 - Prevents accidental Unix socket connections (e.g., when DATABASE_URL is misconfigured)
-- Compatible with all major PostgreSQL hosting providers (Railway, Neon, Render, etc.)
+- Compatible with all major PostgreSQL hosting providers (Render, Neon, Render, etc.)
 
 ### Defense-in-Depth Approach
 Many configuration files use both `ssl` context and `sslmode`:
@@ -197,7 +197,7 @@ DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
 ```
 
 ### Serverless Platforms
-This configuration is optimized for serverless (Vercel, Railway, Render):
+This configuration is optimized for serverless (Vercel, Render, Render):
 - **Cold starts:** Lazy initialization prevents timeout during container startup
 - **Memory:** Small pool size (2-5 connections) for 512MB environments
 - **Timeouts:** `pool_recycle=300` prevents stale connections

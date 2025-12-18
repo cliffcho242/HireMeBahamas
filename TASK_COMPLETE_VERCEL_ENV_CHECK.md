@@ -39,7 +39,7 @@ Created **VERCEL_ENV_CHECK.md** (10KB) covering:
 - ✅ Step-by-step configuration instructions
 - ✅ Visual reference guides
 - ✅ All three environments (Production, Preview, Development)
-- ✅ Backend URL examples (Railway, Render, local)
+- ✅ Backend URL examples (Render, Render, local)
 - ✅ Verification procedures
 - ✅ Common mistakes and troubleshooting
 - ✅ Security considerations
@@ -90,7 +90,7 @@ Updated **README.md** with:
 - [x] **Common mistakes and corrections documented**
 - [x] **Correct variable naming for Vite projects (`VITE_API_URL`)**
 - [x] **Framework clarification (Vite/React, NOT Next.js)**
-- [x] **Multiple backend examples (Railway, Render, local dev)**
+- [x] **Multiple backend examples (Render, Render, local dev)**
 - [x] **Security considerations included**
 - [x] **Troubleshooting section added**
 - [x] **Related documentation cross-referenced**

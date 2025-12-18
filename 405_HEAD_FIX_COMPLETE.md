@@ -1,7 +1,7 @@
 # 405 HEAD Request Fix - Complete ✅
 
 ## Problem Statement
-Render (and other platforms like Railway) periodically send HEAD requests to check if the application is responsive:
+Render (and other platforms like Render) periodically send HEAD requests to check if the application is responsive:
 - `HEAD /`
 - `HEAD /health`
 - `HEAD /api/health`
@@ -137,4 +137,4 @@ The following endpoints already had HEAD support and required no changes:
 
 ✅ **COMPLETE** - Ready for deployment
 
-This fix is production-ready and will eliminate 405 warnings in Render/Railway logs while maintaining full backward compatibility.
+This fix is production-ready and will eliminate 405 warnings in Render/Render logs while maintaining full backward compatibility.

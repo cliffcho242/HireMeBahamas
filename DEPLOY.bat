@@ -25,7 +25,7 @@ echo.
 echo ✅ Code pushed to GitHub!
 echo.
 echo Next steps:
-echo 1. Deploy backend to Railway: https://railway.app
+echo 1. Deploy backend to Render: https://render.app
 echo 2. Deploy frontend to Vercel: https://vercel.com
 echo 3. Update environment variables with production URLs
 echo.

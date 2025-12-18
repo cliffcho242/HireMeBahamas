@@ -7,7 +7,7 @@ This implementation addresses the requirement to improve database initialization
 3. Logs clearly reflect the "one backend, one DB, one env var" architecture
 
 ## Problem Statement
-Previously, the application had multiple services (Render, Railway, Vercel) with multiple database strings and internal/private hosts, which caused confusing log messages. Users would see warnings about "Invalid DATABASE_URL" or "missing username, password, hostname" even when their database was properly configured.
+Previously, the application had multiple services (Render, Render, Vercel) with multiple database strings and internal/private hosts, which caused confusing log messages. Users would see warnings about "Invalid DATABASE_URL" or "missing username, password, hostname" even when their database was properly configured.
 
 ## Solution Implemented
 
@@ -123,7 +123,7 @@ This implementation supports the new simplified architecture:
 
 | Before | After |
 |--------|-------|
-| Multiple services (Render, Railway, Vercel) | ✅ One backend |
+| Multiple services (Render, Render, Vercel) | ✅ One backend |
 | Multiple DB strings | ✅ One DB |
 | Multiple env vars | ✅ One env var (DATABASE_URL) |
 | Confusing logs | ✅ Clear, actionable logs |

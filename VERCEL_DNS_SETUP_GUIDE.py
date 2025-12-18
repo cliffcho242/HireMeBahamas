@@ -77,12 +77,12 @@ STEP-BY-STEP INSTRUCTIONS:
       Name: @ (root) and www
       Value: Vercel's servers (automatic)
 
-   B) Backend (Railway) - Add manually:
+   B) Backend (Render) - Add manually:
       Type: CNAME
       Name: api (or backend)
-      Value: hiremebahamas-backend.railway.app
+      Value: hiremebahamas-backend.render.app
 
-   This allows: https://api.hiremebahamas.com → Railway backend
+   This allows: https://api.hiremebahamas.com → Render backend
 
 COMMON ISSUES:
 ==============
@@ -126,7 +126,7 @@ After nameservers are configured, your DNS should look like:
 
 hiremebahamas.com          → A record → Vercel frontend
 www.hiremebahamas.com      → CNAME   → Vercel frontend
-api.hiremebahamas.com      → CNAME   → Railway backend
+api.hiremebahamas.com      → CNAME   → Render backend
 
 TESTING AFTER SETUP:
 ====================
@@ -147,7 +147,7 @@ NEXT STEPS:
 2. Wait 2-4 hours for propagation
 3. Run: nslookup hiremebahamas.com to verify
 4. Once propagated, configure DNS records in Vercel dashboard
-5. Add CNAME for api.hiremebahamas.com → Railway backend
+5. Add CNAME for api.hiremebahamas.com → Render backend
 6. Test all endpoints
 7. Update frontend environment variables with new API URL
 

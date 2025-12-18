@@ -14,7 +14,7 @@ git push origin main
 
 ### 2. Set Environment Variables in Vercel
 
-**🔗 [Complete Database Connection Guide](./DATABASE_CONNECTION_GUIDE.md)** - Step-by-step instructions with direct links for Vercel, Railway, and Render.
+**🔗 [Complete Database Connection Guide](./DATABASE_CONNECTION_GUIDE.md)** - Step-by-step instructions with direct links for Vercel, Render, and Render.
 
 Quick version for Vercel:
 

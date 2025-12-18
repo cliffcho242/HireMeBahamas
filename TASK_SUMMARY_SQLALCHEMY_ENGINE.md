@@ -133,7 +133,7 @@ The fixed configuration provides:
 3. **Compatibility**
    - Works with asyncpg (current implementation)
    - Compatible with psycopg2/psycopg3 (documented migration)
-   - Cloud provider ready (Neon, Render, Railway)
+   - Cloud provider ready (Neon, Render, Render)
    - SSL/TLS support built-in
 
 4. **Maintainability**

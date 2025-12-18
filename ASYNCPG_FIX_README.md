@@ -100,7 +100,7 @@ curl https://your-app.vercel.app/api/health
 |----------|--------|---------|
 | **Render** | ✅ READY | Auto-deploys on push |
 | **Vercel** | ✅ READY | Auto-deploys on push |
-| **Railway** | ✅ READY | Auto-deploys on push |
+| **Render** | ✅ READY | Auto-deploys on push |
 | **Local Dev** | ✅ READY | `pip install --only-binary=:all: -r requirements.txt` |
 
 ---
@@ -118,7 +118,7 @@ pip install --only-binary=:all: asyncpg==0.30.0
 **A:** Missing `--only-binary` flag. Check your platform config:
 - Render: `render.yaml` buildCommand
 - Vercel: `vercel.json` installCommand
-- Railway: `Dockerfile` RUN command
+- Render: `Dockerfile` RUN command
 
 ### Q: asyncpg still won't install?
 **A:** Use the nuclear alternative (psycopg):
@@ -142,7 +142,7 @@ pip install -r requirements-psycopg.txt
 - ✅ ARM64
 - ✅ Render Free Tier
 - ✅ Vercel Serverless
-- ✅ Railway
+- ✅ Render
 
 ---
 
@@ -206,7 +206,7 @@ NOW     : Review this file (2 minutes)
 ## 🔥 DEPLOY NOW
 
 1. **Merge this PR** to main branch
-2. **Watch** automatic deployments (Render/Vercel/Railway)
+2. **Watch** automatic deployments (Render/Vercel/Render)
 3. **Verify** logs show "Successfully installed asyncpg-0.30.0"
 4. **Test** all /health endpoints
 5. **Celebrate** 🎉
@@ -223,4 +223,4 @@ NOW     : Review this file (2 minutes)
 
 *Last Updated: December 2025*  
 *Fix Version: asyncpg 0.30.0*  
-*Platforms: Render + Vercel + Railway*
+*Platforms: Render + Vercel + Render*

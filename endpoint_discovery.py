@@ -9,7 +9,7 @@ import requests
 
 def discover_endpoints():
     """Try to discover what endpoints are available"""
-    base_url = "https://hiremebahamas-backend.railway.app"
+    base_url = "https://hiremebahamas-backend.render.app"
 
     # Test common endpoint patterns
     test_endpoints = [
@@ -59,7 +59,7 @@ def discover_endpoints():
 
 def test_auth_methods():
     """Test specific auth endpoint methods"""
-    base_url = "https://hiremebahamas-backend.railway.app"
+    base_url = "https://hiremebahamas-backend.render.app"
 
     # Based on final_backend.py, these should exist
     auth_endpoints = ["/api/auth/login", "/api/auth/register"]
@@ -108,4 +108,4 @@ if __name__ == "__main__":
         print("✅ Auth endpoints found - checking method support")
     else:
         print("⚠️  No auth endpoints found - wrong backend deployed?")
-        print("   Check if correct backend file is deployed to Railway")
+        print("   Check if correct backend file is deployed to Render")

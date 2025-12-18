@@ -653,7 +653,7 @@ python -c "from app.database import init_db; init_db()"
 
 For production deployment, see:
 - [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)
-- [Railway Deployment](https://railway.app)
+- [Render Deployment](https://render.app)
 - [Vercel Frontend](https://vercel.com)
 - [Render Backend](https://render.com)
 
@@ -683,7 +683,7 @@ jobs:
         run: python scripts/verify_installation.py
 ```
 
-### Railway
+### Render
 
 Use the install script in `nixpacks.toml`:
 

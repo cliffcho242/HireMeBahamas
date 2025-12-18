@@ -45,7 +45,7 @@ git commit -m "Fix: Update asyncpg to 0.30.0 with binary-only installation"
 git push origin main
 ```
 
-**Expected Result:** Automatic triggers deployment on Render/Vercel/Railway
+**Expected Result:** Automatic triggers deployment on Render/Vercel/Render
 
 ---
 
@@ -91,9 +91,9 @@ vercel --prod
 
 ---
 
-### ✅ STEP 5: Monitor Railway Deployment (10 seconds)
+### ✅ STEP 5: Monitor Render Deployment (10 seconds)
 ```bash
-# Watch Railway dashboard
+# Watch Render dashboard
 # Automatic deployment on push
 ```
 
@@ -127,9 +127,9 @@ curl https://hiremebahamas.vercel.app/api/health
 # Expected: 200 OK
 ```
 
-#### Test Railway Endpoint
+#### Test Render Endpoint
 ```bash
-curl https://[your-railway-url]/health
+curl https://[your-render-url]/health
 # Expected: 200 OK
 ```
 
@@ -172,7 +172,7 @@ All of these must be TRUE after deployment:
 
 - [x] Render build completes without errors
 - [x] Vercel build completes without errors
-- [x] Railway build completes without errors
+- [x] Render build completes without errors
 - [x] All /health endpoints return 200 OK
 - [x] asyncpg 0.30.0 installed on all platforms
 - [x] No compilation in any build logs
@@ -211,10 +211,10 @@ All of these must be TRUE after deployment:
 T+0s   : Push to Git ✅
 T+5s   : Render starts building
 T+10s  : Vercel starts building
-T+15s  : Railway starts building
+T+15s  : Render starts building
 T+20s  : Render deploy completes ✅
 T+30s  : Vercel deploy completes ✅
-T+45s  : Railway deploy completes ✅
+T+45s  : Render deploy completes ✅
 T+60s  : ALL PLATFORMS LIVE ✅
 ```
 
@@ -236,7 +236,7 @@ git push origin main
 # 3. Watch deployments
 # Render:  https://dashboard.render.com
 # Vercel:  https://vercel.com/dashboard
-# Railway: https://railway.app/dashboard
+# Render: https://render.app/dashboard
 
 # 4. Verify endpoints
 curl https://hiremebahamas.onrender.com/health

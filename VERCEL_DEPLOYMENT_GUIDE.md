@@ -57,7 +57,7 @@ This guide will help you deploy the entire HireMeBahamas application (frontend +
 
 #### Option B: External PostgreSQL
 
-If using Railway, Neon, or another provider:
+If using Render, Neon, or another provider:
 - Ensure your database allows connections from Vercel's IP ranges
 - Have your connection string ready in this format:
   ```

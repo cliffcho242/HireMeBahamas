@@ -1124,7 +1124,7 @@ async def catch_all_api_routes(request: Request, path: str):
 # where the parent directory is not deployed. This is safe to skip.
 try:
     # Attempt to import forever_fix from parent directory
-    # This will only work if the file is deployed (e.g., Railway, local dev)
+    # This will only work if the file is deployed (e.g., Render, local dev)
     parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if parent_dir not in sys.path:
         sys.path.insert(0, parent_dir)

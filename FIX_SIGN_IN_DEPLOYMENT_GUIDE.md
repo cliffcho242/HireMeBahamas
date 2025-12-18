@@ -20,18 +20,18 @@ You need to add these secrets to your GitHub repository:
 | `VERCEL_TOKEN` | https://vercel.com/account/tokens | `xxxxxxxxxxxxxxxxxxxxxx` |
 | `VERCEL_ORG_ID` | https://vercel.com → Settings → General | `team_xxxxxxxxxxxxxx` |
 | `VERCEL_PROJECT_ID` | Vercel Project → Settings → General | `prj_xxxxxxxxxxxxxx` |
-| `DATABASE_URL` | Railway/Render PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
+| `DATABASE_URL` | Render/Render PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
 | `SECRET_KEY` | Generate with: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` | `abc123...` |
 | `JWT_SECRET_KEY` | Generate with: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` | `xyz789...` |
 
-#### Optional Secrets (for Railway backend):
+#### Optional Secrets (for Render backend):
 
 | Secret Name | How to Get It | When Needed |
 |------------|---------------|-------------|
-| `RAILWAY_TOKEN` | https://railway.app/account/tokens | If using Railway for backend hosting |
-| `RAILWAY_PROJECT_ID` | Railway Project → Settings | If using Railway for backend hosting |
+| `RAILWAY_TOKEN` | https://render.app/account/tokens | If using Render for backend hosting |
+| `RAILWAY_PROJECT_ID` | Render Project → Settings | If using Render for backend hosting |
 
-**Note:** Railway deployment is optional. If you're using Vercel serverless backend (recommended), you can skip these secrets. The deployment workflow will automatically skip Railway deployment if these secrets are not configured.
+**Note:** Render deployment is optional. If you're using Vercel serverless backend (recommended), you can skip these secrets. The deployment workflow will automatically skip Render deployment if these secrets are not configured.
 
 ### Step 2: Configure Vercel Environment Variables
 
@@ -103,17 +103,17 @@ git push origin main
 
 ### Getting Your Database Connection String
 
-#### Option A: Railway PostgreSQL
+#### Option A: Render PostgreSQL
 
-1. Go to: https://railway.app/dashboard
+1. Go to: https://render.app/dashboard
 2. Click on your **HireMeBahamas** project
 3. Click on the **Postgres** service
 4. Copy the **DATABASE_URL** or **DATABASE_PRIVATE_URL**
-5. Example format: `postgresql://postgres:password@containers-us-west-XXX.railway.app:7432/railway`
+5. Example format: `postgresql://postgres:password@containers-us-west-XXX.render.app:7432/render`
 
 **Important:** Add `?sslmode=require` to the end of the URL for secure connections:
 ```
-postgresql://postgres:password@host:7432/railway?sslmode=require
+postgresql://postgres:password@host:7432/render?sslmode=require
 ```
 
 #### Option B: Render PostgreSQL
@@ -166,7 +166,7 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 1. **Database not connected:**
    - Verify `DATABASE_URL` is set in Vercel environment variables
    - Test the connection string manually
-   - Check if Railway/Render database is running
+   - Check if Render/Render database is running
 
 2. **Secret keys mismatch:**
    - Ensure `SECRET_KEY` and `JWT_SECRET_KEY` match between GitHub and Vercel
@@ -176,20 +176,20 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
    - The backend will automatically create tables on first connection
    - Check Vercel Function logs for database initialization errors
 
-### Issue: "Railway backend deployment failing"
+### Issue: "Render backend deployment failing"
 
 **Solution:**
 
-Railway deployment is optional and will be automatically skipped if not configured. If you want to use Railway:
+Render deployment is optional and will be automatically skipped if not configured. If you want to use Render:
 
 1. Verify `RAILWAY_TOKEN` is set in GitHub Secrets
 2. Verify `RAILWAY_PROJECT_ID` is correct
-3. Check if you have Railway CLI access
-4. Note: Railway backend is optional if using Vercel serverless backend
+3. Check if you have Render CLI access
+4. Note: Render backend is optional if using Vercel serverless backend
 
-**To skip Railway deployment entirely:**
+**To skip Render deployment entirely:**
 - Simply don't add the `RAILWAY_TOKEN` secret to GitHub
-- The workflow will automatically skip Railway deployment steps
+- The workflow will automatically skip Render deployment steps
 - The build will succeed with a warning message
 
 ### Issue: "Vercel deployment workflow skipped"
@@ -258,7 +258,7 @@ Expected responses:
           │                                  │
           ▼                                  ▼
 ┌──────────────────────┐         ┌──────────────────────┐
-│ Vercel               │         │ Railway/Render       │
+│ Vercel               │         │ Render/Render       │
 │ - Frontend hosting   │         │ - PostgreSQL DB      │
 │ - Serverless backend │         │ - Optional backend   │
 │ - /api/* endpoints   │         │                      │

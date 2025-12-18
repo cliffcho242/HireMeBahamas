@@ -117,11 +117,11 @@ This index helps you find the right Redis documentation for your needs.
 
 ---
 
-### Scenario 3: Deploying to production (Railway/Render)
+### Scenario 3: Deploying to production (Render/Render)
 
 **Recommended Path:**
 1. **[REDIS_CONFIGURATION.md](./REDIS_CONFIGURATION.md)** - Provider setup (10 min)
-2. **[railway.toml](./railway.toml)** or **[render.yaml](./render.yaml)** - Check config
+2. **[render.toml](./render.toml)** or **[render.yaml](./render.yaml)** - Check config
 3. **[REDIS_IMPLEMENTATION_SUMMARY.md](./REDIS_IMPLEMENTATION_SUMMARY.md)** - Deploy guide (20 min)
 4. Monitor `/health/cache` endpoint - Verify in production
 
@@ -156,7 +156,7 @@ This index helps you find the right Redis documentation for your needs.
 - **[.env.example](./.env.example)** - Template with Redis configuration examples
 
 ### Deployment Configurations
-- **[railway.toml](./railway.toml)** - Railway deployment with Redis setup instructions
+- **[render.toml](./render.toml)** - Render deployment with Redis setup instructions
 - **[render.yaml](./render.yaml)** - Render deployment with Redis configuration
 - **[vercel.json](./vercel.json)** - Vercel serverless configuration
 
@@ -176,7 +176,7 @@ This index helps you find the right Redis documentation for your needs.
 ### For DevOps Engineers
 1. **[REDIS_CONFIGURATION.md](./REDIS_CONFIGURATION.md)** - Quick start
 2. **[REDIS_IMPLEMENTATION_SUMMARY.md](./REDIS_IMPLEMENTATION_SUMMARY.md)** - Deployment
-3. **[railway.toml](./railway.toml)** or **[render.yaml](./render.yaml)** - Platform config
+3. **[render.toml](./render.toml)** or **[render.yaml](./render.yaml)** - Platform config
 4. Monitor `/health/cache` endpoint
 
 ### For System Architects
@@ -226,7 +226,7 @@ redis-cli ping
 - Store credentials in environment variables
 - Monitor cache hit rates (target: >80%)
 - Test configuration before deploying
-- Use Upstash or Railway for production
+- Use Upstash or Render for production
 
 ### ❌ DON'T
 - Commit `REDIS_URL` to git
@@ -278,7 +278,7 @@ Messages: 30s
 **Ready to configure Redis?**
 
 1. **Start here:** [REDIS_CONFIGURATION.md](./REDIS_CONFIGURATION.md)
-2. **Choose provider:** Upstash (recommended) or Railway
+2. **Choose provider:** Upstash (recommended) or Render
 3. **Set environment variable:** `REDIS_URL=rediss://...`
 4. **Test:** Run `python test_redis_configuration.py`
 5. **Deploy:** Restart application and monitor `/health/cache`

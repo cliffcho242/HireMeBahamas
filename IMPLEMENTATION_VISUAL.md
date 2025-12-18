@@ -5,7 +5,7 @@
 ```
 BEFORE (Database Sleeping Issue):
 ┌─────────────────────────────────────────────┐
-│  Railway PostgreSQL Database                │
+│  Render PostgreSQL Database                │
 │                                             │
 │  ⏰ Active for 15 minutes                   │
 │  💤 Sleeps after inactivity                 │
@@ -15,7 +15,7 @@ BEFORE (Database Sleeping Issue):
 
 AFTER (Keepalive Implemented):
 ┌─────────────────────────────────────────────┐
-│  Railway PostgreSQL Database                │
+│  Render PostgreSQL Database                │
 │                                             │
 │  🔄 Pinged every 10 minutes                 │
 │  ✅ Always active                           │
@@ -58,7 +58,7 @@ AFTER (Keepalive Implemented):
 └─────────────────────────┼────────────────────────────────────┘
                           ↓
              ┌─────────────────────────┐
-             │  Railway PostgreSQL DB   │
+             │  Render PostgreSQL DB   │
              │  🔥 Always Active        │
              └─────────────────────────┘
 ```
@@ -190,7 +190,7 @@ HireMeBahamas/
 ## Monitoring Dashboard
 
 ```
-Railway Dashboard View:
+Render Dashboard View:
 
 ┌────────────────────────────────────────────────┐
 │  HireMeBahamas Backend Service                 │
@@ -238,7 +238,7 @@ After Keepalive:
 ```
 ┌──────────────────────────────────────────────────┐
 │  ✅ Automatic database keepalive implemented     │
-│  ✅ Prevents Railway PostgreSQL from sleeping    │
+│  ✅ Prevents Render PostgreSQL from sleeping    │
 │  ✅ No configuration needed (works automatically)│
 │  ✅ Full monitoring via /api/health endpoint     │
 │  ✅ Comprehensive documentation provided         │

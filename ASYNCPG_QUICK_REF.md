@@ -18,7 +18,7 @@ buildCommand: pip install --upgrade pip setuptools wheel && pip install --only-b
 "installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt"
 ```
 
-### Railway (Dockerfile)
+### Render (Dockerfile)
 ```dockerfile
 RUN pip install --upgrade pip && \
     pip install --only-binary=:all: -r requirements.txt

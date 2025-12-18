@@ -136,6 +136,6 @@ Once PR #360 is merged into main, the repository will have:
 3. **Updated Configuration**
    - `drizzle.config.ts` with non-pooling support for migrations
    - Enhanced `.env.example` files with detailed comments
-   - Railway and Vercel deployment guides
+   - Render and Vercel deployment guides
 
 Both feature sets complement each other perfectly!

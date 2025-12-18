@@ -90,8 +90,8 @@ def test_database_url_parsing():
     print("\n🧪 Testing full DATABASE_URL parsing...")
     print("=" * 70)
     
-    # Test with a realistic Railway DATABASE_URL format
-    test_url = "postgresql://hiremebahamas_user:p%40ssw%3Bord%21@dpg-test.railway.app:5432/railway"
+    # Test with a realistic Render DATABASE_URL format
+    test_url = "postgresql://hiremebahamas_user:p%40ssw%3Bord%21@dpg-test.render.app:5432/render"
     
     print(f"\nTest URL: {test_url}")
     

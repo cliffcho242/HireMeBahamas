@@ -19,14 +19,14 @@ The frontend had hardcoded URLs like:
 
 These would fail in production because:
 - ❌ Localhost is not accessible from deployed Vercel frontend
-- ❌ Internal URLs (Railway private, Render internal) are not publicly accessible
+- ❌ Internal URLs (Render private, Render internal) are not publicly accessible
 - ❌ Hardcoded URLs don't respect deployment environment
 
 ## ✅ Solution Implemented
 
 Replaced all hardcoded URLs with dynamic URL resolution:
 
-1. **VITE_API_URL environment variable** (if set) → for Railway, Render, or local dev
+1. **VITE_API_URL environment variable** (if set) → for Render, Render, or local dev
 2. **window.location.origin** (if no env var) → for Vercel serverless backend
 3. **Localhost fallback** (only for build-time/SSR, not used in practice)
 
@@ -80,16 +80,16 @@ Replaced all hardcoded URLs with dynamic URL resolution:
 - ✅ No configuration needed
 - ✅ Automatic cold-start management
 
-### Option B: Separate Backend (Railway/Render)
+### Option B: Separate Backend (Render/Render)
 
 ```bash
 # In Vercel Dashboard → Environment Variables:
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 # OR
 VITE_API_URL=https://your-backend.onrender.com
 
 # Frontend: https://your-project.vercel.app
-# Backend: https://your-backend.up.railway.app/api/*
+# Backend: https://your-backend.up.render.app/api/*
 ```
 
 **Requirements:**

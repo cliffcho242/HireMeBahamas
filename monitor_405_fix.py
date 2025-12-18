@@ -27,7 +27,7 @@ def monitor_deployment():
     print("=" * 60)
     print("Press Ctrl+C to stop monitoring\n")
 
-    backend_url = "https://hiremebahamas-backend.railway.app"
+    backend_url = "https://hiremebahamas-backend.render.app"
     endpoints = {
         "Health": "/health",
         "Login (OPTIONS)": "/api/auth/login",
@@ -77,7 +77,7 @@ def monitor_deployment():
             print("✅ Users can now sign in and register")
             print("\n🌐 Your application is live at:")
             print("   Frontend: https://hiremebahamas.vercel.app")
-            print("   Backend:  https://hiremebahamas-backend.railway.app")
+            print("   Backend:  https://hiremebahamas-backend.render.app")
             print("   Domain:   https://hiremebahamas.com")
             print("=" * 60)
             fixed = True

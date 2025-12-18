@@ -48,7 +48,7 @@ def validate_environment():
         print(f"❌ DATABASE_URL not set")
         print("   Required: DATABASE_URL with Neon PostgreSQL connection string")
         print("   Format: postgresql://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME?sslmode=require")
-        print("   Configure DATABASE_URL in Railway dashboard or deployment platform")
+        print("   Configure DATABASE_URL in Render dashboard or deployment platform")
         errors.append("DATABASE_URL not configured")
     
     # Check SECRET_KEY
@@ -101,29 +101,29 @@ def validate_environment():
     
     # Check environment type
     print("\n🌍 Environment Detection:")
-    is_railway = os.getenv("RAILWAY_PROJECT_ID") is not None
+    is_render = os.getenv("RAILWAY_PROJECT_ID") is not None
     is_render = os.getenv("RENDER") == "true"
     environment = os.getenv("ENVIRONMENT", "development")
     
-    if is_railway:
-        print("  ✅ Detected: Railway")
+    if is_render:
+        print("  ✅ Detected: Render")
         
-        # Railway-specific PostgreSQL check
-        print("\n🔍 Railway PostgreSQL Configuration Check:")
+        # Render-specific PostgreSQL check
+        print("\n🔍 Render PostgreSQL Configuration Check:")
         db_url = os.getenv("DATABASE_URL", "")
         
-        # Check if DATABASE_URL points to Railway's managed PostgreSQL
-        if "railway.app" in db_url or "railway.internal" in db_url:
-            print("  ✅ Using Railway managed PostgreSQL database")
+        # Check if DATABASE_URL points to Render's managed PostgreSQL
+        if "render.app" in db_url or "render.internal" in db_url:
+            print("  ✅ Using Render managed PostgreSQL database")
         elif db_url and "postgres" in db_url:
-            print("  ⚠️  DATABASE_URL detected but not Railway managed database")
-            print("     Ensure you're using Railway's PostgreSQL service, not a container")
-            warnings.append("Non-Railway PostgreSQL URL detected")
+            print("  ⚠️  DATABASE_URL detected but not Render managed database")
+            print("     Ensure you're using Render's PostgreSQL service, not a container")
+            warnings.append("Non-Render PostgreSQL URL detected")
         else:
-            print("  ⚠️  No Railway PostgreSQL connection detected")
-            print("     Make sure to add PostgreSQL database in Railway dashboard:")
+            print("  ⚠️  No Render PostgreSQL connection detected")
+            print("     Make sure to add PostgreSQL database in Render dashboard:")
             print("     Dashboard → + New → Database → PostgreSQL")
-            warnings.append("No Railway managed database detected")
+            warnings.append("No Render managed database detected")
         
         # Critical check: Warn if PostgreSQL server packages detected
         print("\n⚠️  PostgreSQL Server Check:")
@@ -131,12 +131,12 @@ def validate_environment():
   If you see "root execution of the PostgreSQL server is not permitted" error:
   
   ❌ WRONG: Deploying PostgreSQL as a container service
-  ✅ CORRECT: Use Railway's managed PostgreSQL database
+  ✅ CORRECT: Use Render's managed PostgreSQL database
   
   Fix:
-  1. Delete any PostgreSQL service containers in Railway dashboard
+  1. Delete any PostgreSQL service containers in Render dashboard
   2. Add managed database: Dashboard → + New → Database → PostgreSQL
-  3. Railway will auto-inject DATABASE_URL
+  3. Render will auto-inject DATABASE_URL
   
   See: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md for detailed instructions
         """

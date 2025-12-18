@@ -1,21 +1,21 @@
-# Complete PostgreSQL Migration Guide: Railway/Render → Vercel Postgres
+# Complete PostgreSQL Migration Guide: Render/Render → Vercel Postgres
 
 ## Overview
 
-This guide provides step-by-step instructions for migrating your HireMeBahamas PostgreSQL database from Railway or Render to Vercel Postgres (powered by Neon). The migration ensures zero downtime and preserves all data.
+This guide provides step-by-step instructions for migrating your HireMeBahamas PostgreSQL database from Render or Render to Vercel Postgres (powered by Neon). The migration ensures zero downtime and preserves all data.
 
 ## Prerequisites
 
 - ✅ Access to Vercel Dashboard
 - ✅ PostgreSQL client tools installed (`pg_dump`, `pg_restore`, `psql`)
-- ✅ Current Railway or Render database credentials
+- ✅ Current Render or Render database credentials
 - ✅ Backup of environment variables from current deployment
 
 ## Migration Strategy
 
 This migration follows a phased approach:
 1. **Setup**: Create Vercel Postgres database
-2. **Export**: Backup data from Railway/Render
+2. **Export**: Backup data from Render/Render
 3. **Import**: Restore data to Vercel Postgres
 4. **Verify**: Validate data integrity
 5. **Switch**: Update environment variables
@@ -59,13 +59,13 @@ POSTGRES_PRISMA_URL="postgresql://default:PASSWORD@ep-xxxxx.us-east-1.aws.neon.t
 
 ---
 
-## Phase 2: Export Data from Railway/Render
+## Phase 2: Export Data from Render/Render
 
 ### Step 2.1: Set Environment Variables
 
 ```bash
-# Export from Railway
-export RAILWAY_DATABASE_URL="postgresql://user:pass@containers-us-west-123.railway.app:5432/railway"
+# Export from Render
+export RAILWAY_DATABASE_URL="postgresql://user:pass@containers-us-west-123.render.app:5432/render"
 
 # Or export from Render
 export RENDER_DATABASE_URL="postgresql://user:pass@dpg-xxxxx-a.oregon-postgres.render.com:5432/hiremebahamas"
@@ -319,7 +319,7 @@ time curl -s https://hiremebahamas.com/health > /dev/null
 
 ## Phase 7: Set Old Database to Read-Only (Grace Period)
 
-### Step 7.1: Mark Railway/Render Database as Read-Only
+### Step 7.1: Mark Render/Render Database as Read-Only
 
 ```bash
 # Extract database name
@@ -339,7 +339,7 @@ This allows:
 If you need to rollback:
 
 ```bash
-# 1. Update DATABASE_URL in Vercel Dashboard back to Railway/Render URL
+# 1. Update DATABASE_URL in Vercel Dashboard back to Render/Render URL
 # 2. Redeploy application
 # 3. Remove read-only from old database:
 DB_NAME=$(echo "$SOURCE_DATABASE_URL" | sed -E 's|.*://[^/]+/([^?]+).*|\1|')
@@ -362,8 +362,8 @@ After 7 days of running on Vercel Postgres:
 
 Once confident the migration is successful:
 
-**For Railway:**
-1. Go to [Railway Dashboard](https://railway.app/dashboard)
+**For Render:**
+1. Go to [Render Dashboard](https://render.app/dashboard)
 2. Select your PostgreSQL service
 3. Click **Settings**
 4. Scroll to bottom
@@ -383,7 +383,7 @@ Once confident the migration is successful:
 Update these files to reflect the new database:
 - `README.md` - Update database setup section
 - `.env.example` - Update example DATABASE_URL
-- Deployment docs - Remove Railway/Render references
+- Deployment docs - Remove Render/Render references
 
 ---
 
@@ -478,7 +478,7 @@ Use this checklist to track your progress:
 - [ ] Copy Vercel connection strings
 
 ### Migration
-- [ ] Export data from Railway/Render
+- [ ] Export data from Render/Render
 - [ ] Import data to Vercel Postgres
 - [ ] Verify row counts match
 - [ ] Verify table structure
@@ -502,8 +502,8 @@ Use this checklist to track your progress:
 
 ## Cost Comparison
 
-### Before (Railway/Render)
-- **Railway Postgres**: $5-20/month
+### Before (Render/Render)
+- **Render Postgres**: $5-20/month
 - **Render Postgres**: $7/month (Starter)
 - **Total**: $7-20/month
 
@@ -526,13 +526,13 @@ export RAILWAY_DATABASE_URL="postgresql://..."
 export VERCEL_POSTGRES_URL="postgresql://..."
 
 # Run migration script
-python scripts/migrate_railway_to_vercel.py
+python scripts/migrate_render_to_vercel.py
 
 # Set old database to read-only
-python scripts/migrate_railway_to_vercel.py --set-readonly
+python scripts/migrate_render_to_vercel.py --set-readonly
 ```
 
-See [scripts/migrate_railway_to_vercel.py](./scripts/migrate_railway_to_vercel.py) for details.
+See [scripts/migrate_render_to_vercel.py](./scripts/migrate_render_to_vercel.py) for details.
 
 ---
 
@@ -554,7 +554,7 @@ If you encounter issues:
 
 This guide walked you through:
 ✅ Creating Vercel Postgres database
-✅ Exporting data from Railway/Render
+✅ Exporting data from Render/Render
 ✅ Importing to Vercel Postgres
 ✅ Verifying data integrity
 ✅ Updating application configuration

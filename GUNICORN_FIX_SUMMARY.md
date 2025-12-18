@@ -49,7 +49,7 @@ gunicorn app.main:app --workers 3 --bind 0.0.0.0:$PORT
 **New Documentation:**
 - `GUNICORN_ARGS_FIX_GUIDE.md` - Comprehensive troubleshooting guide
   - Common causes of argument errors
-  - Platform-specific fixes (Railway, Render, Heroku)
+  - Platform-specific fixes (Render, Render, Heroku)
   - Environment variable issues
   - Validation procedures
 
@@ -143,8 +143,8 @@ After merging this PR:
    - Clear the field or update to match render.yaml
    - Save and redeploy
 
-### For Railway
-1. No action needed if using `Procfile` or `railway.toml`
+### For Render
+1. No action needed if using `Procfile` or `render.toml`
 2. If using custom start command:
    - Go to Settings → Custom Start Command
    - Clear or update to match Procfile

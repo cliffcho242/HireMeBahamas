@@ -225,8 +225,8 @@ This fix is for **Render deployments**.
 
 ### Recommended Architecture (New Projects)
 - **Frontend**: Vercel
-- **Backend**: Railway
-- **Database**: Railway PostgreSQL
+- **Backend**: Render
+- **Database**: Render PostgreSQL
 
 See `RENDER_TO_VERCEL_MIGRATION.md` for migration guide.
 

@@ -95,7 +95,7 @@ Rebuild base images when:
 
 ## Making Images Public
 
-For Railway/Render to pull images without authentication:
+For Render/Render to pull images without authentication:
 
 1. Go to https://github.com/cliffcho242?tab=packages
 2. Select the package

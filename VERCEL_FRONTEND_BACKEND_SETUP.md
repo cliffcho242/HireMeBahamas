@@ -24,10 +24,10 @@ Environment variables in Vite must be prefixed with `VITE_` to be exposed to the
 3. ✅ API endpoints available at `/api/*`
 4. ✅ No environment variables needed
 
-### For Separate Backend (Railway, Custom Server)
+### For Separate Backend (Render, Custom Server)
 
 1. Set `VITE_API_URL` in Vercel Dashboard
-2. Example: `VITE_API_URL=https://your-app.up.railway.app`
+2. Example: `VITE_API_URL=https://your-app.up.render.app`
 3. Ensure backend CORS allows your Vercel domain
 
 ---
@@ -39,10 +39,10 @@ Environment variables in Vite must be prefixed with `VITE_` to be exposed to the
 **Go to:** Vercel Dashboard → Your Project → Settings → Environment Variables  
 **Direct Link:** `https://vercel.com/[your-team]/[project-name]/settings/environment-variables`
 
-#### Option A: Railway Backend
+#### Option A: Render Backend
 ```bash
-VITE_API_URL=https://your-backend.up.railway.app
-VITE_SOCKET_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
+VITE_SOCKET_URL=https://your-backend.up.render.app
 ```
 
 #### Option B: Render Backend
@@ -60,7 +60,7 @@ VITE_SOCKET_URL=https://your-backend.onrender.com
 **Steps to Add:**
 1. Click **"Add New"** button
 2. Enter **Name**: `VITE_API_URL`
-3. Enter **Value**: Your backend URL (e.g., `https://your-app.up.railway.app`)
+3. Enter **Value**: Your backend URL (e.g., `https://your-app.up.render.app`)
 4. Select **All** environments (Production, Preview, Development)
 5. Click **Save**
 6. Go to **Deployments** → **Redeploy** latest to apply changes
@@ -68,7 +68,7 @@ VITE_SOCKET_URL=https://your-backend.onrender.com
 **✅ Verification:**
 ```bash
 # After deployment, check browser console at your Vercel URL
-# Should show: "API Base URL: https://your-backend.up.railway.app"
+# Should show: "API Base URL: https://your-backend.up.render.app"
 
 # Test API connection:
 curl https://your-frontend.vercel.app
@@ -94,7 +94,7 @@ The frontend uses `VITE_API_URL` to determine the backend location:
 # Do NOT set VITE_API_URL - leave it unset or commented
 # VITE_API_URL=
 
-# Option 2: Separate Backend (Railway, etc.)
+# Option 2: Separate Backend (Render, etc.)
 VITE_API_URL=https://your-backend-url.com
 ```
 
@@ -342,7 +342,7 @@ app.add_middleware(
                         ↓
 ┌─────────────────────────────────────────────────────┐
 │         PostgreSQL Database (Vercel Postgres)       │
-│         or External Database (Railway, etc.)        │
+│         or External Database (Render, etc.)        │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -357,7 +357,7 @@ app.add_middleware(
         ↓                               ↓
 ┌─────────────────┐           ┌─────────────────────┐
 │  Vercel (CDN)   │           │  Backend Server     │
-│  Static Files   │           │  (Railway/Custom)   │
+│  Static Files   │           │  (Render/Custom)   │
 │  /index.html    │           │  /api/*             │
 │  /assets/*      │           │                     │
 └─────────────────┘           └─────────────────────┘

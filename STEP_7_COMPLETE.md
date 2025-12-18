@@ -136,11 +136,11 @@ All checks passed:
 4. Deploy
 5. Done! 🎉
 
-### Option 3: Railway Redis
+### Option 3: Render Redis
 
 **Setup Steps:**
-1. In Railway dashboard, add Redis plugin
-2. Railway auto-configures `REDIS_URL`
+1. In Render dashboard, add Redis plugin
+2. Render auto-configures `REDIS_URL`
 3. Deploy
 4. Done! 🎉
 
@@ -379,7 +379,7 @@ await invalidate_cache("prefix:")
 ### Cost Optimization
 - Start with free tiers (Upstash, Render)
 - Upgrade only when needed
-- Use private networking (Railway)
+- Use private networking (Render)
 - Monitor Redis memory usage
 
 ### Debugging
@@ -400,7 +400,7 @@ await invalidate_cache("prefix:")
 ### External Resources
 - [Upstash Docs](https://docs.upstash.com/)
 - [Render Redis Guide](https://render.com/docs/redis)
-- [Railway Redis Plugin](https://docs.railway.app/databases/redis)
+- [Render Redis Plugin](https://docs.render.app/databases/redis)
 - [Redis Documentation](https://redis.io/documentation)
 
 ---

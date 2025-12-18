@@ -56,7 +56,7 @@
 ### Environment Variables
 - Removed hardcoded `VITE_API_URL` from `vercel.json`
 - This is a security improvement as secrets should be configured via dashboard
-- Railway backend URL uses environment variable fallback pattern
+- Render backend URL uses environment variable fallback pattern
 
 ### Input Validation
 - No changes to input validation logic
@@ -89,5 +89,5 @@ All security checks passed. No vulnerabilities introduced. The merge conflict re
 
 1. ✅ Apply this resolution to PR #349 using instructions in `PR_349_MERGE_RESOLUTION.md`
 2. ✅ Set `VITE_API_URL` environment variable in Vercel dashboard after merge
-3. ✅ Verify deployment works correctly with Railway backend
+3. ✅ Verify deployment works correctly with Render backend
 4. ✅ Monitor for any configuration issues post-deployment

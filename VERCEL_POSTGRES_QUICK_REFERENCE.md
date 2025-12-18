@@ -29,16 +29,16 @@ git push origin main
 
 ---
 
-## 🔄 Migration from Railway/Render
+## 🔄 Migration from Render/Render
 
 ### One-Command Migration
 ```bash
 # Set source and target URLs
-export RAILWAY_DATABASE_URL="postgresql://user:pass@railway.app:5432/railway"
+export RAILWAY_DATABASE_URL="postgresql://user:pass@render.app:5432/render"
 export VERCEL_POSTGRES_URL="postgresql://default:pass@ep-xxxxx.neon.tech:5432/verceldb"
 
 # Run migration script
-python scripts/migrate_railway_to_vercel.py
+python scripts/migrate_render_to_vercel.py
 
 # Verify migration
 python scripts/verify_vercel_postgres_migration.py
@@ -46,7 +46,7 @@ python scripts/verify_vercel_postgres_migration.py
 
 ### Manual Migration (3 Steps)
 ```bash
-# 1. Export from Railway/Render
+# 1. Export from Render/Render
 pg_dump "$RAILWAY_DATABASE_URL" \
   --no-owner --no-acl --format=custom \
   --file=backup.dump
@@ -163,7 +163,7 @@ postgresql://.../...           # ✗ missing database name
 |----------|------|---------|-------|
 | **Vercel Postgres** | Hobby | 0.5 GB | **FREE** |
 | **Vercel Postgres** | Pro | 1 GB | **$1/mo** |
-| Railway | Shared | 1 GB | $5/mo |
+| Render | Shared | 1 GB | $5/mo |
 | Render | Starter | 1 GB | $7/mo |
 
 **Savings**: $7-20/month → $0-5/month
@@ -211,7 +211,7 @@ pg_dump "$DATABASE_URL" > backup.sql
 psql "$DATABASE_URL" < backup.sql
 
 # Run migrations
-python scripts/migrate_railway_to_vercel.py
+python scripts/migrate_render_to_vercel.py
 
 # Verify setup
 python scripts/verify_vercel_postgres_migration.py

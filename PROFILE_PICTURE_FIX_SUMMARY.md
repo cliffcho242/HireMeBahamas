@@ -96,14 +96,14 @@ CodeQL security scan completed with **0 alerts**:
 - ProfilePicture database model (complete)
 - Frontend ProfilePictureGallery component (complete)
 - Image processing with Pillow (dependency already installed)
-- System dependencies on Railway/Render (nixpacks.toml already configured)
+- System dependencies on Render/Render (nixpacks.toml already configured)
 
 ## Deployment Notes
 
 ### Development Environment
 No additional setup required. The directories will be created automatically when the backend starts.
 
-### Production Environment (Railway/Render)
+### Production Environment (Render/Render)
 The `nixpacks.toml` already includes all required system dependencies:
 ```toml
 "libjpeg-dev",

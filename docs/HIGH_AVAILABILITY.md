@@ -15,7 +15,7 @@ HireMeBahamas uses a multi-tier high availability architecture:
                     ┌─────────────────────────────────┼─────────────────────────────────┐
                     │                                 │                                 │
           ┌─────────▼──────────┐           ┌─────────▼──────────┐           ┌─────────▼──────────┐
-          │   Vercel Edge      │           │   Render/Railway   │           │   PostgreSQL       │
+          │   Vercel Edge      │           │   Render/Render   │           │   PostgreSQL       │
           │   (Frontend CDN)   │           │   (Backend API)    │           │   (Database)       │
           │                    │           │                    │           │                    │
           │ • Global CDN       │           │ • Auto-scaling     │           │ • High Availability│
@@ -43,9 +43,9 @@ HireMeBahamas uses a multi-tier high availability architecture:
 
 ### Platform-Managed Load Balancing
 
-Both Railway and Render provide built-in load balancing with their managed infrastructure:
+Both Render and Render provide built-in load balancing with their managed infrastructure:
 
-#### Railway Load Balancing
+#### Render Load Balancing
 - **Automatic load balancing** across multiple instances
 - **Session affinity** (sticky sessions) for stateful applications
 - **Health-based routing** to automatically route traffic away from unhealthy instances
@@ -104,9 +104,9 @@ services:
 
 > **Note**: Scaling requires a paid plan (Standard or higher). When CPU usage exceeds 70% or memory exceeds 80%, Render will automatically add instances up to maxInstances. When usage drops, it will scale down after a cooldown period (typically 5 minutes).
 
-### Railway Auto-Scaling
+### Render Auto-Scaling
 
-Railway automatically scales based on traffic patterns. Key features:
+Render automatically scales based on traffic patterns. Key features:
 - **Horizontal scaling**: Multiple replicas for high traffic
 - **Sleep mode**: Scale to zero during inactivity (free tier)
 - **Instant wake**: Fast cold starts when traffic resumes
@@ -165,7 +165,7 @@ max_requests_jitter = 50
 }
 ```
 
-### Railway (Backend)
+### Render (Backend)
 
 **High Availability Features:**
 - **Multi-region deployments**: Deploy to multiple regions
@@ -174,7 +174,7 @@ max_requests_jitter = 50
 - **Health checks**: Automatic health monitoring
 - **Persistent volumes**: Data survives restarts
 
-**Configuration (`railway.json`):**
+**Configuration (`render.json`):**
 ```json
 {
   "deploy": {
@@ -236,7 +236,7 @@ Our `/health` endpoint provides comprehensive health information:
 
 | Platform | Path | Interval | Timeout | Unhealthy Threshold |
 |----------|------|----------|---------|---------------------|
-| Railway | `/health` | 30s | 10s | 3 failures |
+| Render | `/health` | 30s | 10s | 3 failures |
 | Render | `/health` | 30s | 10s | 3 failures |
 | Docker | `/health` | 30s | 10s | 3 failures |
 
@@ -280,7 +280,7 @@ SELECT 1;  # Every 30 seconds
 
 | Provider | Plan | Features |
 |----------|------|----------|
-| Railway PostgreSQL | Included | Auto-backups, connection pooling |
+| Render PostgreSQL | Included | Auto-backups, connection pooling |
 | Render PostgreSQL | $7/mo | Point-in-time recovery, read replicas |
 | Supabase | Free tier | Real-time, auto-scaling |
 | Neon | Free tier | Serverless, auto-scaling |
@@ -310,8 +310,8 @@ SELECT 1;  # Every 30 seconds
 
 1. **Backend Rollback**
    ```bash
-   # Railway
-   railway rollback
+   # Render
+   render rollback
    
    # Render
    # Use dashboard: Settings > Rollback
@@ -334,7 +334,7 @@ SELECT 1;  # Every 30 seconds
    - Custom metrics with Prometheus/Grafana
 
 2. **Infrastructure Monitoring**
-   - Platform dashboards (Railway, Render, Vercel)
+   - Platform dashboards (Render, Render, Vercel)
    - Uptime monitoring (UptimeRobot, Pingdom)
 
 3. **Alerting**
@@ -404,9 +404,9 @@ autoscaling:
 
 2. Push to main branch - Render auto-deploys with HA enabled
 
-### Enable High Availability on Railway
+### Enable High Availability on Render
 
-1. Update `railway.json`:
+1. Update `render.json`:
 ```json
 {
   "deploy": {
@@ -416,7 +416,7 @@ autoscaling:
 }
 ```
 
-2. Push to main branch - Railway auto-deploys with HA enabled
+2. Push to main branch - Render auto-deploys with HA enabled
 
 ### Local Development with Docker
 
@@ -448,7 +448,7 @@ docker-compose --profile production up --scale backend-flask=3
 
 ### Getting Help
 
-- Review platform documentation (Railway, Render, Vercel)
+- Review platform documentation (Render, Render, Vercel)
 - Check application logs
 - Contact platform support
 - Open an issue on GitHub

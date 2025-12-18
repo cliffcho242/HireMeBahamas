@@ -14,7 +14,7 @@ Never again:
 - ❌ psycopg.connect(... sslmode=...) with URL
 - ❌ Health endpoint touching DB
 - ❌ Backend on more than one platform
-- ❌ Railway + Render together
+- ❌ Render + Render together
 
 ### Frontend Configuration
 
@@ -95,15 +95,15 @@ python3 test_production_config_absolute_bans.py
 ### 5. Backend on Single Platform Only (Render) ✅
 
 **Files Changed:**
-- Removed: `railway.toml`
-- Removed: `railway.json`
-- Updated: `.gitignore` (added Railway config to ignore list)
+- Removed: `render.toml`
+- Removed: `render.json`
+- Updated: `.gitignore` (added Render config to ignore list)
 - Updated: `render.yaml` (added ABSOLUTE PROHIBITIONS header)
 
 **Validation:**
 ```bash
 python3 test_production_config_absolute_bans.py
-# ✅ Railway config files removed
+# ✅ Render config files removed
 # ✅ render.yaml enforces single platform deployment
 ```
 
@@ -151,7 +151,7 @@ python3 test_production_config_absolute_bans.py
 Created comprehensive test suite: `test_production_config_absolute_bans.py`
 
 **Test Categories:**
-1. ✅ No Railway configuration files
+1. ✅ No Render configuration files
 2. ✅ Single Gunicorn worker
 3. ✅ Health endpoints don't touch database
 4. ✅ No DB calls at import time
@@ -212,14 +212,14 @@ Testing Production Config Absolute Bans
 ## Files Changed
 
 ### Modified
-- `.gitignore` - Added Railway config to ignore list
+- `.gitignore` - Added Render config to ignore list
 - `backend/app/main.py` - Changed workers=2 to workers=1
 - `render.yaml` - Updated header with ABSOLUTE PROHIBITIONS
 - `vercel.json` - Removed backend builds
 
 ### Removed
-- `railway.toml` - Railway deployment config
-- `railway.json` - Railway deployment config
+- `render.toml` - Render deployment config
+- `render.json` - Render deployment config
 
 ### Created
 - `FRONTEND_BACKEND_URL_SETUP.md` - Frontend configuration guide

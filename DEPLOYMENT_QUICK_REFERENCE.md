@@ -8,15 +8,15 @@ Add these at: https://github.com/cliffcho242/HireMeBahamas/settings/secrets/acti
 ☐ VERCEL_TOKEN          → Get from: https://vercel.com/account/tokens
 ☐ VERCEL_ORG_ID         → Vercel → Settings → Team ID
 ☐ VERCEL_PROJECT_ID     → Project → Settings → Project ID
-☐ DATABASE_URL          → Railway/Render PostgreSQL connection string
+☐ DATABASE_URL          → Render/Render PostgreSQL connection string
 ☐ SECRET_KEY            → Generate: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ☐ JWT_SECRET_KEY        → Generate: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-Optional (for Railway backend):
+Optional (for Render backend):
 ```
-☐ RAILWAY_TOKEN         → https://railway.app/account/tokens
-☐ RAILWAY_PROJECT_ID    → Railway → Project Settings
+☐ RAILWAY_TOKEN         → https://render.app/account/tokens
+☐ RAILWAY_PROJECT_ID    → Render → Project Settings
 ```
 
 ## ⚙️ Vercel Environment Variables
@@ -37,8 +37,8 @@ ENVIRONMENT        = production
 | GitHub Secrets | https://github.com/cliffcho242/HireMeBahamas/settings/secrets/actions |
 | Vercel Dashboard | https://vercel.com/dashboard |
 | Vercel Tokens | https://vercel.com/account/tokens |
-| Railway Dashboard | https://railway.app/dashboard |
-| Railway Tokens | https://railway.app/account/tokens |
+| Render Dashboard | https://render.app/dashboard |
+| Render Tokens | https://render.app/account/tokens |
 
 ## 🧪 Testing Commands
 
@@ -58,9 +58,9 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
 ## 📝 Database URL Format
 
-### Railway PostgreSQL
+### Render PostgreSQL
 ```
-postgresql://postgres:PASSWORD@containers-us-west-XXX.railway.app:7432/railway?sslmode=require
+postgresql://postgres:PASSWORD@containers-us-west-XXX.render.app:7432/render?sslmode=require
 ```
 
 ### Render PostgreSQL

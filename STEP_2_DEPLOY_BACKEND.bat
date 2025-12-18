@@ -1,16 +1,16 @@
 @echo off
 REM ============================================
-REM  Step 2: Deploy Backend to Railway
-REM  Automated Railway Deployment Guide
+REM  Step 2: Deploy Backend to Render
+REM  Automated Render Deployment Guide
 REM ============================================
 
 echo.
 echo ============================================
-echo   Step 2: Deploy Backend to Railway
+echo   Step 2: Deploy Backend to Render
 echo ============================================
 echo.
 
-echo Railway is a modern platform that makes deployment easy!
+echo Render is a modern platform that makes deployment easy!
 echo.
 echo COST: 100%% FREE to start (500 hours/month = always on)
 echo.
@@ -21,10 +21,10 @@ echo ============================================
 echo.
 
 echo 1. SIGN UP / LOGIN
-echo    Opening Railway.app in your browser...
+echo    Opening Render.app in your browser...
 echo.
 
-start https://railway.app
+start https://render.app
 
 timeout /t 3 >nul
 
@@ -35,14 +35,14 @@ pause
 
 echo 3. SELECT "Deploy from GitHub repo"
 echo    - Choose "Deploy from GitHub repo"
-echo    - Railway will ask to connect to GitHub
-echo    - Authorize Railway to access your repositories
+echo    - Render will ask to connect to GitHub
+echo    - Authorize Render to access your repositories
 echo.
 pause
 
 echo 4. SELECT YOUR REPOSITORY
 echo    - Find and select: HireMeBahamas
-echo    - Railway will automatically detect your configuration!
+echo    - Render will automatically detect your configuration!
 echo.
 pause
 
@@ -64,7 +64,7 @@ echo.
 pause
 
 echo 6. WAIT FOR DEPLOYMENT
-echo    - Railway will build and deploy automatically
+echo    - Render will build and deploy automatically
 echo    - Wait 2-3 minutes
 echo    - Check the "Deployments" tab for status
 echo.
@@ -74,17 +74,17 @@ echo 7. GET YOUR BACKEND URL
 echo    - Click "Settings" tab
 echo    - Find "Domains" section
 echo    - Click "Generate Domain"
-echo    - Copy your Railway URL (e.g., https://hiremebahamas-backend-production.up.railway.app)
+echo    - Copy your Render URL (e.g., https://hiremebahamas-backend-production.up.render.app)
 echo.
-set /p RAILWAY_URL="Paste your Railway backend URL here: "
+set /p RAILWAY_URL="Paste your Render backend URL here: "
 
 if "%RAILWAY_URL%"=="" (
     echo No URL provided. You can add it later.
 ) else (
-    REM Save Railway URL to file
+    REM Save Render URL to file
     echo %RAILWAY_URL% > RAILWAY_URL.txt
     echo.
-    echo Railway URL saved!
+    echo Render URL saved!
 )
 
 echo.

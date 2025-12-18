@@ -445,7 +445,7 @@ async def get_my_list(
 ### Environment Variables
 No new environment variables required. Uses existing:
 - `DATABASE_URL` - Primary database connection
-- `DATABASE_PRIVATE_URL` - Railway private network (optional)
+- `DATABASE_PRIVATE_URL` - Render private network (optional)
 - `POSTGRES_URL` - Vercel Postgres (optional)
 
 ### Database Indexes

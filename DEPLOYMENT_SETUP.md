@@ -1,13 +1,13 @@
 # 🚀 Deployment Setup Guide
 
-This guide explains how to set up automated deployments for HireMeBahamas using GitHub Actions, Vercel, and optionally Railway.
+This guide explains how to set up automated deployments for HireMeBahamas using GitHub Actions, Vercel, and optionally Render.
 
 ## Overview
 
 HireMeBahamas supports multiple deployment strategies:
 
 1. **Vercel Serverless** (Recommended) - Frontend + Backend API on Vercel
-2. **Railway Backend** (Optional) - Separate backend instance on Railway
+2. **Render Backend** (Optional) - Separate backend instance on Render
 3. **Flexible Setup** - Choose what works best for you
 
 The deployment workflows are designed to be **gracefully degrading** - they will skip deployment steps if credentials are not configured, allowing you to set up services incrementally.
@@ -30,16 +30,16 @@ For a basic deployment with Vercel serverless backend:
 
 3. Push to `main` branch - deployment happens automatically!
 
-### Full Setup (Vercel + Railway)
+### Full Setup (Vercel + Render)
 
-For deploying both Vercel frontend and Railway backend:
+For deploying both Vercel frontend and Render backend:
 
 1. Set up all Vercel secrets (above)
-2. Additionally add Railway secrets:
+2. Additionally add Render secrets:
    - `RAILWAY_TOKEN`
    - `RAILWAY_PROJECT_ID`
 
-3. Configure Railway environment variables in Railway dashboard
+3. Configure Render environment variables in Render dashboard
 
 ## Detailed Setup Instructions
 
@@ -57,18 +57,18 @@ GitHub Actions secrets are used to authenticate with deployment services.
 | `VERCEL_ORG_ID` | Your Vercel organization/team ID | 1. Go to https://vercel.com<br>2. Click Settings<br>3. Copy "Team ID" (starts with `team_`) |
 | `VERCEL_PROJECT_ID` | Your project's unique ID | 1. Go to project dashboard<br>2. Settings → General<br>3. Copy "Project ID" (starts with `prj_`) |
 
-#### Railway Secrets (Optional, for Railway deployment)
+#### Render Secrets (Optional, for Render deployment)
 
 | Secret | Description | How to Get |
 |--------|-------------|------------|
-| `RAILWAY_TOKEN` | Authentication token for Railway API | 1. Go to https://railway.app/account/tokens<br>2. Click "Create Token"<br>3. Copy the token |
-| `RAILWAY_PROJECT_ID` | Your Railway project ID | 1. Go to your project<br>2. Settings<br>3. Copy "Project ID" |
+| `RAILWAY_TOKEN` | Authentication token for Render API | 1. Go to https://render.app/account/tokens<br>2. Click "Create Token"<br>3. Copy the token |
+| `RAILWAY_PROJECT_ID` | Your Render project ID | 1. Go to your project<br>2. Settings<br>3. Copy "Project ID" |
 
 #### Database & Security Secrets
 
 | Secret | Description | How to Generate |
 |--------|-------------|-----------------|
-| `DATABASE_URL` | PostgreSQL connection string | Get from Railway/Render/Vercel Postgres<br>Format: `postgresql://user:pass@host:5432/db?sslmode=require` |
+| `DATABASE_URL` | PostgreSQL connection string | Get from Render/Render/Vercel Postgres<br>Format: `postgresql://user:pass@host:5432/db?sslmode=require` |
 | `SECRET_KEY` | Application secret key | `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` |
 | `JWT_SECRET_KEY` | JWT signing key | `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` |
 
@@ -88,15 +88,15 @@ These must be set in your Vercel project dashboard.
 
 **Important:** The `SECRET_KEY` and `JWT_SECRET_KEY` must be identical between GitHub Secrets and Vercel Environment Variables for JWT tokens to work across deployments.
 
-### 3. Railway Environment Variables (Optional)
+### 3. Render Environment Variables (Optional)
 
-If using Railway backend, configure these in Railway project settings:
+If using Render backend, configure these in Render project settings:
 
-- `DATABASE_URL` - Your Railway PostgreSQL connection string
+- `DATABASE_URL` - Your Render PostgreSQL connection string
 - `SECRET_KEY` - Same as other deployments
 - `JWT_SECRET_KEY` - Same as other deployments
 - `ENVIRONMENT` - Set to `production`
-- `PORT` - Railway will provide this automatically
+- `PORT` - Render will provide this automatically
 
 ### 4. GitHub Repository Variables (Optional)
 
@@ -107,7 +107,7 @@ These are used for health checks and monitoring.
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `VERCEL_URL` | Your Vercel deployment URL | `https://hiremebahamas.vercel.app` |
-| `RAILWAY_BACKEND_URL` | Your Railway backend URL (if using) | `https://hiremebahamas.railway.app` |
+| `RAILWAY_BACKEND_URL` | Your Render backend URL (if using) | `https://hiremebahamas.render.app` |
 
 ## Deployment Workflows
 
@@ -128,10 +128,10 @@ Deployments are triggered automatically by:
   - ⏭️ Skips gracefully if secrets are missing
   - 📊 Shows summary in GitHub Actions
 
-#### deploy-backend.yml (Railway)
+#### deploy-backend.yml (Render)
 - **Triggers:** Push to `main` (when backend files change), manual dispatch
 - **Behavior:**
-  - ✅ Runs if Railway token is configured
+  - ✅ Runs if Render token is configured
   - ⏭️ Skips gracefully if token is missing
   - 📊 Shows summary in GitHub Actions
 
@@ -186,7 +186,7 @@ curl https://your-deployment.vercel.app/api/health
 **File:** `.github/workflows/uptime-monitoring.yml`
 
 - Runs every 15 minutes
-- Checks Railway backend (if configured)
+- Checks Render backend (if configured)
 - Creates GitHub issues on critical failures
 - Provides status summaries
 
@@ -198,7 +198,7 @@ curl https://your-deployment.vercel.app/api/health
 
 **Solution:** This is intentional! Add the required secrets to enable deployment:
 - For Vercel: Add `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
-- For Railway: Add `RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`
+- For Render: Add `RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`
 
 ### "Database connection failed"
 
@@ -238,8 +238,8 @@ curl https://your-deployment.vercel.app/api/health
 4. Select the deployment
 5. View "Functions" tab for API logs
 
-**Railway:**
-1. Go to https://railway.app/dashboard
+**Render:**
+1. Go to https://render.app/dashboard
 2. Select your project
 3. Click on the service
 4. View "Deployments" tab
@@ -259,7 +259,7 @@ curl https://your-deployment.vercel.app/api/health
 1. **Never commit secrets** - Use GitHub Secrets and environment variables
 2. **Rotate tokens regularly** - Generate new tokens every 6 months
 3. **Use strong secret keys** - At least 32 characters, randomly generated
-4. **Enable 2FA** - On GitHub, Vercel, and Railway accounts
+4. **Enable 2FA** - On GitHub, Vercel, and Render accounts
 5. **Restrict token permissions** - Use minimum required permissions
 
 ### Performance
@@ -273,7 +273,7 @@ curl https://your-deployment.vercel.app/api/health
 ### Maintenance
 
 1. **Monitor deployments** - Check GitHub Actions regularly
-2. **Review logs** - Look for errors in Vercel/Railway logs
+2. **Review logs** - Look for errors in Vercel/Render logs
 3. **Update dependencies** - Keep packages up to date
 4. **Test before merging** - Use pull requests for changes
 5. **Backup database** - Regular backups of PostgreSQL data
@@ -320,7 +320,7 @@ curl -X POST https://your-deployment.vercel.app/api/auth/login \
 ### Official Documentation
 
 - [Vercel Documentation](https://vercel.com/docs)
-- [Railway Documentation](https://docs.railway.app)
+- [Render Documentation](https://docs.render.app)
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [FastAPI Documentation](https://fastapi.tiangolo.com)
 
@@ -335,7 +335,7 @@ curl -X POST https://your-deployment.vercel.app/api/auth/login \
 
 1. Check this guide and troubleshooting section
 2. Review GitHub Actions logs for specific errors
-3. Check Vercel/Railway deployment logs
+3. Check Vercel/Render deployment logs
 4. Create a GitHub issue with:
    - Error message and logs
    - Steps to reproduce

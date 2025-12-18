@@ -56,7 +56,7 @@ gunicorn app.main:app \
 
 ✅ **Correct Settings**:
 - Uses `uvicorn.workers.UvicornWorker` for ASGI support
-- Binds to `0.0.0.0:$PORT` (dynamic port from Railway/Render)
+- Binds to `0.0.0.0:$PORT` (dynamic port from Render/Render)
 - 2 workers for production
 - 120s timeout prevents premature SIGTERM
 
@@ -140,7 +140,7 @@ PORT=10000  # Will be set automatically by platform
 
 ### Platform-Specific Notes:
 
-#### Railway:
+#### Render:
 - Uses `nixpacks.toml` for build configuration
 - Automatically injects `PORT` environment variable
 - Command: `cd backend && poetry run gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000} --workers 2 --timeout 120`

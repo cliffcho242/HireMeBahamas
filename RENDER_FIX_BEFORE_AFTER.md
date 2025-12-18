@@ -57,9 +57,9 @@ Successfully installed Flask-3.1.0 gunicorn-23.0.0 [... 59 more packages]
 🚀 Ready to start application with gunicorn
 
 ==> Starting service with 'gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload'...
-🚀 Starting Gunicorn (Railway Healthcheck Optimized)
+🚀 Starting Gunicorn (Render Healthcheck Optimized)
 ✅ Gunicorn ready to accept connections in 0.85s
-🎉 HireMeBahamas API is ready for Railway healthcheck
+🎉 HireMeBahamas API is ready for Render healthcheck
 ==> Deploy successful! 🎉
 ```
 

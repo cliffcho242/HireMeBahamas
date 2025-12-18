@@ -83,9 +83,9 @@ alembic upgrade head
 
 ### Deployment Options
 
-#### Option 1: Manual (Railway Console)
+#### Option 1: Manual (Render Console)
 ```bash
-railway shell
+render shell
 alembic upgrade head
 ```
 
@@ -97,7 +97,7 @@ alembic upgrade head
     DATABASE_URL: ${{ secrets.DATABASE_URL }}
 ```
 
-#### Option 3: One-off Job (Railway)
+#### Option 3: One-off Job (Render)
 - Create separate service
 - Set START_COMMAND: `alembic upgrade head`
 - Run once on each deployment

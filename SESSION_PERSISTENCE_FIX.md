@@ -137,7 +137,7 @@ const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
 ### Required Environment Variables
 
-Set these in your production environment (Railway, Vercel, etc.):
+Set these in your production environment (Render, Vercel, etc.):
 
 ```bash
 SECRET_KEY=<generate-with-secrets.token_urlsafe(32)>
@@ -219,7 +219,7 @@ npm run build
 
 ## Next Steps
 
-1. Deploy backend to Railway with PostgreSQL DATABASE_URL
+1. Deploy backend to Render with PostgreSQL DATABASE_URL
 2. Deploy frontend to Vercel
 3. Set environment variables in production
 4. Test complete user registration and login flow

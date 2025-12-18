@@ -201,13 +201,13 @@ All validation checks passed:
    - Check logs for: "✅ Startup completed IMMEDIATELY"
    - Verify no worker SIGTERM errors
 
-### For Railway/Heroku:
+### For Render/Heroku:
 
 1. **Environment variables are already set in Procfile**
 
 2. **Deploy normally:**
    ```bash
-   git push railway main
+   git push render main
    # or
    git push heroku main
    ```

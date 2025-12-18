@@ -80,7 +80,7 @@ connect_args={
 
 ✅ **Status:** No `statement_timeout` in server_settings  
 ✅ **Documentation:** Comment explains alternative approach  
-✅ **Test Verification:** `backend/test_railway_postgres_settings.py` line 76-81 verifies this
+✅ **Test Verification:** `backend/test_render_postgres_settings.py` line 76-81 verifies this
 
 #### 3. backend/app/core/database.py (Async SQLAlchemy - asyncpg)
 
@@ -138,7 +138,7 @@ options="-c jit=off",
 The following references to `statement_timeout` are **NOT problematic**:
 
 1. **Documentation comments** (final_backend_postgresql.py lines 2790-2791):
-   - Explains what Railway's monitoring queries do
+   - Explains what Render's monitoring queries do
    - Does not set the parameter
 
 2. **Status reporting** (final_backend_postgresql.py line 4097):
@@ -147,7 +147,7 @@ The following references to `statement_timeout` are **NOT problematic**:
 
 3. **Test files**:
    - `test_neon_pooled_connection.py` - Verifies the fix
-   - `backend/test_railway_postgres_settings.py` - Verifies the fix
+   - `backend/test_render_postgres_settings.py` - Verifies the fix
 
 ## Alternative Approaches (If Timeout Needed)
 
@@ -179,7 +179,7 @@ Set default `statement_timeout` at the database or role level in Neon's console,
 | Database Provider | Pooler | statement_timeout in options | statement_timeout in server_settings | Current Status |
 |------------------|--------|------------------------------|-------------------------------------|----------------|
 | Neon | PgBouncer | ❌ NOT SUPPORTED | ❌ NOT SUPPORTED | ✅ Compatible |
-| Railway | Direct | ✅ Supported | ✅ Supported | ✅ Compatible |
+| Render | Direct | ✅ Supported | ✅ Supported | ✅ Compatible |
 | Render | Direct | ✅ Supported | ✅ Supported | ✅ Compatible |
 | Supabase | Supavisor/PgBouncer | ❌ NOT SUPPORTED | ❌ NOT SUPPORTED | ✅ Compatible |
 | Direct PostgreSQL | None | ✅ Supported | ✅ Supported | ✅ Compatible |
@@ -193,7 +193,7 @@ The codebase correctly:
 2. Does NOT set `statement_timeout` in `server_settings` dictionary
 3. Includes documentation explaining why it's not set
 4. Provides guidance for session-level configuration if needed
-5. Maintains compatibility with all deployment targets (Neon, Railway, Render, Vercel)
+5. Maintains compatibility with all deployment targets (Neon, Render, Render, Vercel)
 
 ## Testing
 
@@ -208,7 +208,7 @@ Expected result: **5/5 tests passed**
 
 - `NEON_POOLED_CONNECTION_FIX_SUMMARY.md` - Detailed explanation of the original fix
 - `test_neon_pooled_connection.py` - Automated verification tests
-- `backend/test_railway_postgres_settings.py` - Railway/Render settings verification
+- `backend/test_render_postgres_settings.py` - Render/Render settings verification
 
 ## Date
 

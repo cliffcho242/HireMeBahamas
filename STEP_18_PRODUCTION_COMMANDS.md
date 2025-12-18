@@ -18,7 +18,7 @@ pip install poetry && poetry install --only=main
 poetry run gunicorn app.main:app --config gunicorn.conf.py
 ```
 
-### 2. Procfile (Railway/Heroku)
+### 2. Procfile (Render/Heroku)
 
 **Main Procfile:**
 ```bash
@@ -30,7 +30,7 @@ web: poetry run gunicorn app.main:app --config gunicorn.conf.py
 web: poetry run gunicorn app.main:app --config gunicorn.conf.py
 ```
 
-### 3. Railway Configuration (`railway.toml`)
+### 3. Render Configuration (`render.toml`)
 
 **Start Command:**
 ```bash
@@ -122,7 +122,7 @@ The following environment variables can be used to override defaults:
 2. Start command uses Poetry to run Gunicorn
 3. All configuration in `gunicorn.conf.py`
 
-### Railway
+### Render
 1. Nixpacks installs Poetry during build
 2. Start command uses Poetry to run Gunicorn
 3. Auto-detects `pyproject.toml` and `poetry.lock`
@@ -187,7 +187,7 @@ Expected output:
 If you need to rollback to direct Gunicorn commands:
 
 1. **Render**: Update `startCommand` in `render.yaml`
-2. **Railway**: Update `startCommand` in `railway.toml`
+2. **Render**: Update `startCommand` in `render.toml`
 3. **Heroku**: Update `web:` line in `Procfile`
 
 The old commands are preserved in Git history for easy restoration.

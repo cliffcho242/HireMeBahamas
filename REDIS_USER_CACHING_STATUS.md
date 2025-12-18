@@ -434,7 +434,7 @@ health = await redis_cache.health_check()
    - Sub-10ms latency
    - Free tier: 10,000 commands/day
 
-2. **Railway Redis**
+2. **Render Redis**
    - Usage-based pricing
    - Auto-scaling
    - Private networking

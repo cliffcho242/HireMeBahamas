@@ -121,7 +121,7 @@ npm run lint
 
 ## Production Deployment Considerations
 
-### Backend (Railway/Render)
+### Backend (Render/Render)
 1. System dependencies are automatically installed via buildpacks
 2. Python dependencies installed from `requirements.txt`
 3. Environment variables must be set:

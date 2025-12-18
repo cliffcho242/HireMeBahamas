@@ -127,7 +127,7 @@ echo "DATABASE_URL=postgresql://username:password@hostname:5432/database" >> .en
 
 **DO NOT use SQLite in production!** It causes data loss because:
 - ❌ Container filesystems are destroyed on restart
-- ❌ Railway/Render/Docker don't persist local files
+- ❌ Render/Render/Docker don't persist local files
 - ❌ Every deployment = fresh container = lost data
 
 **ALWAYS use PostgreSQL in production:**
@@ -138,8 +138,8 @@ echo "DATABASE_URL=postgresql://username:password@hostname:5432/database" >> .en
 
 ### Setting Up PostgreSQL
 
-#### On Railway:
-1. Add PostgreSQL plugin in Railway dashboard
+#### On Render:
+1. Add PostgreSQL plugin in Render dashboard
 2. Copy the DATABASE_URL from plugin
 3. Set as environment variable
 4. Redeploy
@@ -256,7 +256,7 @@ DATABASE_URL=postgresql://user:password@host:5432/database
 
 If you continue to experience issues with user storage:
 
-1. Check logs: `gunicorn` or `railway logs`
+1. Check logs: `gunicorn` or `render logs`
 2. Verify DATABASE_URL is set correctly
 3. Ensure PostgreSQL is accessible
 4. Confirm all dependencies are installed

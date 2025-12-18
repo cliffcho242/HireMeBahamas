@@ -59,8 +59,8 @@ forwarded_allow_ips = "*"  # Trusts cloud platform load balancers
 - SSL/TLS enforced automatically
 - Private networking for database connections
 
-**Railway:**
-- Secrets injected via Railway's environment system
+**Render:**
+- Secrets injected via Render's environment system
 - Managed PostgreSQL with automatic backups
 - Private networking between services
 

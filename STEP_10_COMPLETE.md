@@ -233,7 +233,7 @@ python migrations/add_performance_indexes.py
 curl https://api.hiremebahamas.com/health
 
 # Check that workers are running
-# Railway/Render logs should show:
+# Render/Render logs should show:
 # "🚀 Starting Gunicorn (Step 10 - Scaling to 100K+ Users)"
 # "Workers: 4 × 4 threads = 16 capacity"
 ```
@@ -246,7 +246,7 @@ curl https://api.hiremebahamas.com/health
 
 1. **Request Throughput**
    - Target: >400 req/s
-   - Monitor: Railway/Render metrics
+   - Monitor: Render/Render metrics
 
 2. **Response Times**
    - Target: p95 <100ms

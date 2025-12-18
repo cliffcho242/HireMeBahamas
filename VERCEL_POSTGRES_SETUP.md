@@ -221,19 +221,19 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
 ## Database Migration
 
-### Option 1: Migrate from Railway Postgres
+### Option 1: Migrate from Render Postgres
 
-If you're currently using Railway Postgres, follow these steps:
+If you're currently using Render Postgres, follow these steps:
 
 1. **Backup Current Database**
    ```bash
-   # Export from Railway
+   # Export from Render
    pg_dump "$RAILWAY_DATABASE_URL" \
      --no-owner \
      --no-acl \
      --format=custom \
      --compress=0 \
-     --file=railway_backup_$(date +%Y%m%d_%H%M%S).dump
+     --file=render_backup_$(date +%Y%m%d_%H%M%S).dump
    ```
 
 2. **Import to Vercel Postgres**
@@ -246,7 +246,7 @@ If you're currently using Railway Postgres, follow these steps:
      --no-owner \
      --no-acl \
      --dbname="$VERCEL_POSTGRES_URL" \
-     railway_backup_*.dump
+     render_backup_*.dump
    ```
 
 3. **Verify Data**
@@ -494,7 +494,7 @@ Access: `Vercel Dashboard → Storage → [Your Database] → Insights`
 
 - **Vercel Postgres Documentation**: https://vercel.com/docs/storage/vercel-postgres
 - **Neon Documentation**: https://neon.tech/docs/introduction
-- **Migration from Railway**: See [VERCEL_POSTGRES_MIGRATION.md](./VERCEL_POSTGRES_MIGRATION.md)
+- **Migration from Render**: See [VERCEL_POSTGRES_MIGRATION.md](./VERCEL_POSTGRES_MIGRATION.md)
 - **Database Security**: See [DOCKER_SECURITY.md](./DOCKER_SECURITY.md)
 - **Environment Variables**: See [.env.example](./.env.example)
 

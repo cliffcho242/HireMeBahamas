@@ -113,7 +113,7 @@ cd admin-panel && npm run build
 
 The updated installation scripts ensure dependencies are installed automatically:
 
-1. **Railway/Render/Vercel**: These platforms run `npm install` automatically when they detect `package.json`
+1. **Render/Render/Vercel**: These platforms run `npm install` automatically when they detect `package.json`
 
 2. **Manual Deployment**: Run the installation script:
    ```bash

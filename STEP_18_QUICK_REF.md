@@ -15,8 +15,8 @@ buildCommand: pip install poetry && poetry install --only=main
 startCommand: poetry run gunicorn app.main:app --config gunicorn.conf.py
 ```
 
-### Railway
-**railway.toml:**
+### Render
+**render.toml:**
 ```toml
 startCommand = "cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py"
 ```
@@ -90,7 +90,7 @@ Expected output:
    poetry run gunicorn app.main:app --config gunicorn.conf.py
    ```
 
-4. **Deploy**: Push to your platform (Render/Railway/Heroku)
+4. **Deploy**: Push to your platform (Render/Render/Heroku)
 
 ## Troubleshooting
 

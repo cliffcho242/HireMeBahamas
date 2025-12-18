@@ -95,16 +95,16 @@ Created 20 test cases covering:
 
 **Before**:
 ```bash
-DATABASE_URL=postgresql://username:password@YOUR-ACTUAL-HOSTNAME.railway.app:5432/railway?sslmode=require
+DATABASE_URL=postgresql://username:password@YOUR-ACTUAL-HOSTNAME.render.app:5432/render?sslmode=require
 ```
 
 **After**:
 ```bash
-# ⚠️  IMPORTANT: Copy your ACTUAL connection string from Railway Dashboard!
-#     Do NOT manually type placeholders - copy the entire URL from Railway
-#     Railway Dashboard → PostgreSQL → Connect → Copy Connection String
+# ⚠️  IMPORTANT: Copy your ACTUAL connection string from Render Dashboard!
+#     Do NOT manually type placeholders - copy the entire URL from Render
+#     Render Dashboard → PostgreSQL → Connect → Copy Connection String
 # Example format:
-# DATABASE_URL=postgresql://postgres:ABCxyz123@containers-us-west-123.railway.app:5432/railway?sslmode=require
+# DATABASE_URL=postgresql://postgres:ABCxyz123@containers-us-west-123.render.app:5432/render?sslmode=require
 DATABASE_URL=
 ```
 
@@ -298,4 +298,4 @@ This implementation ensures that all DATABASE_URL configurations follow the NEON
 - [Vercel Postgres Documentation](https://vercel.com/docs/storage/vercel-postgres)
 - [Neon Documentation](https://neon.tech/docs/introduction)
 - [PostgreSQL Connection Strings](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING)
-- [Railway Database Setup](https://docs.railway.app/databases/postgresql)
+- [Render Database Setup](https://docs.render.app/databases/postgresql)

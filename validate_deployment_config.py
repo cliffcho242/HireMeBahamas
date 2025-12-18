@@ -73,16 +73,16 @@ def check_render_yaml():
         print_warning("No startCommand found in render.yaml")
         return False
 
-def check_railway_toml():
-    """Check railway.toml configuration"""
-    print_header("Checking railway.toml")
+def check_render_toml():
+    """Check render.toml configuration"""
+    print_header("Checking render.toml")
     
-    railway_toml_path = Path("railway.toml")
-    if not railway_toml_path.exists():
-        print_warning("railway.toml not found")
+    render_toml_path = Path("render.toml")
+    if not render_toml_path.exists():
+        print_warning("render.toml not found")
         return False
     
-    content = railway_toml_path.read_text()
+    content = render_toml_path.read_text()
     
     if "startCommand" in content:
         # Extract the startCommand
@@ -118,7 +118,7 @@ def check_railway_toml():
             print_info(f"Command: {command[:80]}...")
             return True
     
-    print_warning("No startCommand or cmd found in railway.toml")
+    print_warning("No startCommand or cmd found in render.toml")
     return False
 
 def check_procfile():
@@ -304,7 +304,7 @@ def main():
     results = []
     
     results.append(("render.yaml", check_render_yaml()))
-    results.append(("railway.toml", check_railway_toml()))
+    results.append(("render.toml", check_render_toml()))
     results.append(("Procfile", check_procfile()))
     results.append(("gunicorn.conf.py", check_gunicorn_config()))
     results.append(("Entry Points", check_entry_points()))

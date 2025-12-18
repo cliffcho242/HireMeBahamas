@@ -361,7 +361,7 @@ https://github.com/YOUR_USERNAME/HireMeBahamas/actions/workflows/vercel-keepaliv
    ```
 
 3. **Check database provider**:
-   - Railway: Ensure database is not paused
+   - Render: Ensure database is not paused
    - Render: Ensure database service is running
    - Vercel Postgres: Check Vercel Storage dashboard
 

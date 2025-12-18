@@ -164,10 +164,10 @@ LOGIN FAILED status=failure http_status=401 reason=invalid_password email=user@e
 
 ## 📞 Troubleshooting Commands
 
-### Check backend logs (Railway/Render)
+### Check backend logs (Render/Render)
 ```bash
-# Railway
-railway logs
+# Render
+render logs
 
 # Render
 # View logs in Render dashboard

@@ -21,7 +21,7 @@ Frontend (Vite/React)  →  /api/*  →  Vercel Serverless Functions (Python/Fas
 
 - Vercel account (free tier is sufficient)
 - GitHub repository connected to Vercel
-- Vercel Postgres database (optional, can use Railway)
+- Vercel Postgres database (optional, can use Render)
 
 ## Deployment Steps
 
@@ -43,7 +43,7 @@ Frontend (Vite/React)  →  /api/*  →  Vercel Serverless Functions (Python/Fas
 
 Required:
 ```bash
-# Database (use Vercel Postgres or Railway)
+# Database (use Vercel Postgres or Render)
 DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
 
 # Authentication
@@ -261,7 +261,7 @@ function getBackendConfig(): BackendConfig {
 
 **Best for:** Most production deployments
 
-### Option B: Railway Backend + Vercel Frontend
+### Option B: Render Backend + Vercel Frontend
 
 **Pros:**
 - ✅ No timeout limits
@@ -411,9 +411,9 @@ The keepalive workflow provides monitoring:
 
 ## Migration Guide
 
-### From Railway to Vercel Serverless
+### From Render to Vercel Serverless
 
-1. **Export data from Railway database**
+1. **Export data from Render database**
 2. **Set up Vercel Postgres**
 3. **Import data to Vercel Postgres**
 4. **Update environment variables in Vercel Dashboard**
@@ -422,7 +422,7 @@ The keepalive workflow provides monitoring:
 
 ### From Render to Vercel Serverless
 
-Same steps as Railway migration above.
+Same steps as Render migration above.
 
 ## Support
 

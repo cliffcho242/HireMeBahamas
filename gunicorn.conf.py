@@ -147,7 +147,7 @@ proc_name = "hiremebahamas"
 # ============================================================================
 # SECURITY
 # ============================================================================
-# Trust proxy headers from cloud platform load balancers (Railway, Render, etc.)
+# Trust proxy headers from cloud platform load balancers (Render, Render, etc.)
 forwarded_allow_ips = "*"
 
 # ============================================================================

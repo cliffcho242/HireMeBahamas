@@ -3,7 +3,7 @@
 Comprehensive Health Endpoint Tests
 ====================================
 Tests that the /health endpoint is correctly implemented across all
-deployment configurations (Render, Railway, Vercel).
+deployment configurations (Render, Render, Vercel).
 
 This test ensures:
 1. The endpoint exists and returns {"status": "ok"}
@@ -137,18 +137,18 @@ def test_deployment_configs():
         print("⚠️  render.yaml not found (optional)")
         checks.append(True)  # Optional file
     
-    # Check railway.toml
-    railway_toml = Path("railway.toml")
-    if railway_toml.exists():
-        content = railway_toml.read_text()
+    # Check render.toml
+    render_toml = Path("render.toml")
+    if render_toml.exists():
+        content = render_toml.read_text()
         if 'healthcheckPath = "/health"' in content:
-            print("✅ railway.toml has healthcheckPath = '/health'")
+            print("✅ render.toml has healthcheckPath = '/health'")
             checks.append(True)
         else:
-            print("❌ railway.toml missing healthcheckPath")
+            print("❌ render.toml missing healthcheckPath")
             checks.append(False)
     else:
-        print("⚠️  railway.toml not found (optional)")
+        print("⚠️  render.toml not found (optional)")
         checks.append(True)  # Optional file
     
     # Check Procfile
@@ -291,7 +291,7 @@ def main():
         print("  ✅ Return {'status': 'ok'} with status code 200")
         print("  ✅ Respond in <5ms (no database dependency)")
         print("  ✅ Support both GET and HEAD requests")
-        print("  ✅ Prevent SIGTERM issues on Render/Railway")
+        print("  ✅ Prevent SIGTERM issues on Render/Render")
         print()
         print("Test in browser:")
         print("  https://your-backend.onrender.com/health")

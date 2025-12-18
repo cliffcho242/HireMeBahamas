@@ -3,8 +3,8 @@
 Comprehensive API Test - Tests all major endpoints
 
 Usage:
-  # Test Railway backend
-  BACKEND_URL=https://hiremebahamas.up.railway.app python comprehensive_api_test.py
+  # Test Render backend
+  BACKEND_URL=https://hiremebahamas.up.render.app python comprehensive_api_test.py
   
   # Test Vercel backend
   BACKEND_URL=https://hiremebahamas.vercel.app python comprehensive_api_test.py

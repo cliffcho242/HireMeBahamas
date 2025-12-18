@@ -170,7 +170,7 @@ jobs:stats:overview
 - ✅ SSL/TLS support (rediss://)
 - ✅ Connection timeouts prevent hanging
 - ✅ Password authentication
-- ✅ Private network support (Railway)
+- ✅ Private network support (Render)
 
 ### Error Handling
 - ✅ Circuit breaker pattern
@@ -229,7 +229,7 @@ jobs:stats:overview
 
 **Alternatives:**
 - Render Redis (free tier: 25MB)
-- Railway Redis (usage-based pricing)
+- Render Redis (usage-based pricing)
 
 ### Step 2: Set Environment Variable
 
@@ -239,12 +239,12 @@ jobs:stats:overview
 REDIS_URL=rediss://:your-password@your-redis-host:6379
 ```
 
-**For Railway:**
+**For Render:**
 ```bash
-# In Railway Dashboard > Variables
+# In Render Dashboard > Variables
 REDIS_URL=rediss://:your-password@your-redis-host:6379
 
-# OR use Railway Redis plugin (auto-configures)
+# OR use Render Redis plugin (auto-configures)
 ```
 
 **For Vercel (if deploying backend there):**

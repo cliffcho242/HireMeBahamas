@@ -36,7 +36,7 @@ ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 2. Copy DATABASE_URL to environment variables
 3. Database auto-restarts on crashes
 
-# If using external Postgres (Railway, Supabase, etc):
+# If using external Postgres (Render, Supabase, etc):
 1. Ensure connection pooling is enabled
 2. Use postgresql:// connection string
 3. Set max_connections appropriately
@@ -48,7 +48,7 @@ ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 - Manual restart: Not needed (serverless = auto-healing)
 
 **Restart External Postgres:**
-- Railway: Dashboard → Database → Settings → Restart
+- Render: Dashboard → Database → Settings → Restart
 - Supabase: Auto-manages restarts
 - Self-hosted: `sudo systemctl restart postgresql`
 
@@ -308,8 +308,8 @@ vercel logs | grep "jose"
 **Fix 1 (Vercel Postgres):** Auto-restarts, no action needed
 **Fix 2 (External Postgres):** 
 ```bash
-# Railway:
-railway up --service database
+# Render:
+render up --service database
 
 # Check connection:
 curl https://yourdomain.com/api/ready

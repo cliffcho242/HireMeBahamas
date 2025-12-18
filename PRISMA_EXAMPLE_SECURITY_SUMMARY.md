@@ -179,7 +179,7 @@ Users implementing this example should:
 
 3. **Production Deployment:**
    - Set environment variables in hosting platform
-   - Use secrets management (Vercel/Railway/etc.)
+   - Use secrets management (Vercel/Render/etc.)
    - Enable HTTPS (automatic on Vercel)
 
 4. **Authentication (Not Implemented in Example):**

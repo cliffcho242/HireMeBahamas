@@ -13,7 +13,7 @@ Performance targets:
 Run this script on your PostgreSQL database:
     python backend/create_database_indexes.py
 
-For Railway/Render, add to your build command:
+For Render, add to your build command:
     python backend/create_database_indexes.py
 """
 import asyncio

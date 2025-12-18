@@ -19,7 +19,7 @@ class Main405Diagnostics:
 
     def __init__(self):
         self.workspace_root = Path(".")
-        self.api_base = "https://hiremebahamas-backend.railway.app"
+        self.api_base = "https://hiremebahamas-backend.render.app"
         self.local_api = "http://localhost:5000"
 
         # Setup logging

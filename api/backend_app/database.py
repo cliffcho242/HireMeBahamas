@@ -146,7 +146,7 @@ POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for conne
 POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "1800"))  # Recycle every 30 min
 
 # =============================================================================
-# CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RAILWAY
+# CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RENDER
 # =============================================================================
 # These timeouts prevent the dreaded "Connection timed out" error
 CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))  # 5s for Render cold starts
@@ -175,7 +175,7 @@ STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s
 # 1. pool_pre_ping=True - validates connections before use
 # 2. pool_recycle=300 - recycles connections (serverless-friendly)
 #
-# COPY-PASTE ENV VARS FOR NEON/RAILWAY/RENDER:
+# COPY-PASTE ENV VARS FOR NEON/RENDER:
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
 # DB_POOL_RECYCLE=300
 # =============================================================================

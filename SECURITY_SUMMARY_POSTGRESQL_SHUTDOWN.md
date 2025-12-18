@@ -1,7 +1,7 @@
 # Security Summary - PostgreSQL Graceful Shutdown Fix
 
 ## Overview
-This fix addresses the PostgreSQL "database system was not properly shut down" issue by implementing proper signal handlers and connection pool cleanup. The changes ensure graceful shutdown of the Flask application when running in Railway or Docker containers.
+This fix addresses the PostgreSQL "database system was not properly shut down" issue by implementing proper signal handlers and connection pool cleanup. The changes ensure graceful shutdown of the Flask application when running in Render or Docker containers.
 
 ## Security Analysis
 
@@ -55,7 +55,7 @@ The security scanning completed successfully with no alerts:
 #### ✅ Compatibility
 - Python 3.8+ supported with fallback for older versions
 - Works with all PostgreSQL versions
-- Compatible with Railway, Docker, Kubernetes
+- Compatible with Render, Docker, Kubernetes
 
 ### No New Security Risks Introduced
 
@@ -102,8 +102,8 @@ All security-relevant aspects have been tested:
 
 ### Deployment Considerations
 
-#### Railway/Production Environment
-- Application will receive SIGTERM from Railway when stopping
+#### Render/Production Environment
+- Application will receive SIGTERM from Render when stopping
 - 30-second grace period (from gunicorn.conf.py: `graceful_timeout = 30`)
 - Sufficient time for connection cleanup (typically < 1 second)
 - No data loss or corruption risk

@@ -191,9 +191,9 @@ function disableFeatures(capabilities) {
    Running in FALLBACK MODE with limited API functionality
    ```
 
-### Railway Deployment Logs
+### Render Deployment Logs
 
-1. Go to Railway Dashboard → Your Project
+1. Go to Render Dashboard → Your Project
 2. Click "View Logs"
 3. Look for:
    ```
@@ -241,7 +241,7 @@ EOF
 ### Support
 
 If issue persists after following this guide:
-1. Check deployment logs in Vercel/Railway
+1. Check deployment logs in Vercel/Render
 2. Review `DEPLOYMENT_FIX_SUMMARY.md` for configuration details
 3. Verify all environment variables are set
 4. Check that both `requirements.txt` and `api/requirements.txt` are current
@@ -250,4 +250,4 @@ If issue persists after following this guide:
 - `DEPLOYMENT_FIX_SUMMARY.md` - Complete deployment configuration guide
 - `.env.example` - Environment variable reference
 - `api/requirements.txt` - Required Python packages for serverless
-- `requirements.txt` - Required Python packages for Railway
+- `requirements.txt` - Required Python packages for Render

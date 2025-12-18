@@ -241,14 +241,14 @@ Analysis Result for 'python'. Found 0 alerts:
 ## Deployment Instructions
 
 ### Configuration Already in Place
-Both Railway and Render configurations use the correct command:
+Both Render and Render configurations use the correct command:
 ```bash
 cd backend && PYTHONPATH=. poetry run gunicorn app.main:app --config gunicorn.conf.py
 ```
 
 ### Deploy to Production
 ```bash
-# Push to main branch - automatic deployment on Railway/Render
+# Push to main branch - automatic deployment on Render/Render
 git push origin main
 ```
 

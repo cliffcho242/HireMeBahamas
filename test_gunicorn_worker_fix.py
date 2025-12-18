@@ -223,7 +223,7 @@ def main():
         print("4. Startup operations have timeout protection")
         print()
         print("Next steps:")
-        print("- Deploy to your platform (Railway/Render)")
+        print("- Deploy to your platform (Render/Render)")
         print("- Monitor logs for worker_abort messages")
         print("- If workers still timeout, check the diagnostic output")
         return 0

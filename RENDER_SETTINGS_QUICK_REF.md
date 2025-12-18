@@ -161,7 +161,7 @@ HireMeBahamas/
 │   │   ├── threads = 2
 │   │   └── timeout = 120
 │   │
-│   ├── Procfile                   # Railway/Heroku config (reference)
+│   ├── Procfile                   # Render/Heroku config (reference)
 │   │   └── Same settings as render.yaml
 │   │
 │   └── app/

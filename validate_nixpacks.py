@@ -43,6 +43,6 @@ def validate_nixpacks():
 if __name__ == "__main__":
     print("🔍 Validating nixpacks.toml...")
     if validate_nixpacks():
-        print("✅ Ready for Railway deployment!")
+        print("✅ Ready for Render deployment!")
     else:
         print("❌ Fix syntax errors before deploying")

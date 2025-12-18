@@ -40,7 +40,7 @@ Successfully implemented all production-safe configuration requirements with ABS
   - `vercel.json` uses `@vercel/python` (serverless)
   - `api/index.py` uses Mangum adapter (serverless)
   - No gunicorn references in Vercel configuration
-  - Procfile uses uvicorn for Railway/Render (not gunicorn)
+  - Procfile uses uvicorn for Render/Render (not gunicorn)
 - **Testing**: ✅ Validation script confirms no gunicorn in Vercel config
 
 ### ✅ 5. No database work in /health endpoint
@@ -128,7 +128,7 @@ Both issues resolved:
 ❌ ABSOLUTE BAN: DATABASE_URL uses 'localhost' in production.
 Found: 'localhost'.
 Production MUST use remote database hostname.
-Example: ep-xxxx.us-east-1.aws.neon.tech or containers-us-west-123.railway.app
+Example: ep-xxxx.us-east-1.aws.neon.tech or containers-us-west-123.render.app
 ```
 
 ### Unix Socket in Production

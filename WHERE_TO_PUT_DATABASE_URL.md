@@ -14,14 +14,14 @@
    Example: postgresql://default:abc123xyz@ep-cool-sound-12345.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require
    ```
 
-### Railway Postgres
-1. Go to https://railway.app/dashboard
+### Render Postgres
+1. Go to https://render.app/dashboard
 2. Click your **project** → **PostgreSQL service**
 3. Click **Variables** tab
 4. Copy **`DATABASE_PRIVATE_URL`** (recommended) or **`DATABASE_URL`**
    ```
-   DATABASE_PRIVATE_URL: postgresql://postgres:abc123@postgres.railway.internal:5432/railway
-   DATABASE_URL: postgresql://postgres:abc123@containers-us-west-1.railway.app:5432/railway
+   DATABASE_PRIVATE_URL: postgresql://postgres:abc123@postgres.render.internal:5432/render
+   DATABASE_URL: postgresql://postgres:abc123@containers-us-west-1.render.app:5432/render
    ```
 
 ### Render Postgres
@@ -76,22 +76,22 @@ Environment: Production, Preview, Development
 
 ---
 
-### Option 2: Vercel Frontend + Railway Backend
+### Option 2: Vercel Frontend + Render Backend
 
-#### A. Railway Backend (where to put DATABASE_URL)
+#### A. Render Backend (where to put DATABASE_URL)
 
-**Where**: Railway Dashboard → Your Project → Backend Service → Variables
+**Where**: Render Dashboard → Your Project → Backend Service → Variables
 
-1. Go to https://railway.app/dashboard
+1. Go to https://render.app/dashboard
 2. Click your **HireMeBahamas project**
 3. Click your **backend service** (NOT the PostgreSQL service)
 4. Click **Variables** tab
 5. Add these variables (click **+ New Variable**):
 
 ```bash
-# Railway auto-creates these when you add PostgreSQL:
-DATABASE_PRIVATE_URL = postgresql://postgres:abc123@postgres.railway.internal:5432/railway
-DATABASE_URL = postgresql://postgres:abc123@containers-us-west-1.railway.app:5432/railway
+# Render auto-creates these when you add PostgreSQL:
+DATABASE_PRIVATE_URL = postgresql://postgres:abc123@postgres.render.internal:5432/render
+DATABASE_URL = postgresql://postgres:abc123@containers-us-west-1.render.app:5432/render
 
 # You need to add these manually:
 SECRET_KEY = (generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))")
@@ -102,7 +102,7 @@ PORT = 8000
 ```
 
 6. Click **Add** for each variable
-7. Railway will **automatically redeploy** your backend
+7. Render will **automatically redeploy** your backend
 
 #### B. Vercel Frontend (where to put API URL)
 
@@ -115,11 +115,11 @@ PORT = 8000
 
 ```bash
 Name: VITE_API_URL
-Value: https://your-app.up.railway.app
+Value: https://your-app.up.render.app
 Environment: Production, Preview, Development
 
 Name: VITE_SOCKET_URL
-Value: https://your-app.up.railway.app
+Value: https://your-app.up.render.app
 Environment: Production, Preview, Development
 ```
 
@@ -178,9 +178,9 @@ Value: https://your-app.onrender.com
 | What | Where | Example |
 |------|-------|---------|
 | **Vercel Postgres URL** | Vercel Dashboard → Project → Settings → Environment Variables → `DATABASE_URL` | `postgresql://default:pass@ep-xxx.neon.tech:5432/verceldb` |
-| **Railway Postgres URL** | Railway Dashboard → Project → Backend Service → Variables → `DATABASE_PRIVATE_URL` | `postgresql://postgres:pass@postgres.railway.internal:5432/railway` |
+| **Render Postgres URL** | Render Dashboard → Project → Backend Service → Variables → `DATABASE_PRIVATE_URL` | `postgresql://postgres:pass@postgres.render.internal:5432/render` |
 | **Render Postgres URL** | Render Dashboard → Web Service → Environment → `DATABASE_URL` | `postgresql://user:pass@dpg-xxx-a/database` |
-| **Backend API URL** | Vercel Dashboard → Frontend Project → Settings → Environment Variables → `VITE_API_URL` | `https://your-app.railway.app` |
+| **Backend API URL** | Vercel Dashboard → Frontend Project → Settings → Environment Variables → `VITE_API_URL` | `https://your-app.render.app` |
 
 ---
 
@@ -192,8 +192,8 @@ After adding the database URL, test with these commands:
 # For Vercel
 curl https://your-app.vercel.app/api/health
 
-# For Railway backend
-curl https://your-app.up.railway.app/health
+# For Render backend
+curl https://your-app.up.render.app/health
 
 # For Render backend
 curl https://your-app.onrender.com/health
@@ -221,7 +221,7 @@ DATABASE_URL = "postgresql://user:pass@host:5432/db"
 
 ### ✅ RIGHT: Putting database URL in platform environment variables
 - Vercel: Dashboard → Settings → Environment Variables
-- Railway: Dashboard → Service → Variables
+- Render: Dashboard → Service → Variables
 - Render: Dashboard → Environment
 
 ### ❌ WRONG: Using `postgres://` (missing "ql")
@@ -253,7 +253,7 @@ DATABASE_URL=postgresql://default:pass@ep-xxx.neon.tech:5432/verceldb?sslmode=re
 ## 🔐 Security Note
 
 **NEVER** commit database URLs to git! Always use:
-- Platform environment variables (Vercel/Railway/Render dashboard)
+- Platform environment variables (Vercel/Render/Render dashboard)
 - `.env` file for local development (add to `.gitignore`)
 
 ---
@@ -261,7 +261,7 @@ DATABASE_URL=postgresql://default:pass@ep-xxx.neon.tech:5432/verceldb?sslmode=re
 ## 📚 Need More Help?
 
 - **Vercel setup**: See [VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md)
-- **Railway setup**: See [RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)
+- **Render setup**: See [RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)
 - **Full guide**: See [DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)
 
 ---

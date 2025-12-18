@@ -325,7 +325,7 @@ Your FastAPI + Postgres app is now:
 ### CHEAP 💰
 - $0-7/month on Render
 - $0/month on Vercel
-- No Railway fees
+- No Render fees
 
 ---
 

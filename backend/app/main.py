@@ -838,7 +838,7 @@ async def warm_cache_endpoint():
     
     Example cron job: */5 * * * * curl -X POST https://your-backend-url/warm-cache
     
-    For Railway: Use GitHub Actions workflow (scheduled-ping.yml)
+    For Render: Use GitHub Actions workflow (scheduled-ping.yml)
     For Vercel: Add to vercel.json cron configuration
     """
     result = await warm_cache()
@@ -1080,7 +1080,7 @@ if __name__ == "__main__":
         print("", file=sys.stderr)
         print("Common HTTP ports:", file=sys.stderr)
         print("  • 8000, 8080: Common development ports", file=sys.stderr)
-        print("  • 10000: Railway/Render default", file=sys.stderr)
+        print("  • 10000: Render default", file=sys.stderr)
         print("  • Use $PORT environment variable for cloud deployments", file=sys.stderr)
         print("", file=sys.stderr)
         print("To fix this:", file=sys.stderr)

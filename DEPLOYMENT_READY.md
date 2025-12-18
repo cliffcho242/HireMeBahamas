@@ -5,7 +5,7 @@
 All deployment configuration files have been automatically generated:
 
 - ✅ `.env` - Production environment variables
-- ✅ `railway.json` - Railway deployment config
+- ✅ `render.json` - Render deployment config
 - ✅ `vercel.json` - Vercel frontend config
 - ✅ `requirements.txt` - Python dependencies
 - ✅ `Procfile` - Heroku compatibility
@@ -31,14 +31,14 @@ git push -u origin main
 
 Or simply run: `DEPLOY.bat`
 
-### Step 2: Deploy Backend to Railway
+### Step 2: Deploy Backend to Render
 
-1. Go to: https://railway.app
+1. Go to: https://render.app
 2. Click "New Project" → "Deploy from GitHub repo"
 3. Select your HireMeBahamas repository
-4. Railway will auto-detect `railway.json` and deploy!
+4. Render will auto-detect `render.json` and deploy!
 5. Add environment variable: `SECRET_KEY` (copy from `.env` file)
-6. Copy your Railway URL (e.g., `https://hiremebahamas-backend.railway.app`)
+6. Copy your Render URL (e.g., `https://hiremebahamas-backend.render.app`)
 
 ### Step 3: Deploy Frontend to Vercel
 
@@ -47,7 +47,7 @@ Or simply run: `DEPLOY.bat`
 3. Select your HireMeBahamas repository
 4. Set Root Directory to: `frontend`
 5. Add environment variable:
-   - `VITE_API_URL` = Your Railway backend URL
+   - `VITE_API_URL` = Your Render backend URL
 6. Click "Deploy"!
 7. Your site will be live at: `https://hiremebahamas.vercel.app`
 
@@ -79,9 +79,9 @@ Once your website is live and tested:
 ## 🔒 Security Checklist
 
 Before going live:
-- [ ] Update `SECRET_KEY` in Railway environment variables
+- [ ] Update `SECRET_KEY` in Render environment variables
 - [ ] Update `ALLOWED_ORIGINS` in `.env` to your production domain
-- [ ] Enable HTTPS (automatic on Railway & Vercel)
+- [ ] Enable HTTPS (automatic on Render & Vercel)
 - [ ] Test all authentication flows
 - [ ] Set up error monitoring (Sentry)
 - [ ] Configure backup strategy for database
@@ -98,22 +98,22 @@ Add to your production deployment:
 ## 💰 Cost Breakdown
 
 ### Free Tier (Perfect for Launch):
-- Railway Backend: FREE (500 hours/month)
+- Render Backend: FREE (500 hours/month)
 - Vercel Frontend: FREE (unlimited)
 - Total: $0/month
 
 ### Paid (When You Scale):
-- Railway: $5/month
+- Render: $5/month
 - Vercel Pro: $20/month
 - Domain: $12/year
 - Total: ~$25/month + domain
 
 ## 🆘 Troubleshooting
 
-### Backend won't deploy on Railway?
-- Check `railway.json` syntax
+### Backend won't deploy on Render?
+- Check `render.json` syntax
 - Verify `requirements.txt` has all dependencies
-- Check Railway logs for errors
+- Check Render logs for errors
 
 ### Frontend won't deploy on Vercel?
 - Verify `frontend` directory structure
@@ -129,7 +129,7 @@ Add to your production deployment:
 
 - **Email**: support@hiremebahamas.com
 - **Documentation**: This file
-- **Railway Docs**: https://docs.railway.app
+- **Render Docs**: https://docs.render.app
 - **Vercel Docs**: https://vercel.com/docs
 
 ## 🎉 You're Ready!

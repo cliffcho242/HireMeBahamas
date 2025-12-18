@@ -524,7 +524,7 @@ def main():
 📝 Next Steps:
    1. Make sure your SENTRY_DSN is in .env file
    2. Run 'python test_sentry.py' to test the integration
-   3. Deploy to Railway (changes will auto-deploy)
+   3. Deploy to Render (changes will auto-deploy)
    4. Check your Sentry dashboard for events
 
 📊 Sentry Dashboard: https://sentry.io/

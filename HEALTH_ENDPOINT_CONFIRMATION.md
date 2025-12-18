@@ -73,7 +73,7 @@ services:
     healthCheckPath: /health
 ```
 
-**Railway Configuration** (`railway.toml`):
+**Render Configuration** (`render.toml`):
 ```toml
 [deploy]
 healthcheckPath = "/health"

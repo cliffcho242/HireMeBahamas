@@ -15,11 +15,11 @@ echo.
 echo COST: 100%% FREE (unlimited bandwidth!)
 echo.
 
-REM Read Railway URL if exists
+REM Read Render URL if exists
 if exist RAILWAY_URL.txt (
     set /p RAILWAY_URL=<RAILWAY_URL.txt
 ) else (
-    set /p RAILWAY_URL="Enter your Railway backend URL: "
+    set /p RAILWAY_URL="Enter your Render backend URL: "
 )
 
 echo.
@@ -66,7 +66,7 @@ echo.
 echo    Variable Name:  VITE_API_URL
 echo    Variable Value: %RAILWAY_URL%
 echo.
-echo    (Copy the Railway URL above)
+echo    (Copy the Render URL above)
 echo.
 pause
 

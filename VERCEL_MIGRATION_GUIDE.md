@@ -17,7 +17,7 @@ This guide covers the complete migration from Render to Vercel for both frontend
 ```
 Frontend (Vercel) → Backend (Render - separate service)
                      ↓
-                  Database (Railway/Render Postgres)
+                  Database (Render/Render Postgres)
 ```
 
 ### After (Vercel Only)
@@ -54,7 +54,7 @@ HireMeBahamas/
 
 - Vercel account (https://vercel.com)
 - GitHub repository connected to Vercel
-- Database URL (Vercel Postgres, Railway, or other)
+- Database URL (Vercel Postgres, Render, or other)
 
 ### 2. Configure Environment Variables in Vercel
 

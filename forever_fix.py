@@ -2,7 +2,7 @@
 """
 FOREVER FIX - Immortal Deployment System (2025)
 ===============================================
-Prevents app from dying on Vercel/Railway/Render by implementing:
+Prevents app from dying on Vercel/Render/Render by implementing:
 - Automatic health monitoring and recovery
 - Database connection keep-alive with retry logic
 - Worker process health checks
@@ -71,7 +71,7 @@ _stats = {
 async def database_keepalive(db_engine):
     """
     Keeps database connection alive by pinging every N seconds.
-    Prevents Railway/Render from sleeping the database.
+    Prevents Render/Render from sleeping the database.
     """
     from sqlalchemy import text
     
