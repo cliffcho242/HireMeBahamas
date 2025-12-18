@@ -163,7 +163,8 @@ if USE_POSTGRESQL:
         "database": parsed.path[1:],  # Remove leading '/'
         "user": parsed.username,
         "password": parsed.password,
-        "sslmode": "require",
+        # ❌ DO NOT include sslmode here - it must be in DATABASE_URL query string
+        # SSL is configured via DATABASE_URL: postgresql://...?sslmode=require
     }
 else:
     # SQLite for local development

@@ -1027,7 +1027,8 @@ if USE_POSTGRESQL:
         "database": database,
         "user": username,
         "password": password,
-        "sslmode": sslmode,
+        # ❌ DO NOT include sslmode here - it must be in DATABASE_URL query string
+        # SSL is configured via DATABASE_URL: postgresql://...?sslmode=require
         "application_name": APPLICATION_NAME,
     }
 
@@ -1100,7 +1101,7 @@ if USE_POSTGRESQL:
 
     print(
         f"✅ Database config parsed: {DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']} "
-        f"(sslmode={sslmode}, app={DB_CONFIG['application_name']})"
+        f"(SSL via DATABASE_URL, app={DB_CONFIG['application_name']})"
     )
 else:
     # SQLite for local development
@@ -1768,16 +1769,12 @@ def _get_connection_pool():
                     #
                     # tcp_user_timeout: Provides a hard limit on unacknowledged data
                     # This helps detect broken connections faster than keepalives alone
+                    # ✅ CORRECT: Use DATABASE_URL directly (includes sslmode in query string)
+                    # ❌ DO NOT pass sslmode as a kwarg - it must be in the DATABASE_URL
                     _connection_pool = pool.ThreadedConnectionPool(
                         minconn=DB_POOL_MIN_CONNECTIONS,
                         maxconn=DB_POOL_MAX_CONNECTIONS,
-                        host=DB_CONFIG["host"],
-                        port=DB_CONFIG["port"],
-                        database=DB_CONFIG["database"],
-                        user=DB_CONFIG["user"],
-                        password=DB_CONFIG["password"],
-                        sslmode=DB_CONFIG["sslmode"],
-                        application_name=DB_CONFIG["application_name"],
+                        dsn=DATABASE_URL,  # Use DATABASE_URL directly (includes ?sslmode=require)
                         cursor_factory=RealDictCursor,
                         # FIX #1: Increased to 30s for cloud databases with higher latency
                         connect_timeout=DB_CONNECT_TIMEOUT,
@@ -2048,9 +2045,9 @@ def _get_pooled_connection_with_timeout(conn_pool, timeout_seconds):
         raise
 
 
-def _create_direct_postgresql_connection(sslmode: str = None):
+def _create_direct_postgresql_connection(use_fallback_ssl: bool = False):
     """
-    Create a direct PostgreSQL connection with the specified SSL mode.
+    Create a direct PostgreSQL connection.
     
     Includes TCP keepalive and tcp_user_timeout settings to prevent 
     "SSL error: unexpected eof while reading" errors that occur when idle 
@@ -2059,10 +2056,10 @@ def _create_direct_postgresql_connection(sslmode: str = None):
     Applies the TOP 3 TIMEOUT FIXES:
     1. connect_timeout=30s for cloud database latency
     2. jit=off to prevent first-query compilation delays
-    3. sslmode=require for proper SSL handling
+    3. SSL configured via DATABASE_URL query string (?sslmode=require)
     
     Args:
-        sslmode: SSL mode to use. If None, uses the configured default.
+        use_fallback_ssl: If True, modifies DATABASE_URL to use sslmode=prefer as fallback
         
     Returns:
         A psycopg2 connection object
@@ -2070,14 +2067,15 @@ def _create_direct_postgresql_connection(sslmode: str = None):
     Raises:
         psycopg2.Error: If connection fails
     """
+    # ✅ CORRECT: Use DATABASE_URL directly (includes sslmode in query string)
+    # ❌ DO NOT pass sslmode as a kwarg - it must be in the DATABASE_URL
+    connection_url = DATABASE_URL
+    if use_fallback_ssl and "sslmode=" in connection_url:
+        # Replace sslmode=require with sslmode=prefer for fallback retry
+        connection_url = connection_url.replace("sslmode=require", "sslmode=prefer")
+    
     return psycopg2.connect(
-        host=DB_CONFIG["host"],
-        port=DB_CONFIG["port"],
-        database=DB_CONFIG["database"],
-        user=DB_CONFIG["user"],
-        password=DB_CONFIG["password"],
-        sslmode=sslmode or DB_CONFIG["sslmode"],
-        application_name=DB_CONFIG["application_name"],
+        dsn=connection_url,
         cursor_factory=RealDictCursor,
         # FIX #1: 30s timeout for cloud databases with higher latency
         connect_timeout=DB_CONNECT_TIMEOUT,
@@ -2175,7 +2173,7 @@ def get_db_connection():
                 if "ssl" in error_msg or "certificate" in error_msg:
                     logger.warning("SSL connection failed, attempting with sslmode=prefer...")
                     try:
-                        conn = _create_direct_postgresql_connection(sslmode="prefer")
+                        conn = _create_direct_postgresql_connection(use_fallback_ssl=True)
                         return conn
                     except Exception as fallback_error:
                         logger.error("SSL fallback connection also failed: %s", fallback_error)
