@@ -115,10 +115,23 @@ if DATABASE_URL.startswith("postgresql://"):
 # Ensure explicit port in DATABASE_URL (required for cloud deployments)
 # Parse URL and add port if missing
 try:
+    from urllib.parse import quote
     parsed = urlparse(DATABASE_URL)
     if parsed.hostname and not parsed.port:
-        # Add default PostgreSQL port
-        new_netloc = f"{parsed.username}:{parsed.password}@{parsed.hostname}:5432"
+        # Add default PostgreSQL port using URL-safe components
+        # Note: urlparse handles URL-encoded passwords correctly
+        # We reconstruct the netloc with the port added
+        if parsed.username and parsed.password:
+            # Properly encode credentials if needed
+            user = quote(parsed.username, safe='')
+            password = quote(parsed.password, safe='')
+            new_netloc = f"{user}:{password}@{parsed.hostname}:5432"
+        elif parsed.username:
+            user = quote(parsed.username, safe='')
+            new_netloc = f"{user}@{parsed.hostname}:5432"
+        else:
+            new_netloc = f"{parsed.hostname}:5432"
+        
         DATABASE_URL = urlunparse((
             parsed.scheme,
             new_netloc,
@@ -129,7 +142,8 @@ try:
         ))
         logger.info("Added explicit port :5432 to DATABASE_URL")
 except Exception as e:
-    logger.warning(f"Could not parse DATABASE_URL for port validation: {e}")
+    # Don't log exception details to avoid exposing sensitive URL information
+    logger.warning("Could not parse DATABASE_URL for port validation")
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation

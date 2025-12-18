@@ -23,7 +23,7 @@ _engine = create_async_engine(
     DATABASE_URL,
     pool_size=POOL_SIZE,
     max_overflow=MAX_OVERFLOW,
-    pool_pre_ping=True,  # ONLY pool option needed
+    pool_pre_ping=True,  # Validates connections before use
     pool_recycle=POOL_RECYCLE,
     pool_timeout=POOL_TIMEOUT,
     echo=os.getenv("DB_ECHO", "false").lower() == "true",
