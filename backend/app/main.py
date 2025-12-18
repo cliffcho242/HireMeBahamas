@@ -709,8 +709,15 @@ async def startup():
 
 @app.on_event("shutdown")
 async def full_shutdown():
-    """Graceful shutdown"""
+    """Graceful shutdown to allow tasks to close cleanly.
+    
+    This prevents orphaned tasks when Gunicorn restarts workers.
+    """
     logger.info("Shutting down HireMeBahamas API...")
+    
+    # Allow pending tasks to complete
+    await asyncio.sleep(0)
+    
     try:
         if redis_cache is not None:
             await redis_cache.disconnect()

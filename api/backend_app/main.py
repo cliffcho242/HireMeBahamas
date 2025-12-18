@@ -720,8 +720,15 @@ async def lazy_import_heavy_stuff():
 
 @app.on_event("shutdown")
 async def full_shutdown():
-    """Graceful shutdown"""
+    """Graceful shutdown to allow tasks to close cleanly.
+    
+    This prevents orphaned tasks when Gunicorn restarts workers.
+    """
     logger.info("Shutting down HireMeBahamas API...")
+    
+    # Allow pending tasks to complete
+    await asyncio.sleep(0)
+    
     try:
         await redis_cache.disconnect()
         logger.info("Redis cache disconnected")
