@@ -1,7 +1,10 @@
 import { ErrorBoundary } from "react-error-boundary";
-import type { ReactNode } from "react";
 
-export function QueryErrorBoundary({ children }: { children: ReactNode }) {
+export function QueryErrorBoundary({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <ErrorBoundary fallback={<p>Something went wrong.</p>}>
       {children}
