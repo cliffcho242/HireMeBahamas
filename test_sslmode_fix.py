@@ -34,6 +34,7 @@ def test_no_sslmode_in_connect_args():
     repo_root = Path(__file__).parent
     
     all_passed = True
+    file_passed = True  # Track current file status
     
     for file_path in files_to_check:
         full_path = repo_root / file_path
@@ -42,9 +43,13 @@ def test_no_sslmode_in_connect_args():
             continue
         
         print(f"\n📄 Checking: {file_path}")
+        file_passed = True  # Reset for each file
         
         with open(full_path, 'r') as f:
             content = f.read()
+        
+        # Pre-compile connection function patterns for efficiency
+        connection_keywords = ['connect(', 'ThreadedConnectionPool(', 'create_engine(']
         
         # Check for sslmode in connect_args
         # Pattern 1: connect_args={...sslmode...}
@@ -52,28 +57,34 @@ def test_no_sslmode_in_connect_args():
         if re.search(pattern1, content):
             print(f"   ❌ FAILED: Found sslmode in connect_args")
             all_passed = False
+            file_passed = False
             continue
         
         # Pattern 2: "sslmode": "require" or 'sslmode': 'require' in code (not comments)
         # But only in connection contexts
         lines = content.split('\n')
         for i, line in enumerate(lines, 1):
-            # Skip comments
-            if line.strip().startswith('#'):
+            # Skip comments and docstrings
+            stripped = line.strip()
+            if stripped.startswith('#') or stripped.startswith('"""') or stripped.startswith("'''"):
                 continue
             
             # Check for sslmode being passed as parameter to connect functions
-            if 'sslmode=' in line and any(word in line for word in ['connect(', 'ThreadedConnectionPool(', 'create_engine(']):
-                # Check if it's in a DSN/URL string (which is OK) or as a parameter (which is bad)
-                if 'dsn=' in line or 'DATABASE_URL' in line or '?sslmode=' in line:
-                    # This is OK - sslmode in URL string
-                    continue
-                else:
-                    # Check if it's a parameter assignment
-                    if re.search(r'sslmode\s*=\s*["\']', line):
-                        print(f"   ❌ FAILED: Line {i} passes sslmode as parameter: {line.strip()}")
-                        all_passed = False
+            if 'sslmode=' in line:
+                # Check if it's in a connection function call
+                has_connection_call = any(keyword in line for keyword in connection_keywords)
+                if has_connection_call:
+                    # Check if it's in a DSN/URL string (which is OK) or as a parameter (which is bad)
+                    if 'dsn=' in line or 'DATABASE_URL' in line or '?sslmode=' in line:
+                        # This is OK - sslmode in URL string
                         continue
+                    else:
+                        # Check if it's a parameter assignment (not in a string)
+                        if re.search(r'sslmode\s*=\s*["\']', line):
+                            print(f"   ❌ FAILED: Line {i} passes sslmode as parameter: {line.strip()}")
+                            all_passed = False
+                            file_passed = False
+                            continue
         
         # Check for DB_CONFIG["sslmode"] usage in connection calls
         if 'DB_CONFIG["sslmode"]' in content or "DB_CONFIG['sslmode']" in content:
@@ -81,15 +92,17 @@ def test_no_sslmode_in_connect_args():
             for i, line in enumerate(lines, 1):
                 if 'DB_CONFIG["sslmode"]' in line or "DB_CONFIG['sslmode']" in line:
                     # Skip comments
-                    if line.strip().startswith('#'):
+                    stripped = line.strip()
+                    if stripped.startswith('#') or stripped.startswith('"""') or stripped.startswith("'''"):
                         continue
                     # Check if it's in a connection context
-                    if any(word in line for word in ['connect(', 'ThreadedConnectionPool(', 'create_engine(']):
+                    if any(keyword in line for keyword in connection_keywords):
                         print(f"   ❌ FAILED: Line {i} uses DB_CONFIG['sslmode'] in connection: {line.strip()}")
                         all_passed = False
+                        file_passed = False
                         continue
         
-        if all_passed:
+        if file_passed:
             print(f"   ✅ PASSED: No sslmode in connect_args or connection parameters")
     
     print("\n" + "=" * 80)
