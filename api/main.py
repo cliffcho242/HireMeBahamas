@@ -116,10 +116,8 @@ except ImportError as e:
     
     @app.get("/api/health", include_in_schema=False)
     @app.head("/api/health", include_in_schema=False)
-    @app.get("/health", include_in_schema=False)
-    @app.head("/health", include_in_schema=False)
-    def health():
-        """Instant health check - no database dependency.
+    def api_health():
+        """Instant API health check - no database dependency.
         
         Supports both GET and HEAD methods for maximum compatibility.
         
@@ -129,7 +127,43 @@ except ImportError as e:
         
         Render kills apps that fail health checks, so this must be instant.
         """
+        return JSONResponse({
+            "status": "ok",
+            "service": "hiremebahamas-backend",
+            "uptime": "healthy"
+        }, status_code=200)
+    
+    @app.get("/health", include_in_schema=False)
+    @app.head("/health", include_in_schema=False)
+    def health():
+        """Basic health check endpoint.
+        
+        Supports both GET and HEAD methods for maximum compatibility.
+        
+        ✅ NO DATABASE - instant response
+        ✅ NO IO - instant response
+        ✅ NO async/await - synchronous function
+        """
         return JSONResponse({"status": "ok"}, status_code=200)
+    
+    @app.get("/healthz", include_in_schema=False)
+    def healthz():
+        """Emergency health check endpoint - ultra stable fallback.
+        
+        This is a SECOND emergency health route that returns a plain "ok" string.
+        If /health or /api/health ever changes, this endpoint ensures the service
+        still survives health checks.
+        
+        Returns plain text "ok" for maximum compatibility and minimal overhead.
+        
+        ✅ NO DATABASE - instant response
+        ✅ NO IO - instant response  
+        ✅ NO async/await - synchronous function
+        ✅ Plain text response - no JSON parsing overhead
+        
+        Facebook-grade uptime: This endpoint will NEVER fail.
+        """
+        return "ok"
     
     @app.get("/health/ping", include_in_schema=False)
     @app.head("/health/ping", include_in_schema=False)
