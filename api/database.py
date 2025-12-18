@@ -20,13 +20,10 @@ This legacy module will be removed in a future version.
 """
 import os
 import logging
-import re
-from urllib.parse import urlparse, urlunparse
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 from sqlalchemy.exc import ArgumentError
 from sqlalchemy.engine.url import make_url
-from .db_url_utils import ensure_sslmode, validate_database_url_structure, validate_password_encoding
 
 # Global engine (reused across invocations)
 _engine = None
