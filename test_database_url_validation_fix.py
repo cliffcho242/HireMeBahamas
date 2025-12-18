@@ -159,8 +159,8 @@ def test_no_runtime_modifications():
     importlib.reload(sys.modules['app.config'])
     
     url = Settings.get_database_url()
-    # Should NOT add port automatically
-    if ':5432' not in url or 'db.example.com:' not in url:
+    # Should NOT add port automatically - verify port is not present
+    if ':5432' not in url and 'db.example.com:5432' not in url:
         print("  ✅ PASS: Port NOT auto-added to URL")
     else:
         print(f"  ⚠️  WARNING: Port may have been auto-added: {url}")
@@ -189,7 +189,9 @@ def main():
     print("DATABASE_URL Validation Fix - Test Suite")
     print("=========================================\n")
     
-    os.chdir('/home/runner/work/HireMeBahamas/HireMeBahamas')
+    # Change to the directory where the test is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(script_dir)
     
     results = []
     

@@ -77,11 +77,11 @@ class Settings:
         database_url = cls.DATABASE_URL
         
         # Strip whitespace to prevent connection errors from misconfigured environment variables
+        # Check before empty test to handle whitespace-only strings
         if database_url:
             database_url = database_url.strip()
         
         # For local development only - require explicit configuration in production
-        # Check after stripping to handle whitespace-only strings (e.g., "   ")
         if not database_url:
             if cls.ENVIRONMENT == "production":
                 raise RuntimeError("DATABASE_URL is required in production")
