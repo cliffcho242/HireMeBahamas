@@ -58,11 +58,28 @@ class ImmortalMigrationFix:
         while self.retry_count < self.max_retries:
             try:
                 import asyncpg
+                from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
                 
                 # Prepare connection URL
                 db_url = self.database_url
                 if db_url.startswith('postgresql+asyncpg://'):
                     db_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
+                
+                # Strip sslmode parameter - asyncpg handles SSL automatically
+                parsed = urlparse(db_url)
+                if parsed.query and 'sslmode' in parsed.query:
+                    query_params = parse_qs(parsed.query)
+                    if 'sslmode' in query_params:
+                        del query_params['sslmode']
+                    new_query = urlencode(query_params, doseq=True)
+                    db_url = urlunparse((
+                        parsed.scheme,
+                        parsed.netloc,
+                        parsed.path,
+                        parsed.params,
+                        new_query,
+                        parsed.fragment
+                    ))
                 
                 # Extended timeout for cold starts
                 conn = await asyncpg.connect(db_url, timeout=60)
@@ -117,10 +134,27 @@ class ImmortalMigrationFix:
         """
         try:
             import asyncpg
+            from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
             
             db_url = self.database_url
             if db_url.startswith('postgresql+asyncpg://'):
                 db_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
+            
+            # Strip sslmode parameter - asyncpg handles SSL automatically
+            parsed = urlparse(db_url)
+            if parsed.query and 'sslmode' in parsed.query:
+                query_params = parse_qs(parsed.query)
+                if 'sslmode' in query_params:
+                    del query_params['sslmode']
+                new_query = urlencode(query_params, doseq=True)
+                db_url = urlunparse((
+                    parsed.scheme,
+                    parsed.netloc,
+                    parsed.path,
+                    parsed.params,
+                    new_query,
+                    parsed.fragment
+                ))
             
             conn = await asyncpg.connect(db_url, timeout=60)
             

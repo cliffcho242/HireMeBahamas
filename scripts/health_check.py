@@ -273,6 +273,23 @@ class HealthChecker:
         elif db_url.startswith('postgres://'):
             db_url = db_url.replace('postgres://', 'postgresql://')
         
+        # Strip sslmode parameter - asyncpg handles SSL automatically
+        from urllib.parse import parse_qs, urlencode, urlunparse
+        parsed = urlparse(db_url)
+        if parsed.query and 'sslmode' in parsed.query:
+            query_params = parse_qs(parsed.query)
+            if 'sslmode' in query_params:
+                del query_params['sslmode']
+            new_query = urlencode(query_params, doseq=True)
+            db_url = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                parsed.path,
+                parsed.params,
+                new_query,
+                parsed.fragment
+            ))
+        
         start_time = time.time()
         try:
             conn = await asyncpg.connect(db_url, timeout=10)
