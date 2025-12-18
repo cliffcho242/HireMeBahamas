@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../config/axios';
 import toast from 'react-hot-toast';
-import { isPlanPro, isPlanBusiness, isPlanEnterprise } from '../constants/subscriptions';
+import { isPlanBusiness, isPlanEnterprise } from '../constants/subscriptions';
 
 export interface SubscriptionPlan {
   plan: string;
