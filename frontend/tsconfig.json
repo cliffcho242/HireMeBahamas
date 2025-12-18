@@ -9,19 +9,18 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
 
+    // ✅ MASTER PLAYBOOK: Strict TypeScript
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
-
-    // Deliberately disabled to prevent TS6133 (unused variables) from blocking builds
-    // Type checking is advisory only and runs separately via `npm run typecheck`
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
 
     "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
 
+    // ✅ MASTER PLAYBOOK: React JSX (not default import)
     "jsx": "react-jsx",
     "noEmit": true
   },
