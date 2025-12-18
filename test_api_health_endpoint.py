@@ -48,7 +48,15 @@ def test_api_health_endpoint():
     response_json = response.json()
     assert "status" in response_json, "Response should contain 'status' key"
     assert response_json["status"] == "ok", f"Expected status='ok', got status='{response_json.get('status')}'"
-    print("   ✅ Response format is correct: {'status': 'ok'}")
+    
+    # Verify additional metadata (production-grade response)
+    assert "service" in response_json, "Response should contain 'service' key"
+    assert response_json["service"] == "hiremebahamas-backend", "Service name should be hiremebahamas-backend"
+    assert "uptime" in response_json, "Response should contain 'uptime' key"
+    assert response_json["uptime"] == "healthy", "Uptime should be 'healthy'"
+    
+    print("   ✅ Response format is correct with metadata")
+    print(f"   Response: {response_json}")
     
     # Test HEAD request (Render may use this for health checks)
     print("\n2. Testing HEAD /api/health...")
@@ -79,7 +87,10 @@ def test_api_health_endpoint():
     print("\nSummary:")
     print("  ✅ Endpoint exists at /api/health (case-sensitive)")
     print("  ✅ Returns status code 200")
-    print("  ✅ Returns {'status': 'ok'}")
+    print("  ✅ Returns production-grade response with metadata")
+    print("     - status: ok")
+    print("     - service: hiremebahamas-backend")
+    print("     - uptime: healthy")
     print("  ✅ Supports both GET and HEAD methods")
     print("  ✅ No authentication required")
     print("  ✅ Fast response (< 100ms)")
