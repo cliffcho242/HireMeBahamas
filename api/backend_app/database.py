@@ -4,9 +4,9 @@
 #
 # ✅ NEON POOLER COMPATIBILITY - ZERO EXTRA FLAGS
 #
-# CRITICAL RULES FOR NEON:
+# CRITICAL RULES FOR NEON POOLED CONNECTIONS:
 # 1. DATABASE_URL format: postgresql+asyncpg://USER:PASSWORD@HOST:5432/DATABASE
-#    - ❌ NO sslmode in URL
+#    - ❌ NO sslmode in URL (Neon pooler manages SSL automatically)
 #    - ❌ NO statement_timeout
 #    - ❌ NO pooler params
 # 2. SQLAlchemy Engine: create_async_engine with ONLY pool_pre_ping=True
@@ -14,11 +14,18 @@
 #    - ❌ NO server_settings
 #    - ❌ NO startup options
 #
-# This configuration is specifically designed for Neon Serverless Postgres
-# and works with PgBouncer connection pooling.
+# ⚠️  SPECIAL CASE: This configuration is ONLY for Neon Pooled connections.
+# For standard PostgreSQL (Railway/Render), use: ?sslmode=require in DATABASE_URL
 #
-# ENV VARS (for Neon/Railway/Render deployment):
-# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
+# This configuration is specifically designed for Neon Serverless Postgres
+# and works with PgBouncer connection pooling where SSL is managed by the pooler.
+#
+# ENV VARS (for Neon Pooled deployment):
+# DATABASE_URL=postgresql+asyncpg://user:pass@ep-xxx.pooler.neon.tech:5432/db
+# DB_POOL_RECYCLE=300
+#
+# ENV VARS (for Railway/Render - standard PostgreSQL):
+# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
 # DB_POOL_RECYCLE=300
 #
 # Key improvements:
