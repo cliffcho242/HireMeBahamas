@@ -245,17 +245,43 @@ def validate_password_encoding(db_url: str) -> Tuple[bool, str]:
             # Special handling for % character
             if char == '%':
                 # Find all % characters that are NOT part of proper encoding
-                # Look for % not followed by exactly 2 hex digits
-                unencoded_percents = re.findall(r'%(?![0-9A-Fa-f]{2})', parsed.password)
+                # Look for % not followed by exactly 2 hex digits (with proper boundary)
+                # The negative lookahead ensures we only match unencoded % characters
+                unencoded_percents = re.findall(r'%(?![0-9A-Fa-f]{2}(?:[^0-9A-Fa-f]|$))', parsed.password)
                 if unencoded_percents:
                     found_issues.append(f"'{char}' should be '{encoded}' (found {len(unencoded_percents)} unencoded)")
                 continue
             
-            # For other characters, check if the character exists in its literal form
-            # Note: urlparse automatically decodes the password, so we check the decoded form
-            if char in parsed.password:
-                # This character should have been encoded in the URL
-                found_issues.append(f"'{char}' should be '{encoded}'")
+            # For other characters, we need to check the ORIGINAL URL string, not the parsed password
+            # because urlparse automatically decodes the password field.
+            # Strategy: Extract the netloc portion and look for the last @ before the hostname
+            # This handles cases where @ appears in the password itself.
+            
+            try:
+                # Extract netloc (between :// and /)
+                # Format: [user[:password]@]host[:port]
+                netloc_match = re.search(r'://([^/]+)', db_url)
+                if netloc_match:
+                    netloc = netloc_match.group(1)
+                    
+                    # Find the last @ (which separates credentials from host)
+                    last_at = netloc.rfind('@')
+                    if last_at > 0:
+                        # Everything before the last @ is credentials
+                        credentials = netloc[:last_at]
+                        
+                        # Split credentials on first : to get user:password
+                        if ':' in credentials:
+                            colon_idx = credentials.index(':')
+                            password_in_url = credentials[colon_idx + 1:]
+                            
+                            # Check if the character appears literally (unencoded) in the password portion
+                            if char in password_in_url and encoded not in password_in_url:
+                                found_issues.append(f"'{char}' should be '{encoded}'")
+            except Exception:
+                # If we can't extract password from URL, skip this check
+                # This maintains robustness
+                pass
         
         if found_issues:
             issues_str = ", ".join(found_issues)
