@@ -10,7 +10,9 @@ from urllib.parse import quote
 logger = logging.getLogger(__name__)
 
 
-# Validation function removed - DATABASE_URL is used as-is
+# Validation functions removed - DATABASE_URL is now used as-is from environment
+# to improve startup performance and reduce potential startup failures.
+# Users must ensure DATABASE_URL is properly formatted before deployment.
 
 
 def ensure_sslmode(db_url: str) -> str:
@@ -82,4 +84,6 @@ def url_encode_password(password: str) -> str:
     return quote(password, safe='')
 
 
-# Password encoding validation function removed - DATABASE_URL is used as-is
+# Password encoding validation function removed - DATABASE_URL is now used as-is.
+# Users should use the url_encode_password() function above to encode passwords
+# with special characters before setting DATABASE_URL in their environment.
