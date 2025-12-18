@@ -91,23 +91,33 @@ def health():
 **Render Configuration**: `render.yaml` (line 161)
 
 ```yaml
-healthCheckPath: /health
+healthCheckPath: /api/health
 ```
 
 **Verification**:
-- Health check path in `render.yaml` is `/health`
-- Matches the endpoint path in `backend/app/main.py`
+- Health check path in `render.yaml` is `/api/health`
+- Matches the endpoint path in `backend/app/main.py` (line 816-829)
 - Case-sensitive match confirmed
 
 **Alternative Path** (also supported):
-- `/api/health` - Available but not configured in render.yaml
+- `/health` - Available but using `/api/health` as primary
 
 **Render Dashboard Configuration**:
 Go to: Render Dashboard → Your Backend → Settings → Health Check
-- **Health Check Path**: `/health` (must match exactly)
+- **Health Check Path**: `/api/health` (must match exactly, case-sensitive)
 - **Grace Period**: 60 seconds (minimal for Always On)
 - **Health Check Timeout**: 10 seconds
 - **Health Check Interval**: 30 seconds
+
+**Manual Verification Required**:
+After deployment, open browser to: https://hiremebahamas.onrender.com/api/health
+
+You MUST see one of:
+- Blank page
+- 200 OK status
+- `{"status": "ok"}`
+
+❌ If you see 404, 401, 405, or timeout → Render will never pass health checks
 
 ---
 
@@ -428,9 +438,10 @@ Run through this checklist after deploying to Render:
 #### Issue 1: Health Check Fails (404 Not Found)
 **Cause**: Health check path mismatch
 **Solution**:
-1. Verify `render.yaml` has: `healthCheckPath: /health`
-2. Verify endpoint exists in `backend/app/main.py`
-3. Redeploy if needed
+1. Verify `render.yaml` has: `healthCheckPath: /api/health`
+2. Verify endpoint exists in `backend/app/main.py` (line 816-829)
+3. Manually test: https://hiremebahamas.onrender.com/api/health
+4. Redeploy if needed
 
 #### Issue 2: Health Check Fails (502 Bad Gateway)
 **Cause**: App not binding to correct port

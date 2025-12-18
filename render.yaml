@@ -211,8 +211,8 @@ services:
     # No cold starts, no warm-up needed
     #
     # AVAILABLE ENDPOINTS:
-    #   /health      - Instant health check (recommended, no prefix)
-    #   /api/health  - Instant health check (alternative with /api prefix)
+    #   /health      - Instant health check (no prefix)
+    #   /api/health  - Instant health check (with /api prefix) ✅ RECOMMENDED
     #   /ready       - Readiness check with DB connectivity
     #   /live        - Liveness probe
     #
@@ -220,15 +220,25 @@ services:
     # ==========================================================================
     # Go to: Render Dashboard → Your Backend → Settings → Health Check
     # 
-    # Set ONE of these paths (case-sensitive, must match exactly):
-    #   Option 1 (Recommended): Health Check Path: /health
-    #   Option 2 (With prefix):  Health Check Path: /api/health
+    # ✅ REQUIRED CONFIGURATION (Must match exactly, case-sensitive):
+    #    Health Check Path: /api/health
     #
     # Additional Settings:
     #   Grace Period: 60 seconds (minimal - Always On service)
     #   Health Check Timeout: 10 seconds
     #   Health Check Interval: 30 seconds
     #
+    # ✅ VERIFICATION REQUIRED:
+    #    After deployment, open browser to:
+    #    https://hiremebahamas.onrender.com/api/health
+    #    
+    #    You MUST see:
+    #    - Blank page or
+    #    - 200 OK status or
+    #    - {"status": "ok"}
+    #    
+    #    ❌ If you see 404, 401, 405, or timeout → Render will never pass
+    #
     # Note: With Always On (Standard plan), no keepalive workers needed!
     # ==========================================================================
-    healthCheckPath: /health
+    healthCheckPath: /api/health
