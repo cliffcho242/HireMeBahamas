@@ -44,6 +44,8 @@ class User(Base):
     # OAuth fields
     oauth_provider = Column(String(50))  # 'google', 'apple', or None for regular accounts
     oauth_provider_id = Column(String(255))  # ID from OAuth provider
+    # Monetization fields
+    stripe_customer_id = Column(String(255), unique=True, index=True)  # Stripe customer ID
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -111,6 +113,10 @@ class Job(Base):
     is_remote = Column(Boolean, default=False)  # Whether job is remote
     skills = Column(Text)  # Required skills as comma-separated text
     status = Column(String(20), default="active")
+    # Monetization fields
+    is_featured = Column(Boolean, default=False)  # Featured/paid job post
+    is_sponsored = Column(Boolean, default=False)  # Sponsored ad placement
+    featured_until = Column(DateTime(timezone=True), nullable=True)  # When featured expires
     employer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -323,3 +329,155 @@ class LoginAttempt(Base):
     
     # Relationships
     user = relationship("User", foreign_keys=[user_id])
+
+
+# ============================================================================
+# MONETIZATION MODELS - Subscription, Payments, Boosts
+# ============================================================================
+
+class SubscriptionTier(Base):
+    """Subscription tier definitions (Free, Pro, Business, Enterprise)"""
+    __tablename__ = "subscription_tiers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(50), nullable=False, unique=True)  # free, pro, business, enterprise
+    display_name = Column(String(100), nullable=False)  # Display name for UI
+    price = Column(Float, nullable=False, default=0)  # Monthly price in USD
+    annual_price = Column(Float, nullable=True)  # Annual price (if different)
+    billing_period = Column(String(20), default="monthly")  # monthly, annual
+    description = Column(Text)
+    features = Column(Text)  # JSON string of features
+    limits = Column(Text)  # JSON string of usage limits
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    subscriptions = relationship("UserSubscription", back_populates="tier")
+
+
+class UserSubscription(Base):
+    """User subscription records linked to Stripe"""
+    __tablename__ = "user_subscriptions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    tier_id = Column(Integer, ForeignKey("subscription_tiers.id"), nullable=False)
+    stripe_subscription_id = Column(String(255), unique=True, index=True)
+    stripe_customer_id = Column(String(255), index=True)
+    status = Column(String(50), default="active")  # active, canceled, past_due, trialing, incomplete
+    current_period_start = Column(DateTime(timezone=True))
+    current_period_end = Column(DateTime(timezone=True))
+    cancel_at_period_end = Column(Boolean, default=False)
+    trial_end = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    user = relationship("User")
+    tier = relationship("SubscriptionTier", back_populates="subscriptions")
+    payments = relationship("Payment", back_populates="subscription")
+
+
+class Payment(Base):
+    """Payment transaction history"""
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    subscription_id = Column(Integer, ForeignKey("user_subscriptions.id"), nullable=True)
+    stripe_payment_id = Column(String(255), unique=True, index=True)
+    stripe_invoice_id = Column(String(255), index=True)
+    amount = Column(Float, nullable=False)
+    currency = Column(String(3), default="USD")
+    status = Column(String(50), nullable=False)  # succeeded, failed, pending, refunded
+    payment_method = Column(String(50))  # card, bank_transfer
+    description = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User")
+    subscription = relationship("UserSubscription", back_populates="payments")
+
+
+class FeatureUsage(Base):
+    """Track feature usage for subscription limits"""
+    __tablename__ = "feature_usage"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    feature = Column(String(100), nullable=False)  # messages, posts, inmails, job_posts
+    usage_count = Column(Integer, default=0)
+    period_start = Column(DateTime(timezone=True), nullable=False)
+    period_end = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    user = relationship("User")
+
+
+class BoostedPost(Base):
+    """Boosted posts for enhanced visibility"""
+    __tablename__ = "boosted_posts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    boost_duration_days = Column(Integer, default=7)  # How many days to boost
+    boost_start = Column(DateTime(timezone=True), nullable=False)
+    boost_end = Column(DateTime(timezone=True), nullable=False)
+    amount_paid = Column(Float, nullable=False)  # Amount paid for boost
+    payment_id = Column(Integer, ForeignKey("payments.id"), nullable=True)
+    status = Column(String(20), default="active")  # active, expired, cancelled
+    impressions = Column(Integer, default=0)  # Track views
+    clicks = Column(Integer, default=0)  # Track clicks
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    post = relationship("Post")
+    user = relationship("User")
+    payment = relationship("Payment")
+
+
+class SponsoredContent(Base):
+    """Sponsored job posts and profile promotions (ads)"""
+    __tablename__ = "sponsored_content"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sponsor_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    content_type = Column(String(50), nullable=False)  # job, profile, post
+    content_id = Column(Integer, nullable=False)  # ID of the job, user profile, or post
+    campaign_name = Column(String(200))
+    budget = Column(Float, nullable=False)  # Total budget for campaign
+    cost_per_click = Column(Float)  # CPC if using CPC model
+    cost_per_impression = Column(Float)  # CPM if using CPM model
+    start_date = Column(DateTime(timezone=True), nullable=False)
+    end_date = Column(DateTime(timezone=True), nullable=False)
+    status = Column(String(20), default="active")  # active, paused, completed, cancelled
+    impressions = Column(Integer, default=0)
+    clicks = Column(Integer, default=0)
+    conversions = Column(Integer, default=0)  # Applications, follows, etc.
+    amount_spent = Column(Float, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    sponsor = relationship("User")
+
+
+class AnalyticsEvent(Base):
+    """Track user events for analytics (conversion, paywall views, etc.)"""
+    __tablename__ = "analytics_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # Nullable for anonymous
+    event_type = Column(String(100), nullable=False, index=True)  # upgrade_clicked, paywall_viewed, etc.
+    event_data = Column(Text)  # JSON string of additional event data
+    session_id = Column(String(255), index=True)
+    ip_address = Column(String(45))
+    user_agent = Column(String(500))
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    # Relationships
+    user = relationship("User")

@@ -77,6 +77,9 @@ cloudinary==1.44.1
 redis==7.1.0
 hiredis==3.1.0
 
+# Payment Processing (Stripe)
+stripe==11.2.0
+
 # OAuth Libraries
 authlib==1.6.5
 

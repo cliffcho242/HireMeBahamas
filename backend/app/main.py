@@ -125,7 +125,7 @@ from . import schemas
 inject_typing_exports(schemas)
 
 # Inject typing exports into all schema submodules
-_schema_modules = ['auth', 'job', 'message', 'post', 'review']
+_schema_modules = ['auth', 'job', 'message', 'post', 'review', 'subscription']
 for _module_name in _schema_modules:
     try:
         _module = importlib.import_module(f'.schemas.{_module_name}', package='app')
@@ -144,6 +144,9 @@ try:
     from .api.profile_pictures import router as profile_pictures_router
     from .api.reviews import router as reviews_router
     from .api.upload import router as upload_router
+    # Monetization routers
+    from .api.subscriptions import router as subscriptions_router
+    from .api.boosts import router as boosts_router
     # Import new Facebook-style modular routers
     from .auth import routes as auth_routes
     from .users import routes as users_routes
@@ -154,6 +157,7 @@ except Exception as e:
     print(f"API router import failed: {e}")
     auth_routes = hireme_router = jobs_router = messages_router = notifications_router = None
     feed_routes = profile_pictures_router = reviews_router = upload_router = users_routes = health_router = None
+    subscriptions_router = boosts_router = None
 
 try:
     from .database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
@@ -846,6 +850,12 @@ if reviews_router is not None:
     app.include_router(reviews_router, prefix="/api/reviews", tags=["reviews"])
 if upload_router is not None:
     app.include_router(upload_router, prefix="/api/upload", tags=["uploads"])
+
+# Monetization routers
+if subscriptions_router is not None:
+    app.include_router(subscriptions_router, prefix="/api", tags=["subscriptions"])
+if boosts_router is not None:
+    app.include_router(boosts_router, prefix="/api", tags=["boosts"])
 
 # Include health check router (no prefix as it provides /health, /ready endpoints)
 if health_router is not None:
