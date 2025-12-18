@@ -6,7 +6,6 @@ This module centralizes all environment variable reads and configuration logic.
 import os
 import logging
 from typing import Optional
-from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -63,10 +62,10 @@ class Settings:
     
     @classmethod
     def get_database_url(cls) -> str:
-        """Get database URL with validation and fallback logic.
+        """Get database URL with fallback for development.
         
         Returns:
-            str: Valid database URL
+            str: Database URL from environment or development default
             
         Raises:
             ValueError: If DATABASE_URL is not set in production
@@ -81,95 +80,25 @@ class Settings:
                 # Use local development default only in development mode
                 database_url = "postgresql+asyncpg://hiremebahamas_user:hiremebahamas_password@localhost:5432/hiremebahamas"
         
-        # Strip whitespace to prevent connection errors
-        database_url = database_url.strip()
-        
-        # Fix common typos in DATABASE_URL
-        if "ostgresql" in database_url and "postgresql" not in database_url:
-            database_url = database_url.replace("ostgresql", "postgresql")
-        
         # Convert sync PostgreSQL URLs to async driver format
         if database_url.startswith("postgresql://"):
             database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
         
-        # Validate DATABASE_URL structure for all deployments
-        # In production, raises exceptions. In development, logs warnings only.
-        try:
-            cls._validate_database_url_structure(database_url)
-        except ValueError as e:
-            if cls.ENVIRONMENT == "production":
-                raise
-            else:
-                logger.warning(f"Development mode: DATABASE_URL validation failed: {e}")
-        
         return database_url
+    
+    # Validation method removed - DATABASE_URL is used as-is
     
     @classmethod
     def _validate_database_url_structure(cls, db_url: str) -> None:
-        """Validate DATABASE_URL meets cloud deployment requirements.
+        """DEPRECATED: Validation method removed per requirement to remove validation at startup.
         
-        Requirements:
-        1. Must contain a hostname (not localhost/127.0.0.1 or empty - banned in production)
-        2. Must contain a port number
-        3. Must use TCP connection (no Unix sockets)
-        4. Must have SSL mode configured
+        This method is kept as a no-op for backward compatibility but does nothing.
         
         Args:
-            db_url: Database connection URL to validate
-            
-        Raises:
-            ValueError: If validation fails in production
+            db_url: Database connection URL (ignored)
         """
-        if not db_url:
-            raise ValueError("DATABASE_URL is empty")
-        
-        try:
-            # Parse the URL
-            parsed = urlparse(db_url)
-            
-            # Check 1: Must have a hostname
-            if not parsed.hostname:
-                raise ValueError(
-                    "DATABASE_URL missing hostname. "
-                    "Format: postgresql://user:pass@hostname:port/dbname?sslmode=require"
-                )
-            
-            # Check 2: ABSOLUTE BAN on localhost in production
-            hostname = parsed.hostname.lower()
-            if cls.ENVIRONMENT == "production" and hostname in ('localhost', '127.0.0.1', '::1'):
-                raise ValueError(
-                    f"❌ ABSOLUTE BAN: DATABASE_URL uses 'localhost' in production. "
-                    f"Found: '{parsed.hostname}'. "
-                    "Production MUST use remote database hostname. "
-                    "Example: ep-xxxx.us-east-1.aws.neon.tech or containers-us-west-123.railway.app"
-                )
-            
-            # Check 3: ABSOLUTE BAN on Unix sockets (/var/run/postgresql) in production
-            if '/var/run/' in db_url or 'unix:/' in db_url:
-                raise ValueError(
-                    f"❌ ABSOLUTE BAN: DATABASE_URL contains Unix socket path. "
-                    "Production MUST use TCP connections with explicit hostname and port. "
-                    "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
-                )
-            
-            # Check 4: Must have an explicit port number
-            if not parsed.port:
-                raise ValueError(
-                    "DATABASE_URL missing port number. "
-                    "Add explicit port (e.g., :5432) after hostname. "
-                    "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
-                )
-            
-            # Note: sslmode parameter validation removed as redundant
-            # SSL mode is handled automatically at the database connection level
-            # This validation is no longer necessary
-            
-            logger.info("✓ DATABASE_URL validation passed: hostname, port, TCP, and SSL configured")
-            
-        except ValueError:
-            raise
-        except Exception as e:
-            raise ValueError(f"Failed to parse DATABASE_URL: {str(e)}")
+        # No-op: validation removed per requirements
+        pass
 
 
 # Global settings instance
