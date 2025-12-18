@@ -81,13 +81,13 @@ python-socketio==5.15.0
 # BACKGROUND JOBS - NON-BLOCKING TASK PROCESSING
 # ============================================================================
 # Celery - Distributed task queue for emails and scheduled tasks
-celery[redis]==5.4.0
+celery==5.4.0
 
 # RQ (Redis Queue) - Simple Python job queue for notifications
 rq==2.0.0
 
-# Kombu - Messaging library for Celery
-kombu==5.4.2
+# Kombu - Messaging library for Celery (already included with Celery)
+# kombu==5.4.2
 
 # Flower - Celery monitoring tool (optional, for development)
 flower==2.0.1
