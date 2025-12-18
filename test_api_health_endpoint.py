@@ -12,9 +12,9 @@ import os
 import traceback
 from pathlib import Path
 
-# Add backend to path
-backend_path = Path(__file__).parent / 'backend'
-sys.path.insert(0, str(backend_path))
+# Add api/backend_app to path (where the main app is located)
+api_backend_path = Path(__file__).parent / 'api' / 'backend_app'
+sys.path.insert(0, str(api_backend_path))
 
 def test_api_health_endpoint():
     """Test that /api/health endpoint exists and returns correct format"""
@@ -23,8 +23,8 @@ def test_api_health_endpoint():
     print("="*70)
     
     try:
-        # Import the FastAPI app
-        from app.main import app
+        # Import the FastAPI app from backend_app
+        from main import app
         from fastapi.testclient import TestClient
     except ImportError as e:
         print(f"❌ Failed to import required modules: {e}")
