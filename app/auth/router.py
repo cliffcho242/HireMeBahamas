@@ -36,10 +36,12 @@ def login(response: Response):
     # httponly=True prevents JavaScript access (XSS protection)
     # secure=True requires HTTPS (production security)
     # samesite="None" allows cross-origin requests (needed for frontend/backend on different domains)
+    # path="/" makes cookie available site-wide (must match during deletion)
     # max_age=900 is 15 minutes in seconds
     response.set_cookie(
         "access_token",
         access,
+        path="/",
         httponly=True,
         secure=True,
         samesite="None",
@@ -47,10 +49,12 @@ def login(response: Response):
     )
     
     # Set refresh token cookie
+    # path="/" makes cookie available site-wide (must match during deletion)
     # max_age=604800 is 7 days in seconds
     response.set_cookie(
         "refresh_token",
         refresh,
+        path="/",
         httponly=True,
         secure=True,
         samesite="None",
