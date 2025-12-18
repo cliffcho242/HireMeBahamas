@@ -67,12 +67,12 @@ def test_gunicorn_render_safe_config():
         print("=" * 70)
         print()
         print("Configuration Summary (Render-Safe):")
-        print(f"  bind = '0.0.0.0:10000'")
-        print(f"  workers = 2")
-        print(f"  worker_class = 'uvicorn.workers.UvicornWorker'")
-        print(f"  timeout = 120")
-        print(f"  keepalive = 5")
-        print(f"  preload_app = False  # IMPORTANT 🚫 DO NOT preload when DB/network involved")
+        print(f"  bind = '{gunicorn_conf.bind}'")
+        print(f"  workers = {gunicorn_conf.workers}")
+        print(f"  worker_class = '{gunicorn_conf.worker_class}'")
+        print(f"  timeout = {gunicorn_conf.timeout}")
+        print(f"  keepalive = {gunicorn_conf.keepalive}")
+        print(f"  preload_app = {gunicorn_conf.preload_app}  # IMPORTANT 🚫 DO NOT preload when DB/network involved")
         print()
         return True
         

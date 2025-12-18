@@ -57,8 +57,8 @@ class SIGTERMContextFilter(logging.Filter):
                 # Get the original message
                 original_msg = record.msg
                 
-                # Get timeout value from environment or default
-                worker_timeout = int(os.environ.get("GUNICORN_TIMEOUT", "120"))
+                # Get timeout value
+                worker_timeout = timeout
                 
                 # Add helpful context
                 context = (
@@ -150,13 +150,12 @@ _master_start_time = None
 
 
 def _get_worker_timeout():
-    """Get the worker timeout value from environment or config default.
+    """Get the worker timeout value.
     
     Returns:
         int: Worker timeout in seconds
     """
-    import os
-    return int(os.environ.get("GUNICORN_TIMEOUT", str(timeout)))
+    return timeout
 
 
 def on_starting(server):
