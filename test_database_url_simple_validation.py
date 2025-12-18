@@ -15,15 +15,15 @@ import subprocess
 def test_production_requires_database_url():
     """Test that production mode requires DATABASE_URL to be set."""
     # Run in subprocess to avoid module caching issues
+    # Remove DATABASE_URL from environment and set production mode
+    env = {k: v for k, v in os.environ.items() if k != 'DATABASE_URL'}
+    env['ENV'] = 'production'
+    env['ENVIRONMENT'] = 'production'
+    
     result = subprocess.run(
         ['python3', '-c', '''
-import os
 import sys
 sys.path.insert(0, ".")
-os.environ["ENV"] = "production"
-os.environ["ENVIRONMENT"] = "production"
-if "DATABASE_URL" in os.environ:
-    del os.environ["DATABASE_URL"]
 
 try:
     from api import database
@@ -40,7 +40,7 @@ except RuntimeError as e:
         cwd=os.path.dirname(os.path.abspath(__file__)),
         capture_output=True,
         text=True,
-        env={**os.environ, 'ENV': 'production', 'ENVIRONMENT': 'production'}
+        env=env
     )
     
     assert result.returncode == 0, f"Test failed: {result.stdout}\n{result.stderr}"
@@ -49,15 +49,15 @@ except RuntimeError as e:
 
 def test_development_allows_missing_database_url():
     """Test that development mode allows missing DATABASE_URL."""
+    # Remove DATABASE_URL from environment and set development mode
+    env = {k: v for k, v in os.environ.items() if k != 'DATABASE_URL'}
+    env['ENV'] = 'development'
+    env['ENVIRONMENT'] = 'development'
+    
     result = subprocess.run(
         ['python3', '-c', '''
-import os
 import sys
 sys.path.insert(0, ".")
-os.environ["ENV"] = "development"
-os.environ["ENVIRONMENT"] = "development"
-if "DATABASE_URL" in os.environ:
-    del os.environ["DATABASE_URL"]
 
 try:
     from api import database
@@ -70,7 +70,7 @@ except Exception as e:
         cwd=os.path.dirname(os.path.abspath(__file__)),
         capture_output=True,
         text=True,
-        env={**os.environ, 'ENV': 'development', 'ENVIRONMENT': 'development'}
+        env=env
     )
     
     assert result.returncode == 0, f"Test failed: {result.stdout}\n{result.stderr}"
@@ -79,12 +79,12 @@ except Exception as e:
 
 def test_whitespace_stripping():
     """Test that whitespace is stripped from DATABASE_URL."""
+    env = {**os.environ, 'DATABASE_URL': '  postgresql://user:pass@host:5432/db  '}
+    
     result = subprocess.run(
         ['python3', '-c', '''
-import os
 import sys
 sys.path.insert(0, ".")
-os.environ["DATABASE_URL"] = "  postgresql://user:pass@host:5432/db  "
 from api import database
 if database.DATABASE_URL == "postgresql://user:pass@host:5432/db":
     print("PASS")
@@ -96,7 +96,7 @@ else:
         cwd=os.path.dirname(os.path.abspath(__file__)),
         capture_output=True,
         text=True,
-        env={**os.environ, 'DATABASE_URL': '  postgresql://user:pass@host:5432/db  '}
+        env=env
     )
     
     assert result.returncode == 0, f"Test failed: {result.stdout}\n{result.stderr}"
@@ -105,12 +105,12 @@ else:
 
 def test_no_typo_auto_fix():
     """Test that typos are NOT auto-fixed."""
+    env = {**os.environ, 'DATABASE_URL': 'ostgresql://user:pass@host:5432/db'}
+    
     result = subprocess.run(
         ['python3', '-c', '''
-import os
 import sys
 sys.path.insert(0, ".")
-os.environ["DATABASE_URL"] = "ostgresql://user:pass@host:5432/db"
 from api import database
 if database.DATABASE_URL == "ostgresql://user:pass@host:5432/db":
     print("PASS")
@@ -122,7 +122,7 @@ else:
         cwd=os.path.dirname(os.path.abspath(__file__)),
         capture_output=True,
         text=True,
-        env={**os.environ, 'DATABASE_URL': 'ostgresql://user:pass@host:5432/db'}
+        env=env
     )
     
     assert result.returncode == 0, f"Test failed: {result.stdout}\n{result.stderr}"
@@ -131,12 +131,12 @@ else:
 
 def test_no_port_auto_add():
     """Test that ports are NOT auto-added."""
+    env = {**os.environ, 'DATABASE_URL': 'postgresql://user:pass@host/db'}
+    
     result = subprocess.run(
         ['python3', '-c', '''
-import os
 import sys
 sys.path.insert(0, ".")
-os.environ["DATABASE_URL"] = "postgresql://user:pass@host/db"
 from api import database
 if database.DATABASE_URL == "postgresql://user:pass@host/db":
     print("PASS")
@@ -148,7 +148,7 @@ else:
         cwd=os.path.dirname(os.path.abspath(__file__)),
         capture_output=True,
         text=True,
-        env={**os.environ, 'DATABASE_URL': 'postgresql://user:pass@host/db'}
+        env=env
     )
     
     assert result.returncode == 0, f"Test failed: {result.stdout}\n{result.stderr}"
@@ -157,12 +157,12 @@ else:
 
 def test_no_driver_conversion():
     """Test that postgres:// is NOT converted to postgresql+asyncpg://."""
+    env = {**os.environ, 'DATABASE_URL': 'postgres://user:pass@host:5432/db'}
+    
     result = subprocess.run(
         ['python3', '-c', '''
-import os
 import sys
 sys.path.insert(0, ".")
-os.environ["DATABASE_URL"] = "postgres://user:pass@host:5432/db"
 from api import database
 if database.DATABASE_URL == "postgres://user:pass@host:5432/db":
     print("PASS")
@@ -174,7 +174,7 @@ else:
         cwd=os.path.dirname(os.path.abspath(__file__)),
         capture_output=True,
         text=True,
-        env={**os.environ, 'DATABASE_URL': 'postgres://user:pass@host:5432/db'}
+        env=env
     )
     
     assert result.returncode == 0, f"Test failed: {result.stdout}\n{result.stderr}"

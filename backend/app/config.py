@@ -62,11 +62,11 @@ class Settings:
     ]
     
     @classmethod
-    def get_database_url(cls) -> str:
+    def get_database_url(cls) -> Optional[str]:
         """Get database URL from environment.
         
         Returns:
-            str: Database URL if set, raises error in production if not set
+            str | None: Database URL if set, None otherwise
             
         Raises:
             RuntimeError: If DATABASE_URL is not set in production
@@ -81,7 +81,7 @@ class Settings:
         if cls.ENVIRONMENT == "production" and not database_url:
             raise RuntimeError("DATABASE_URL is required in production")
         
-        return database_url if database_url else ""
+        return database_url
 
 
 # Global settings instance
