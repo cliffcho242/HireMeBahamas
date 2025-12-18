@@ -359,6 +359,17 @@ async def login(user_data: UserLogin, request: Request, response: Response, db: 
             f"[{request_id}] Login failed - User not found: {user_data.email}, "
             f"client_ip: {client_ip}"
         )
+        # 🔒 CRITICAL AUTH LOG: Explicit failure logging
+        logger.warning(
+            "LOGIN FAILED",
+            extra={
+                "status": "failure",
+                "http_status": 401,
+                "reason": "user_not_found",
+                "email": user_data.email,
+                "request_id": request_id
+            }
+        )
         record_login_attempt(client_ip, False)
         record_login_attempt(user_data.email, False)
         # Record in database for analytics
@@ -436,6 +447,18 @@ async def login(user_data: UserLogin, request: Request, response: Response, db: 
             f"[{request_id}] Login failed - Invalid password for user: {user_data.email}, "
             f"user_id: {user.id}, client_ip: {client_ip}"
         )
+        # 🔒 CRITICAL AUTH LOG: Explicit failure logging
+        logger.warning(
+            "LOGIN FAILED",
+            extra={
+                "status": "failure",
+                "http_status": 401,
+                "reason": "invalid_password",
+                "user_id": user.id,
+                "email": user_data.email,
+                "request_id": request_id
+            }
+        )
         record_login_attempt(client_ip, False)
         record_login_attempt(user_data.email, False)
         # Record in database for analytics
@@ -511,6 +534,20 @@ async def login(user_data: UserLogin, request: Request, response: Response, db: 
 
     # Set secure cookies
     set_auth_cookies(response, access_token, refresh_token)
+    
+    # 🔒 CRITICAL AUTH LOG: Explicit success logging for monitoring
+    logger.info(
+        "LOGIN RESULT",
+        extra={
+            "status": "success",
+            "http_status": 200,
+            "user_id": user.id,
+            "email": user.email,
+            "tokens_issued": True,
+            "cookies_set": True,
+            "request_id": request_id
+        }
+    )
 
     return {
         "access_token": access_token,
