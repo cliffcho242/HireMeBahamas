@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 import { SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { PLAN_NAMES, PLAN_PRICES, SubscriptionPlan } from '../constants/subscriptions';
+import { PLAN_NAMES, PLAN_PRICES, SUBSCRIPTION_PLANS } from '../constants/subscriptions';
+
+type RequiredPlan = 'pro' | 'business' | 'enterprise';
 
 interface UpgradePromptProps {
   featureName: string;
-  requiredPlan?: 'pro' | 'business' | 'enterprise';
+  requiredPlan?: RequiredPlan;
   onClose?: () => void;
   inline?: boolean;
 }
@@ -15,8 +17,13 @@ export default function UpgradePrompt({
   onClose,
   inline = false 
 }: UpgradePromptProps) {
-  const planName = PLAN_NAMES[requiredPlan as SubscriptionPlan] || 'Pro';
-  const planPrice = PLAN_PRICES[requiredPlan as SubscriptionPlan] || '$9.99/mo';
+  // Map requiredPlan to actual plan constant safely
+  const planKey = requiredPlan === 'pro' ? SUBSCRIPTION_PLANS.PRO
+    : requiredPlan === 'business' ? SUBSCRIPTION_PLANS.BUSINESS
+    : SUBSCRIPTION_PLANS.ENTERPRISE;
+  
+  const planName = PLAN_NAMES[planKey] || 'Pro';
+  const planPrice = PLAN_PRICES[planKey] || '$9.99/mo';
 
   if (inline) {
     return (

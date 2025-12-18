@@ -2,7 +2,7 @@
 Subscription API endpoints for managing user subscriptions and plans.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -172,7 +172,7 @@ async def upgrade_subscription(
         # Enterprise typically has custom contracts
         current_user.subscription_end_date = None
     else:
-        current_user.subscription_end_date = datetime.utcnow() + timedelta(days=30)
+        current_user.subscription_end_date = datetime.now(timezone.utc) + timedelta(days=30)
     
     await db.commit()
     await db.refresh(current_user)
