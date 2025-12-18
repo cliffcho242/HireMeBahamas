@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, and_, desc
+from sqlalchemy import select, and_, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user
@@ -292,26 +292,38 @@ async def cancel_boost(
 
 
 # ============================================================================
-# TRACK BOOST PERFORMANCE (Internal API)
+# TRACK BOOST PERFORMANCE (Internal API - Authenticated)
 # ============================================================================
 
 @router.post("/{boost_id}/impression")
 async def track_impression(
     boost_id: int,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Track impression for boosted post (internal use)
+    Track impression for boosted post
     
     Called when a boosted post is displayed to a user
+    Requires authentication to prevent abuse
     """
-    boost = await db.get(BoostedPost, boost_id)
+    # Use atomic update to prevent race conditions
+    stmt = (
+        update(BoostedPost)
+        .where(
+            and_(
+                BoostedPost.id == boost_id,
+                BoostedPost.status == "active"
+            )
+        )
+        .values(impressions=BoostedPost.impressions + 1)
+    )
     
-    if not boost or boost.status != "active":
-        return {"status": "ignored"}
-    
-    boost.impressions += 1
+    result = await db.execute(stmt)
     await db.commit()
+    
+    if result.rowcount == 0:
+        return {"status": "ignored"}
     
     return {"status": "tracked"}
 
@@ -319,19 +331,31 @@ async def track_impression(
 @router.post("/{boost_id}/click")
 async def track_click(
     boost_id: int,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Track click for boosted post (internal use)
+    Track click for boosted post
     
     Called when a user clicks on a boosted post
+    Requires authentication to prevent abuse
     """
-    boost = await db.get(BoostedPost, boost_id)
+    # Use atomic update to prevent race conditions
+    stmt = (
+        update(BoostedPost)
+        .where(
+            and_(
+                BoostedPost.id == boost_id,
+                BoostedPost.status == "active"
+            )
+        )
+        .values(clicks=BoostedPost.clicks + 1)
+    )
     
-    if not boost or boost.status != "active":
-        return {"status": "ignored"}
-    
-    boost.clicks += 1
+    result = await db.execute(stmt)
     await db.commit()
+    
+    if result.rowcount == 0:
+        return {"status": "ignored"}
     
     return {"status": "tracked"}
