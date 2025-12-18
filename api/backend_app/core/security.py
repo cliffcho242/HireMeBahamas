@@ -20,7 +20,7 @@ SECRET_KEY = config("SECRET_KEY", default="your-secret-key-change-in-production"
 ALGORITHM = "HS256"
 # Production-grade token expiration settings
 ACCESS_TOKEN_EXPIRE_MINUTES = config("ACCESS_TOKEN_EXPIRE_MINUTES", default=15, cast=int)  # 15 minutes
-REFRESH_TOKEN_EXPIRE_DAYS = config("REFRESH_TOKEN_EXPIRE_DAYS", default=7, cast=int)  # 7 days
+REFRESH_TOKEN_EXPIRE_DAYS = config("REFRESH_TOKEN_EXPIRE_DAYS", default=30, cast=int)  # 30 days for mobile compatibility
 
 # Validate token expiration configuration
 if ACCESS_TOKEN_EXPIRE_MINUTES < 1:
@@ -45,13 +45,15 @@ def is_production() -> bool:
     vercel_env = os.getenv("VERCEL_ENV", "").lower()
     return env == "production" or vercel_env == "production"
 
-# Cookie settings - PRODUCTION-GRADE SECURITY
+# Cookie settings - PRODUCTION-GRADE SECURITY FOR CROSS-ORIGIN
+# These settings are REQUIRED for Vercel (frontend) → Render (backend) to work on Safari/iPhone
 COOKIE_NAME_ACCESS = "access_token"
 COOKIE_NAME_REFRESH = "refresh_token"
-COOKIE_SECURE = is_production()  # True in production, False in development
-COOKIE_HTTPONLY = True  # Always True - prevents JavaScript access
-COOKIE_SAMESITE = "none" if is_production() else "lax"  # "none" for cross-origin in production
+COOKIE_SECURE = True  # REQUIRED for Safari - always use HTTPS-only cookies
+COOKIE_HTTPONLY = True  # REQUIRED - prevents JavaScript access (XSS protection)
+COOKIE_SAMESITE = "None"  # REQUIRED for cross-origin (Vercel → Render) - must be capitalized "None"
 COOKIE_DOMAIN = None  # Let browser determine domain for better compatibility
+COOKIE_PATH = "/"  # REQUIRED - cookie available on all paths
 
 # Bcrypt configuration
 # Default of 12 rounds can be slow (200-300ms per operation)
@@ -453,9 +455,10 @@ def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
         secure=COOKIE_SECURE,
         samesite=COOKIE_SAMESITE,
         domain=COOKIE_DOMAIN,
+        path=COOKIE_PATH,
     )
     
-    # Refresh token cookie - long-lived (7-30 days)
+    # Refresh token cookie - long-lived (30 days for mobile compatibility)
     refresh_max_age = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     response.set_cookie(
         key=COOKIE_NAME_REFRESH,
@@ -465,6 +468,7 @@ def set_auth_cookies(response, access_token: str, refresh_token: str) -> None:
         secure=COOKIE_SECURE,
         samesite=COOKIE_SAMESITE,
         domain=COOKIE_DOMAIN,
+        path=COOKIE_PATH,
     )
     
     logger.info("Set secure auth cookies (httpOnly=True, secure={}, samesite={})".format(
@@ -491,6 +495,7 @@ def clear_auth_cookies(response) -> None:
         secure=COOKIE_SECURE,
         samesite=COOKIE_SAMESITE,
         domain=COOKIE_DOMAIN,
+        path=COOKIE_PATH,
     )
     
     # Clear refresh token cookie
@@ -502,6 +507,7 @@ def clear_auth_cookies(response) -> None:
         secure=COOKIE_SECURE,
         samesite=COOKIE_SAMESITE,
         domain=COOKIE_DOMAIN,
+        path=COOKIE_PATH,
     )
     
     logger.info("Cleared auth cookies")
