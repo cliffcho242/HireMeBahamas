@@ -7,6 +7,7 @@
  */
 
 import { apiUrl } from '../lib/api';
+import { User } from '../types/user';
 
 // Session storage key - must match sessionManager.ts
 const SESSION_KEY = 'hireme_session';
@@ -14,6 +15,43 @@ const USER_KEY = 'hireme_user';
 
 let refreshing = false;
 let queue: (() => void)[] = [];
+
+/**
+ * Get the current session from the backend
+ * 
+ * This function is called once on app startup to bootstrap authentication.
+ * It uses the /api/auth/me endpoint with credentials: 'include' for Safari
+ * cookie support.
+ * 
+ * ✅ Page refresh safe
+ * ✅ Safari safe
+ * ✅ Vercel safe
+ * 
+ * @returns User data if authenticated, null if not authenticated or error
+ */
+export async function getSession(): Promise<User | null> {
+  try {
+    const res = await fetch(apiUrl("/api/auth/me"), {
+      credentials: 'include',
+    });
+
+    if (!res.ok) {
+      // Not authenticated or error - return null safely
+      return null;
+    }
+
+    const data = await res.json();
+    
+    // The backend returns UserResponse which contains the user data directly
+    return data as User;
+  } catch (error) {
+    // Network error or other issue - return null safely (no guessing)
+    if (import.meta.env.DEV) {
+      console.error('Session fetch error:', error);
+    }
+    return null;
+  }
+}
 
 /**
  * Refresh the authentication token
