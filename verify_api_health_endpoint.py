@@ -64,7 +64,8 @@ def verify_api_health_endpoint():
         return False
     
     # Check that it's synchronous (not async)
-    function_section = '\n'.join(lines[api_health_function_line-2:api_health_function_line+1])
+    start_idx = max(0, api_health_function_line - 2)
+    function_section = '\n'.join(lines[start_idx:api_health_function_line+1])
     if 'async def' in function_section:
         print("   ❌ Function is async - should be synchronous!")
         return False
@@ -73,7 +74,8 @@ def verify_api_health_endpoint():
     
     # Check for database dependency
     function_body_start = api_health_function_line
-    function_body = '\n'.join(lines[function_body_start:function_body_start+20])
+    end_idx = min(function_body_start + 20, len(lines))
+    function_body = '\n'.join(lines[function_body_start:end_idx])
     
     has_db_param = 'db:' in function_body or 'db =' in function_body
     has_await = 'await' in function_body
@@ -97,7 +99,9 @@ def verify_api_health_endpoint():
     print("\n📝 Next Steps:")
     print("   1. Deploy to Render")
     print("   2. Render will automatically check /api/health")
-    print("   3. Verify manually: https://hiremebahamas.onrender.com/api/health")
+    print("   3. Verify manually at your deployment URL:")
+    print("      • Production: https://hiremebahamas.onrender.com/api/health")
+    print("      • Or check your specific Render service URL")
     print("   4. Expected: 200 OK with {'status': 'ok'}")
     
     print("\n✅ This fix resolves the Render health check timeout issue!")
