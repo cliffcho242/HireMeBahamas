@@ -197,8 +197,48 @@ def on_exit(server):
 
 
 def worker_exit(server, worker):
-    """Called when a worker exits"""
-    print(f"👷 Worker {worker.pid} exiting...")
+    """Called when a worker exits.
+    
+    This hook ensures proper cleanup of async resources when a worker is restarted.
+    CRITICAL for preventing "Task was destroyed but it is pending!" warnings.
+    """
+    import sys
+    import asyncio
+    
+    print(f"👷 Worker {worker.pid} exiting - cleaning up async resources...")
+    
+    # Try to clean up any pending async tasks in the worker's event loop
+    try:
+        # Get the event loop if it exists
+        try:
+            loop = asyncio.get_event_loop()
+            if loop and not loop.is_closed():
+                # Cancel all pending tasks
+                pending_tasks = [
+                    task for task in asyncio.all_tasks(loop)
+                    if not task.done()
+                ]
+                
+                if pending_tasks:
+                    print(f"   Cancelling {len(pending_tasks)} pending tasks in worker {worker.pid}...", file=sys.stderr)
+                    for task in pending_tasks:
+                        task.cancel()
+                    
+                    # Give tasks a moment to cancel
+                    # Note: Can't use asyncio.wait here since we're in a sync context
+                    # Tasks will be cleaned up when the loop is closed
+                
+                # Close the event loop
+                if not loop.is_closed():
+                    loop.close()
+                    print(f"   Event loop closed for worker {worker.pid}", file=sys.stderr)
+        except RuntimeError:
+            # No event loop in current thread - this is fine
+            pass
+    except Exception as e:
+        print(f"   Warning: Error during worker cleanup: {e}", file=sys.stderr)
+    
+    print(f"✅ Worker {worker.pid} cleanup complete")
 
 
 def worker_int(worker):

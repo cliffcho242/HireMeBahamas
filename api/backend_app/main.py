@@ -723,16 +723,26 @@ async def full_shutdown():
     """Graceful shutdown with proper async task cleanup.
     
     This prevents "Task was destroyed but it is pending!" warnings by:
-    1. Properly awaiting all cleanup operations
-    2. Cancelling any pending background tasks
-    3. Giving async operations time to complete gracefully
+    1. Shutting down thread pool before cancelling async tasks
+    2. Properly awaiting all cleanup operations
+    3. Cancelling any pending background tasks
+    4. Giving async operations time to complete gracefully
     """
     import asyncio
+    from app.core.concurrent import shutdown_thread_pool
     
     logger.info("Shutting down HireMeBahamas API...")
     
     # Configurable shutdown timeout (default 5 seconds)
     SHUTDOWN_TIMEOUT_SECONDS = int(os.getenv("SHUTDOWN_TIMEOUT_SECONDS", "5"))
+    
+    # CRITICAL: Shutdown thread pool FIRST before async cleanup
+    # This prevents "Task was destroyed but it is pending!" warnings for thread pool tasks
+    try:
+        shutdown_thread_pool()
+        logger.debug("Thread pool shutdown completed")
+    except Exception as e:
+        logger.warning(f"Error shutting down thread pool: {e}")
     
     # Collect all cleanup tasks
     cleanup_tasks = []
