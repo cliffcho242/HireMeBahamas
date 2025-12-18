@@ -36,7 +36,7 @@ def test_sync_database_hardening():
     if engine:
         # Verify pool settings
         pool = engine.pool
-        assert pool._pre_ping == True, "Expected pool_pre_ping=True"
+        assert pool._pre_ping is True, "Expected pool_pre_ping=True"
         assert pool._recycle == 1800, f"Expected pool._recycle=1800, got {pool._recycle}"
         assert pool.size() <= 5, f"Expected pool.size() <= 5, got {pool.size()}"
         
@@ -55,9 +55,10 @@ def test_async_database_hardening():
     """Test asynchronous database engine hardening settings."""
     print("Testing asynchronous database hardening...")
     
-    # Import after setting env vars
-    import sys
-    sys.path.insert(0, '/home/runner/work/HireMeBahamas/HireMeBahamas/api')
+    # Add api directory to path for imports
+    api_path = os.path.join(os.path.dirname(__file__), 'api')
+    if api_path not in sys.path:
+        sys.path.insert(0, api_path)
     
     from backend_app.database import POOL_SIZE, MAX_OVERFLOW, POOL_RECYCLE, get_engine
     
@@ -73,7 +74,7 @@ def test_async_database_hardening():
     if engine:
         # Verify pool settings
         pool = engine.pool
-        assert pool._pre_ping == True, "Expected pool_pre_ping=True"
+        assert pool._pre_ping is True, "Expected pool_pre_ping=True"
         assert pool._recycle == 1800, f"Expected pool._recycle=1800, got {pool._recycle}"
         
         print("✓ Async database engine hardening verified")
@@ -98,7 +99,7 @@ def test_deprecated_database_hardening():
     if engine:
         # Verify pool settings
         pool = engine.pool
-        assert pool._pre_ping == True, "Expected pool_pre_ping=True"
+        assert pool._pre_ping is True, "Expected pool_pre_ping=True"
         assert pool._recycle == 1800, f"Expected pool._recycle=1800, got {pool._recycle}"
         
         print("✓ Deprecated database engine hardening verified")
