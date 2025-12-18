@@ -36,10 +36,12 @@ def login(response: Response):
     # httponly=True prevents JavaScript access (XSS protection)
     # secure=True requires HTTPS (production security)
     # samesite="None" allows cross-origin requests (needed for frontend/backend on different domains)
+    # path="/" makes cookie available site-wide (must match during deletion)
     # max_age=900 is 15 minutes in seconds
     response.set_cookie(
         "access_token",
         access,
+        path="/",
         httponly=True,
         secure=True,
         samesite="None",
@@ -47,10 +49,12 @@ def login(response: Response):
     )
     
     # Set refresh token cookie
+    # path="/" makes cookie available site-wide (must match during deletion)
     # max_age=604800 is 7 days in seconds
     response.set_cookie(
         "refresh_token",
         refresh,
+        path="/",
         httponly=True,
         secure=True,
         samesite="None",
@@ -64,9 +68,29 @@ def login(response: Response):
 def logout(response: Response):
     """
     Logout endpoint that clears authentication cookies.
+    
+    CRITICAL: Uses delete_cookie() with path="/" to ensure proper cookie removal
+    and prevent "ghost login" issues.
+    
+    All parameters must match those used during cookie creation:
+    - httponly=True (security flag)
+    - secure=True (HTTPS-only in production)
+    - samesite="None" (cross-origin support)
     """
-    response.delete_cookie("access_token", samesite="None", secure=True)
-    response.delete_cookie("refresh_token", samesite="None", secure=True)
+    response.delete_cookie(
+        "access_token",
+        path="/",
+        httponly=True,
+        samesite="None",
+        secure=True
+    )
+    response.delete_cookie(
+        "refresh_token",
+        path="/",
+        httponly=True,
+        samesite="None",
+        secure=True
+    )
     
     return {"status": "logged_out"}
 
@@ -94,9 +118,11 @@ def refresh(response: Response):
     access = create_access_token(user_id)
     
     # Set new access token cookie
+    # path="/" makes cookie available site-wide (must match during deletion)
     response.set_cookie(
         "access_token",
         access,
+        path="/",
         httponly=True,
         secure=True,
         samesite="None",
