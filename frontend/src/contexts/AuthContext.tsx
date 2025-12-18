@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { sessionManager } from '../services/sessionManager';
 import { ApiError } from '../types';
 import { loginWithRetry, registerWithRetry } from '../utils/retryWithBackoff';
+import { getSession } from '../services/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -122,61 +123,103 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, [refreshTokenInternal]);
 
-  // Initialize auth from session manager
+  // Initialize auth from session manager with getSession bootstrap
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Try to restore session from session manager
-        const savedSession = sessionManager.loadSession();
+        // ✅ STEP 5: Frontend Auth Bootstrap - Call getSession() on app startup
+        // This provides production-grade session restoration that is:
+        // ✔ Page refresh safe
+        // ✔ Safari safe (credentials: 'include')
+        // ✔ Vercel safe (works with serverless deployments)
+        console.log('[Auth Bootstrap] Initializing session...');
         
-        if (savedSession) {
-          // Session exists, restore it
-          setToken(savedSession.token);
-          setUser(savedSession.user);
-          setRememberMeState(savedSession.rememberMe);
+        // First, try to get session from backend (the official way)
+        const sessionUser = await getSession();
+        
+        if (sessionUser) {
+          // Session exists on backend - this is the source of truth
+          console.log('[Auth Bootstrap] Session restored from backend:', sessionUser.email);
+          setUser(sessionUser);
           
-          // Check if token needs refresh - do this in a separate effect
-          // to avoid calling refreshTokenInternal before it's stable
-        } else {
-          // Fallback to old method if session doesn't exist
+          // Get stored token for API calls (if available)
           const storedToken = localStorage.getItem('token');
           if (storedToken) {
-            try {
-              const userData = await authAPI.getProfile();
-              setUser(userData);
-              setToken(storedToken);
-              
-              // Migrate to new session management
-              const expiresAt = sessionManager.getTokenExpiration(storedToken);
-              sessionManager.saveSession({
-                token: storedToken,
-                user: userData,
-                lastActivity: Date.now(),
-                expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
-                rememberMe: false,
-              });
-            } catch (error) {
-              console.error('Auth initialization failed:', error);
-              // Only clear session if it's a genuine auth error, not a network error
-              const apiError = error as { code?: string; message?: string };
-              const isNetworkError = apiError?.code === 'ERR_NETWORK' || 
-                                    apiError?.message?.includes('Network Error');
-              
-              if (!isNetworkError) {
-                // Genuine auth failure - clear invalid session
-                localStorage.removeItem('token');
-                sessionManager.clearSession();
-              } else {
-                // Network error - keep session for retry
-                console.warn('Network error during auth init - keeping session for retry');
+            setToken(storedToken);
+            
+            // Save/update session in session manager
+            const expiresAt = sessionManager.getTokenExpiration(storedToken);
+            sessionManager.saveSession({
+              token: storedToken,
+              user: sessionUser,
+              lastActivity: Date.now(),
+              expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
+              rememberMe: true, // Backend session exists, so remember
+            });
+            setRememberMeState(true);
+          } else {
+            // Backend has session but we don't have token locally
+            // This can happen after browser restart with cookies
+            console.log('[Auth Bootstrap] Backend session exists but no local token - will refresh');
+          }
+        } else {
+          // No backend session - try local session manager as fallback
+          console.log('[Auth Bootstrap] No backend session, checking local session...');
+          const savedSession = sessionManager.loadSession();
+          
+          if (savedSession) {
+            // Local session exists, attempt to restore it
+            setToken(savedSession.token);
+            setUser(savedSession.user);
+            setRememberMeState(savedSession.rememberMe);
+            console.log('[Auth Bootstrap] Local session restored:', savedSession.user.email);
+          } else {
+            // Final fallback: check for bare token in localStorage
+            const storedToken = localStorage.getItem('token');
+            if (storedToken) {
+              try {
+                console.log('[Auth Bootstrap] Attempting profile fetch with stored token...');
+                const userData = await authAPI.getProfile();
+                setUser(userData);
+                setToken(storedToken);
+                
+                // Migrate to new session management
+                const expiresAt = sessionManager.getTokenExpiration(storedToken);
+                sessionManager.saveSession({
+                  token: storedToken,
+                  user: userData,
+                  lastActivity: Date.now(),
+                  expiresAt: expiresAt || Date.now() + 7 * 24 * 60 * 60 * 1000,
+                  rememberMe: false,
+                });
+                console.log('[Auth Bootstrap] Token migration successful:', userData.email);
+              } catch (error) {
+                console.error('[Auth Bootstrap] Profile fetch failed:', error);
+                // Only clear session if it's a genuine auth error, not a network error
+                const apiError = error as { code?: string; message?: string };
+                const isNetworkError = apiError?.code === 'ERR_NETWORK' || 
+                                      apiError?.message?.includes('Network Error');
+                
+                if (!isNetworkError) {
+                  // Genuine auth failure - clear invalid session
+                  localStorage.removeItem('token');
+                  sessionManager.clearSession();
+                  console.log('[Auth Bootstrap] Invalid token cleared');
+                } else {
+                  // Network error - keep session for retry
+                  console.warn('[Auth Bootstrap] Network error - keeping session for retry');
+                }
               }
+            } else {
+              console.log('[Auth Bootstrap] No session found - user is not authenticated');
             }
           }
         }
       } catch (error) {
-        console.error('Failed to initialize auth:', error);
+        console.error('[Auth Bootstrap] Failed to initialize auth:', error);
       } finally {
         setIsLoading(false);
+        console.log('[Auth Bootstrap] Initialization complete');
       }
     };
 
