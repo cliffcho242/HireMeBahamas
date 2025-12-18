@@ -140,8 +140,13 @@ def test_health_endpoint_no_database():
     health_endpoint_start = content.find('@app.get("/health"')
     assert health_endpoint_start != -1, "Health endpoint not found"
     
-    # Extract the health endpoint function (get more lines to ensure we capture the return)
-    health_section = content[health_endpoint_start:health_endpoint_start + 800]
+    # Extract the health endpoint function (find the next function or reasonable end)
+    # Look for the next @app decorator or end of function (approximately)
+    next_decorator = content.find('@app.', health_endpoint_start + 20)
+    if next_decorator == -1:
+        health_section = content[health_endpoint_start:health_endpoint_start + 800]
+    else:
+        health_section = content[health_endpoint_start:next_decorator]
     
     # Must be synchronous (def, not async def)
     assert 'async def health' not in health_section, \
@@ -209,7 +214,8 @@ def test_no_trailing_slashes_in_urls():
             content = f.read()
         
         # Find URLs with trailing slashes (excluding directory paths in comments)
-        url_pattern = r'https://[^\s"\']+/'
+        # Match complete URLs including optional trailing slash
+        url_pattern = r'https://[^\s"\']+/?'
         matches = re.finditer(url_pattern, content)
         
         suspicious_urls = []
