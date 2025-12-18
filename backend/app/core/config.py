@@ -51,6 +51,9 @@ class Settings:
     RUNTIME_LOG_DIR: str = os.getenv('RUNTIME_LOG_DIR', '/tmp/runtime-logs')
     
     # CORS Origins
+    # ⚠️  NOTE: Wildcard patterns (*.vercel.app) are NOT allowed when credentials are enabled
+    # ⚠️  Browsers will block cookies if wildcard is used with allow_credentials=True
+    # ✅  Use explicit origins only
     CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
@@ -58,7 +61,7 @@ class Settings:
         "http://127.0.0.1:5173",
         "https://hiremebahamas.com",
         "https://www.hiremebahamas.com",
-        "https://*.vercel.app",
+        "https://hiremebahamas.vercel.app",  # Explicit Vercel deployment URL
     ]
     
     @classmethod

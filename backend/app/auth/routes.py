@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from threading import Lock
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +21,14 @@ from app.auth.jwt import create_access_token
 from app.core.security import (
     get_password_hash_async,
     verify_password_async,
+    create_refresh_token,
     BCRYPT_ROUNDS,
+    COOKIE_HTTPONLY,
+    COOKIE_SECURE,
+    COOKIE_SAMESITE,
+    COOKIE_PATH,
+    COOKIE_MAX_AGE,
+    COOKIE_NAME_REFRESH,
 )
 from app.core.query_timeout import set_fast_query_timeout
 from app.database import get_db
@@ -133,10 +140,18 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 @router.post("/login", response_model=Token)
 async def login(
     user_data: UserLogin, 
-    request: Request, 
+    request: Request,
+    response: Response,
     db: AsyncSession = Depends(get_db)
 ):
-    """Authenticate user and return token."""
+    """Authenticate user and return token.
+    
+    Sets both access token (returned in JSON) and refresh token (HTTP-only cookie).
+    The refresh token cookie is configured for cross-origin support:
+    - httponly=True: XSS protection
+    - secure=True: HTTPS only (required for Safari)
+    - samesite="None": Cross-origin support (Vercel ↔ Backend)
+    """
     login_start_time = time.time()
     
     # Get client IP for rate limiting
@@ -229,6 +244,25 @@ async def login(
     access_token = create_access_token(data={"sub": str(user.id)})
     token_create_ms = int((time.time() - token_create_start) * 1000)
     
+    # Create refresh token for long-term authentication
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    
+    # Set refresh token as HTTP-only cookie
+    # ✅ HttpOnly: Prevents JavaScript access (XSS protection)
+    # ✅ Secure: HTTPS only (required for Safari with SameSite=None)
+    # ✅ SameSite=None: Cross-origin support (Vercel frontend ↔ Railway/Render backend)
+    # ❗ CRITICAL: SameSite=None is MANDATORY for cross-origin authentication
+    #             If SameSite=Lax, Safari login will fail silently!
+    response.set_cookie(
+        key=COOKIE_NAME_REFRESH,
+        value=refresh_token,
+        httponly=COOKIE_HTTPONLY,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        path=COOKIE_PATH,
+        max_age=COOKIE_MAX_AGE
+    )
+    
     # Reset rate limit counters
     record_login_attempt(client_ip, True)
     record_login_attempt(user_data.email, True)
@@ -237,7 +271,7 @@ async def login(
     
     logger.info(
         f"[{request_id}] Login successful - user: {user.email}, "
-        f"total_time: {total_login_ms}ms"
+        f"total_time: {total_login_ms}ms, refresh_token_cookie_set=True"
     )
 
     return {

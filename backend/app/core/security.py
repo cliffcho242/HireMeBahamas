@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
@@ -18,6 +19,49 @@ logging.getLogger('passlib').setLevel(logging.ERROR)
 SECRET_KEY = config("SECRET_KEY", default="your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
+
+# =============================================================================
+# COOKIE CONFIGURATION - SAFARI & CROSS-ORIGIN COMPATIBLE
+# =============================================================================
+# Critical settings for Vercel (frontend) ↔ Railway/Render (backend) authentication
+# 
+# MUST-HAVE for Safari/iPhone support:
+# - SameSite=None: Required for cross-origin requests (frontend on different domain than backend)
+# - Secure=True: MANDATORY when using SameSite=None (Safari will reject otherwise)
+# - HttpOnly=True: Security best practice (prevents XSS attacks)
+#
+# WARNING: If SameSite=Lax, Safari login fails silently in cross-origin scenarios!
+# =============================================================================
+
+def is_production() -> bool:
+    """Check if running in production environment."""
+    env = os.getenv("ENVIRONMENT", "").lower()
+    vercel_env = os.getenv("VERCEL_ENV", "").lower()
+    return env == "production" or vercel_env == "production"
+
+# Cookie security settings - MUST be compatible with Safari and cross-origin requests
+COOKIE_HTTPONLY = True   # ✅ XSS protection - JavaScript cannot access cookie
+COOKIE_SECURE = True     # ✅ REQUIRED for Safari when using SameSite=None
+COOKIE_SAMESITE = "None" # ✅ MANDATORY for cross-origin (Vercel ↔ Backend) - RFC6265bis specifies capitalized "None"
+COOKIE_PATH = "/"        # ✅ Available across entire domain
+COOKIE_MAX_AGE = 60 * 60 * 24 * 30  # 30 days in seconds
+
+# Cookie names
+COOKIE_NAME_ACCESS = "access_token"
+COOKIE_NAME_REFRESH = "refresh_token"
+
+# Validate Safari requirements at startup
+# Safari requires Secure=True when SameSite=None, otherwise cookies are rejected
+if COOKIE_SAMESITE.lower() == "none" and not COOKIE_SECURE:
+    error_msg = "❌ CONFIGURATION ERROR: SameSite=None requires Secure=True for Safari compatibility"
+    logger.error(error_msg)
+    # This is a critical misconfiguration - cookies will be rejected by Safari
+    # Rather than silently "fixing" it, we log an error so it can be corrected in configuration
+    raise ValueError(error_msg)
+
+# Log cookie configuration for debugging
+logger.info(f"Cookie configuration: httponly={COOKIE_HTTPONLY}, secure={COOKIE_SECURE}, "
+            f"samesite={COOKIE_SAMESITE}, production={is_production()}")
 
 # Bcrypt configuration
 # Default of 12 rounds can be slow (200-300ms per operation)
@@ -118,6 +162,39 @@ def create_access_token(
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+    return encoded_jwt
+
+
+def create_refresh_token(
+    data: Dict[str, Any], expires_delta: Optional[timedelta] = None
+) -> str:
+    """Create a JWT refresh token for long-term authentication.
+    
+    Refresh tokens are used to obtain new access tokens without requiring
+    the user to log in again. They should be stored securely in HTTP-only cookies.
+    
+    Args:
+        data: Payload data to encode (typically contains user_id in 'sub' field)
+        expires_delta: Optional custom expiration time (default: 30 days)
+        
+    Returns:
+        Encoded JWT refresh token string
+    """
+    to_encode = data.copy()
+    
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        # Refresh tokens live longer than access tokens (30 days)
+        expire = datetime.utcnow() + timedelta(days=30)
+    
+    # Mark token type as refresh for validation
+    to_encode.update({
+        "exp": expire,
+        "type": "refresh"
+    })
+    
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 
