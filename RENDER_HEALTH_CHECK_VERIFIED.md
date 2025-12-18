@@ -2,7 +2,10 @@
 
 ## Health Endpoint Status: PRODUCTION READY ✅
 
-The HireMeBahamas backend has **two health check endpoints** that are fully configured and tested for Render deployment:
+The HireMeBahamas backend has **two health check endpoints** that are fully configured and tested for Render deployment.
+
+> **Note**: This documentation is specific to the HireMeBahamas production deployment at `hiremebahamas.onrender.com`. 
+> If deploying to a different domain, replace `hiremebahamas.onrender.com` with your Render service URL throughout this document.
 
 ### Available Health Endpoints
 
@@ -201,6 +204,6 @@ If you encounter any issues:
 
 ---
 
-**Last Updated**: December 18, 2025
+**Last Updated**: December 18, 2024
 **Status**: ✅ PRODUCTION READY
 **Verification**: Automated tests passing

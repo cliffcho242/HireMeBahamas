@@ -109,6 +109,8 @@ def test_health_endpoints():
             all_tests_passed = False
     
     # Final summary
+    render_url = os.getenv('RENDER_EXTERNAL_URL', 'https://hiremebahamas.onrender.com')
+    
     print("\n" + "=" * 80)
     if all_tests_passed:
         print("✅ ALL TESTS PASSED - HEALTH ENDPOINTS READY FOR RENDER")
@@ -120,10 +122,11 @@ def test_health_endpoints():
         print("   3. Expected Render logs:")
         print("      ==> Health check passed")
         print("      ==> Service is live")
-        print("\n🔗 Manual verification URLs:")
-        print("   • https://hiremebahamas.onrender.com/api/health")
-        print("   • https://hiremebahamas.onrender.com/health")
+        print(f"\n🔗 Manual verification URLs:")
+        print(f"   • {render_url}/api/health")
+        print(f"   • {render_url}/health")
         print("\n✅ Expected response: {'status': 'ok'} or 200 OK")
+        print("\nNote: URLs based on RENDER_EXTERNAL_URL env var or default.")
     else:
         print("❌ SOME TESTS FAILED - REVIEW ERRORS ABOVE")
         print("=" * 80)
@@ -133,10 +136,13 @@ def test_health_endpoints():
 
 def print_render_configuration():
     """Print Render configuration instructions"""
+    # Get deployment URL from environment or use default
+    render_url = os.getenv('RENDER_EXTERNAL_URL', 'https://hiremebahamas.onrender.com')
+    
     print("\n" + "=" * 80)
     print("📋 RENDER CONFIGURATION GUIDE")
     print("=" * 80)
-    print("""
+    print(f"""
 In your Render Dashboard:
 
 1. Go to: Your Backend Service → Settings
@@ -154,11 +160,13 @@ Expected Behavior After Configuration:
 ✅ No repeated restarts
 
 Manual Verification (30 seconds):
-• Open: https://hiremebahamas.onrender.com/api/health
-• Should see: {"status":"ok"} or 200 OK
+• Open: {render_url}/api/health
+• Should see: {{"status":"ok"}} or 200 OK
 • Should NOT see: 404, 401, timeout
 
 🏁 Once configured, your Render deployment will be STABLE.
+
+Note: Using deployment URL from RENDER_EXTERNAL_URL env var or default.
 """)
 
 
