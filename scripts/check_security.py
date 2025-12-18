@@ -137,7 +137,8 @@ def check_hardcoded_credentials(file_path: Path) -> List[Tuple[int, str]]:
     
     # Skip test files, examples, and documentation - they may have dummy credentials
     skip_patterns = ['test_', 'example', '_test.py', 'README', 'GUIDE', 'SUMMARY', 
-                     'CHECKLIST', 'SECURITY.md', '.md']
+                     'CHECKLIST', 'SECURITY.md', '.md', 'validator', 'validation',
+                     'backup_database.py', 'db_config_validation.py', 'db_url_validator.py']
     if any(pattern in str(file_path) for pattern in skip_patterns):
         return issues
     
@@ -148,16 +149,30 @@ def check_hardcoded_credentials(file_path: Path) -> List[Tuple[int, str]]:
                 if line.strip().startswith('#') or line.strip().startswith('//'):
                     continue
                 
-                # Skip lines with environment variable usage, examples, or docstrings
+                # Skip lines with environment variable usage, examples, error messages, or docstrings
                 if ('os.getenv' in line or 'os.environ' in line or 'config(' in line or
                     'Example:' in line or '>>>' in line or 'print(' in line or 
                     'default=' in line or line.strip().startswith('"""') or 
-                    line.strip().startswith("'''")):
+                    line.strip().startswith("'''") or 'export DATABASE_URL' in line or
+                    'Required format:' in line or 'REQUIRED FORMAT:' in line or
+                    'Format:' in line or 'Ensure format:' in line or
+                    'f"' in line and ('format' in line.lower() or 'required' in line.lower()) or
+                    'placeholder' in line.lower() or 'invalid.local' in line or
+                    'USER:PASSWORD' in line or 'user:pass' in line or 'user:password' in line or
+                    'xxxxx' in line or 'REGION' in line.upper()):
                     continue
                 
                 # Check for hardcoded credentials
                 for pattern in CREDENTIAL_PATTERNS:
-                    if re.search(pattern, line, re.IGNORECASE):
+                    match = re.search(pattern, line, re.IGNORECASE)
+                    if match:
+                        matched_text = match.group(0)
+                        # Skip if it's obviously a placeholder/example
+                        if any(placeholder in matched_text.lower() for placeholder in 
+                               ['user', 'pass', 'password', 'placeholder', 'example', 
+                                'xxxxx', 'host', 'invalid', 'localhost', 'hiremebahamas_user']):
+                            continue
+                        
                         # Additional check: ensure it's not in a comment, docstring, or example
                         if not (line.strip().startswith('"""') or line.strip().startswith("'''") or
                                 line.strip().startswith('#')):

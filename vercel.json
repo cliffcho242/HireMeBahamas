@@ -17,6 +17,11 @@
       }
     }
   ],
+  "functions": {
+    "api/*.py": {
+      "runtime": "python3.9"
+    }
+  },
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -62,11 +67,20 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
+          "value": "public, max-age=0, must-revalidate, stale-while-revalidate=86400"
         },
         {
           "key": "Link",
           "value": "</assets/vendor.js>; rel=preload; as=script, </assets/ui.js>; rel=preload; as=script"
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.html)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate, stale-while-revalidate=86400"
         }
       ]
     },
