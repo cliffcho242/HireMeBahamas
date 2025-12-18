@@ -22,7 +22,14 @@ worker_class = "uvicorn.workers.UvicornWorker"
 # TIMEOUT CONFIGURATION
 # ============================================================================
 timeout = 120
+graceful_timeout = 30  # Time to wait for graceful worker shutdown
 keepalive = 5
+
+# ============================================================================
+# WORKER RECYCLING (Prevents memory leaks)
+# ============================================================================
+max_requests = 1000  # Restart workers after 1000 requests
+max_requests_jitter = 100  # Add randomness to prevent thundering herd
 
 # ============================================================================
 # PRELOAD CONFIGURATION

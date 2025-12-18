@@ -16,8 +16,8 @@ Performance targets:
 
 Production-Safe Configuration:
 - SSL/TLS support (rediss://)
-- Connection timeouts (2s)
-- Socket timeouts (2s)
+- Connection timeouts (3s)
+- Socket timeouts (3s)
 - Automatic fallback to in-memory cache
 - Graceful degradation on Redis failures
 
@@ -33,8 +33,14 @@ Usage:
     async def get_user(user_id: int):
         return await db.get_user(user_id)
 
-Render Setup:
+Environment Configuration:
+    # Option 1: Full Redis URL
     REDIS_URL=rediss://:password@host:port
+    
+    # Option 2: Component-based (flexible configuration)
+    REDIS_HOST=your-redis-host.com
+    REDIS_PORT=6379  # Optional, defaults to 6379
+    REDIS_PASSWORD=your-password  # Optional
 """
 import asyncio
 import json
@@ -56,10 +62,33 @@ T = TypeVar('T')
 # 1. REDIS_URL (primary - supports rediss:// for SSL)
 # 2. REDIS_PRIVATE_URL (Railway private network)
 # 3. UPSTASH_REDIS_REST_URL (Upstash REST API)
-REDIS_URL = os.getenv("REDIS_URL") or \
-            os.getenv("REDIS_PRIVATE_URL") or \
-            os.getenv("UPSTASH_REDIS_REST_URL") or \
-            ""
+# 4. REDIS_HOST + REDIS_PORT (component-based configuration)
+
+def _build_redis_url() -> str:
+    """Build Redis URL from environment variables."""
+    # First priority: Full Redis URL
+    if url := os.getenv("REDIS_URL"):
+        return url
+    if url := os.getenv("REDIS_PRIVATE_URL"):
+        return url
+    if url := os.getenv("UPSTASH_REDIS_REST_URL"):
+        return url
+    
+    # Second priority: Component-based configuration
+    redis_host = os.getenv("REDIS_HOST")
+    if redis_host:
+        redis_port = os.getenv("REDIS_PORT", "6379")
+        redis_password = os.getenv("REDIS_PASSWORD", "")
+        
+        # Build URL with or without password
+        if redis_password:
+            return f"redis://:{redis_password}@{redis_host}:{redis_port}"
+        else:
+            return f"redis://{redis_host}:{redis_port}"
+    
+    return ""
+
+REDIS_URL = _build_redis_url()
 
 # Cache configuration constants
 DEFAULT_TTL = 300  # 5 minutes
@@ -111,9 +140,16 @@ class AsyncRedisCache:
         - Connection pooling for performance
         - Automatic reconnection with circuit breaker
         - Graceful fallback to in-memory cache
+        - Component-based configuration via REDIS_HOST
         
-        Configuration (Render example):
+        Configuration options:
+            # Option 1: Full URL
             REDIS_URL=rediss://:password@host:port
+            
+            # Option 2: Component-based
+            REDIS_HOST=your-redis-host.com
+            REDIS_PORT=6379
+            REDIS_PASSWORD=your-password
         
         Returns:
             bool: True if Redis is available, False if using memory fallback
@@ -136,8 +172,8 @@ class AsyncRedisCache:
                 encoding="utf-8",
                 decode_responses=True,
                 max_connections=REDIS_POOL_SIZE,
-                socket_timeout=2,  # 2s socket timeout (as per requirement)
-                socket_connect_timeout=2,  # 2s connect timeout (as per requirement)
+                socket_timeout=3,  # 3s socket timeout (as per hardening requirement)
+                socket_connect_timeout=3,  # 3s connect timeout (as per hardening requirement)
                 retry_on_timeout=True,
                 socket_keepalive=True,  # Keep connections alive
                 health_check_interval=30,  # Health check every 30s
