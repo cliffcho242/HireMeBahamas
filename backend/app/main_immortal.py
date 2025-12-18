@@ -16,6 +16,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Global task references for proper cleanup during shutdown
+_background_tasks = []
+
 # =============================================================================
 # INSTANT APP — IMMORTAL HEALTH ENDPOINT (NO HEAVY IMPORTS)
 # =============================================================================
@@ -218,7 +221,8 @@ async def startup():
     
     # Warm cache in background with safe task management
     if warm_cache is not None:
-        asyncio.create_task(safe_warm_cache())
+        task = asyncio.create_task(safe_warm_cache())
+        _background_tasks.append(task)
     
     logger.info("✅ API READY | Docs: /docs | Health: /health | Ready: /ready")
 
@@ -229,7 +233,6 @@ async def safe_warm_cache():
     This prevents orphaned tasks and ensures proper error logging.
     """
     try:
-        from app.core.redis_cache import warm_cache
         if warm_cache is not None:
             await warm_cache()
             logger.info("✓ Cache warmed successfully")
@@ -245,7 +248,25 @@ async def shutdown():
     """
     logger.info("🛑 Shutting down...")
     
-    # Allow pending tasks to complete
+    # Cancel background tasks and wait for them to finish
+    for task in _background_tasks:
+        if not task.done():
+            task.cancel()
+    
+    # Wait for all background tasks to complete (with timeout)
+    if _background_tasks:
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*_background_tasks, return_exceptions=True),
+                timeout=5.0
+            )
+            logger.info("✓ Background tasks completed")
+        except asyncio.TimeoutError:
+            logger.warning("⚠ Some background tasks did not complete in time")
+        except Exception as e:
+            logger.warning(f"⚠ Error waiting for background tasks: {e}")
+    
+    # Allow remaining pending tasks to complete
     await asyncio.sleep(0)
     
     try:

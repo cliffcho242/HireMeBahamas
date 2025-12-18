@@ -18,6 +18,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Global task references for proper cleanup during shutdown
+_background_tasks = []
+
 app = FastAPI(
     docs_url=None,
     redoc_url=None,
@@ -60,7 +63,8 @@ async def startup():
     ensuring proper task lifecycle management.
     """
     logger.info("Application startup initiated")
-    asyncio.create_task(safe_background_init())
+    task = asyncio.create_task(safe_background_init())
+    _background_tasks.append(task)
     logger.info("Background initialization task scheduled")
 
 @app.on_event("shutdown")
@@ -70,6 +74,25 @@ async def shutdown():
     This prevents orphaned tasks when Gunicorn restarts workers.
     """
     logger.info("Graceful shutdown initiated")
-    # Allow pending tasks to complete
+    
+    # Cancel background tasks and wait for them to finish
+    for task in _background_tasks:
+        if not task.done():
+            task.cancel()
+    
+    # Wait for all background tasks to complete (with timeout)
+    if _background_tasks:
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*_background_tasks, return_exceptions=True),
+                timeout=5.0
+            )
+            logger.info("Background tasks completed")
+        except asyncio.TimeoutError:
+            logger.warning("Some background tasks did not complete in time")
+        except Exception as e:
+            logger.warning(f"Error waiting for background tasks: {e}")
+    
+    # Allow remaining pending tasks to complete
     await asyncio.sleep(0)
     logger.info("Shutdown complete")
