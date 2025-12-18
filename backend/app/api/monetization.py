@@ -406,7 +406,7 @@ def get_active_boosted_posts(
     """Get all active boosted posts (for feed prioritization)"""
     now = datetime.utcnow()
     boosted = db.query(BoostedPost).filter(
-        BoostedPost.is_active == True,
+        BoostedPost.is_active.is_(True),
         BoostedPost.expires_at > now
     ).all()
     
@@ -506,8 +506,8 @@ def get_active_ads(
     now = datetime.utcnow()
     
     query = db.query(Advertisement).filter(
-        Advertisement.is_active == True,
-        Advertisement.is_approved == True,
+        Advertisement.is_active.is_(True),
+        Advertisement.is_approved.is_(True),
         Advertisement.starts_at <= now,
         Advertisement.expires_at > now,
         Advertisement.budget_spent < Advertisement.budget_total

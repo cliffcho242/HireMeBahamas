@@ -106,9 +106,11 @@ const Pricing: React.FC = () => {
           <span className={`text-lg ${billingCycle === 'annual' ? 'text-gray-900 font-semibold' : 'text-gray-500'}`}>
             Annual
           </span>
-          <span className="ml-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-            Save 17%
-          </span>
+          {pricingData.subscription_tiers.some(t => t.annual_price > 0 && t.monthly_price > 0) && (
+            <span className="ml-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+              Save up to 17%
+            </span>
+          )}
         </div>
       </div>
 

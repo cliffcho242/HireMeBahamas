@@ -84,7 +84,7 @@ const BoostPostModal: React.FC<BoostPostModalProps> = ({ postId, isOpen, onClose
           post_id: postId,
           boost_type: selectedBoost.type,
           price_paid: selectedBoost.price,
-          impressions_target: parseInt(selectedBoost.estimated_impressions.replace(/[^0-9]/g, '')),
+          impressions_target: parseInt(selectedBoost.estimated_impressions.split('-')[0].replace(/[^0-9]/g, '') || '1000'),
           expires_at: expiresAt.toISOString(),
         },
         {
