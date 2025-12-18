@@ -10,7 +10,8 @@ import {
   PlusIcon,
   Cog6ToothIcon,
   UserGroupIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import { HomeIcon as HomeIconSolid } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
@@ -154,6 +155,14 @@ const Navbar = () => {
                       >
                         <Cog6ToothIcon className="w-5 h-5" />
                         <span>Settings</span>
+                      </Link>
+                      <Link
+                        to="/subscriptions"
+                        className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        <SparklesIcon className="w-5 h-5 text-yellow-500" />
+                        <span>Upgrade Plan</span>
                       </Link>
                       {user?.user_type === 'employer' && (
                         <Link
