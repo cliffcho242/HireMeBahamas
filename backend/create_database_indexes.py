@@ -20,6 +20,7 @@ import asyncio
 import logging
 import sys
 import os
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -402,6 +403,22 @@ async def create_indexes():
     if DATABASE_URL.startswith("postgresql+asyncpg://"):
         DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
     
+    # Strip sslmode parameter - asyncpg handles SSL automatically
+    parsed = urlparse(DATABASE_URL)
+    if parsed.query and 'sslmode' in parsed.query:
+        query_params = parse_qs(parsed.query)
+        if 'sslmode' in query_params:
+            del query_params['sslmode']
+        new_query = urlencode(query_params, doseq=True)
+        DATABASE_URL = urlunparse((
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            new_query,
+            parsed.fragment
+        ))
+    
     logger.info(f"Connecting to database...")
     
     try:
@@ -491,6 +508,22 @@ async def analyze_tables():
     
     if DATABASE_URL.startswith("postgresql+asyncpg://"):
         DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
+    
+    # Strip sslmode parameter - asyncpg handles SSL automatically
+    parsed = urlparse(DATABASE_URL)
+    if parsed.query and 'sslmode' in parsed.query:
+        query_params = parse_qs(parsed.query)
+        if 'sslmode' in query_params:
+            del query_params['sslmode']
+        new_query = urlencode(query_params, doseq=True)
+        DATABASE_URL = urlunparse((
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            new_query,
+            parsed.fragment
+        ))
     
     tables = list(set(idx[0] for idx in INDEXES))
     

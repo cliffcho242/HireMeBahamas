@@ -26,7 +26,7 @@ import os
 import sys
 import time
 from typing import Dict, List, Optional, Tuple
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 
 # Check for optional dependencies
@@ -272,6 +272,22 @@ class HealthChecker:
             db_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
         elif db_url.startswith('postgres://'):
             db_url = db_url.replace('postgres://', 'postgresql://')
+        
+        # Strip sslmode parameter - asyncpg handles SSL automatically
+        parsed = urlparse(db_url)
+        if parsed.query and 'sslmode' in parsed.query:
+            query_params = parse_qs(parsed.query)
+            if 'sslmode' in query_params:
+                del query_params['sslmode']
+            new_query = urlencode(query_params, doseq=True)
+            db_url = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                parsed.path,
+                parsed.params,
+                new_query,
+                parsed.fragment
+            ))
         
         start_time = time.time()
         try:

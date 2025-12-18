@@ -22,7 +22,7 @@ Environment Variables Optional:
 
 import os
 import sys
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import asyncio
 
 # Check for required dependencies at startup
@@ -71,6 +71,45 @@ def print_info(msg: str) -> None:
     print(f"{Colors.CYAN}ℹ {msg}{Colors.NC}")
 
 
+def strip_sslmode_from_url(db_url: str) -> str:
+    """Remove sslmode parameter from database URL.
+    
+    asyncpg doesn't accept 'sslmode' as a connection parameter.
+    It handles SSL automatically based on the server's requirements.
+    
+    Args:
+        db_url: Database URL that may contain sslmode parameter
+        
+    Returns:
+        Database URL without sslmode parameter
+    """
+    parsed = urlparse(db_url)
+    if not parsed.query:
+        return db_url
+    
+    # Parse query parameters
+    query_params = parse_qs(parsed.query)
+    
+    # Remove sslmode if present
+    if 'sslmode' in query_params:
+        del query_params['sslmode']
+    
+    # Rebuild query string
+    new_query = urlencode(query_params, doseq=True)
+    
+    # Rebuild URL
+    new_url = urlunparse((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path,
+        parsed.params,
+        new_query,
+        parsed.fragment
+    ))
+    
+    return new_url
+
+
 def get_database_url() -> str:
     """Get and validate database URL from environment"""
     db_url = os.environ.get('VERCEL_POSTGRES_URL') or os.environ.get('DATABASE_URL')
@@ -115,6 +154,9 @@ async def test_connection(db_url: str) -> bool:
         elif db_url.startswith('postgres://'):
             db_url = db_url.replace('postgres://', 'postgresql://')
         
+        # Strip sslmode parameter - asyncpg handles SSL automatically
+        db_url = strip_sslmode_from_url(db_url)
+        
         print_info("Attempting to connect to database...")
         conn = await asyncpg.connect(db_url, timeout=30)
         
@@ -148,6 +190,9 @@ async def verify_tables(db_url: str) -> bool:
             db_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
         elif db_url.startswith('postgres://'):
             db_url = db_url.replace('postgres://', 'postgresql://')
+        
+        # Strip sslmode parameter - asyncpg handles SSL automatically
+        db_url = strip_sslmode_from_url(db_url)
         
         conn = await asyncpg.connect(db_url, timeout=30)
         
@@ -200,6 +245,9 @@ async def check_row_counts(db_url: str) -> bool:
             db_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
         elif db_url.startswith('postgres://'):
             db_url = db_url.replace('postgres://', 'postgresql://')
+        
+        # Strip sslmode parameter - asyncpg handles SSL automatically
+        db_url = strip_sslmode_from_url(db_url)
         
         conn = await asyncpg.connect(db_url, timeout=30)
         
@@ -260,6 +308,9 @@ async def verify_indexes(db_url: str) -> bool:
         elif db_url.startswith('postgres://'):
             db_url = db_url.replace('postgres://', 'postgresql://')
         
+        # Strip sslmode parameter - asyncpg handles SSL automatically
+        db_url = strip_sslmode_from_url(db_url)
+        
         conn = await asyncpg.connect(db_url, timeout=30)
         
         # Get indexes
@@ -314,6 +365,9 @@ async def test_query_performance(db_url: str) -> bool:
             db_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
         elif db_url.startswith('postgres://'):
             db_url = db_url.replace('postgres://', 'postgresql://')
+        
+        # Strip sslmode parameter - asyncpg handles SSL automatically
+        db_url = strip_sslmode_from_url(db_url)
         
         conn = await asyncpg.connect(db_url, timeout=30)
         
