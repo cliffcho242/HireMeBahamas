@@ -529,8 +529,8 @@ def clear_auth_cookies(response) -> None:
         key=COOKIE_NAME_ACCESS,
         path="/",
         httponly=COOKIE_HTTPONLY,
-        samesite=COOKIE_SAMESITE,
         secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
         domain=COOKIE_DOMAIN,
     )
     
@@ -541,8 +541,8 @@ def clear_auth_cookies(response) -> None:
         key=COOKIE_NAME_REFRESH,
         path="/",
         httponly=COOKIE_HTTPONLY,
-        samesite=COOKIE_SAMESITE,
         secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
         domain=COOKIE_DOMAIN,
     )
     
