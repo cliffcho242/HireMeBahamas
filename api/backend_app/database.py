@@ -123,10 +123,12 @@ try:
         )
         
         # Add default PostgreSQL port using URL-safe components
-        # Note: urlparse handles URL-encoded passwords correctly
-        # We reconstruct the netloc with the port added
+        # Note: urlparse automatically decodes the URL, so when we reconstruct,
+        # we must re-encode the components. Using quote() directly here is correct
+        # (not url_encode_password) because we're working with parsed URL components.
+        # This ensures proper encoding during URL reconstruction.
         if parsed.username and parsed.password:
-            # Properly encode credentials if needed
+            # Re-encode credentials for URL reconstruction
             user = quote(parsed.username, safe='')
             password = quote(parsed.password, safe='')
             new_netloc = f"{user}:{password}@{parsed.hostname}:5432"

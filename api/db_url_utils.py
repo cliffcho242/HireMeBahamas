@@ -242,13 +242,19 @@ def validate_password_encoding(db_url: str) -> Tuple[bool, str]:
         
         found_issues = []
         for char, encoded in problematic_chars.items():
-            # Skip % if it's already part of an encoding (e.g., %40)
+            # Special handling for % character
             if char == '%':
-                # Check if % is followed by two hex digits (proper encoding)
-                if re.search(r'%[0-9A-Fa-f]{2}', parsed.password):
-                    continue
+                # Find all % characters that are NOT part of proper encoding
+                # Look for % not followed by exactly 2 hex digits
+                unencoded_percents = re.findall(r'%(?![0-9A-Fa-f]{2})', parsed.password)
+                if unencoded_percents:
+                    found_issues.append(f"'{char}' should be '{encoded}' (found {len(unencoded_percents)} unencoded)")
+                continue
             
-            if char in parsed.password and encoded not in parsed.password:
+            # For other characters, check if the character exists in its literal form
+            # Note: urlparse automatically decodes the password, so we check the decoded form
+            if char in parsed.password:
+                # This character should have been encoded in the URL
                 found_issues.append(f"'{char}' should be '{encoded}'")
         
         if found_issues:

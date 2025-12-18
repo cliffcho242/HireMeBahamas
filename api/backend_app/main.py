@@ -731,6 +731,9 @@ async def full_shutdown():
     
     logger.info("Shutting down HireMeBahamas API...")
     
+    # Configurable shutdown timeout (default 5 seconds)
+    SHUTDOWN_TIMEOUT_SECONDS = int(os.getenv("SHUTDOWN_TIMEOUT_SECONDS", "5"))
+    
     # Collect all cleanup tasks
     cleanup_tasks = []
     
@@ -748,17 +751,17 @@ async def full_shutdown():
     except Exception as e:
         logger.warning(f"Error queueing database close: {e}")
     
-    # Execute all cleanup tasks with timeout to prevent hanging
+    # Execute all cleanup tasks with configurable timeout to prevent hanging
     if cleanup_tasks:
         try:
-            # Wait for all cleanup tasks with 5 second timeout
+            # Wait for all cleanup tasks with configurable timeout
             await asyncio.wait_for(
                 asyncio.gather(*cleanup_tasks, return_exceptions=True),
-                timeout=5.0
+                timeout=SHUTDOWN_TIMEOUT_SECONDS
             )
             logger.info("✅ All cleanup tasks completed successfully")
         except asyncio.TimeoutError:
-            logger.warning("⚠️  Shutdown cleanup timed out after 5 seconds")
+            logger.warning(f"⚠️  Shutdown cleanup timed out after {SHUTDOWN_TIMEOUT_SECONDS} seconds")
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
     
@@ -775,9 +778,18 @@ async def full_shutdown():
             for task in pending_tasks:
                 task.cancel()
             
-            # Wait briefly for cancelled tasks to complete
-            await asyncio.gather(*pending_tasks, return_exceptions=True)
-            logger.info("✅ All pending tasks cancelled")
+            # Wait for cancelled tasks with shorter timeout to avoid delays
+            # Use wait() instead of gather() for better control with cancelled tasks
+            done, pending = await asyncio.wait(
+                pending_tasks,
+                timeout=1.0,  # Short timeout for cancelled tasks
+                return_when=asyncio.ALL_COMPLETED
+            )
+            
+            if pending:
+                logger.warning(f"⚠️  {len(pending)} tasks still pending after cancellation")
+            else:
+                logger.info("✅ All pending tasks cancelled")
     except Exception as e:
         logger.warning(f"Error cancelling pending tasks: {e}")
     

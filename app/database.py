@@ -121,10 +121,12 @@ try:
         )
         
         # Add default PostgreSQL port using URL-safe components
-        # Note: urlparse handles URL-encoded passwords correctly
-        # We reconstruct the netloc with the port added
+        # Note: urlparse automatically decodes the URL, so when we reconstruct,
+        # we must re-encode the components. Using quote() directly here is correct
+        # (not url_encode_password) because we're working with parsed URL components.
+        # This ensures proper encoding during URL reconstruction.
         if parsed.username and parsed.password:
-            # Properly encode credentials if needed
+            # Re-encode credentials for URL reconstruction
             user = quote(parsed.username, safe='')
             password = quote(parsed.password, safe='')
             new_netloc = f"{user}:{password}@{parsed.hostname}:5432"
@@ -144,12 +146,13 @@ try:
         ))
         logger.info("✅ Auto-fixed DATABASE_URL by adding :5432 port (update your config to fix permanently)")
 except Exception as e:
-    # Don't log exception details to avoid exposing sensitive URL information
+    # Log exception type for debugging without exposing sensitive data
     logger.warning(
-        f"⚠️  Could not parse DATABASE_URL for port validation. "
+        f"⚠️  Could not parse DATABASE_URL for port validation ({type(e).__name__}). "
         f"This may cause connection errors. "
         f"Ensure format: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
     )
+    logger.debug(f"URL parsing error details: {e}")
 
 # Strip whitespace from database name in the URL path
 # This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
