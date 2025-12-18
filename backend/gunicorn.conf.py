@@ -6,6 +6,7 @@ Zero 502, Zero cold starts, Sub-800ms boot, Sub-300ms login globally
 import os
 import multiprocessing
 import time
+import logging
 
 # ============================================================================
 # BIND CONFIGURATION
@@ -126,10 +127,61 @@ accesslog = "-"
 errorlog = "-"
 access_log_format = '%(h)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)sµs'
 
+
+class SIGTERMContextFilter(logging.Filter):
+    """
+    Custom logging filter to add context to SIGTERM messages.
+    
+    When Gunicorn master sends SIGTERM to workers, it logs at ERROR level:
+    "[ERROR] Worker (pid:X) was sent SIGTERM!"
+    
+    This is NORMAL during deployments but looks alarming. This filter adds
+    helpful context immediately after the SIGTERM message.
+    """
+    
+    def filter(self, record):
+        """Add context message after SIGTERM logs."""
+        # Check if this is a SIGTERM message from Gunicorn master
+        if hasattr(record, 'msg') and isinstance(record.msg, str):
+            if 'was sent SIGTERM' in record.msg or 'was sent SIG' in record.msg:
+                # Get the original message
+                original_msg = record.msg
+                
+                # Get timeout value from environment or default
+                worker_timeout = int(os.environ.get("GUNICORN_TIMEOUT", "120"))
+                
+                # Add helpful context
+                context = (
+                    f"\n{'─'*80}\n"
+                    f"ℹ️  SIGTERM CONTEXT: This is NORMAL during:\n"
+                    f"   ✓ Deployments and service restarts\n"
+                    f"   ✓ Configuration reloads  \n"
+                    f"   ✓ Platform maintenance\n"
+                    f"   ✓ Scaling operations\n"
+                    f"\n"
+                    f"⚠️  Only investigate if this happens repeatedly OUTSIDE deployments:\n"
+                    f"   • Check for timeout issues (workers exceeding {worker_timeout}s)\n"
+                    f"   • Monitor memory usage (potential OOM kills)\n"
+                    f"   • Review application errors before SIGTERM\n"
+                    f"   • Check for slow database queries or API calls\n"
+                    f"{'─'*80}"
+                )
+                
+                # Append context to the message
+                record.msg = original_msg + context
+        
+        return True
+
+
 # Custom logger class to provide better context for worker signals
 logconfig_dict = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'sigterm_context': {
+            '()': SIGTERMContextFilter,
+        }
+    },
     'formatters': {
         'generic': {
             'format': '%(asctime)s [%(process)d] [%(levelname)s] %(message)s',
@@ -146,6 +198,7 @@ logconfig_dict = {
         'error_console': {
             'class': 'logging.StreamHandler',
             'formatter': 'generic',
+            'filters': ['sigterm_context'],
             'stream': 'ext://sys.stderr'
         }
     },
