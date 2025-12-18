@@ -162,6 +162,27 @@ def health():
     return {"status": "ok"}
 
 
+# EMERGENCY HEALTH ENDPOINT — ULTRA STABLE FALLBACK
+@app.get("/healthz", include_in_schema=False)
+def healthz():
+    """Emergency health check endpoint - ultra stable fallback.
+    
+    This is a SECOND emergency health route that returns a plain "ok" string.
+    If /health or /api/health ever changes, this endpoint ensures the service
+    still survives health checks.
+    
+    Returns plain text "ok" for maximum compatibility and minimal overhead.
+    
+    ✅ NO DATABASE - instant response
+    ✅ NO IO - instant response  
+    ✅ NO async/await - synchronous function
+    ✅ Plain text response - no JSON parsing overhead
+    
+    High reliability through minimal dependencies and failure points.
+    """
+    return "ok"
+
+
 # LIVENESS PROBE — Kubernetes/Render liveness check
 @app.get("/live", tags=["health"])
 @app.head("/live", tags=["health"])
@@ -826,7 +847,11 @@ def api_health():
     
     Render kills apps that fail health checks, so this must be instant.
     """
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "service": "hiremebahamas-backend",
+        "uptime": "healthy"
+    }
 
 
 # Detailed health check endpoint for monitoring
