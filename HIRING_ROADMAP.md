@@ -184,11 +184,11 @@ This is a real startup hiring plan designed to minimize burn, avoid bad hires, a
 - **Full-time:** $70K–$110K/year + performance bonuses
 - Consider equity compensation tied to growth metrics
 
-**Success Metrics:**
-- Reduced CAC by X%
-- Increased conversion rate by Y%
-- Improved retention by Z%
-- Added $N in monthly recurring revenue (MRR)
+**Success Metrics (Examples):**
+- Reduced CAC by 15-30% (e.g., from $50 to $35-$42)
+- Increased conversion rate by 10-25% (e.g., from 2% to 2.2-2.5%)
+- Improved retention by 5-15% (e.g., from 60% to 63-69% 30-day retention)
+- Added $5K-$50K in monthly recurring revenue (MRR) within 6 months
 
 ---
 
@@ -474,13 +474,16 @@ This is a real startup hiring plan designed to minimize burn, avoid bad hires, a
 ### Before Each Hire, Validate:
 
 1. **Bottleneck Exists**
-   - You're spending >20 hours/week on tasks this role would own
+   - You're spending >20 hours/week (>50% of your time) on tasks this role would own
    - User growth is limited by this constraint
    - Revenue/retention suffering due to this gap
+   - This work is preventing you from strategic activities
 
 2. **Budget Available**
-   - 12 months of salary + benefits covered
-   - Or contract cost fully funded upfront
+   - **Conservative approach:** 12 months of salary + benefits covered
+   - **Startup-friendly:** 6 months covered with validated path to profitability
+   - **Contract roles:** 3-6 months of contract costs funded upfront
+   - **Revenue-generating roles** (e.g., sales, growth): Can be 3-4 months if ROI is clear
 
 3. **Role Defined**
    - Clear job description
