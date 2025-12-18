@@ -723,13 +723,17 @@ async def full_shutdown():
     """Graceful shutdown with proper async task cleanup.
     
     This prevents "Task was destroyed but it is pending!" warnings by:
-    1. Properly awaiting all cleanup operations
-    2. Cancelling any pending background tasks
-    3. Giving async operations time to complete gracefully
+    1. Allowing tasks to close cleanly before cleanup
+    2. Properly awaiting all cleanup operations
+    3. Cancelling any pending background tasks
+    4. Giving async operations time to complete gracefully
     """
     import asyncio
     
     logger.info("Shutting down HireMeBahamas API...")
+    
+    # Allow tasks to close cleanly (prevents orphaned tasks when Gunicorn restarts workers)
+    await asyncio.sleep(0)
     
     # Configurable shutdown timeout (default 5 seconds)
     SHUTDOWN_TIMEOUT_SECONDS = int(os.getenv("SHUTDOWN_TIMEOUT_SECONDS", "5"))
