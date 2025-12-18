@@ -22,11 +22,17 @@ def test_sigterm_context_filter():
     print("="*80)
     print()
     
-    # Load the gunicorn config directly
+    # Load the gunicorn config directly from the script's directory
     import importlib.util
+    import os
+    
+    # Get the directory containing this test script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, "gunicorn.conf.py")
+    
     spec = importlib.util.spec_from_file_location(
         "gunicorn_conf", 
-        "/home/runner/work/HireMeBahamas/HireMeBahamas/gunicorn.conf.py"
+        config_path
     )
     config = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(config)

@@ -147,6 +147,9 @@ class SIGTERMContextFilter(logging.Filter):
                 # Get the original message
                 original_msg = record.msg
                 
+                # Get timeout value from environment or default
+                worker_timeout = int(os.environ.get("GUNICORN_TIMEOUT", "120"))
+                
                 # Add helpful context
                 context = (
                     f"\n{'─'*80}\n"
@@ -157,7 +160,7 @@ class SIGTERMContextFilter(logging.Filter):
                     f"   ✓ Scaling operations\n"
                     f"\n"
                     f"⚠️  Only investigate if this happens repeatedly OUTSIDE deployments:\n"
-                    f"   • Check for timeout issues (workers exceeding {_get_worker_timeout()}s)\n"
+                    f"   • Check for timeout issues (workers exceeding {worker_timeout}s)\n"
                     f"   • Monitor memory usage (potential OOM kills)\n"
                     f"   • Review application errors before SIGTERM\n"
                     f"   • Check for slow database queries or API calls\n"
