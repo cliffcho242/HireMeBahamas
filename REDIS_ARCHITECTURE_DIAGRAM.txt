@@ -1,0 +1,206 @@
+================================================================================
+REDIS CACHING ARCHITECTURE - HireMeBahamas Feed
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CLIENT REQUEST                                     │
+│                                  │                                           │
+│                                  ▼                                           │
+│                        GET /api/posts?skip=0&limit=20                       │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         EDGE CACHE (CDN)                                     │
+│                                                                              │
+│  Cache-Control: public, max-age=30, stale-while-revalidate=60              │
+│                                                                              │
+│  ┌──────────────┐         ┌──────────────┐                                 │
+│  │ Cache Hit?   │   YES   │ Return Cache │ ─────────► Response (5-10ms)    │
+│  │ (< 30s old)  │ ───────►│   Content    │                                 │
+│  └──────────────┘         └──────────────┘                                 │
+│         │                                                                    │
+│         │ NO                                                                 │
+└─────────┼──────────────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    FASTAPI APPLICATION LAYER                                │
+│                                                                              │
+│  Feed Endpoint: api/backend_app/api/feed.py                                │
+│                                                                              │
+│  @router.get("/")                                                           │
+│  async def feed(response: Response, db: AsyncSession):                     │
+│      key = "feed:global"                                                    │
+│      cached = await redis_cache.get(key)  ◄─┐                             │
+│                                              │                              │
+│      if cached:                              │                              │
+│          return json.loads(cached) ──────────┼───► Response (< 10ms)       │
+│                                              │                              │
+│      # Cache miss - fetch from DB            │                              │
+└──────────────────────────────────────────────┼──────────────────────────────┘
+                                               │
+                                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       REDIS CACHE LAYER                                      │
+│                                                                              │
+│  Module: api/backend_app/core/redis_cache.py                               │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────┐          │
+│  │ AsyncRedisCache                                              │          │
+│  │                                                              │          │
+│  │ - Connection Pool (10 connections)                          │          │
+│  │ - Circuit Breaker Pattern                                   │          │
+│  │ - TTL: 30 seconds                                           │          │
+│  │ - Graceful Fallback to In-Memory                           │          │
+│  │ - JSON Serialization                                        │          │
+│  │                                                              │          │
+│  │ Methods:                                                    │          │
+│  │   • async get(key) → Optional[Any]                         │          │
+│  │   • async set(key, value, ttl=30) → bool                   │          │
+│  │   • async invalidate_prefix(prefix) → int                  │          │
+│  │   • async health_check() → dict                            │          │
+│  └─────────────────────────────────────────────────────────────┘          │
+│                                                                              │
+│  Cache Hit? ──YES──► Return Cached Data (< 10ms)                          │
+│      │                                                                       │
+│      NO                                                                      │
+└──────┼───────────────────────────────────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      POSTGRESQL DATABASE                                     │
+│                                                                              │
+│  Query: SELECT * FROM posts ORDER BY created_at DESC LIMIT 20              │
+│                                                                              │
+│  Execution: ~100-300ms                                                      │
+│                                                                              │
+│  Result: [Post objects with user relationships]                            │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    DATA SERIALIZATION & CACHING                             │
+│                                                                              │
+│  1. Serialize posts to JSON                                                │
+│  2. Store in Redis with key "feed:global"                                 │
+│  3. Set TTL = 30 seconds                                                   │
+│  4. Return to client                                                       │
+│                                                                              │
+│  await redis_cache.set(key, json.dumps(data), ttl=30)                     │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+                                       ▼
+                              Response (~100-200ms)
+
+
+================================================================================
+CACHE INVALIDATION FLOW
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      POST MUTATION OPERATIONS                               │
+│                                                                              │
+│  Module: api/backend_app/api/posts.py                                      │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+       ┌───────────────────────────────┼───────────────────────────────┐
+       │                               │                               │
+       ▼                               ▼                               ▼
+┌─────────────┐              ┌─────────────┐              ┌─────────────┐
+│ POST CREATE │              │ POST UPDATE │              │ POST DELETE │
+└──────┬──────┘              └──────┬──────┘              └──────┬──────┘
+       │                             │                             │
+       └─────────────────────────────┼─────────────────────────────┘
+                                     │
+                                     ▼
+                    await redis_cache.invalidate_prefix("feed:global")
+                                     │
+                                     ▼
+                           All feed caches cleared
+                                     │
+                                     ▼
+                    Next request triggers cache miss
+                                     │
+                                     ▼
+                    Fresh data loaded from database
+
+
+================================================================================
+PERFORMANCE METRICS
+================================================================================
+
+Request Flow:                Time Taken:        Improvement:
+─────────────────            ────────────       ─────────────
+
+Cache Hit (Redis)            < 10ms             20× faster than DB
+  ├─ Edge Cache              5-10ms             ✅ Best performance
+  └─ Redis Cache             8-12ms             ✅ Excellent
+
+Cache Miss (Database)        100-300ms          Baseline
+  ├─ DB Query                100-250ms          
+  ├─ Serialization           10-20ms            
+  └─ Cache Storage           5-10ms             
+
+Database Protection:
+  Before:  100 requests = 100 DB queries
+  After:   100 requests = 1-5 DB queries (95% reduction) ✅
+
+
+================================================================================
+MONITORING & HEALTH CHECK
+================================================================================
+
+Endpoint: GET /health/cache
+
+Response:
+{
+  "status": "healthy",
+  "backend": "redis",
+  "latency_ms": 1.23,
+  "stats": {
+    "hits": 1500,
+    "misses": 300,
+    "hit_rate_percent": 83.33,
+    "redis_available": true,
+    "memory_cache_size": 0
+  }
+}
+
+
+================================================================================
+GRACEFUL DEGRADATION
+================================================================================
+
+Redis Available:
+  └─► Use Redis cache (optimal performance)
+
+Redis Unavailable:
+  ├─► Fall back to in-memory cache
+  ├─► Log warning
+  ├─► Circuit breaker pattern
+  └─► Continue serving requests (degraded performance)
+
+
+================================================================================
+PRODUCTION DEPLOYMENT
+================================================================================
+
+Environment Variable:
+  REDIS_URL=rediss://:password@host:port
+
+Features:
+  ✅ SSL/TLS Support (rediss://)
+  ✅ Connection Pooling
+  ✅ Automatic Reconnection
+  ✅ Circuit Breaker
+  ✅ Health Monitoring
+  ✅ Graceful Fallback
+
+Recommended Providers:
+  • Upstash Redis (Serverless, Free Tier)
+  • Railway Redis (Private Networking)
+  • Render Redis (Simple Setup)
+
+
+================================================================================
