@@ -46,7 +46,9 @@ export async function getSession(): Promise<User | null> {
     return data as User;
   } catch (error) {
     // Network error or other issue - return null safely (no guessing)
-    console.error('Session fetch error:', error);
+    if (import.meta.env.DEV) {
+      console.error('Session fetch error:', error);
+    }
     return null;
   }
 }

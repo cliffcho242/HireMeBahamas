@@ -12,7 +12,7 @@ Located in: `frontend/src/services/auth.ts`
 
 ```typescript
 export async function getSession(): Promise<User | null> {
-  const res = await fetch(`${API}/api/auth/me`, {
+  const res = await fetch(apiUrl("/api/auth/me"), {
     credentials: 'include',
   });
 

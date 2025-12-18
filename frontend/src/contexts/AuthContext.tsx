@@ -151,7 +151,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             
             // Check if we have a saved session to get the original rememberMe preference
             const savedSession = sessionManager.loadSession();
-            const rememberMePreference = savedSession?.rememberMe ?? true; // Default to true if backend session exists
+            // Default to true if backend session exists (user chose persistent session previously)
+            // This handles the case where local session data was cleared but backend cookie remains
+            const rememberMePreference = savedSession?.rememberMe ?? true;
             
             // Save/update session in session manager
             const expiresAt = sessionManager.getTokenExpiration(storedToken);
