@@ -121,6 +121,8 @@ except ImportError as e:
     def health():
         """Instant health check - no database dependency.
         
+        Supports both GET and HEAD methods for maximum compatibility.
+        
         ✅ NO DATABASE - instant response
         ✅ NO IO - instant response
         ✅ NO async/await - synchronous function
@@ -133,6 +135,8 @@ except ImportError as e:
     @app.head("/health/ping", include_in_schema=False)
     def health_ping():
         """Ultra-fast health ping endpoint
+        
+        Supports both GET and HEAD methods for maximum compatibility.
         
         🚫 NO database queries
         🚫 NO external service calls

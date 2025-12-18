@@ -149,6 +149,8 @@ def health():
     This endpoint is designed to respond immediately (<5ms) even during
     the coldest start. It does NOT check database connectivity.
     
+    Supports both GET and HEAD methods for maximum compatibility.
+    
     Use /ready for database connectivity check.
     
     ✅ NO DATABASE - instant response
@@ -815,6 +817,8 @@ async def cache_health():
 @app.head("/api/health")
 def api_health():
     """Instant API health check - no database dependency.
+    
+    Supports both GET and HEAD methods for health check compatibility.
     
     ✅ NO DATABASE - instant response
     ✅ NO IO - instant response
