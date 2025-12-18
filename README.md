@@ -24,6 +24,7 @@ Complete architecture and implementation guides for:
 1. 🎯 **[SCALE_TO_1M_USERS_BLUEPRINT.md](./SCALE_TO_1M_USERS_BLUEPRINT.md)** - Complete infrastructure blueprint for 1M+ users
 2. 💰 **[MONETIZATION_STRATEGY.md](./MONETIZATION_STRATEGY.md)** - Revenue generation ($300K+/month MRR)
 3. ⚡ **[BACKEND_SCALING_PATTERN.md](./BACKEND_SCALING_PATTERN.md)** - Critical backend architecture patterns
+4. 👥 **[HIRING_ROADMAP.md](./HIRING_ROADMAP.md)** - **NEW!** Execution-ready hiring plan from solo to 1M users
 
 **Infrastructure**:
 - Frontend: Vercel Edge CDN (100+ global locations)
