@@ -31,6 +31,8 @@ import os
 import logging
 import threading
 import errno
+import time
+import asyncio
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -643,6 +645,61 @@ async def get_pool_status() -> dict:
         "pool_recycle_seconds": POOL_RECYCLE,
         "connect_timeout_seconds": CONNECT_TIMEOUT,
     }
+
+
+# =============================================================================
+# DATABASE WAIT WITH RETRY AND BACKOFF (NO CRASH ON BOOT)
+# =============================================================================
+
+async def wait_for_db(max_retries: int = 5) -> None:
+    """Wait for database to become available with exponential backoff.
+    
+    This function implements retry logic with exponential backoff to handle
+    database unavailability at boot time. It prevents application crashes
+    when the database is temporarily unavailable (e.g., cold starts, network issues).
+    
+    ⚠️  IMPORTANT: Do NOT call this in health check endpoints.
+    ✅ Call this in background initialization only.
+    
+    Args:
+        max_retries: Maximum number of retry attempts (default: 5)
+    
+    Raises:
+        RuntimeError: If database never becomes ready after max_retries
+    
+    Example:
+        # Call in background init only (NOT in health check)
+        async def background_init():
+            await wait_for_db(max_retries=5)
+            # Database is now ready, continue with other initialization...
+    """
+    for attempt in range(1, max_retries + 1):
+        try:
+            # Get the actual engine (may trigger lazy initialization)
+            actual_engine = get_engine()
+            if actual_engine is None:
+                # Engine creation failed (invalid config)
+                raise RuntimeError("Database engine is not available (check DATABASE_URL)")
+            
+            # Test database connectivity
+            from sqlalchemy import text
+            async with actual_engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            
+            logger.info("Database ready")
+            return
+            
+        except Exception as e:
+            logger.warning(f"DB not ready (attempt {attempt}): {e}")
+            
+            # If this was the last attempt, raise error
+            if attempt == max_retries:
+                raise RuntimeError("Database never became ready")
+            
+            # Wait with exponential backoff: attempt * 2 seconds
+            # attempt 1: 2s, attempt 2: 4s, attempt 3: 6s, attempt 4: 8s
+            delay = attempt * 2
+            await asyncio.sleep(delay)
 
 
 # =============================================================================

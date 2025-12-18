@@ -617,7 +617,23 @@ async def startup():
         
         try:
             # ==========================================================================
-            # STEP 1: Pre-warm bcrypt (non-blocking, no database)
+            # STEP 1: Wait for database with retry and backoff (background init only)
+            # ==========================================================================
+            try:
+                from .database import wait_for_db
+                # Wait for DB with max 5 retries and exponential backoff
+                # This prevents app crashes when DB is temporarily unavailable
+                loop.run_until_complete(wait_for_db(max_retries=5))
+                logger.info("✅ Database connection established")
+            except RuntimeError as e:
+                # Database never became ready - log warning but don't crash
+                logger.warning(f"Database initialization failed: {e}")
+                logger.warning("Application will start but database operations may fail")
+            except Exception as e:
+                logger.warning(f"Database wait skipped (non-critical): {type(e).__name__}: {e}")
+            
+            # ==========================================================================
+            # STEP 2: Pre-warm bcrypt (non-blocking, no database)
             # ==========================================================================
             try:
                 if prewarm_bcrypt_async is not None:
@@ -633,7 +649,7 @@ async def startup():
                 logger.warning(f"Bcrypt pre-warm skipped (non-critical): {type(e).__name__}")
             
             # ==========================================================================
-            # STEP 2: Initialize Redis cache (non-blocking, no database)
+            # STEP 3: Initialize Redis cache (non-blocking, no database)
             # ==========================================================================
             try:
                 if redis_cache is not None:
@@ -652,7 +668,7 @@ async def startup():
                 logger.warning(f"Redis connection failed (non-critical): {e}")
             
             # ==========================================================================
-            # STEP 3: Warm up cache (optional, non-blocking, no database required)
+            # STEP 4: Warm up cache (optional, non-blocking, no database required)
             # ==========================================================================
             try:
                 from .core.cache import warmup_cache
@@ -666,7 +682,7 @@ async def startup():
                 logger.debug(f"Cache warmup skipped: {e}")
             
             # ==========================================================================
-            # STEP 4: Run performance optimizations (background, non-blocking)
+            # STEP 5: Run performance optimizations (background, non-blocking)
             # ==========================================================================
             try:
                 from .core.performance import run_all_performance_optimizations
