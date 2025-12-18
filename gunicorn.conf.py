@@ -4,120 +4,30 @@ Gunicorn Production Configuration - HireMeBahamas (2025)
 Zero 502, Zero cold starts, Sub-800ms boot, Sub-300ms login globally
 """
 import os
-import multiprocessing
 import time
 import logging
 
 # ============================================================================
 # BIND CONFIGURATION
 # ============================================================================
-# ⚠️ CRITICAL: Validate port before binding
-_port = os.environ.get('PORT', '10000')
-_port_int = int(_port)
-
-# DO NOT BIND TO PORT 5432 - This is a PostgreSQL port, not for HTTP backends
-if _port_int == 5432:
-    import sys
-    print("=" * 80, file=sys.stderr)
-    print("❌ CRITICAL ERROR: Cannot bind to port 5432", file=sys.stderr)
-    print("=" * 80, file=sys.stderr)
-    print("", file=sys.stderr)
-    print("Port 5432 is reserved for PostgreSQL database servers.", file=sys.stderr)
-    print("Your HTTP backend (gunicorn) should use a different port.", file=sys.stderr)
-    print("", file=sys.stderr)
-    print("Common HTTP ports:", file=sys.stderr)
-    print("  • 8000, 8080, 8888: Common development ports", file=sys.stderr)
-    print("  • 10000: Railway/Render default", file=sys.stderr)
-    print("  • Use $PORT environment variable for cloud deployments", file=sys.stderr)
-    print("", file=sys.stderr)
-    print("To fix this:", file=sys.stderr)
-    print("  1. Check your PORT environment variable: echo $PORT", file=sys.stderr)
-    print("  2. Unset PORT if it's 5432: unset PORT", file=sys.stderr)
-    print("  3. Use correct port for HTTP: export PORT=8000", file=sys.stderr)
-    print("  4. Never set PORT=5432 for web services", file=sys.stderr)
-    print("=" * 80, file=sys.stderr)
-    sys.exit(1)
-
-bind = f"0.0.0.0:{_port}"
+bind = "0.0.0.0:10000"
 
 # ============================================================================
-# WORKER CONFIGURATION (Optimized for Render Small Instances)
+# WORKER CONFIGURATION
 # ============================================================================
-# Optimized for Render and similar PaaS platforms with small instance sizes
-# CRITICAL: Render does NOT like many workers on small instances
-# 
-# Configuration for Render (AGGRESSIVE FOREVER FIX):
-# - workers=1: Single worker is faster + safer on small instances
-# - threads=2: Minimal threading for request handling
-# - Total capacity: 1 worker with async event loop (handles many concurrent connections)
-# 
-# Benefits of single worker:
-# - Lower memory footprint
-# - Faster startup times
-# - More predictable behavior on small instances
-# - Prevents worker timeout issues on constrained resources
-cpu_count = multiprocessing.cpu_count()
-
-# Workers: 1 for optimal performance on Render small instances (CRITICAL)
-# Use WEB_CONCURRENCY env var to override (but keep it at 1 for Render)
-workers = int(os.environ.get("WEB_CONCURRENCY", "1"))
-
-# Worker class: uvicorn.workers.UvicornWorker for FastAPI async support
-# Uvicorn workers provide ASGI support with excellent async/await performance
+workers = 2
 worker_class = "uvicorn.workers.UvicornWorker"
 
-# Threads: 2 for minimal threading overhead (Render optimization)
-# Note: UvicornWorker uses async event loop, not threads for concurrency
-# With UvicornWorker:
-# - Each worker runs an async event loop
-# - Concurrency is handled via async/await, not threads
-# - Single worker can handle 100+ concurrent connections efficiently
-# - Threads parameter only used if switching to 'gthread' worker class
-threads = int(os.environ.get("WEB_THREADS", "2"))
-
 # ============================================================================
-# TIMEOUT CONFIGURATION (Optimized for Render)
+# TIMEOUT CONFIGURATION
 # ============================================================================
-# Worker timeout: 120s - increased for startup and initialization on Render
-# This prevents worker SIGTERM during slow startup on small instances
-timeout = int(os.environ.get("GUNICORN_TIMEOUT", "120"))
-
-# Graceful timeout: 30s for in-flight requests during shutdown
-graceful_timeout = 30
-
-# Keep-alive: 5s (matches most cloud load balancers)
+timeout = 120
 keepalive = 5
 
 # ============================================================================
-# MEMORY MANAGEMENT (Prevents OOM on Free Tier)
+# PRELOAD CONFIGURATION
 # ============================================================================
-# Restart worker after 1000 requests to prevent memory leaks
-max_requests = 1000
-max_requests_jitter = 100
-
-# ============================================================================
-# PRELOAD & PERFORMANCE (DATABASE SAFETY - CRITICAL)
-# ============================================================================
-# ⚠️ CRITICAL WARNING: Never use --preload with databases!
-#
-# Preload app setting:
-# - True: Load app once before forking (DANGEROUS with databases)
-# - False: Each worker loads app independently (SAFE with databases)
-#
-# Why preload_app = False is critical for database applications:
-# 1. Database connection pools cannot be safely shared across fork()
-# 2. Each worker needs its own database connections
-# 3. Prevents health check failures during initialization
-# 4. Allows /health endpoint to respond while workers initialize
-# 5. Avoids worker synchronization issues with shared state
-#
-# ⚠️ NEVER override this with --preload on the command line!
-# Command line: poetry run gunicorn final_backend_postgresql:application --config gunicorn.conf.py
-# Do NOT add: --preload (this would override the safe setting below)
-#
-# SAFE COMMAND:   gunicorn final_backend_postgresql:application --config gunicorn.conf.py
-# UNSAFE COMMAND: gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preload
-preload_app = False
+preload_app = False  # IMPORTANT 🚫 DO NOT preload when DB/network involved
 
 # ============================================================================
 # LOGGING (Production-grade)
@@ -257,13 +167,11 @@ def on_starting(server):
     print("="*80)
     print("  HireMeBahamas API - Production Configuration")
     print("="*80)
-    print(f"  Workers: {workers} (single worker = predictable memory)")
-    print(f"  Threads: {threads} (async event loop handles concurrency)")
-    print(f"  Timeout: {timeout}s (prevents premature SIGTERM)")
-    print(f"  Graceful: {graceful_timeout}s (clean shutdown)")
-    print(f"  Keepalive: {keepalive}s (connection persistence)")
-    print(f"  Preload: {preload_app} (safe for database apps)")
-    print(f"  Worker Class: {worker_class} (async)")
+    print(f"  Workers: {workers}")
+    print(f"  Timeout: {timeout}s")
+    print(f"  Keepalive: {keepalive}s")
+    print(f"  Preload: {preload_app}")
+    print(f"  Worker Class: {worker_class}")
     print("")
     print("  This is how production FastAPI apps actually run.")
     print("="*80)
