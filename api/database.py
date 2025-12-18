@@ -20,13 +20,10 @@ This legacy module will be removed in a future version.
 """
 import os
 import logging
-import re
-from urllib.parse import urlparse, urlunparse
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 from sqlalchemy.exc import ArgumentError
-from sqlalchemy.engine.url import make_url
-from .db_url_utils import ensure_sslmode, validate_database_url_structure, validate_password_encoding
+from .db_url_utils import ensure_sslmode
 
 # Global engine (reused across invocations)
 _engine = None
@@ -68,92 +65,13 @@ def get_database_url():
     """
     db_url = os.getenv("DATABASE_URL", "")
     
-    # Strip whitespace from database URL to prevent connection errors
-    db_url = db_url.strip()
+    # DATABASE_URL is used as-is from environment
     
     if not db_url:
         logger.warning("DATABASE_URL environment variable not set")
         return None
     
-    # Check for password encoding issues early
-    is_encoded, encoding_warning = validate_password_encoding(db_url)
-    if not is_encoded:
-        logger.warning(
-            f"⚠️  DATABASE_URL password encoding issue: {encoding_warning}. "
-            f"This may cause connection failures. Please URL-encode special characters in password."
-        )
-    
-    # Validate basic URL structure before processing
-    # PostgreSQL connection string should match pattern: postgresql://[user[:password]@]host[:port][/dbname][?param=value]
-    # This prevents the cryptic asyncpg error: "The string did not match the expected pattern"
-    if not re.match(r'^(postgres|postgresql)://', db_url):
-        logger.warning(
-            f"Invalid DATABASE_URL format. Must start with 'postgres://' or 'postgresql://'. "
-            f"Example: postgresql://user:password@host:5432/dbname"
-        )
-        return None
-    
-    # Check for common mistakes that cause "pattern" errors
-    # 1. Missing host (e.g., "postgresql://:password@/dbname")
-    # 2. Double slashes in unexpected places
-    # 3. Invalid characters in parts that should only contain alphanumeric + specific chars
-    try:
-        # Try to parse URL to validate structure
-        test_parse = urlparse(db_url)
-        
-        # Validate netloc (user:pass@host:port) is present
-        if not test_parse.netloc:
-            logger.warning(
-                f"Invalid DATABASE_URL: missing host/port information. "
-                f"Please check your environment variables. See SECURITY.md for proper format."
-            )
-            return None
-        
-        # Check if hostname is present (netloc could be just ":port" which is invalid)
-        if test_parse.netloc.startswith(':') or '@:' in test_parse.netloc:
-            logger.warning(
-                f"Invalid DATABASE_URL: missing hostname. "
-                f"Please check your environment variables. See SECURITY.md for proper format."
-            )
-            return None
-        
-        # Validate hostname is not a placeholder value
-        # Common placeholder values that should not be used in production
-        PLACEHOLDER_HOSTS = [
-            "host",           # Most common placeholder in examples
-            "hostname",       # Alternative placeholder
-            "your-host",      # Another common placeholder
-            "your-hostname",  # Another variant
-            "example.com",    # Example domain
-            "your-db-host",   # Descriptive placeholder
-        ]
-        
-        hostname = test_parse.hostname
-        if hostname and hostname.lower() in PLACEHOLDER_HOSTS:
-            # Production-safe: log warning instead of raising exception
-            # This allows the app to start for health checks and diagnostics
-            logger.warning(
-                f"⚠️  DATABASE_URL contains placeholder hostname '{hostname}'. "
-                f"Please replace it with your actual database hostname. "
-                f"Database connections will likely fail. "
-                f"For Railway: copy DATABASE_PRIVATE_URL or DATABASE_URL from your project variables. "
-                f"For Vercel Postgres: get the connection string from Storage → Postgres in your dashboard. "
-                f"For other providers: check your database dashboard for connection details."
-            )
-            
-    except Exception as e:
-        # Catch any parsing errors and log warning
-        logger.warning(
-            f"Invalid DATABASE_URL format: {str(e)}. "
-            f"Please check your environment variables. See SECURITY.md for proper format."
-        )
-        return None
-    
-    # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
-    # This handles cases where the 'p' is missing from "postgresql"
-    if "ostgresql" in db_url and "postgresql" not in db_url:
-        db_url = db_url.replace("ostgresql", "postgresql")
-        logger.warning("Fixed malformed DATABASE_URL: 'ostgresql' -> 'postgresql'")
+    # No validation or auto-fix - DATABASE_URL is used as-is
     
     # Convert postgres:// to postgresql+asyncpg://
     if db_url.startswith("postgres://"):
@@ -161,47 +79,8 @@ def get_database_url():
     elif db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     
-    # Strip whitespace from database name in the URL path
-    # This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
-    try:
-        parsed = urlparse(db_url)
-        if parsed.path:
-            # Strip leading slash and whitespace from database name
-            db_name = parsed.path.lstrip('/').strip()
-            if db_name:
-                # Reconstruct path with cleaned database name
-                new_path = '/' + db_name
-                db_url = urlunparse((
-                    parsed.scheme,
-                    parsed.netloc,
-                    new_path,
-                    parsed.params,
-                    parsed.query,
-                    parsed.fragment
-                ))
-    except Exception as e:
-        # If URL parsing fails after validation, log it but continue
-        logger.warning(f"Could not clean database name from URL: {e}")
-    
     # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
     db_url = ensure_sslmode(db_url)
-    
-    # Validate DATABASE_URL structure meets cloud deployment requirements
-    is_valid, error_msg = validate_database_url_structure(db_url)
-    if not is_valid:
-        logger.warning(
-            f"❌ DATABASE_URL validation failed: {error_msg}. "
-            f"Database connections will fail. "
-            f"Required format: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
-        )
-        # In production, this is a critical error but we still return the URL
-        # to allow health checks and diagnostics to run
-        if ENV == "production":
-            logger.error(
-                "⚠️  PRODUCTION DATABASE MISCONFIGURED - connections will fail! "
-                f"Error: {error_msg}. "
-                "REQUIRED: postgresql://user:ENCODED_PASSWORD@ep-dawn-cloud-a4rbrgox.us-east-1.aws.neon.tech:5432/dbname?sslmode=require"
-            )
     
     return db_url
 
@@ -238,20 +117,6 @@ def get_engine():
             # If validation failed, get_database_url() returns None
             if not db_url:
                 logger.warning("Cannot create database engine: invalid or missing DATABASE_URL")
-                return None
-            
-            # CRITICAL: Validate DATABASE_URL using SQLAlchemy make_url()
-            # This is the production-grade way to parse and validate database URLs
-            try:
-                validated_url = make_url(db_url)
-                # Log only driver name to avoid exposing sensitive connection details
-                logger.info(f"✅ DATABASE_URL validated successfully (driver: {validated_url.drivername})")
-            except Exception as url_error:
-                logger.error(
-                    f"❌ DATABASE_URL validation failed using make_url(): {url_error}. "
-                    f"Application will start but database operations will fail. "
-                    f"Required format: postgresql://user:password@host:port/database?sslmode=require"
-                )
                 return None
             
             # Get configurable timeout values from environment

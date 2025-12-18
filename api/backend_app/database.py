@@ -36,23 +36,13 @@
 
 import os
 import logging
-import sys
 import threading
 import errno
 from typing import Optional
-from urllib.parse import urlparse, urlunparse
-
-# Add project root to path for importing shared validation
-_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if _project_root not in sys.path:
-    sys.path.insert(0, _project_root)
-
-# No need for db_config_validation import anymore since we only use DATABASE_URL
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import ArgumentError
-from sqlalchemy.engine.url import make_url
 
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
@@ -81,9 +71,7 @@ ENV = os.getenv("ENV", "development")
 # Get database URL - only DATABASE_URL is supported
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Strip whitespace from DATABASE_URL to prevent connection errors
-if DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.strip()
+# DATABASE_URL is used as-is from environment
 
 # =============================================================================
 # PRODUCTION SAFETY: WARN IF POSTGRES NOT CONFIGURED (PRODUCTION-SAFE)
@@ -104,121 +92,22 @@ elif not DATABASE_URL:
     logger.warning("Using default local development database URL. Set DATABASE_URL for production.")
 # =============================================================================
 
-# Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
-# This handles cases where the 'p' is missing from "postgresql"
-if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("ostgresql", "postgresql")
-    logger.info("✓ Auto-fixed DATABASE_URL typo: 'ostgresql' → 'postgresql' (update env var to fix permanently)")
+# No auto-fix for typos - DATABASE_URL must be correct
 
 # Convert sync PostgreSQL URLs to async driver format
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
 
-# Ensure explicit port in DATABASE_URL (required for cloud deployments)
-# Parse URL and add port if missing
-try:
-    from urllib.parse import urlparse, urlunparse, quote
-    parsed = urlparse(DATABASE_URL)
-    if parsed.hostname and not parsed.port:
-        # CRITICAL FIX: Missing port causes "Could not parse DATABASE_URL" errors
-        # Render/Railway/Neon require explicit :5432 port in connection string
-        logger.warning(
-            f"⚠️  DATABASE_URL missing port number! "
-            f"Adding :5432 automatically, but you should fix your DATABASE_URL. "
-            f"REQUIRED FORMAT: postgresql://user:pass@{parsed.hostname}:5432/dbname?sslmode=require"
-        )
-        
-        # Add default PostgreSQL port using URL-safe components
-        # Note: urlparse automatically decodes the URL, so when we reconstruct,
-        # we must re-encode the components. Using quote() directly here is correct
-        # (not url_encode_password) because we're working with parsed URL components.
-        # This ensures proper encoding during URL reconstruction.
-        if parsed.username and parsed.password:
-            # Re-encode credentials for URL reconstruction
-            user = quote(parsed.username, safe='')
-            password = quote(parsed.password, safe='')
-            new_netloc = f"{user}:{password}@{parsed.hostname}:5432"
-        elif parsed.username:
-            user = quote(parsed.username, safe='')
-            new_netloc = f"{user}@{parsed.hostname}:5432"
-        else:
-            new_netloc = f"{parsed.hostname}:5432"
-        
-        DATABASE_URL = urlunparse((
-            parsed.scheme,
-            new_netloc,
-            parsed.path,
-            parsed.params,
-            parsed.query,
-            parsed.fragment
-        ))
-        logger.info("✅ Auto-fixed DATABASE_URL by adding :5432 port (update your config to fix permanently)")
-except Exception as e:
-    # Don't log exception details to avoid exposing sensitive URL information
-    logger.warning(
-        f"⚠️  Could not parse DATABASE_URL for port validation. "
-        f"This may cause 'The string did not match the expected pattern' errors. "
-        f"Ensure format: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
-    )
+# No auto-fix for missing ports - DATABASE_URL must include explicit port
 
-# Strip whitespace from database name in the URL path
-# This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
-try:
-    parsed_url = urlparse(DATABASE_URL)
-    if parsed_url.path:
-        # Strip leading slash and whitespace from database name
-        db_name = parsed_url.path.lstrip('/').strip()
-        if db_name and db_name != parsed_url.path.lstrip('/'):
-            # Reconstruct URL with cleaned database name only if it was changed
-            new_path = '/' + db_name
-            DATABASE_URL = urlunparse((
-                parsed_url.scheme,
-                parsed_url.netloc,
-                new_path,
-                parsed_url.params,
-                parsed_url.query,
-                parsed_url.fragment
-            ))
-            logger.info(f"✓ Auto-stripped whitespace from database name in URL")
-except Exception as e:
-    # If URL parsing fails, log warning but continue with original URL
-    logger.warning(f"Could not parse DATABASE_URL for database name sanitization: {e}")
+# No auto-fix for whitespace - DATABASE_URL must be properly formatted
 
 # NOTE: SQLAlchemy's create_async_engine() automatically handles URL decoding for
 # special characters in username/password. No manual decoding is needed here.
 # For example, passwords with '@' or '%' are automatically decoded from URL-encoded form.
 
-# Validate DATABASE_URL format - ensure all required fields are present
-# Parse and validate required fields using production-safe validation
-# Only validate if DATABASE_URL is actually configured (not placeholder or local dev default)
-if DATABASE_URL and DATABASE_URL != DB_PLACEHOLDER_URL:
-    parsed = urlparse(DATABASE_URL)
-    missing_fields = []
-    if not parsed.username:
-        missing_fields.append("username")
-    if not parsed.password:
-        missing_fields.append("password")
-    if not parsed.hostname:
-        missing_fields.append("hostname")
-    if not parsed.port:
-        # Port should have been auto-fixed by ensure_port_in_url()
-        # If we still don't have a port here, check why
-        if not parsed.hostname:
-            missing_fields.append("port (requires hostname first, explicit port required, e.g., :5432)")
-        else:
-            missing_fields.append("port (auto-fix failed, explicit port required, e.g., :5432)")
-    if not parsed.path or len(parsed.path) <= 1:
-        # path should be /database_name, so length > 1
-        missing_fields.append("database name in path (e.g., /mydatabase)")
-
-    if missing_fields:
-        # Production-safe: log warning instead of raising exception
-        # This allows the app to start for health checks and diagnostics
-        logger.warning(
-            f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}. "
-            f"Required format: postgresql://user:password@host:5432/database"
-        )
+# No validation - DATABASE_URL is used as-is from environment
 
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:
@@ -327,22 +216,7 @@ def get_engine():
                     return None
                 
                 try:
-                    # CRITICAL: Validate DATABASE_URL using SQLAlchemy make_url()
-                    # This is the production-grade way to parse and validate database URLs
-                    try:
-                        validated_url = make_url(DATABASE_URL)
-                        # Log only driver name to avoid exposing sensitive connection details
-                        logger.info(f"✅ DATABASE_URL validated successfully (driver: {validated_url.drivername})")
-                    except Exception as url_error:
-                        logger.error(
-                            f"❌ DATABASE_URL validation failed using make_url(): {url_error}. "
-                            f"Application will start but database operations will fail. "
-                            f"Required format: postgresql+asyncpg://user:password@host:5432/database"
-                        )
-                        _engine = None
-                        return None
-                    
-                    # CRITICAL: Create engine for Neon pooler compatibility
+                    # Create engine for Neon pooler compatibility
                     # Neon pooled connections (PgBouncer) do NOT support:
                     # - sslmode in URL or connect_args
                     # - statement_timeout
