@@ -79,7 +79,7 @@ def healthz():
     ✅ NO async/await - synchronous function
     ✅ Plain text response - no JSON parsing overhead
     
-    Facebook-grade uptime: This endpoint will NEVER fail.
+    Facebook-grade reliability: Minimal failure points in application code.
     """
     return "ok"
 
