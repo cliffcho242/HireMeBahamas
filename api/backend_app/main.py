@@ -74,7 +74,7 @@ if 'app' not in sys.modules or not hasattr(sys.modules.get('app', None), '__path
     inject_typing_exports(backend_app.schemas)
     
     # Dynamically alias all schema submodules to handle all "from app.schemas.X" imports
-    _schema_modules = ['auth', 'job', 'message', 'post', 'review']
+    _schema_modules = ['auth', 'job', 'message', 'post', 'review', 'subscription']
     for _module_name in _schema_modules:
         try:
             _module = __import__(f'backend_app.schemas.{_module_name}', fromlist=[''])
@@ -92,7 +92,7 @@ if 'app' not in sys.modules or not hasattr(sys.modules.get('app', None), '__path
     
     # Dynamically alias all api submodules to handle all "from app.api.X" imports
     _api_modules = ['analytics', 'auth', 'debug', 'feed', 'health', 'hireme', 'jobs', 'messages', 
-                    'notifications', 'posts', 'profile_pictures', 'reviews', 'upload', 'users']
+                    'notifications', 'posts', 'profile_pictures', 'reviews', 'subscriptions', 'upload', 'users']
     for _module_name in _api_modules:
         try:
             _module = __import__(f'backend_app.api.{_module_name}', fromlist=[''])
@@ -239,6 +239,7 @@ from app.api.notifications import router as notifications_router
 from app.api.posts import router as posts_router
 from app.api.profile_pictures import router as profile_pictures_router
 from app.api.reviews import router as reviews_router
+from app.api.subscriptions import router as subscriptions_router
 from app.api.upload import router as upload_router
 from app.api.users import router as users_router
 from app.database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
@@ -888,6 +889,7 @@ app.include_router(notifications_router, prefix="/api/notifications", tags=["not
 app.include_router(posts_router, prefix="/api/posts", tags=["posts"])
 app.include_router(profile_pictures_router, prefix="/api/profile-pictures", tags=["profile-pictures"])
 app.include_router(reviews_router, prefix="/api/reviews", tags=["reviews"])
+app.include_router(subscriptions_router)  # Router prefix and tags defined in subscriptions.py
 app.include_router(upload_router, prefix="/api/upload", tags=["uploads"])
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 

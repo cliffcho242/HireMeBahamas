@@ -46,6 +46,10 @@ class User(Base):
     oauth_provider = Column(String(50))  # 'google', 'apple', or None for regular accounts
     oauth_provider_id = Column(String(255))  # ID from OAuth provider
     last_login = Column(DateTime(timezone=True), nullable=True, index=True)  # Track last successful login
+    # Subscription fields
+    subscription_plan = Column(String(20), default="free")  # free, pro, business, enterprise
+    subscription_status = Column(String(20), default="active")  # active, cancelled, expired
+    subscription_end_date = Column(DateTime(timezone=True))  # null for free plan
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -92,6 +96,11 @@ class User(Base):
     @hybrid_property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+    @hybrid_property
+    def is_pro(self):
+        """Check if user has Pro or higher subscription"""
+        return self.subscription_plan in ["pro", "business", "enterprise"]
 
 
 class Job(Base):
