@@ -118,9 +118,11 @@ def refresh(response: Response):
     access = create_access_token(user_id)
     
     # Set new access token cookie
+    # path="/" makes cookie available site-wide (must match during deletion)
     response.set_cookie(
         "access_token",
         access,
+        path="/",
         httponly=True,
         secure=True,
         samesite="None",
