@@ -102,7 +102,10 @@ def test_implementation_matches_spec():
     """Test that the implementation matches the problem statement specification."""
     import inspect
     import sys
-    sys.path.insert(0, '/home/runner/work/HireMeBahamas/HireMeBahamas/backend')
+    # Add backend directory to path using relative path
+    backend_path = os.path.dirname(os.path.abspath(__file__))
+    if backend_path not in sys.path:
+        sys.path.insert(0, backend_path)
     from app.main import startup, shutdown, background_bootstrap, wait_for_db
     
     # Check startup is an async function

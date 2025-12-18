@@ -227,6 +227,7 @@ SLOW_REQUEST_THRESHOLD_MS = 3000  # 3 seconds
 MAX_ERROR_BODY_SIZE = 10240  # 10KB - prevent reading large response bodies
 STARTUP_OPERATION_TIMEOUT = 5.0  # 5 seconds - timeout for non-critical startup operations
 TOTAL_STARTUP_TIMEOUT = 20.0  # 20 seconds - maximum time for entire startup event
+SHUTDOWN_TASK_TIMEOUT = 5.0  # 5 seconds - timeout for background tasks during shutdown
 
 # =============================================================================
 # BACKGROUND BOOTSTRAP UTILITIES
@@ -304,12 +305,11 @@ async def create_indexes_async():
             
         create_indexes_func = indexes_module.create_indexes
         
-        # The create_indexes function is async, so await it directly
+        # Check if the function is async and call it appropriately
         if inspect.iscoroutinefunction(create_indexes_func):
             success = await create_indexes_func()
         else:
-            # This shouldn't happen as the function is defined as async in create_database_indexes.py
-            logger.warning("create_indexes is not async, this is unexpected")
+            logger.warning("create_indexes function is not async, skipping index creation")
             return False
         
         return success
@@ -760,7 +760,7 @@ async def shutdown():
         try:
             # Yield control to allow tasks to progress, then wait for completion
             await asyncio.sleep(0)
-            await asyncio.wait(_background_tasks, timeout=5.0)
+            await asyncio.wait(_background_tasks, timeout=SHUTDOWN_TASK_TIMEOUT)
         except Exception as e:
             logger.warning(f"Error waiting for background tasks: {e}")
     
