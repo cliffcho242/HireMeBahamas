@@ -28,6 +28,11 @@ export { default as UserProfile } from './UserProfile';
 export { default as UserAnalytics } from './UserAnalytics';
 export { default as Users } from './Users';
 
+// Monetization pages
+export { default as Pricing } from './Pricing';
+export { default as SubscriptionSuccess } from './SubscriptionSuccess';
+export { default as SubscriptionCancel } from './SubscriptionCancel';
+
 // Download pages
 export { default as Download } from './Download';
 export { default as DownloadTest } from './DownloadTest';
