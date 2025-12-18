@@ -142,6 +142,7 @@ app = FastAPI(
 
 # IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
 @app.get("/health", include_in_schema=False)
+@app.head("/health", include_in_schema=False)
 def health():
     """Instant health check - no database dependency.
     
@@ -811,6 +812,7 @@ async def cache_health():
 
 # API health check endpoint (simple status check)
 @app.get("/api/health")
+@app.head("/api/health")
 def api_health():
     """Instant API health check - no database dependency.
     
