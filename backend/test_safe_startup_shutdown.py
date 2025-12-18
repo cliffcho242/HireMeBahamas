@@ -101,6 +101,8 @@ def test_background_tasks_tracked():
 def test_implementation_matches_spec():
     """Test that the implementation matches the problem statement specification."""
     import inspect
+    import sys
+    sys.path.insert(0, '/home/runner/work/HireMeBahamas/HireMeBahamas/backend')
     from app.main import startup, shutdown, background_bootstrap, wait_for_db
     
     # Check startup is an async function
@@ -120,14 +122,14 @@ def test_implementation_matches_spec():
     assert 'asyncio.create_task' in startup_source, "startup should use asyncio.create_task"
     assert 'background_bootstrap' in startup_source, "startup should call background_bootstrap"
     
-    # Check that background_bootstrap uses asyncio.to_thread (by inspecting source)
+    # Check that background_bootstrap has proper async/await pattern
     bootstrap_source = inspect.getsource(background_bootstrap)
-    assert 'asyncio.to_thread' in bootstrap_source, "background_bootstrap should use asyncio.to_thread"
+    assert 'await wait_for_db' in bootstrap_source, "background_bootstrap should await wait_for_db"
     
     # Check that shutdown waits for tasks (by inspecting source)
     shutdown_source = inspect.getsource(shutdown)
-    assert 'asyncio.sleep(0)' in shutdown_source or 'await asyncio.wait' in shutdown_source, \
-        "shutdown should wait for background tasks"
+    assert 'asyncio.sleep(0)' in shutdown_source, "shutdown should use asyncio.sleep(0)"
+    assert 'await asyncio.wait' in shutdown_source, "shutdown should await background tasks"
 
 
 if __name__ == "__main__":

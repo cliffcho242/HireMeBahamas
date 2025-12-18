@@ -279,12 +279,11 @@ async def create_indexes_async():
     """
     try:
         import importlib.util
+        import inspect
         
-        # Import the create_indexes module
-        indexes_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "create_database_indexes.py"
-        )
+        # Get path to create_database_indexes.py (in backend directory)
+        backend_dir = os.path.dirname(os.path.dirname(__file__))
+        indexes_path = os.path.join(backend_dir, "create_database_indexes.py")
         
         if not os.path.exists(indexes_path):
             logger.warning(f"create_database_indexes.py not found at {indexes_path}")
@@ -298,8 +297,21 @@ async def create_indexes_async():
         indexes_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(indexes_module)
         
-        # Run the async index creation function
-        success = await indexes_module.create_indexes()
+        # Check if create_indexes is async or sync
+        if not hasattr(indexes_module, 'create_indexes'):
+            logger.warning("create_indexes function not found in module")
+            return False
+            
+        create_indexes_func = indexes_module.create_indexes
+        
+        # The create_indexes function is async, so await it directly
+        if inspect.iscoroutinefunction(create_indexes_func):
+            success = await create_indexes_func()
+        else:
+            # This shouldn't happen as the function is defined as async in create_database_indexes.py
+            logger.warning("create_indexes is not async, this is unexpected")
+            return False
+        
         return success
             
     except Exception as e:
