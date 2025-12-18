@@ -32,15 +32,16 @@
 
 # Main web process - Production FastAPI with Gunicorn
 # 
-# CRITICAL PRODUCTION SETTINGS:
-# - workers=1: Single worker (predictable memory, no coordination overhead)
-# - threads=2: Minimal threading (async event loop handles concurrency)
-# - timeout=120: Prevents premature SIGTERM during startup
-# - graceful-timeout=30: Clean shutdown of in-flight requests
-# - keep-alive=5: Connection persistence for load balancers
-# - log-level=info: Production logging
-# - config: Additional settings in gunicorn.conf.py
+# ✅ NEON SAFE GUNICORN CONFIGURATION:
+# - app.main:app - FastAPI application entry point
+# - -k uvicorn.workers.UvicornWorker - ASGI worker for async support
+# - --bind 0.0.0.0:$PORT - Bind to all interfaces on dynamic port
+# - --workers 2 - Two workers for production
+# - --timeout 120 - Prevents premature SIGTERM during startup
+# 
+# ❌ NO extra flags (no --reload, no --preload, no SSL flags)
+# ❌ NO sslmode configuration here
 #
 # Single worker with UvicornWorker (async event loop) handles 100+ concurrent connections efficiently.
 # This is the correct production pattern for FastAPI.
-web: poetry run gunicorn app.main:app --config gunicorn.conf.py
+web: poetry run gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000} --workers 2 --timeout 120
