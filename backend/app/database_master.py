@@ -4,19 +4,25 @@
 # Stack: FastAPI + Gunicorn + Render + Neon Postgres (POOLED)
 # 
 # ABSOLUTE LAWS (NEVER BREAK):
-# ❌ NEVER use sslmode in connect_args (causes Neon pooler issues)
+# ❌ NEVER pass sslmode as a kwarg in connect_args
 # ❌ NEVER use statement_timeout at startup (incompatible with PgBouncer)
 # ❌ NEVER touch DB in /health endpoint
 # ❌ NEVER use Base.metadata.create_all() in prod
 # ❌ NEVER use more than 1 Gunicorn worker
 # ❌ NEVER have hardcoded ports
 #
+# ✅ ALWAYS include sslmode in DATABASE_URL: ?sslmode=require
 # ✅ ALWAYS use Neon pooled URL (asyncpg driver)
 # ✅ ALWAYS use non-blocking DB boot
 # ✅ ALWAYS lazy initialize engine
 #
-# NOTE: For asyncpg driver specifically, sslmode in URL must be stripped
-# and SSL configured via connect_args instead. See db_utils.strip_sslmode_from_url()
+# ✅ CORRECT ENGINE CONFIG:
+# engine = create_engine(
+#     DATABASE_URL,  # includes ?sslmode=require
+#     pool_pre_ping=True,
+#     pool_size=5,
+#     max_overflow=10,
+# )
 # =============================================================================
 
 import os

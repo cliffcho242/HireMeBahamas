@@ -1,16 +1,15 @@
 # =============================================================================
-# DATABASE ENGINE CONFIGURATION - CORRECT & PORTABLE (Dec 2025)
+# DATABASE ENGINE CONFIGURATION - PRODUCTION-SAFE (Dec 2025)
 # =============================================================================
 #
-# ✅ RULE: For PostgreSQL + SQLAlchemy with asyncpg, SSL belongs in the URL — NOT in connect_args
-# (This rule applies specifically to asyncpg. Other drivers may differ.)
+# ✅ CRITICAL RULE: sslmode MUST be in DATABASE_URL, NOT in connect_args
+# ❌ DO NOT pass sslmode as a kwarg to create_engine()
 #
 # This configuration works on:
 # - Render
 # - Railway
 # - Neon
-# - psycopg2
-# - psycopg (v3)
+# - Vercel
 # - SQLAlchemy 1.4 / 2.0
 #
 # DATABASE_URL FORMAT (copy-paste):
@@ -20,12 +19,12 @@
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
 # DB_POOL_RECYCLE=300
 #
-# Key improvements:
-# 1. SSL configured via URL query string (?sslmode=require) - portable across platforms
-# 2. pool_recycle=300 - prevents stale connections
-# 3. pool_pre_ping=True - validates connections before use
-# 4. JIT=off - prevents first-query compilation delays
-# 5. connect_timeout=45 - handles cold starts
+# Key configuration:
+# 1. pool_pre_ping=True - validates connections before use
+# 2. pool_recycle=300 - prevents stale connections (serverless-friendly)
+# 3. pool_size=5 - adequate for production load
+# 4. max_overflow=5 - hard limit to prevent resource exhaustion
+# 5. SSL via DATABASE_URL only (?sslmode=require)
 # =============================================================================
 
 import logging
@@ -49,11 +48,9 @@ logger = logging.getLogger(__name__)
 DATABASE_URL = settings.get_database_url()
 logger.info("Database URL configured from settings")
 
-# CRITICAL: Remove sslmode from URL for asyncpg compatibility
-# asyncpg does NOT accept sslmode in URL - it must be in connect_args
-# sslmode in URL causes: connect() got an unexpected keyword argument 'sslmode'
-from .db_utils import strip_sslmode_from_url, get_ssl_config
-DATABASE_URL = strip_sslmode_from_url(DATABASE_URL)
+# Database URL is used as-is
+# sslmode should be included in the DATABASE_URL query string if needed
+# Example: postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
@@ -153,25 +150,27 @@ STATEMENT_TIMEOUT_MS = settings.DB_STATEMENT_TIMEOUT_MS
 # =============================================================================
 # SSL CONFIGURATION
 # =============================================================================
-# SSL is configured via the DATABASE_URL query string parameter: ?sslmode=require
-# This is the correct and portable way to configure SSL for PostgreSQL connections.
-# No additional SSL configuration is needed in connect_args.
+# ✅ SSL must be in DATABASE_URL query string: ?sslmode=require
+# ❌ DO NOT pass sslmode as a kwarg in connect_args
+# This is the production-safe pattern for SQLAlchemy + asyncpg.
 # =============================================================================
 
 # =============================================================================
 # CREATE ASYNC ENGINE - LAZY INITIALIZATION FOR SERVERLESS (Vercel/Render)
 # =============================================================================
-# ✅ GOOD PATTERN: Lazy connection initialization
-# - Defers connection until first request (not at module import)
-# - Uses pool_pre_ping=True to validate connections before use
-# - Uses pool_recycle=300 (5 min) to prevent stale connections
+# ✅ PRODUCTION-SAFE PATTERN:
+# - Lazy connection initialization (defers until first request)
+# - pool_pre_ping=True validates connections before use
+# - pool_recycle=300 prevents stale connections (serverless-friendly)
+# - NO connect_args with SSL (SSL must be in DATABASE_URL)
 #
-# This pattern PERMANENTLY FIXES serverless issues:
-# 1. pool_pre_ping=True - validates connections before use (detects dead connections)
-# 2. pool_recycle=300 - recycles connections (serverless-friendly)
-# 3. JIT=off - prevents first-query compilation delays
-# 4. connect_timeout=45 - allows Railway cold starts
-# 5. SSL configured via URL query string (?sslmode=require)
+# ✅ CORRECT ENGINE CONFIGURATION:
+# engine = create_engine(
+#     DATABASE_URL,  # includes ?sslmode=require
+#     pool_pre_ping=True,
+#     pool_size=5,
+#     max_overflow=10,
+# )
 #
 # COPY-PASTE ENV VARS FOR RAILWAY/RENDER/VERCEL:
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
@@ -204,7 +203,7 @@ def get_engine():
             if _engine is None:
                 _engine = create_async_engine(
                     DATABASE_URL,
-                    # Pool configuration
+                    # Pool configuration - optimized for production
                     pool_size=POOL_SIZE,
                     max_overflow=MAX_OVERFLOW,
                     pool_pre_ping=True,  # Validate connections before use (detects stale connections)
@@ -213,35 +212,6 @@ def get_engine():
                     
                     # Echo SQL for debugging (disabled in production)
                     echo=settings.DB_ECHO,
-                    
-                    # asyncpg-specific connection arguments
-                    # NOTE: For asyncpg driver, SSL MUST be in connect_args, NOT in URL query string
-                    # sslmode in URL causes: connect() got an unexpected keyword argument 'sslmode'
-                    # For cloud deployments, use ssl='require' or ssl=True in connect_args
-                    connect_args={
-                        # Connection timeout (45s for Railway cold starts)
-                        "timeout": CONNECT_TIMEOUT,
-                        
-                        # Query timeout (30s per query)
-                        "command_timeout": COMMAND_TIMEOUT,
-                        
-                        # SSL configuration for asyncpg
-                        # Use 'require' to enforce SSL connections (recommended for production)
-                        # asyncpg does NOT accept sslmode in URL - it must be in connect_args
-                        "ssl": get_ssl_config(settings.ENVIRONMENT),
-                        
-                        # PostgreSQL server settings
-                        "server_settings": {
-                            # CRITICAL: Disable JIT to prevent 60s+ first-query delays
-                            "jit": "off",
-                            # Application name for pg_stat_activity
-                            "application_name": "hiremebahamas",
-                            # NOTE: statement_timeout is NOT set here for compatibility with
-                            # Neon pooled connections (PgBouncer), which don't support startup
-                            # parameters. If needed, set it at the session level, e.g.:
-                            # conn.execute("SET statement_timeout = '30000ms'")
-                        },
-                    }
                 )
                 logger.info("✅ Database engine initialized successfully")
                 logger.info(

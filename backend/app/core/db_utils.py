@@ -15,43 +15,28 @@ DEFAULT_POSTGRES_PORT = 5432
 
 def strip_sslmode_from_url(database_url: str) -> str:
     """
-    Remove sslmode parameter from DATABASE_URL for asyncpg compatibility.
+    ⚠️  DEPRECATED: This function is no longer needed.
     
-    asyncpg does NOT accept sslmode in URL - it must be in connect_args.
-    sslmode in URL causes: connect() got an unexpected keyword argument 'sslmode'
+    ❌ OLD APPROACH (INCORRECT):
+    Remove sslmode from URL and pass it in connect_args
+    
+    ✅ NEW APPROACH (CORRECT):
+    Keep sslmode in DATABASE_URL query string: ?sslmode=require
+    DO NOT pass sslmode as a kwarg in connect_args
+    
+    This function now returns the URL unchanged for backward compatibility.
     
     Args:
         database_url: Database connection URL
         
     Returns:
-        URL with sslmode parameter removed
+        URL unchanged (sslmode should stay in URL)
     """
-    if not database_url or "sslmode=" not in database_url:
-        return database_url
-    
-    parsed_url = urlparse(database_url)
-    # Parse query parameters
-    query_params = parse_qs(parsed_url.query)
-    
-    # Remove sslmode parameter if present
-    if 'sslmode' in query_params:
-        del query_params['sslmode']
-        logger.info("Removed sslmode from DATABASE_URL (asyncpg requires SSL in connect_args)")
-    
-    # Reconstruct query string
-    new_query = urlencode(query_params, doseq=True)
-    
-    # Reconstruct URL
-    cleaned_url = urlunparse((
-        parsed_url.scheme,
-        parsed_url.netloc,
-        parsed_url.path,
-        parsed_url.params,
-        new_query,
-        parsed_url.fragment
-    ))
-    
-    return cleaned_url
+    logger.warning(
+        "strip_sslmode_from_url() is deprecated. "
+        "Keep sslmode in DATABASE_URL: postgresql://...?sslmode=require"
+    )
+    return database_url
 
 
 def ensure_port_in_url(database_url: str, default_port: int = DEFAULT_POSTGRES_PORT) -> str:
@@ -113,14 +98,26 @@ def ensure_port_in_url(database_url: str, default_port: int = DEFAULT_POSTGRES_P
 
 def get_ssl_config(environment: str) -> str:
     """
-    Get SSL configuration value based on environment.
+    ⚠️  DEPRECATED: This function is no longer needed.
+    
+    ❌ OLD APPROACH (INCORRECT):
+    Pass SSL config in connect_args: connect_args={"ssl": "require"}
+    
+    ✅ NEW APPROACH (CORRECT):
+    Configure SSL in DATABASE_URL: ?sslmode=require
+    DO NOT pass sslmode as a kwarg in connect_args
     
     Args:
         environment: Application environment (production, development, test, etc.)
         
     Returns:
-        SSL configuration value: 'require' for production, True for others
+        Deprecated - raises error to prevent misuse
     """
-    # In production, enforce SSL with 'require'
-    # In development/test, enable SSL with True (allows unencrypted fallback)
-    return "require" if environment == "production" else True
+    logger.error(
+        "get_ssl_config() is deprecated and should not be used. "
+        "Configure SSL in DATABASE_URL: postgresql://...?sslmode=require"
+    )
+    raise DeprecationWarning(
+        "get_ssl_config() is deprecated. "
+        "Use DATABASE_URL with ?sslmode=require instead."
+    )
