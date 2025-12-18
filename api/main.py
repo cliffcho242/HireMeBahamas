@@ -115,9 +115,13 @@ except ImportError as e:
     )
     
     @app.get("/api/health", include_in_schema=False)
+    @app.head("/api/health", include_in_schema=False)
     @app.get("/health", include_in_schema=False)
+    @app.head("/health", include_in_schema=False)
     def health():
         """Instant health check - no database dependency.
+        
+        Supports both GET and HEAD methods for maximum compatibility.
         
         ✅ NO DATABASE - instant response
         ✅ NO IO - instant response
@@ -128,8 +132,11 @@ except ImportError as e:
         return JSONResponse({"status": "ok"}, status_code=200)
     
     @app.get("/health/ping", include_in_schema=False)
+    @app.head("/health/ping", include_in_schema=False)
     def health_ping():
         """Ultra-fast health ping endpoint
+        
+        Supports both GET and HEAD methods for maximum compatibility.
         
         🚫 NO database queries
         🚫 NO external service calls
