@@ -848,7 +848,7 @@ if reviews_router is not None:
 if upload_router is not None:
     app.include_router(upload_router, prefix="/api/upload", tags=["uploads"])
 if monetization_router is not None:
-    app.include_router(monetization_router, tags=["monetization"])
+    app.include_router(monetization_router, prefix="/api/monetization", tags=["monetization"])
 
 # Include health check router (no prefix as it provides /health, /ready endpoints)
 if health_router is not None:

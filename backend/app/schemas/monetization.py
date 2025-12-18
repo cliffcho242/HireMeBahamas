@@ -25,7 +25,7 @@ class SubscriptionBase(BaseModel):
 
 
 class SubscriptionCreate(SubscriptionBase):
-    user_id: int
+    pass  # user_id comes from authenticated user
 
 
 class SubscriptionUpdate(BaseModel):
@@ -60,7 +60,7 @@ class JobPostingPackageBase(BaseModel):
 
 
 class JobPostingPackageCreate(JobPostingPackageBase):
-    user_id: int
+    pass  # user_id comes from authenticated user
 
 
 class JobPostingPackageResponse(JobPostingPackageBase):
@@ -95,7 +95,7 @@ class BoostedPostBase(BaseModel):
 
 class BoostedPostCreate(BoostedPostBase):
     post_id: int
-    user_id: int
+    # user_id comes from authenticated user
 
 
 class BoostedPostResponse(BoostedPostBase):
@@ -145,7 +145,7 @@ class AdvertisementBase(BaseModel):
 
 
 class AdvertisementCreate(AdvertisementBase):
-    user_id: int
+    pass  # user_id comes from authenticated user
 
 
 class AdvertisementUpdate(BaseModel):

@@ -142,7 +142,7 @@ const SubscriptionStatus: React.FC = () => {
         </div>
       )}
 
-      {subscription.tier === 'professional' || subscription.tier === 'business' && (
+      {(subscription.tier === 'professional' || subscription.tier === 'business') && (
         <div className="mt-4">
           <Link
             to="/pricing"

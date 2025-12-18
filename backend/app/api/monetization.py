@@ -20,7 +20,7 @@ from app.schemas.monetization import (
     PricingResponse, PricingTierInfo, SubscriptionTierEnum
 )
 
-router = APIRouter(prefix="/api/monetization", tags=["monetization"])
+router = APIRouter(tags=["monetization"])
 
 
 # =============================================================================
@@ -208,9 +208,12 @@ def create_subscription(
 ):
     """Create or upgrade a subscription (admin/payment webhook endpoint)"""
     
+    # Use authenticated user's ID for security
+    user_id = current_user.id
+    
     # Check if subscription already exists
     existing = db.query(Subscription).filter(
-        Subscription.user_id == subscription_data.user_id
+        Subscription.user_id == user_id
     ).first()
     
     if existing:
@@ -225,7 +228,7 @@ def create_subscription(
         expires_at = datetime.utcnow() + timedelta(days=30)
     
     subscription = Subscription(
-        user_id=subscription_data.user_id,
+        user_id=user_id,
         tier=subscription_data.tier,
         price_paid=subscription_data.price_paid,
         expires_at=expires_at,
@@ -299,8 +302,9 @@ def purchase_job_package(
 ):
     """Purchase a job posting package (payment webhook endpoint)"""
     
+    # Use authenticated user's ID for security
     package = JobPostingPackage(
-        user_id=package_data.user_id,
+        user_id=current_user.id,
         package_name=package_data.package_name,
         credits_purchased=package_data.credits_purchased,
         credits_remaining=package_data.credits_purchased,
@@ -377,9 +381,10 @@ def create_boosted_post(
 ):
     """Boost a post (payment webhook endpoint)"""
     
+    # Use authenticated user's ID for security
     boosted = BoostedPost(
         post_id=boost_data.post_id,
-        user_id=boost_data.user_id,
+        user_id=current_user.id,
         boost_type=boost_data.boost_type,
         price_paid=boost_data.price_paid,
         impressions_target=boost_data.impressions_target,
@@ -433,8 +438,9 @@ def create_advertisement(
 ):
     """Create a new advertisement"""
     
+    # Use authenticated user's ID for security
     ad = Advertisement(
-        user_id=ad_data.user_id,
+        user_id=current_user.id,
         title=ad_data.title,
         description=ad_data.description,
         image_url=ad_data.image_url,

@@ -82,7 +82,6 @@ const BoostPostModal: React.FC<BoostPostModalProps> = ({ postId, isOpen, onClose
         `${API_URL}/api/monetization/boosted-posts`,
         {
           post_id: postId,
-          user_id: 0, // Will be set by backend from token
           boost_type: selectedBoost.type,
           price_paid: selectedBoost.price,
           impressions_target: parseInt(selectedBoost.estimated_impressions.replace(/[^0-9]/g, '')),
