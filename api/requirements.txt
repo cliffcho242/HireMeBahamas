@@ -78,6 +78,21 @@ authlib==1.6.5
 python-socketio==5.15.0
 
 # ============================================================================
+# BACKGROUND JOBS - NON-BLOCKING TASK PROCESSING
+# ============================================================================
+# Celery - Distributed task queue for emails and scheduled tasks
+celery[redis]==5.4.0
+
+# RQ (Redis Queue) - Simple Python job queue for notifications
+rq==2.0.0
+
+# Kombu - Messaging library for Celery
+kombu==5.4.2
+
+# Flower - Celery monitoring tool (optional, for development)
+flower==2.0.1
+
+# ============================================================================
 # DEPLOYMENT NOTES:
 # 1. Vercel automatically installs from this requirements.txt
 # 2. All packages have binary wheels for Python 3.12
