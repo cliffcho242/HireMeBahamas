@@ -24,7 +24,7 @@ The application was failing to deploy on Vercel because:
 ## Build Results ✅
 
 ### Successful Build Output
-```
+```bash
 ✓ built in 8.2s
 ✓ 50 precached entries (1602.47 KiB)
 ✓ PWA service worker generated
