@@ -29,7 +29,11 @@ def health():
     
     ✅ CRITICAL: Does NOT touch the database to ensure instant response.
     """
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "service": "hiremebahamas-backend",
+        "uptime": "healthy"
+    }
 
 
 @router.get("/live", tags=["health"])
@@ -118,12 +122,21 @@ def health_ping():
 
 
 @router.get("/api/health")
-async def api_health():
+@router.head("/api/health")
+def api_health():
     """Simple API health check endpoint.
     
     Returns a simple status response for basic health verification.
+    
+    ✅ NO DATABASE - instant response
+    ✅ NO IO - instant response
+    ✅ NO async/await - synchronous function for fastest response
     """
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "service": "hiremebahamas-backend",
+        "uptime": "healthy"
+    }
 
 
 @router.get("/health/detailed")
