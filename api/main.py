@@ -161,7 +161,7 @@ except ImportError as e:
         ✅ NO async/await - synchronous function
         ✅ Plain text response - no JSON parsing overhead
         
-        Facebook-grade reliability: Minimal failure points in application code.
+        High reliability through minimal dependencies and failure points.
         """
         return "ok"
     
