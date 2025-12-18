@@ -9,7 +9,6 @@
       "destination": "https://hiremebahamas.onrender.com/api/$1"
     }
   ],
-  "_comment": "API requests to /api/* are proxied to the Render backend. Frontend should use relative URLs (/api/*) and NOT set VITE_API_URL in Vercel environment variables. This allows seamless proxy without CORS issues.",
   "routes": [
     {
       "src": "/api/(.*)",
