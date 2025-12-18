@@ -274,7 +274,20 @@ app.docs_url = "/docs"
 app.redoc_url = "/redoc"
 app.openapi_url = "/openapi.json"
 
-# Configure CORS - Allow development and production origins
+# =============================================================================
+# CORS CONFIGURATION - CREDENTIALS ENABLED
+# =============================================================================
+# ✅ STEP 3: CORS MUST ALLOW CREDENTIALS
+# 
+# CRITICAL SECURITY REQUIREMENTS:
+# 1. ✅ allow_credentials=True - Enables cookies/credentials in CORS requests
+# 2. ✅ Explicit origins - NO wildcard (*) patterns allowed with credentials
+# 3. ✅ Browser will block cookies if wildcard (*) is used with credentials
+# 
+# Production origins are explicitly listed to prevent security vulnerabilities.
+# Development includes localhost for testing but is excluded in production.
+# =============================================================================
+
 # Import environment utilities for consistent production checks
 try:
     from .core.environment import get_cors_origins
@@ -302,10 +315,13 @@ except ImportError:
             "http://127.0.0.1:5173",
         ]
 
+# Apply CORS middleware with credentials support
+# ❌ NEVER use allow_origins=["*"] with allow_credentials=True
+# ✅ ALWAYS use explicit origin list when credentials are enabled
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allowed_origins,
-    allow_credentials=True,
+    allow_origins=_allowed_origins,  # Explicit origins required for credentials
+    allow_credentials=True,          # Enable cookies/auth headers in CORS requests
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )

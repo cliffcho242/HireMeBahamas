@@ -63,6 +63,20 @@ class UserUpdate(BaseModel):
     education: Optional[str] = None
 
 
+class UserMeResponse(BaseModel):
+    """Minimal user response for /api/auth/me endpoint.
+    
+    Returns only essential user identification fields.
+    This is a single source of truth for authenticated user verification.
+    """
+    id: int
+    email: str
+    role: str
+
+    class Config:
+        from_attributes = True
+
+
 class PasswordChange(BaseModel):
     current_password: str
     new_password: str
