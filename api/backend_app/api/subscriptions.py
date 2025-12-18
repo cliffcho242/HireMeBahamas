@@ -11,6 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_current_user
 from app.database import get_db
 from app.models import User
+from app.schemas.subscription import (
+    CurrentSubscriptionResponse,
+    SubscriptionCancelResponse,
+    SubscriptionPlansResponse,
+    SubscriptionUpgradeRequest,
+    SubscriptionUpgradeResponse,
+)
 
 
 router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
@@ -99,7 +106,7 @@ SUBSCRIPTION_PLANS = {
 }
 
 
-@router.get("/plans")
+@router.get("/plans", response_model=SubscriptionPlansResponse)
 async def get_subscription_plans():
     """
     Get all available subscription plans.
@@ -110,7 +117,7 @@ async def get_subscription_plans():
     }
 
 
-@router.get("/current")
+@router.get("/current", response_model=CurrentSubscriptionResponse)
 async def get_current_subscription(
     current_user: User = Depends(get_current_user),
 ):
@@ -128,9 +135,9 @@ async def get_current_subscription(
     }
 
 
-@router.post("/upgrade")
+@router.post("/upgrade", response_model=SubscriptionUpgradeResponse)
 async def upgrade_subscription(
-    plan: str,
+    request: SubscriptionUpgradeRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -140,18 +147,13 @@ async def upgrade_subscription(
     In a production environment, this would integrate with a payment processor
     like Stripe. For now, it's a simple plan change.
     """
-    # Validate plan
+    plan = request.plan
+    
+    # Validate plan exists (already validated by Pydantic)
     if plan not in SUBSCRIPTION_PLANS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid plan: {plan}. Must be one of: free, pro, business, enterprise"
-        )
-    
-    # Don't allow downgrade to free through this endpoint
-    if plan == "free":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Use the cancel endpoint to downgrade to free plan"
+            detail=f"Invalid plan: {plan}. Must be one of: pro, business, enterprise"
         )
     
     # Check if user is already on this plan
@@ -186,7 +188,7 @@ async def upgrade_subscription(
     }
 
 
-@router.post("/cancel")
+@router.post("/cancel", response_model=SubscriptionCancelResponse)
 async def cancel_subscription(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

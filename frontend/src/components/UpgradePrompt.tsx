@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PLAN_NAMES, PLAN_PRICES, SubscriptionPlan } from '../constants/subscriptions';
 
 interface UpgradePromptProps {
   featureName: string;
@@ -14,17 +15,8 @@ export default function UpgradePrompt({
   onClose,
   inline = false 
 }: UpgradePromptProps) {
-  const planNames = {
-    pro: 'Pro',
-    business: 'Business',
-    enterprise: 'Enterprise'
-  };
-
-  const planPrices = {
-    pro: '$9.99/mo',
-    business: '$29.99/mo',
-    enterprise: 'Custom'
-  };
+  const planName = PLAN_NAMES[requiredPlan as SubscriptionPlan] || 'Pro';
+  const planPrice = PLAN_PRICES[requiredPlan as SubscriptionPlan] || '$9.99/mo';
 
   if (inline) {
     return (
@@ -33,10 +25,10 @@ export default function UpgradePrompt({
           <SparklesIcon className="h-6 w-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-gray-900 mb-1">
-              {featureName} requires {planNames[requiredPlan]} subscription
+              {featureName} requires {planName} subscription
             </h3>
             <p className="text-sm text-gray-600 mb-3">
-              Upgrade to unlock this feature and many more starting at {planPrices[requiredPlan]}
+              Upgrade to unlock this feature and many more starting at {planPrice}
             </p>
             <Link
               to="/subscriptions"
@@ -67,7 +59,7 @@ export default function UpgradePrompt({
           <SparklesIcon className="h-12 w-12 mb-4" />
           <h2 className="text-2xl font-bold mb-2">Upgrade Required</h2>
           <p className="text-blue-100">
-            Unlock premium features with {planNames[requiredPlan]}
+            Unlock premium features with {planName}
           </p>
         </div>
 
@@ -78,7 +70,7 @@ export default function UpgradePrompt({
               {featureName}
             </h3>
             <p className="text-gray-600">
-              This feature is available for {planNames[requiredPlan]} subscribers and above.
+              This feature is available for {planName} subscribers and above.
             </p>
           </div>
 

@@ -74,7 +74,7 @@ if 'app' not in sys.modules or not hasattr(sys.modules.get('app', None), '__path
     inject_typing_exports(backend_app.schemas)
     
     # Dynamically alias all schema submodules to handle all "from app.schemas.X" imports
-    _schema_modules = ['auth', 'job', 'message', 'post', 'review']
+    _schema_modules = ['auth', 'job', 'message', 'post', 'review', 'subscription']
     for _module_name in _schema_modules:
         try:
             _module = __import__(f'backend_app.schemas.{_module_name}', fromlist=[''])

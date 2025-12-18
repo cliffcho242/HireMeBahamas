@@ -71,8 +71,23 @@ export default function Subscriptions() {
       toast.success(response.data.message);
       await fetchCurrentSubscription();
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to upgrade subscription';
-      toast.error(message);
+      // Provide specific error messages based on error status
+      if (error.response?.status === 400) {
+        const detail = error.response.data?.detail || '';
+        if (detail.includes('already subscribed')) {
+          toast.error('You are already on this plan');
+        } else if (detail.includes('Invalid plan')) {
+          toast.error('Invalid subscription plan selected');
+        } else {
+          toast.error(detail || 'Cannot upgrade to this plan');
+        }
+      } else if (error.response?.status === 402) {
+        toast.error('Payment required. Please update your payment method.');
+      } else if (error.response?.status === 401) {
+        toast.error('Please log in to upgrade your subscription');
+      } else {
+        toast.error('Failed to upgrade subscription. Please try again later.');
+      }
     } finally {
       setUpgrading(null);
     }

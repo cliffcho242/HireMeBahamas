@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../config/axios';
 import toast from 'react-hot-toast';
+import { isPlanPro, isPlanBusiness, isPlanEnterprise } from '../constants/subscriptions';
 
 export interface SubscriptionPlan {
   plan: string;
@@ -40,7 +41,7 @@ export function useSubscription() {
   };
 
   const requireBusiness = (featureName: string = 'This feature') => {
-    if (!subscription || !['business', 'enterprise'].includes(subscription.plan)) {
+    if (!subscription || !isPlanBusiness(subscription.plan)) {
       toast.error(`${featureName} requires a Business subscription or higher`, {
         duration: 5000,
         icon: '💼',
@@ -51,7 +52,7 @@ export function useSubscription() {
   };
 
   const requireEnterprise = (featureName: string = 'This feature') => {
-    if (subscription?.plan !== 'enterprise') {
+    if (!subscription || !isPlanEnterprise(subscription.plan)) {
       toast.error(`${featureName} requires an Enterprise subscription`, {
         duration: 5000,
         icon: '🏢',
@@ -65,8 +66,8 @@ export function useSubscription() {
     subscription,
     loading,
     isPro: subscription?.is_pro || false,
-    isBusiness: subscription ? ['business', 'enterprise'].includes(subscription.plan) : false,
-    isEnterprise: subscription?.plan === 'enterprise',
+    isBusiness: subscription ? isPlanBusiness(subscription.plan) : false,
+    isEnterprise: subscription ? isPlanEnterprise(subscription.plan) : false,
     requirePro,
     requireBusiness,
     requireEnterprise,
