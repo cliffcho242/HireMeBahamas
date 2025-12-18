@@ -227,6 +227,132 @@ SLOW_REQUEST_THRESHOLD_MS = 3000  # 3 seconds
 MAX_ERROR_BODY_SIZE = 10240  # 10KB - prevent reading large response bodies
 STARTUP_OPERATION_TIMEOUT = 5.0  # 5 seconds - timeout for non-critical startup operations
 TOTAL_STARTUP_TIMEOUT = 20.0  # 20 seconds - maximum time for entire startup event
+SHUTDOWN_TASK_TIMEOUT = 5.0  # 5 seconds - timeout for background tasks during shutdown
+
+# =============================================================================
+# BACKGROUND BOOTSTRAP UTILITIES
+# =============================================================================
+
+async def wait_for_db(max_retries: int = 5, retry_delay: float = 2.0) -> bool:
+    """Wait for database to become available.
+    
+    Retries database connection with exponential backoff.
+    Safe to call from background tasks.
+    
+    Args:
+        max_retries: Maximum number of connection attempts
+        retry_delay: Initial delay between retries (seconds)
+        
+    Returns:
+        bool: True if database is available, False otherwise
+    """
+    for attempt in range(1, max_retries + 1):
+        try:
+            if test_db_connection is not None:
+                success, error = await test_db_connection()
+                if success:
+                    logger.info(f"✅ Database connection successful (attempt {attempt}/{max_retries})")
+                    return True
+                else:
+                    logger.warning(f"Database connection failed (attempt {attempt}/{max_retries}): {error}")
+            else:
+                logger.warning("test_db_connection function not available")
+                return False
+        except Exception as e:
+            logger.warning(f"Database connection attempt {attempt}/{max_retries} failed: {e}")
+        
+        if attempt < max_retries:
+            await asyncio.sleep(retry_delay)
+            retry_delay *= 1.5  # Exponential backoff
+    
+    logger.error(f"❌ Database connection failed after {max_retries} attempts")
+    return False
+
+
+async def create_indexes_async():
+    """Create database indexes asynchronously.
+    
+    This function imports and runs the create_indexes module.
+    Should be called from background_bootstrap().
+    
+    Returns:
+        bool: True if indexes created successfully, False otherwise
+    """
+    try:
+        import importlib.util
+        import inspect
+        
+        # Get path to create_database_indexes.py (in backend directory)
+        backend_dir = os.path.dirname(os.path.dirname(__file__))
+        indexes_path = os.path.join(backend_dir, "create_database_indexes.py")
+        
+        if not os.path.exists(indexes_path):
+            logger.warning(f"create_database_indexes.py not found at {indexes_path}")
+            return False
+            
+        spec = importlib.util.spec_from_file_location("create_database_indexes", indexes_path)
+        if spec is None or spec.loader is None:
+            logger.warning("Could not load create_database_indexes module")
+            return False
+            
+        indexes_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(indexes_module)
+        
+        # Check if create_indexes is async or sync
+        if not hasattr(indexes_module, 'create_indexes'):
+            logger.warning("create_indexes function not found in module")
+            return False
+            
+        create_indexes_func = indexes_module.create_indexes
+        
+        # Check if the function is async and call it appropriately
+        if inspect.iscoroutinefunction(create_indexes_func):
+            success = await create_indexes_func()
+        else:
+            logger.warning("create_indexes function is not async, skipping index creation")
+            return False
+        
+        return success
+            
+    except Exception as e:
+        logger.error(f"Failed to create indexes: {e}", exc_info=True)
+        return False
+
+
+async def background_bootstrap():
+    """Background bootstrap - waits for DB and creates indexes.
+    
+    This function runs in the background using asyncio.create_task().
+    It safely waits for the database and creates indexes without blocking startup.
+    
+    ✅ No blocking
+    ✅ No destroyed tasks
+    ✅ Gunicorn-safe
+    """
+    try:
+        logger.info("📦 Background bootstrap started")
+        
+        # Wait for database to become available
+        db_ready = await wait_for_db()
+        if not db_ready:
+            logger.warning("Database not ready, skipping index creation")
+            return
+        
+        # Create indexes asynchronously
+        logger.info("Creating database indexes...")
+        try:
+            success = await create_indexes_async()
+            if success:
+                logger.info("✅ Database indexes created successfully")
+            else:
+                logger.warning("⚠️ Some indexes may not have been created")
+        except Exception as e:
+            logger.error(f"Index creation failed: {e}", exc_info=True)
+            
+    except Exception as e:
+        logger.error(f"Bootstrap failed: {e}", exc_info=True)
+    finally:
+        logger.info("📦 Background bootstrap completed")
 
 # Configure logging with more detail
 # Check if runtime logs directory exists (e.g., in CI/test environment)
@@ -572,133 +698,44 @@ async def log_requests(request: Request, call_next):
 
 
 # =============================================================================
-# AGGRESSIVE NON-BLOCKING STARTUP (RENDER FOREVER FIX)
+# SAFE STARTUP & SHUTDOWN (NO ORPHAN TASKS)
 # =============================================================================
+# Track background tasks to prevent orphans
+_background_tasks = set()
+
 @app.on_event("startup")
 async def startup():
-    """Ultra-fast startup with background thread initialization.
+    """Safe startup with non-blocking background bootstrap.
     
     ✅ PRODUCTION FASTAPI PATTERN (DO NOT EVER DO list compliant):
     - ❌ NO Multiple Gunicorn workers (using 1 worker)
     - ❌ NO Blocking DB calls at import
     - ❌ NO Health check touching DB
     - ❌ NO --reload flag
-    - ❌ NO Heavy startup logic (all in background thread)
+    - ❌ NO Heavy startup logic (all in background task)
     - ✅ Single platform deployment (Render only)
     
     App responds IMMEDIATELY. Health check passes INSTANTLY.
-    ALL heavy operations moved to background thread.
+    ALL heavy operations moved to background task.
     Database connects on first actual request only.
+    
+    ✅ No blocking
+    ✅ No destroyed tasks
+    ✅ Gunicorn-safe
     """
     logger.info("🚀 Starting HireMeBahamas API (Production Mode)")
     logger.info("   Workers: 1 (predictable memory)")
     logger.info("   Health: INSTANT (no DB dependency)")
     logger.info("   DB: Lazy (connects on first request)")
     
-    def background_init():
-        """Background initialization - runs in separate thread.
-        
-        Runs AFTER app is ready. Does NOT block startup.
-        Health check already responding while this runs.
-        
-        Using threading instead of asyncio for true non-blocking behavior:
-        - Thread starts immediately and runs in parallel
-        - No event loop coordination needed
-        - Startup function returns instantly (<5ms)
-        """
-        bg_start = time.time()
-        logger.info(f"📦 Background initialization started (thread: {threading.current_thread().name})")
-        
-        # Create new event loop for this background thread
-        # Safe to set as current loop because this is a separate thread from main app
-        # Main app's event loop (created by uvicorn) runs in the main thread
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        try:
-            # ==========================================================================
-            # STEP 1: Pre-warm bcrypt (non-blocking, no database)
-            # ==========================================================================
-            try:
-                if prewarm_bcrypt_async is not None:
-                    loop.run_until_complete(
-                        asyncio.wait_for(prewarm_bcrypt_async(), timeout=STARTUP_OPERATION_TIMEOUT)
-                    )
-                    logger.info("✅ Bcrypt pre-warmed")
-                else:
-                    logger.debug("Bcrypt pre-warm function not available")
-            except asyncio.TimeoutError:
-                logger.warning(f"Bcrypt pre-warm timed out after {STARTUP_OPERATION_TIMEOUT}s (non-critical)")
-            except Exception as e:
-                logger.warning(f"Bcrypt pre-warm skipped (non-critical): {type(e).__name__}")
-            
-            # ==========================================================================
-            # STEP 2: Initialize Redis cache (non-blocking, no database)
-            # ==========================================================================
-            try:
-                if redis_cache is not None:
-                    redis_available = loop.run_until_complete(
-                        asyncio.wait_for(redis_cache.connect(), timeout=STARTUP_OPERATION_TIMEOUT)
-                    )
-                    if redis_available:
-                        logger.info("✅ Redis cache connected")
-                    else:
-                        logger.debug("Using in-memory cache (Redis not configured - this is expected)")
-                else:
-                    logger.debug("Redis cache module not available")
-            except asyncio.TimeoutError:
-                logger.warning(f"Redis connection timed out after {STARTUP_OPERATION_TIMEOUT}s (falling back to in-memory cache)")
-            except Exception as e:
-                logger.warning(f"Redis connection failed (non-critical): {e}")
-            
-            # ==========================================================================
-            # STEP 3: Warm up cache (optional, non-blocking, no database required)
-            # ==========================================================================
-            try:
-                from .core.cache import warmup_cache
-                loop.run_until_complete(
-                    asyncio.wait_for(warmup_cache(), timeout=STARTUP_OPERATION_TIMEOUT)
-                )
-                logger.info("✅ Cache system ready")
-            except asyncio.TimeoutError:
-                logger.warning(f"Cache warmup timed out after {STARTUP_OPERATION_TIMEOUT}s (non-critical)")
-            except Exception as e:
-                logger.debug(f"Cache warmup skipped: {e}")
-            
-            # ==========================================================================
-            # STEP 4: Run performance optimizations (background, non-blocking)
-            # ==========================================================================
-            try:
-                from .core.performance import run_all_performance_optimizations
-                # Run performance optimizations in the background thread's event loop
-                # Note: This is intentionally fire-and-forget - runs in background
-                # The event loop stays open long enough for initialization tasks,
-                # but performance optimizations continue asynchronously
-                # If they don't complete before loop closes, that's acceptable (non-critical)
-                loop.create_task(run_all_performance_optimizations())
-                logger.info("✅ Performance optimizations scheduled")
-            except Exception as e:
-                logger.debug(f"Performance optimizations skipped: {e}")
-            
-            bg_duration = time.time() - bg_start
-            logger.info(f"✅ Background initialization completed in {bg_duration:.2f}s")
-        except Exception as e:
-            # Catch any unexpected errors to ensure event loop is always closed
-            logger.error(f"Background initialization error: {e}", exc_info=True)
-        finally:
-            # Always close the event loop, even if an error occurred
-            try:
-                loop.close()
-            except Exception as e:
-                logger.error(f"Error closing event loop: {e}")
-    
-    # Start background initialization in daemon thread
-    # Returns IMMEDIATELY - startup completes in <1ms
-    thread = threading.Thread(target=background_init, daemon=True, name="BackgroundInit")
-    thread.start()
+    # Create background task for bootstrap (non-blocking)
+    task = asyncio.create_task(background_bootstrap())
+    _background_tasks.add(task)
+    # Remove task from set when it completes
+    task.add_done_callback(_background_tasks.discard)
     
     logger.info("✅ Application startup complete (instant)")
-    logger.info("   Background initialization running in parallel thread")
+    logger.info("   Background bootstrap running in async task")
     
     # Production configuration (see PRODUCTION_CONFIG_COMPLIANCE.md):
     # - Workers: 1 (predictable memory)
@@ -708,21 +745,42 @@ async def startup():
 
 
 @app.on_event("shutdown")
-async def full_shutdown():
-    """Graceful shutdown"""
+async def shutdown():
+    """Graceful shutdown - waits for background tasks.
+    
+    ✅ No blocking
+    ✅ No destroyed tasks
+    ✅ Gunicorn-safe
+    """
     logger.info("Shutting down HireMeBahamas API...")
+    
+    # Wait for background tasks to complete (with timeout)
+    if _background_tasks:
+        logger.info(f"Waiting for {len(_background_tasks)} background task(s) to complete...")
+        try:
+            # Yield control to allow tasks to progress, then wait for completion
+            await asyncio.sleep(0)
+            await asyncio.wait(_background_tasks, timeout=SHUTDOWN_TASK_TIMEOUT)
+        except Exception as e:
+            logger.warning(f"Error waiting for background tasks: {e}")
+    
+    # Close Redis cache
     try:
         if redis_cache is not None:
             await redis_cache.disconnect()
             logger.info("Redis cache disconnected")
     except Exception as e:
         logger.warning(f"Error disconnecting Redis cache: {e}")
+    
+    # Close database connections
     try:
         if close_db is not None:
             await close_db()
         logger.info("Database connections closed")
     except Exception as e:
         logger.error(f"Error closing database connections: {e}")
+    
+    logger.info("✅ Shutdown complete")
 
 
 # Database readiness check endpoint (full database connectivity check)
