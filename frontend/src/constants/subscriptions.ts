@@ -29,23 +29,17 @@ export const PLAN_PRICES: Record<SubscriptionPlan, string> = {
  * Check if a plan is Pro or higher
  */
 export function isPlanPro(plan: string): boolean {
-  const proPlanTypes = [
-    SUBSCRIPTION_PLANS.PRO,
-    SUBSCRIPTION_PLANS.BUSINESS,
-    SUBSCRIPTION_PLANS.ENTERPRISE,
-  ] as const;
-  return (proPlanTypes as readonly string[]).includes(plan);
+  return plan === SUBSCRIPTION_PLANS.PRO ||
+         plan === SUBSCRIPTION_PLANS.BUSINESS ||
+         plan === SUBSCRIPTION_PLANS.ENTERPRISE;
 }
 
 /**
  * Check if a plan is Business or higher
  */
 export function isPlanBusiness(plan: string): boolean {
-  const businessPlanTypes = [
-    SUBSCRIPTION_PLANS.BUSINESS,
-    SUBSCRIPTION_PLANS.ENTERPRISE,
-  ] as const;
-  return (businessPlanTypes as readonly string[]).includes(plan);
+  return plan === SUBSCRIPTION_PLANS.BUSINESS ||
+         plan === SUBSCRIPTION_PLANS.ENTERPRISE;
 }
 
 /**
