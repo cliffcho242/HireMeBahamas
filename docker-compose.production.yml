@@ -241,11 +241,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
+      PGPASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres-replica-1-data:/var/lib/postgresql/data
     command: >
       bash -c "
-      until pg_basebackup -h postgres-primary -D /var/lib/postgresql/data/pgdata -U ${POSTGRES_USER} -v -P -W; do
+      until pg_basebackup -h postgres-primary -D /var/lib/postgresql/data/pgdata -U ${POSTGRES_USER} -v -P; do
         echo 'Waiting for primary to be ready...'
         sleep 5
       done
@@ -278,11 +279,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
+      PGPASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres-replica-2-data:/var/lib/postgresql/data
     command: >
       bash -c "
-      until pg_basebackup -h postgres-primary -D /var/lib/postgresql/data/pgdata -U ${POSTGRES_USER} -v -P -W; do
+      until pg_basebackup -h postgres-primary -D /var/lib/postgresql/data/pgdata -U ${POSTGRES_USER} -v -P; do
         echo 'Waiting for primary to be ready...'
         sleep 5
       done

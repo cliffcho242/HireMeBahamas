@@ -602,17 +602,24 @@ async def get_db_write():
         finally:
             await session.close()
 
+# Round-robin replica selection for better load balancing
+_replica_index = 0
+_replica_lock = asyncio.Lock()
+
 # Dependency for read operations
 async def get_db_read():
-    """Get database session for read operations (uses random replica)"""
+    """Get database session for read operations (uses round-robin replica selection)"""
     if not replica_engines:
         # Fall back to primary if no replicas configured
         async for session in get_db_write():
             yield session
         return
     
-    # Select random replica (load balancing)
-    SessionLocal = random.choice(AsyncReplicaSessionLocals)
+    # Select replica using round-robin (better load balancing than random)
+    global _replica_index
+    async with _replica_lock:
+        SessionLocal = AsyncReplicaSessionLocals[_replica_index % len(AsyncReplicaSessionLocals)]
+        _replica_index = (_replica_index + 1) % len(AsyncReplicaSessionLocals)
     
     async with SessionLocal() as session:
         try:
