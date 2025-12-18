@@ -120,7 +120,7 @@ def get_engine():
                 return None
             
             # Get configurable timeout values from environment
-            # CRITICAL: 5s timeout for Railway cold starts and cloud database latency
+            # CRITICAL: 5s timeout for Render cold starts and cloud database latency
             connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
             command_timeout = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))
             pool_size = int(os.getenv("DB_POOL_SIZE", "5"))

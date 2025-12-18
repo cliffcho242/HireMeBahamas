@@ -4,13 +4,13 @@
  * Uses environment variable or defaults to same-origin (Vercel serverless).
  * 
  * Configuration:
- * - VITE_API_URL: Set this to point to your backend (Railway, custom domain, or local dev)
+ * - VITE_API_URL: Set this to point to your backend (Render, custom domain, or local dev)
  * - VITE_REQUIRE_BACKEND_URL: Set to 'true' to enforce VITE_API_URL (prevents silent failures)
  * - If not set: Uses same-origin (window.location.origin) for Vercel deployments
  * 
  * Examples:
  * - Vercel serverless (same-origin): Don't set VITE_API_URL
- * - Railway backend: VITE_API_URL=https://your-app.up.railway.app
+ * - Render backend: VITE_API_URL=https://your-app.onrender.com
  * - Production backend: VITE_API_URL=https://api.yourdomain.com
  * - Local dev only: VITE_API_URL=http://localhost:8000
  * - Strict mode: VITE_REQUIRE_BACKEND_URL=true (will throw error if VITE_API_URL not set)

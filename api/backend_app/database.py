@@ -15,7 +15,7 @@
 #    - ❌ NO startup options
 #
 # ⚠️  SPECIAL CASE: This configuration is ONLY for Neon Pooled connections.
-# For standard PostgreSQL (Railway/Render), use: ?sslmode=require in DATABASE_URL
+# For standard PostgreSQL (Render), use: ?sslmode=require in DATABASE_URL
 #
 # This configuration is specifically designed for Neon Serverless Postgres
 # and works with PgBouncer connection pooling where SSL is managed by the pooler.
@@ -24,7 +24,7 @@
 # DATABASE_URL=postgresql+asyncpg://user:pass@ep-xxx.pooler.neon.tech:5432/db
 # DB_POOL_RECYCLE=300
 #
-# ENV VARS (for Railway/Render - standard PostgreSQL):
+# ENV VARS (for Render - standard PostgreSQL):
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
 # DB_POOL_RECYCLE=300
 #
@@ -149,7 +149,7 @@ POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "1800"))  # Recycle every 30 min
 # CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RAILWAY
 # =============================================================================
 # These timeouts prevent the dreaded "Connection timed out" error
-CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))  # 5s for Railway cold starts
+CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))  # 5s for Render cold starts
 COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
 STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
 
@@ -605,7 +605,7 @@ async def get_pool_status() -> dict:
 # =============================================================================
 # CONNECTION VERIFICATION COMMAND (For Render Console)
 # =============================================================================
-# Run this from Render console to test Railway Postgres connectivity:
+# Run this from Render console to test Postgres connectivity:
 #
 # python -c "
 # import asyncio

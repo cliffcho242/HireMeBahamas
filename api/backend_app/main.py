@@ -887,7 +887,7 @@ async def warm_cache_endpoint():
     
     Example cron job: */5 * * * * curl -X POST https://your-backend-url/warm-cache
     
-    For Railway: Use GitHub Actions workflow (scheduled-ping.yml)
+    For Render: Use GitHub Actions workflow (scheduled-ping.yml)
     For Vercel: Add to vercel.json cron configuration
     """
     result = await warm_cache()
@@ -1108,7 +1108,7 @@ if __name__ == "__main__":
     # No reload in production, port from environment variable
     # Use the correct module path based on whether we're in standalone mode or not
     # When running as: python -m api.backend_app.main
-    # Or from Railway/Docker: uvicorn api.backend_app.main:app
+    # Or from Render/Docker: uvicorn api.backend_app.main:app
     module_path = "api.backend_app.main:socket_app" if HAS_SOCKETIO else "api.backend_app.main:app"
     
     # Get port from environment variable (no hardcoded ports)
