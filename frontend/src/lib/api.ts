@@ -27,26 +27,29 @@ import { isValidUrl, isSecureUrl } from './safeUrl';
 
 /**
  * Validate and get the base API URL from environment
- * @throws Error if VITE_API_URL is missing or invalid
+ * @throws Error if VITE_API_URL is invalid (when provided)
  */
 function validateAndGetBaseUrl(): string {
   const base = import.meta.env.VITE_API_URL as string | undefined;
 
-  // If no explicit API URL is set, use same-origin (for Vercel serverless)
+  // If no explicit API URL is set, use same-origin
+  // This is the RECOMMENDED approach for Vercel deployments with proxy rewrites
+  // vercel.json rewrites /api/* to the backend, so same-origin works perfectly
   if (!base) {
     // Check if we're in a browser environment
     if (typeof window !== 'undefined') {
+      // Use same-origin - Vercel will proxy /api/* requests to the backend
       return window.location.origin;
     }
     
-    // If not in browser and no URL is set, throw an error
-    throw new Error(
-      "VITE_API_URL is missing or invalid. " +
-      "Set VITE_API_URL environment variable to your backend URL, " +
-      "or deploy to a serverless environment where same-origin is used."
-    );
+    // Server-side rendering or build-time: use empty string
+    // Relative URLs will work fine during build
+    return '';
   }
 
+  // If VITE_API_URL is explicitly set, validate it
+  // This is only needed for local development or separate backend deployments
+  
   // Use our safe URL validator instead of manual checks
   if (!isValidUrl(base)) {
     throw new Error(
@@ -56,7 +59,7 @@ function validateAndGetBaseUrl(): string {
     );
   }
 
-  // Validate HTTPS in production
+  // Validate HTTPS in production (only when explicitly set)
   if (!isSecureUrl(base)) {
     throw new Error(
       `VITE_API_URL must use HTTPS in production: "${base}". ` +
