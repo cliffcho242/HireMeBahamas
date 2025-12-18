@@ -40,9 +40,9 @@ def is_production() -> bool:
     return env == "production" or vercel_env == "production"
 
 # Cookie security settings - MUST be compatible with Safari and cross-origin requests
-COOKIE_HTTPONLY = True  # ✅ XSS protection - JavaScript cannot access cookie
+COOKIE_HTTPONLY = True   # ✅ XSS protection - JavaScript cannot access cookie
 COOKIE_SECURE = True     # ✅ REQUIRED for Safari when using SameSite=None
-COOKIE_SAMESITE = "none" # ✅ MANDATORY for cross-origin (Vercel ↔ Backend)
+COOKIE_SAMESITE = "None" # ✅ MANDATORY for cross-origin (Vercel ↔ Backend) - RFC6265bis specifies capitalized "None"
 COOKIE_PATH = "/"        # ✅ Available across entire domain
 COOKIE_MAX_AGE = 60 * 60 * 24 * 30  # 30 days in seconds
 
@@ -51,10 +51,13 @@ COOKIE_NAME_ACCESS = "access_token"
 COOKIE_NAME_REFRESH = "refresh_token"
 
 # Validate Safari requirements at startup
-if COOKIE_SAMESITE == "none" and not COOKIE_SECURE:
-    # Safari requires Secure=True when SameSite=None
-    logger.warning("⚠️  SameSite=None requires Secure=True for Safari - forcing Secure=True")
-    COOKIE_SECURE = True
+# Safari requires Secure=True when SameSite=None, otherwise cookies are rejected
+if COOKIE_SAMESITE.lower() == "none" and not COOKIE_SECURE:
+    error_msg = "❌ CONFIGURATION ERROR: SameSite=None requires Secure=True for Safari compatibility"
+    logger.error(error_msg)
+    # This is a critical misconfiguration - cookies will be rejected by Safari
+    # Rather than silently "fixing" it, we log an error so it can be corrected in configuration
+    raise ValueError(error_msg)
 
 # Log cookie configuration for debugging
 logger.info(f"Cookie configuration: httponly={COOKIE_HTTPONLY}, secure={COOKIE_SECURE}, "

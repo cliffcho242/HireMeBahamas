@@ -53,7 +53,10 @@ def test_cookie_configuration():
         # Test 3: SameSite=None (CRITICAL for cross-origin)
         print(f"\n📋 Test 3: SameSite Setting (Cross-Origin Support)")
         print(f"   - COOKIE_SAMESITE: {COOKIE_SAMESITE}")
-        assert COOKIE_SAMESITE == "none", "❌ FAIL: SameSite must be 'none' for Vercel ↔ Backend"
+        # Accept both "None" (RFC6265bis standard) and "none" (lowercase)
+        assert COOKIE_SAMESITE.lower() == "none", "❌ FAIL: SameSite must be 'None' for Vercel ↔ Backend"
+        if COOKIE_SAMESITE != "None":
+            print(f"   ℹ️  Note: RFC6265bis specifies capitalized 'None', found '{COOKIE_SAMESITE}'")
         print("   ✅ PASS: SameSite=None (MANDATORY for cross-origin)")
         print("   ⚠️  WARNING: If SameSite=Lax, Safari login fails silently!")
         
@@ -203,7 +206,8 @@ def test_safari_compatibility():
         print(f"   - COOKIE_SAMESITE: {COOKIE_SAMESITE}")
         print(f"   - COOKIE_SECURE: {COOKIE_SECURE}")
         
-        if COOKIE_SAMESITE == "none":
+        # Check SameSite=None (case-insensitive)
+        if COOKIE_SAMESITE.lower() == "none":
             if not COOKIE_SECURE:
                 print("   ❌ FAIL: Safari rejects SameSite=None without Secure=True")
                 assert False, "Safari requires Secure=True with SameSite=None"
