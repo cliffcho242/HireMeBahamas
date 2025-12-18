@@ -522,20 +522,24 @@ def clear_auth_cookies(response) -> None:
     # Delete access token cookie
     # Using delete_cookie() instead of set_cookie() with max_age=0
     # to ensure proper cookie removal across all browsers, especially Safari/iOS
+    # All parameters must match those used during cookie creation for proper deletion
     response.delete_cookie(
         key=COOKIE_NAME_ACCESS,
         path="/",
         samesite=COOKIE_SAMESITE,
         secure=COOKIE_SECURE,
+        domain=COOKIE_DOMAIN,
     )
     
     # Delete refresh token cookie
     # CRITICAL: Must properly clear refresh token to prevent "ghost login"
+    # All parameters must match those used during cookie creation for proper deletion
     response.delete_cookie(
         key=COOKIE_NAME_REFRESH,
         path="/",
         samesite=COOKIE_SAMESITE,
         secure=COOKIE_SECURE,
+        domain=COOKIE_DOMAIN,
     )
     
     logger.info("Deleted auth cookies (access_token and refresh_token)")
