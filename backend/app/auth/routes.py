@@ -31,6 +31,7 @@ from app.schemas.auth import (
     UserCreate,
     UserLogin,
     UserResponse,
+    UserMeResponse,
 )
 
 router = APIRouter()
@@ -271,7 +272,20 @@ async def verify_session(current_user: User = Depends(get_current_user)):
     }
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=UserMeResponse)
 async def get_current_user_profile(current_user: User = Depends(get_current_user)):
-    """Get current user profile."""
-    return UserResponse.from_orm(current_user)
+    """Get current user profile - Single source of truth for session verification.
+    
+    Returns minimal user information for authentication verification:
+    - id: User's unique identifier
+    - email: User's email address
+    - role: User's role in the system (user, employer, admin, etc.)
+    
+    This endpoint is protected and requires a valid JWT token.
+    Use this to verify the current session and get authenticated user details.
+    """
+    return UserMeResponse(
+        id=current_user.id,
+        email=current_user.email,
+        role=current_user.role
+    )
