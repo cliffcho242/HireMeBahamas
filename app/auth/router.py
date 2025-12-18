@@ -67,16 +67,23 @@ def logout(response: Response):
     
     CRITICAL: Uses delete_cookie() with path="/" to ensure proper cookie removal
     and prevent "ghost login" issues.
+    
+    All parameters must match those used during cookie creation:
+    - httponly=True (security flag)
+    - secure=True (HTTPS-only in production)
+    - samesite="None" (cross-origin support)
     """
     response.delete_cookie(
         "access_token",
         path="/",
+        httponly=True,
         samesite="None",
         secure=True
     )
     response.delete_cookie(
         "refresh_token",
         path="/",
+        httponly=True,
         samesite="None",
         secure=True
     )
