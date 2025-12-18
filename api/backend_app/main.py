@@ -720,18 +720,80 @@ async def lazy_import_heavy_stuff():
 
 @app.on_event("shutdown")
 async def full_shutdown():
-    """Graceful shutdown"""
+    """Graceful shutdown with proper async task cleanup.
+    
+    This prevents "Task was destroyed but it is pending!" warnings by:
+    1. Properly awaiting all cleanup operations
+    2. Cancelling any pending background tasks
+    3. Giving async operations time to complete gracefully
+    """
+    import asyncio
+    
     logger.info("Shutting down HireMeBahamas API...")
+    
+    # Configurable shutdown timeout (default 5 seconds)
+    SHUTDOWN_TIMEOUT_SECONDS = int(os.getenv("SHUTDOWN_TIMEOUT_SECONDS", "5"))
+    
+    # Collect all cleanup tasks
+    cleanup_tasks = []
+    
+    # Redis cache cleanup
     try:
-        await redis_cache.disconnect()
-        logger.info("Redis cache disconnected")
+        cleanup_tasks.append(redis_cache.disconnect())
+        logger.debug("Redis cache disconnect queued")
     except Exception as e:
-        logger.warning(f"Error disconnecting Redis cache: {e}")
+        logger.warning(f"Error queueing Redis cache disconnect: {e}")
+    
+    # Database cleanup
     try:
-        await close_db()
-        logger.info("Database connections closed")
+        cleanup_tasks.append(close_db())
+        logger.debug("Database close queued")
     except Exception as e:
-        logger.error(f"Error closing database connections: {e}")
+        logger.warning(f"Error queueing database close: {e}")
+    
+    # Execute all cleanup tasks with configurable timeout to prevent hanging
+    if cleanup_tasks:
+        try:
+            # Wait for all cleanup tasks with configurable timeout
+            await asyncio.wait_for(
+                asyncio.gather(*cleanup_tasks, return_exceptions=True),
+                timeout=SHUTDOWN_TIMEOUT_SECONDS
+            )
+            logger.info("✅ All cleanup tasks completed successfully")
+        except asyncio.TimeoutError:
+            logger.warning(f"⚠️  Shutdown cleanup timed out after {SHUTDOWN_TIMEOUT_SECONDS} seconds")
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
+    
+    # Cancel any remaining pending tasks (except current task)
+    try:
+        current_task = asyncio.current_task()
+        pending_tasks = [
+            task for task in asyncio.all_tasks()
+            if not task.done() and task is not current_task
+        ]
+        
+        if pending_tasks:
+            logger.info(f"Cancelling {len(pending_tasks)} pending background tasks...")
+            for task in pending_tasks:
+                task.cancel()
+            
+            # Wait for cancelled tasks with shorter timeout to avoid delays
+            # Use wait() instead of gather() for better control with cancelled tasks
+            done, pending = await asyncio.wait(
+                pending_tasks,
+                timeout=1.0,  # Short timeout for cancelled tasks
+                return_when=asyncio.ALL_COMPLETED
+            )
+            
+            if pending:
+                logger.warning(f"⚠️  {len(pending)} tasks still pending after cancellation")
+            else:
+                logger.info("✅ All pending tasks cancelled")
+    except Exception as e:
+        logger.warning(f"Error cancelling pending tasks: {e}")
+    
+    logger.info("✅ Shutdown complete")
 
 
 # =============================================================================

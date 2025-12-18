@@ -106,6 +106,54 @@ if DATABASE_URL.startswith("postgresql+asyncpg://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
     logger.info("Converted DATABASE_URL from asyncpg to sync psycopg2 driver format")
 
+# Ensure explicit port in DATABASE_URL (required for cloud deployments)
+# Parse URL and add port if missing
+try:
+    from urllib.parse import urlparse, urlunparse, quote
+    parsed = urlparse(DATABASE_URL)
+    if parsed.hostname and not parsed.port:
+        # CRITICAL FIX: Missing port causes "Could not parse DATABASE_URL" errors
+        # Render/Railway/Neon require explicit :5432 port in connection string
+        logger.warning(
+            f"⚠️  DATABASE_URL missing port number! "
+            f"Adding :5432 automatically, but you should fix your DATABASE_URL. "
+            f"REQUIRED FORMAT: postgresql://user:pass@{parsed.hostname}:5432/dbname?sslmode=require"
+        )
+        
+        # Add default PostgreSQL port using URL-safe components
+        # Note: urlparse automatically decodes the URL, so when we reconstruct,
+        # we must re-encode the components. Using quote() directly here is correct
+        # (not url_encode_password) because we're working with parsed URL components.
+        # This ensures proper encoding during URL reconstruction.
+        if parsed.username and parsed.password:
+            # Re-encode credentials for URL reconstruction
+            user = quote(parsed.username, safe='')
+            password = quote(parsed.password, safe='')
+            new_netloc = f"{user}:{password}@{parsed.hostname}:5432"
+        elif parsed.username:
+            user = quote(parsed.username, safe='')
+            new_netloc = f"{user}@{parsed.hostname}:5432"
+        else:
+            new_netloc = f"{parsed.hostname}:5432"
+        
+        DATABASE_URL = urlunparse((
+            parsed.scheme,
+            new_netloc,
+            parsed.path,
+            parsed.params,
+            parsed.query,
+            parsed.fragment
+        ))
+        logger.info("✅ Auto-fixed DATABASE_URL by adding :5432 port (update your config to fix permanently)")
+except Exception as e:
+    # Log exception type for debugging without exposing sensitive data
+    logger.warning(
+        f"⚠️  Could not parse DATABASE_URL for port validation ({type(e).__name__}). "
+        f"This may cause connection errors. "
+        f"Ensure format: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
+    )
+    logger.debug(f"URL parsing error details: {e}")
+
 # Strip whitespace from database name in the URL path
 # This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
 try:

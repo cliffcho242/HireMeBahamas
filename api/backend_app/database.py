@@ -114,11 +114,21 @@ try:
     from urllib.parse import urlparse, urlunparse, quote
     parsed = urlparse(DATABASE_URL)
     if parsed.hostname and not parsed.port:
+        # CRITICAL FIX: Missing port causes "Could not parse DATABASE_URL" errors
+        # Render/Railway/Neon require explicit :5432 port in connection string
+        logger.warning(
+            f"⚠️  DATABASE_URL missing port number! "
+            f"Adding :5432 automatically, but you should fix your DATABASE_URL. "
+            f"REQUIRED FORMAT: postgresql://user:pass@{parsed.hostname}:5432/dbname?sslmode=require"
+        )
+        
         # Add default PostgreSQL port using URL-safe components
-        # Note: urlparse handles URL-encoded passwords correctly
-        # We reconstruct the netloc with the port added
+        # Note: urlparse automatically decodes the URL, so when we reconstruct,
+        # we must re-encode the components. Using quote() directly here is correct
+        # (not url_encode_password) because we're working with parsed URL components.
+        # This ensures proper encoding during URL reconstruction.
         if parsed.username and parsed.password:
-            # Properly encode credentials if needed
+            # Re-encode credentials for URL reconstruction
             user = quote(parsed.username, safe='')
             password = quote(parsed.password, safe='')
             new_netloc = f"{user}:{password}@{parsed.hostname}:5432"
@@ -136,10 +146,14 @@ try:
             parsed.query,
             parsed.fragment
         ))
-        logger.info("Added explicit port :5432 to DATABASE_URL")
+        logger.info("✅ Auto-fixed DATABASE_URL by adding :5432 port (update your config to fix permanently)")
 except Exception as e:
     # Don't log exception details to avoid exposing sensitive URL information
-    logger.warning("Could not parse DATABASE_URL for port validation")
+    logger.warning(
+        f"⚠️  Could not parse DATABASE_URL for port validation. "
+        f"This may cause 'The string did not match the expected pattern' errors. "
+        f"Ensure format: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
+    )
 
 # Strip whitespace from database name in the URL path
 # This fixes cases like postgresql://user:pass@host:5432/Vercel (with trailing space)
