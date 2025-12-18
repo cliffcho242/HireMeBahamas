@@ -20,6 +20,7 @@ import asyncio
 import logging
 import sys
 import os
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -389,7 +390,6 @@ INDEXES = [
 async def create_indexes():
     """Create all performance indexes."""
     import asyncpg
-    from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
     
     DATABASE_URL = config(
         "DATABASE_PRIVATE_URL",
@@ -497,7 +497,6 @@ async def create_indexes():
 async def analyze_tables():
     """Run ANALYZE on tables to update statistics after creating indexes."""
     import asyncpg
-    from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
     
     DATABASE_URL = config(
         "DATABASE_PRIVATE_URL",

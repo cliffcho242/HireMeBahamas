@@ -26,7 +26,7 @@ import os
 import sys
 import time
 from typing import Dict, List, Optional, Tuple
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 
 # Check for optional dependencies
@@ -274,7 +274,6 @@ class HealthChecker:
             db_url = db_url.replace('postgres://', 'postgresql://')
         
         # Strip sslmode parameter - asyncpg handles SSL automatically
-        from urllib.parse import parse_qs, urlencode, urlunparse
         parsed = urlparse(db_url)
         if parsed.query and 'sslmode' in parsed.query:
             query_params = parse_qs(parsed.query)

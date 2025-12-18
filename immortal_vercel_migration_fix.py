@@ -11,6 +11,7 @@ import asyncio
 import logging
 from typing import Optional, Dict, Any
 from datetime import datetime
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 # Configure logging
 logging.basicConfig(
@@ -58,7 +59,6 @@ class ImmortalMigrationFix:
         while self.retry_count < self.max_retries:
             try:
                 import asyncpg
-                from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
                 
                 # Prepare connection URL
                 db_url = self.database_url
@@ -134,7 +134,6 @@ class ImmortalMigrationFix:
         """
         try:
             import asyncpg
-            from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
             
             db_url = self.database_url
             if db_url.startswith('postgresql+asyncpg://'):

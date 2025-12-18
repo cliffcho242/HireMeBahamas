@@ -83,8 +83,6 @@ def strip_sslmode_from_url(db_url: str) -> str:
     Returns:
         Database URL without sslmode parameter
     """
-    from urllib.parse import parse_qs, urlencode
-    
     parsed = urlparse(db_url)
     if not parsed.query:
         return db_url
