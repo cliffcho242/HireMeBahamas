@@ -69,7 +69,7 @@ All configuration files have been validated:
 | `render.yaml` | ✅ CORRECT | `cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py` |
 | `Procfile` | ✅ CORRECT | `cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py` |
 | `backend/Procfile` | ✅ CORRECT | `poetry run gunicorn app.main:app --config gunicorn.conf.py` |
-| `railway.toml` | ✅ CORRECT | `cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py` |
+| `render.toml` | ✅ CORRECT | `cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py` |
 | `nixpacks.toml` | ✅ CORRECT | `cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py` |
 
 **Note:** `backend/Procfile` doesn't need `cd backend` because it's already in the backend directory.

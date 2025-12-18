@@ -13,7 +13,7 @@ Complete reference guide covering:
 - 📋 Overview and prerequisites
 - 🔧 Step-by-step integration (7 detailed steps)
 - ⚙️ Environment configuration
-- 🔄 Database migration from Railway
+- 🔄 Database migration from Render
 - ✅ Testing procedures
 - 🔍 Troubleshooting guide
 - 💰 Cost management (Free tier vs Pro)
@@ -43,14 +43,14 @@ Step-by-step UI walkthrough with:
 - Clear section headers for different database options
 - Example connection string format
 - Link to setup guide
-- Railway and other options remain as alternatives
+- Render and other options remain as alternatives
 
 #### README.md
 - Added new "Database Setup" section
 - Vercel Postgres listed first (recommended for Vercel deployments)
 - Feature highlights and benefits
 - Direct link to complete setup guide
-- Railway option kept as alternative
+- Render option kept as alternative
 
 ---
 
@@ -62,10 +62,10 @@ Step-by-step UI walkthrough with:
 2. Or follow the **Visual Guide**: `docs/VERCEL_POSTGRES_VISUAL_GUIDE.md` for UI walkthrough
 3. Reference the **Complete Guide** for troubleshooting: `VERCEL_POSTGRES_SETUP.md`
 
-### For Existing Railway Users
+### For Existing Render Users
 
 Follow the migration section in `VERCEL_POSTGRES_SETUP.md`:
-- Export data from Railway with `pg_dump`
+- Export data from Render with `pg_dump`
 - Import to Vercel Postgres with `pg_restore`
 - Update environment variables
 - Verify data integrity
@@ -214,7 +214,7 @@ Health endpoint should return:
 
 The documentation is complete and ready for users to:
 1. Create new Vercel Postgres instances
-2. Migrate from Railway to Vercel Postgres
+2. Migrate from Render to Vercel Postgres
 3. Configure environment variables
 4. Test and verify connections
 5. Troubleshoot common issues

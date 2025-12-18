@@ -158,8 +158,8 @@ curl https://your-app.onrender.com/health
 
 **This guide is for Render deployments.** For new projects, the recommended architecture is:
 - **Frontend**: Vercel
-- **Backend**: Railway
-- **Database**: Railway PostgreSQL
+- **Backend**: Render
+- **Database**: Render PostgreSQL
 
 See `RENDER_TO_VERCEL_MIGRATION.md` for the recommended setup.
 

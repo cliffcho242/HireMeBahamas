@@ -14,8 +14,8 @@ REM Read URLs
 if exist RAILWAY_URL.txt (
     set /p RAILWAY_URL=<RAILWAY_URL.txt
 ) else (
-    echo WARNING: Railway URL not found
-    set /p RAILWAY_URL="Enter your Railway backend URL: "
+    echo WARNING: Render URL not found
+    set /p RAILWAY_URL="Enter your Render backend URL: "
 )
 
 if exist VERCEL_URL.txt (

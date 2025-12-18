@@ -60,7 +60,7 @@ Users and posts were being deleted after deployments or application restarts. Th
 - ✅ Added SQLite and PostgreSQL runtime libraries in production stage
 - ✅ Complete package list for all required libraries
 
-**nixpacks.toml (Railway):**
+**nixpacks.toml (Render):**
 - ✅ Added PostgreSQL packages: `postgresql`, `postgresql-common`, `postgresql-contrib`
 - ✅ Added SQLite packages: `sqlite3`, `libsqlite3-dev`, `libsqlite3-0`
 - ✅ Comprehensive system package list in aptPkgs
@@ -80,7 +80,7 @@ Users and posts were being deleted after deployments or application restarts. Th
 **Procfile:**
 - ✅ Already using correct module reference
 
-**railway.json:**
+**render.json:**
 - ✅ Already using correct module reference
 
 ### 4. Created Documentation
@@ -115,7 +115,7 @@ Users and posts were being deleted after deployments or application restarts. Th
 3. `nixpacks.toml` - Complete package list
 4. `render.yaml` - Full dependency installation
 5. `start.sh` - Correct module reference
-6. (Procfile, railway.json already correct)
+6. (Procfile, render.json already correct)
 
 ## Verification & Testing
 

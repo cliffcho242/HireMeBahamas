@@ -25,7 +25,7 @@ if cls.ENVIRONMENT == "production" and hostname in ('localhost', '127.0.0.1', ':
         f"❌ ABSOLUTE BAN: DATABASE_URL uses 'localhost' in production. "
         f"Found: '{parsed.hostname}'. "
         "Production MUST use remote database hostname. "
-        "Example: ep-xxxx.us-east-1.aws.neon.tech or containers-us-west-123.railway.app"
+        "Example: ep-xxxx.us-east-1.aws.neon.tech or containers-us-west-123.render.app"
     )
 ```
 
@@ -126,12 +126,12 @@ if settings.ENVIRONMENT == "production" and ('/var/run/' in DATABASE_URL or 'uni
 - `vercel.json` uses `@vercel/python` build system (serverless)
 - `api/index.py` uses **Mangum** adapter for FastAPI serverless functions
 - No gunicorn references in Vercel configuration
-- Gunicorn is only used for Railway/Render deployments (via `Procfile`)
+- Gunicorn is only used for Render/Render deployments (via `Procfile`)
 
 **Evidence**:
 - `vercel.json` - Uses `"use": "@vercel/python"` (serverless)
 - `api/index.py` - Imports `from mangum import Mangum` (serverless adapter)
-- `Procfile` - Uses `uvicorn` directly for Railway (not gunicorn)
+- `Procfile` - Uses `uvicorn` directly for Render (not gunicorn)
 
 ### 5. ✅ No database work in /health endpoint
 
@@ -308,7 +308,7 @@ Before deploying to production, ensure:
 ❌ ABSOLUTE BAN: DATABASE_URL uses 'localhost' in production.
 Found: 'localhost'.
 Production MUST use remote database hostname.
-Example: ep-xxxx.us-east-1.aws.neon.tech or containers-us-west-123.railway.app
+Example: ep-xxxx.us-east-1.aws.neon.tech or containers-us-west-123.render.app
 ```
 
 ### Unix Socket in Production

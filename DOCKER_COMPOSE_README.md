@@ -6,11 +6,11 @@ This project uses `docker-compose.local.yml` instead of the standard `docker-com
 
 ### Why the `.local.yml` suffix?
 
-**To prevent accidental deployment to cloud platforms like Railway.**
+**To prevent accidental deployment to cloud platforms like Render.**
 
-When Railway detects a file named `docker-compose.yml`, it may attempt to deploy it as a multi-container application. This causes deployment failures because:
+When Render detects a file named `docker-compose.yml`, it may attempt to deploy it as a multi-container application. This causes deployment failures because:
 
-1. **PostgreSQL refuses to run as root** - Railway's container runtime has security constraints
+1. **PostgreSQL refuses to run as root** - Render's container runtime has security constraints
 2. **Data loss risk** - Containerized databases lose data on redeployment
 3. **Inefficiency** - Managed databases are faster and more reliable
 4. **Cost** - Running database containers wastes resources
@@ -38,7 +38,7 @@ docker-compose -f docker-compose.local.yml up postgres adminer -d
 
 Instead, use platform-managed services:
 
-- **Railway**: Use managed PostgreSQL database service ([Setup Guide](./RAILWAY_POSTGRESQL_SETUP.md))
+- **Render**: Use managed PostgreSQL database service ([Setup Guide](./RAILWAY_POSTGRESQL_SETUP.md))
 - **Render**: Use managed PostgreSQL database service
 - **Vercel**: Use Vercel Postgres
 
@@ -46,20 +46,20 @@ Instead, use platform-managed services:
 
 The `docker-compose.local.yml` file is excluded from cloud deployments via:
 
-1. **`.railwayignore`** - Prevents Railway from using it
+1. **`.renderignore`** - Prevents Render from using it
 2. **`.nixpacksignore`** - Prevents Nixpacks from detecting it
-3. **`railway.json`** - Explicitly disables Docker Compose detection
+3. **`render.json`** - Explicitly disables Docker Compose detection
 4. **File naming** - The `.local.yml` suffix makes intent clear
 
 ### 📖 Documentation
 
-- **Railway Setup**: [RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)
+- **Render Setup**: [RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)
 - **Development Guide**: [DEVELOPMENT.md](./DEVELOPMENT.md)
 - **Docker Quick Start**: [DOCKER_QUICK_START.md](./DOCKER_QUICK_START.md)
 
 ### 🆘 Getting "root execution not permitted" Error?
 
-This means you're trying to deploy PostgreSQL as a container on Railway. This is **incorrect**.
+This means you're trying to deploy PostgreSQL as a container on Render. This is **incorrect**.
 
 ➡️ **Read: [RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)** for the correct setup.
 

@@ -1,6 +1,6 @@
 # 🔗 Database Connection Guide - HireMeBahamas
 
-**Complete guide with direct links and step-by-step instructions to connect your database URL to HireMeBahamas on Vercel, Railway, and Render.**
+**Complete guide with direct links and step-by-step instructions to connect your database URL to HireMeBahamas on Vercel, Render, and Render.**
 
 ---
 
@@ -11,14 +11,14 @@ Choose your platform and jump directly to the setup guide:
 | Platform | Best For | Cost | Setup Time | Link |
 |----------|----------|------|------------|------|
 | **Vercel** ⭐ | Production, global users | $0-5/mo | 10 min | [Setup Guide](#vercel-setup---recommended) |
-| **Railway** | Simple deployment | $5-20/mo | 5 min | [Setup Guide](#railway-setup) |
+| **Render** | Simple deployment | $5-20/mo | 5 min | [Setup Guide](#render-setup) |
 | **Render** | Legacy projects | $7-25/mo | 15 min | [Setup Guide](#render-setup) |
 | **Local** | Development | $0 | 5 min | [Setup Guide](#local-development-setup) |
 
 **Direct Dashboard Links:**
 - 🔗 [Vercel Dashboard](https://vercel.com/dashboard)
 - 🔗 [Vercel Storage (Create DB)](https://vercel.com/dashboard/stores)
-- 🔗 [Railway Dashboard](https://railway.app/dashboard)
+- 🔗 [Render Dashboard](https://render.app/dashboard)
 - 🔗 [Render Dashboard](https://dashboard.render.com/)
 
 ---
@@ -27,7 +27,7 @@ Choose your platform and jump directly to the setup guide:
 
 1. [Overview](#overview)
 2. [Vercel Setup](#vercel-setup---recommended)
-3. [Railway Setup](#railway-setup)
+3. [Render Setup](#render-setup)
 4. [Render Setup](#render-setup)
 5. [Local Development Setup](#local-development-setup)
 6. [Troubleshooting](#troubleshooting)
@@ -184,23 +184,23 @@ After adding variables, trigger a new deployment:
 
 ---
 
-## Railway Setup
+## Render Setup
 
 **Best for:** Simple deployment, private networking, $5-20/month
 
-### Step 1: Create Railway PostgreSQL Database
+### Step 1: Create Render PostgreSQL Database
 
-**Direct Link:** 🔗 [https://railway.app/dashboard](https://railway.app/dashboard)
+**Direct Link:** 🔗 [https://render.app/dashboard](https://render.app/dashboard)
 
 #### Navigation Path:
 ```
-Railway Dashboard → Your Project → + New → Database → PostgreSQL
+Render Dashboard → Your Project → + New → Database → PostgreSQL
 ```
 
 #### Detailed Steps:
 
 1. **Open your project:**
-   - Visit [https://railway.app/dashboard](https://railway.app/dashboard)
+   - Visit [https://render.app/dashboard](https://render.app/dashboard)
    - Click on your **HireMeBahamas** project
 
 2. **Add PostgreSQL:**
@@ -213,22 +213,22 @@ Railway Dashboard → Your Project → + New → Database → PostgreSQL
 
 ### Step 2: Get Your Database Connection String
 
-Railway automatically creates connection variables when you add PostgreSQL.
+Render automatically creates connection variables when you add PostgreSQL.
 
 1. Click on the **PostgreSQL service** (the elephant icon 🐘)
 2. Go to the **"Variables"** tab
 3. You'll see these variables:
 
 ```
-DATABASE_URL = postgresql://postgres:password@hostname.railway.app:5432/railway
-DATABASE_PRIVATE_URL = postgresql://postgres:password@postgres.railway.internal:5432/railway
+DATABASE_URL = postgresql://postgres:password@hostname.render.app:5432/render
+DATABASE_PRIVATE_URL = postgresql://postgres:password@postgres.render.internal:5432/render
 ```
 
 **Use `DATABASE_PRIVATE_URL` for zero egress fees** (recommended)
 
 ### Step 3: Connect Database to Your Backend Service
 
-Railway should automatically share the database URL with your backend service. To verify:
+Render should automatically share the database URL with your backend service. To verify:
 
 1. Click on your **Backend service** (not the PostgreSQL service)
 2. Go to **"Variables"** tab
@@ -263,21 +263,21 @@ Value: production
 
 ### Step 5: Deploy and Verify
 
-1. Railway auto-deploys when you add variables
+1. Render auto-deploys when you add variables
 2. Check the **"Deployments"** tab to see deployment progress
 3. Once deployed, verify:
-   - Visit: `https://your-app.railway.app/health`
+   - Visit: `https://your-app.render.app/health`
    - Should return: `{"status": "healthy", "database": "connected"}`
 
-✅ **Done!** Your database is connected to Railway.
+✅ **Done!** Your database is connected to Render.
 
-**💡 Pro Tip:** Using `DATABASE_PRIVATE_URL` instead of `DATABASE_URL` routes traffic through Railway's internal network, avoiding egress fees.
+**💡 Pro Tip:** Using `DATABASE_PRIVATE_URL` instead of `DATABASE_URL` routes traffic through Render's internal network, avoiding egress fees.
 
 ---
 
 ## Render Setup
 
-> 💡 **Note:** While Render is still a fully supported and valid deployment option, it has become less cost-effective ($7-25/month) and has slower cold start times compared to newer alternatives like Vercel ($0-5/month) and Railway ($5-20/month). We recommend Vercel or Railway for new deployments to get better performance at lower costs. However, if you're already using Render, are comfortable with its interface, or have specific reasons to prefer it, this section provides complete setup instructions.
+> 💡 **Note:** While Render is still a fully supported and valid deployment option, it has become less cost-effective ($7-25/month) and has slower cold start times compared to newer alternatives like Vercel ($0-5/month) and Render ($5-20/month). We recommend Vercel or Render for new deployments to get better performance at lower costs. However, if you're already using Render, are comfortable with its interface, or have specific reasons to prefer it, this section provides complete setup instructions.
 
 **Direct Link:** 🔗 [https://dashboard.render.com/](https://dashboard.render.com/)
 
@@ -449,7 +449,7 @@ For running HireMeBahamas on your local machine:
 
 3. **Check if database is running:**
    - Vercel: Go to [Storage dashboard](https://vercel.com/dashboard/stores)
-   - Railway: Check PostgreSQL service status
+   - Render: Check PostgreSQL service status
    - Render: Check database status in dashboard
 
 4. **Verify environment variables are set:**
@@ -492,14 +492,14 @@ If you see this error:
    POSTGRES_PRISMA_URL=postgresql://...pooler...pgbouncer=true
    ```
 
-3. **For Railway:** Use DATABASE_PRIVATE_URL (includes built-in pooling)
+3. **For Render:** Use DATABASE_PRIVATE_URL (includes built-in pooling)
 
 ### "Database does not exist"
 
 The database hasn't been created yet:
 
 1. **Vercel:** Database is auto-created, check your `.env.local` tab
-2. **Railway:** Database named `railway` is auto-created
+2. **Render:** Database named `render` is auto-created
 3. **Render:** Verify database name matches what you specified
 4. **Local:** Run `CREATE DATABASE hiremebahamas;` in PostgreSQL
 
@@ -534,7 +534,7 @@ Visit these endpoints to diagnose:
 | Platform | Cost | Setup Time | Performance | Best For |
 |----------|------|------------|-------------|----------|
 | **Vercel** | $0-5/mo | 10 min | ⭐⭐⭐⭐⭐ Fastest | Production apps, global users |
-| **Railway** | $5-20/mo | 5 min | ⭐⭐⭐⭐ Fast | Simple deployment, private network |
+| **Render** | $5-20/mo | 5 min | ⭐⭐⭐⭐ Fast | Simple deployment, private network |
 | **Render** | $7-25/mo | 15 min | ⭐⭐⭐ Good | Legacy projects |
 | **Local** | $0 | 5 min | ⭐⭐⭐⭐ Fast | Development only |
 
@@ -546,13 +546,13 @@ Visit these endpoints to diagnose:
 
 - **Vercel Dashboard:** [https://vercel.com/dashboard](https://vercel.com/dashboard)
 - **Vercel Storage:** [https://vercel.com/dashboard/stores](https://vercel.com/dashboard/stores)
-- **Railway Dashboard:** [https://railway.app/dashboard](https://railway.app/dashboard)
+- **Render Dashboard:** [https://render.app/dashboard](https://render.app/dashboard)
 - **Render Dashboard:** [https://dashboard.render.com/](https://dashboard.render.com/)
 
 ### Documentation Links
 
 - **Vercel Postgres Docs:** [https://vercel.com/docs/storage/vercel-postgres](https://vercel.com/docs/storage/vercel-postgres)
-- **Railway Database Docs:** [https://docs.railway.app/databases/postgresql](https://docs.railway.app/databases/postgresql)
+- **Render Database Docs:** [https://docs.render.app/databases/postgresql](https://docs.render.app/databases/postgresql)
 - **Render PostgreSQL Docs:** [https://render.com/docs/databases](https://render.com/docs/databases)
 
 ### Generate Secure Keys
@@ -570,7 +570,7 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ## Additional Resources
 
 - **[DATABASE_URL_LOCATION_GUIDE.md](./DATABASE_URL_LOCATION_GUIDE.md)** - Detailed Vercel navigation with visual guidance
-- **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Comprehensive Railway setup guide with troubleshooting
+- **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Comprehensive Render setup guide with troubleshooting
 - **[VERCEL_DEPLOYMENT_GUIDE.md](./VERCEL_DEPLOYMENT_GUIDE.md)** - Full Vercel deployment walkthrough
 - **[.env.example](./.env.example)** - Template for all environment variables with comments
 

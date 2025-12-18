@@ -69,7 +69,7 @@ Visual guide to understand how different deployment options connect together.
 
 ---
 
-### Option 2: Vercel Frontend + Railway Backend
+### Option 2: Vercel Frontend + Render Backend
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -92,7 +92,7 @@ Visual guide to understand how different deployment options connect together.
 │  Frontend connects to:      │    │  │ - 4 workers     │    │
 │  VITE_API_URL=              │    │  └────────┬─────────┘    │
 │  https://your-app.up.       │◄───┼───────────┘              │
-│    railway.app              │    │                          │
+│    render.app              │    │                          │
 └─────────────────────────────┘    │  Health: /health         │
                                    │  API: /api/*             │
                                    └────────────┬─────────────┘
@@ -116,7 +116,7 @@ Visual guide to understand how different deployment options connect together.
 - WebSocket support
 - Background tasks
 - Private network (no egress fees)
-- Railway free tier: 500 hours/month
+- Render free tier: 500 hours/month
 
 📊 Cost: $0 - $5/month
 ```
@@ -250,14 +250,14 @@ Parts:
 └────────────────┴─────────────────────────────────────────────────────────────┘
 ```
 
-### Railway Postgres Connection String
+### Render Postgres Connection String
 
 ```
 Private Network (Recommended - No Egress Fees):
-postgresql://postgres:PASSWORD@postgres.railway.internal:5432/railway
+postgresql://postgres:PASSWORD@postgres.render.internal:5432/render
 
 Public Network (TCP Proxy - Has Egress Fees):
-postgresql://postgres:PASSWORD@containers-us-west-1.railway.app:5432/railway
+postgresql://postgres:PASSWORD@containers-us-west-1.render.app:5432/render
 
 App Priority:
 1. DATABASE_PRIVATE_URL (if set) ✅
@@ -287,7 +287,7 @@ Development (.env file)
 Git Push
     │
     ▼
-Platform Dashboard (Vercel/Railway/Render)
+Platform Dashboard (Vercel/Render/Render)
     │
     ├─► Set environment variables
     │   - DATABASE_URL
@@ -340,7 +340,7 @@ Heavy Traffic (1,000+ users/day)
     ▼ Cost: $20-50/month
 ```
 
-### Railway/Render Scaling
+### Render/Render Scaling
 
 ```
 Light Traffic (0-100 users/day)
@@ -348,7 +348,7 @@ Light Traffic (0-100 users/day)
     │ Container runs 24/7
     │ Database always on
     │
-    ▼ Cost: $0/month (Railway) or $7/month (Render Starter)
+    ▼ Cost: $0/month (Render) or $7/month (Render Starter)
 
 Medium Traffic (100-1,000 users/day)
     │ May need Pro plan
@@ -371,7 +371,7 @@ Heavy Traffic (1,000+ users/day)
 
 ```
 ┌──────────────────┬───────────┬──────────────┬──────────────┐
-│ Metric           │ Vercel    │ Railway      │ Render       │
+│ Metric           │ Vercel    │ Render      │ Render       │
 ├──────────────────┼───────────┼──────────────┼──────────────┤
 │ Cold Start       │ None      │ None         │ 30-60s (Free)│
 │ API Response     │ <200ms    │ <300ms       │ <400ms       │
@@ -395,13 +395,13 @@ START
   │   └─► YES → Vercel Full Stack ⭐
   │
   ├─► Need long-running processes?
-  │   └─► YES → Railway or Render
+  │   └─► YES → Render or Render
   │
   ├─► Budget constraint: $0/month?
   │   └─► YES → Vercel Full Stack
   │
   ├─► Need WebSocket support?
-  │   └─► YES → Railway (better WebSocket support)
+  │   └─► YES → Render (better WebSocket support)
   │
   ├─► Already using Render?
   │   └─► YES → Vercel + Render
@@ -416,7 +416,7 @@ START
 - **[DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Complete deployment guide
 - **[QUICK_DEPLOYMENT_REFERENCE.md](./QUICK_DEPLOYMENT_REFERENCE.md)** - Quick reference
 - **[VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md)** - Vercel Postgres details
-- **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Railway database setup
+- **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Render database setup
 
 ---
 

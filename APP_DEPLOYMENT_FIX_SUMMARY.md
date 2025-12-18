@@ -2,20 +2,20 @@
 
 ## Issue: "App is Dying"
 
-The application was experiencing deployment failures where the app would "die" or fail to start properly across different deployment platforms (Railway, Vercel, Docker).
+The application was experiencing deployment failures where the app would "die" or fail to start properly across different deployment platforms (Render, Vercel, Docker).
 
 ## Root Cause
 
 The repository had **conflicting deployment configurations** that tried to start different backend implementations:
 
-1. **railway.json**: Configured to use Flask backend (`final_backend_postgresql:application`) with gunicorn + Docker
+1. **render.json**: Configured to use Flask backend (`final_backend_postgresql:application`) with gunicorn + Docker
 2. **Procfile**: Configured to use FastAPI backend (`api.backend_app.main:app`) with uvicorn
 3. **Dockerfile**: Configured to use Flask backend with gunicorn
 
 This mismatch meant:
-- Railway deployments tried to use Flask (via Docker)
+- Render deployments tried to use Flask (via Docker)
 - Heroku-style deployments tried to use FastAPI (via Procfile)
-- The Dockerfile and railway.json conflicted
+- The Dockerfile and render.json conflicted
 - Different backends had different health check endpoints and startup requirements
 
 ## Solution
@@ -24,7 +24,7 @@ This mismatch meant:
 
 ### Changes Made
 
-#### 1. Updated `railway.json`
+#### 1. Updated `render.json`
 ```json
 {
   "build": {
@@ -45,7 +45,7 @@ This mismatch meant:
 CMD ["sh", "-c", "uvicorn api.backend_app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 5 --limit-concurrency 100"]
 ```
 
-**Why**: Aligns Docker deployments with Railway and other platforms using the same FastAPI backend.
+**Why**: Aligns Docker deployments with Render and other platforms using the same FastAPI backend.
 
 #### 3. Made Socket.IO Optional in `api/backend_app/main.py`
 ```python
@@ -99,7 +99,7 @@ All CI/CD tests pass:
 
 ## Benefits
 
-1. **Consistent Deployment**: Same backend across all platforms (Vercel, Railway, Docker, local)
+1. **Consistent Deployment**: Same backend across all platforms (Vercel, Render, Docker, local)
 2. **No More "Dying"**: Eliminates configuration conflicts that caused deployment failures
 3. **Better Performance**: FastAPI provides superior async performance compared to Flask
 4. **Serverless Ready**: FastAPI with async/await works better in serverless environments
@@ -114,11 +114,11 @@ All CI/CD tests pass:
 - **Runtime**: Python 3.12 serverless functions
 - **Health Check**: `/health`, `/api/health`
 
-### Railway (Docker/NIXPACKS)
+### Render (Docker/NIXPACKS)
 - **Status**: ✅ Fixed
-- **Entry**: `uvicorn api.backend_app.main:app` (via railway.json)
+- **Entry**: `uvicorn api.backend_app.main:app` (via render.json)
 - **Builder**: NIXPACKS (uses Procfile)
-- **Health Check**: `/health` (configured in railway.json)
+- **Health Check**: `/health` (configured in render.json)
 
 ### Docker (Manual/Custom)
 - **Status**: ✅ Fixed
@@ -168,17 +168,17 @@ Expected: Backend starts successfully, health check responds
 
 ## Migration Notes
 
-### For Existing Railway Deployments
+### For Existing Render Deployments
 
-If you have an existing Railway deployment using the old Docker configuration:
+If you have an existing Render deployment using the old Docker configuration:
 
-1. **Option A: Let Railway Auto-Detect** (Recommended)
-   - Railway will automatically detect the changes and switch to NIXPACKS
+1. **Option A: Let Render Auto-Detect** (Recommended)
+   - Render will automatically detect the changes and switch to NIXPACKS
    - No manual intervention needed
    - Next deployment will use the new configuration
 
 2. **Option B: Force Rebuild**
-   - Go to Railway dashboard → Settings → Builder
+   - Go to Render dashboard → Settings → Builder
    - Select "NIXPACKS" if not already selected
    - Trigger a new deployment
 
@@ -215,13 +215,13 @@ python -m api.backend_app.main
 ### Issue: Health check failing
 
 **Solution**: Verify the health check endpoint path matches your platform's configuration:
-- Railway: Configured in railway.json as `/health`
+- Render: Configured in render.json as `/health`
 - Docker: Configured in Dockerfile HEALTHCHECK as `/health`
 - Most platforms: Try `/health`, `/api/health`, `/live`, or `/ready`
 
 ## Files Changed
 
-1. `railway.json` - Changed builder to NIXPACKS, updated startCommand
+1. `render.json` - Changed builder to NIXPACKS, updated startCommand
 2. `Dockerfile` - Updated CMD to use FastAPI with uvicorn
 3. `api/backend_app/main.py` - Made Socket.IO optional, fixed module paths
 4. `APP_DEPLOYMENT_FIX_SUMMARY.md` - This documentation
@@ -240,9 +240,9 @@ All changes have been reviewed for security implications:
 
 ## Next Steps
 
-1. ✅ Deploy to Railway - configuration should now work correctly
+1. ✅ Deploy to Render - configuration should now work correctly
 2. ✅ Monitor health checks to ensure app stays alive
-3. ✅ Test all deployment platforms (Vercel, Railway, Docker)
+3. ✅ Test all deployment platforms (Vercel, Render, Docker)
 4. 📝 Update deployment documentation with new configurations
 5. 🎉 App should no longer "die" due to configuration conflicts!
 

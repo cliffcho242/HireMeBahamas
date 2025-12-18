@@ -210,7 +210,7 @@ If you see:
 💾 Database URL: ⚠️  NOT CONFIGURED
 ```
 
-**Solution:** Set the `DATABASE_URL` environment variable in your deployment platform (Vercel, Railway, Render, etc.)
+**Solution:** Set the `DATABASE_URL` environment variable in your deployment platform (Vercel, Render, Render, etc.)
 
 ### Issue: SSL disabled in production
 If you see:

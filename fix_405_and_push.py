@@ -104,7 +104,7 @@ def check_deployment_files():
     files_to_check = {
         "nixpacks.toml": "Nixpacks configuration",
         ".nixpacksignore": "Nixpacks ignore file",
-        ".railwayignore": "Railway ignore file",
+        ".renderignore": "Render ignore file",
         "Procfile": "Process file",
         "requirements.txt": "Python requirements",
     }
@@ -185,7 +185,7 @@ def push_to_repository():
         subprocess.run(["git", "push", "origin", "main"], check=True)
         print("✅ Changes pushed to repository")
 
-        print("\n🎯 Railway will auto-deploy in 3-5 minutes")
+        print("\n🎯 Render will auto-deploy in 3-5 minutes")
         return True
 
     except subprocess.CalledProcessError as e:
@@ -200,7 +200,7 @@ def test_deployed_backend():
 
     import requests
 
-    backend_url = "https://hiremebahamas-backend.railway.app"
+    backend_url = "https://hiremebahamas-backend.render.app"
 
     try:
         # Test health endpoint
@@ -217,7 +217,7 @@ def test_deployed_backend():
             print("   🎉 405 error is FIXED!")
         elif auth_response.status_code == 404:
             print(f"⚠️ Login endpoint: {auth_response.status_code} (Still deploying...)")
-            print("   Wait 3-5 minutes for Railway deployment")
+            print("   Wait 3-5 minutes for Render deployment")
         else:
             print(f"⚠️ Login endpoint: {auth_response.status_code}")
 
@@ -279,10 +279,10 @@ def main():
     if all(checks.values()):
         print("\n🎉 ALL CHECKS PASSED!")
         print("✅ Changes pushed to hiremebahamas.com")
-        print("⏱️ Railway deployment: 3-5 minutes")
+        print("⏱️ Render deployment: 3-5 minutes")
         print("\n🌐 Test endpoints after deployment:")
-        print("   https://hiremebahamas-backend.railway.app/health")
-        print("   https://hiremebahamas-backend.railway.app/api/auth/login")
+        print("   https://hiremebahamas-backend.render.app/health")
+        print("   https://hiremebahamas-backend.render.app/api/auth/login")
     else:
         print("\n⚠️ Some checks failed - review output above")
 

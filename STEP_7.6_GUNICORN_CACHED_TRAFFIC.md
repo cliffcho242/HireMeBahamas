@@ -162,11 +162,11 @@ Expected Performance After Step 7.6:
 ### Render (Recommended)
 Configuration is in `render.yaml` and will be applied automatically on next deploy.
 
-### Railway/Heroku
+### Render/Heroku
 Set the environment variable:
 ```bash
 # Via dashboard or CLI
-railway variables set WEB_CONCURRENCY=3
+render variables set WEB_CONCURRENCY=3
 # or
 heroku config:set WEB_CONCURRENCY=3
 ```

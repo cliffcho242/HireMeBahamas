@@ -13,13 +13,13 @@ I've created a **complete 5-step deployment system** that guides you through eve
 
 ### **Deployment Steps (Automated):**
 1. ✅ **STEP_1_GITHUB_SETUP.bat** - Automatically push code to GitHub
-2. ✅ **STEP_2_DEPLOY_BACKEND.bat** - Guided Railway deployment  
+2. ✅ **STEP_2_DEPLOY_BACKEND.bat** - Guided Render deployment  
 3. ✅ **STEP_3_DEPLOY_FRONTEND.bat** - Guided Vercel deployment
 4. ✅ **STEP_4_TEST_DEPLOYMENT.bat** - Automated production testing
 5. ✅ **STEP_5_SHARE_WITH_USERS.bat** - Marketing materials & sharing
 
 ### **Supporting Files:**
-- ✅ All deployment configs (.env, railway.json, vercel.json, etc.)
+- ✅ All deployment configs (.env, render.json, vercel.json, etc.)
 - ✅ Privacy policy & terms of service (required by app stores)
 - ✅ Complete documentation
 
@@ -38,7 +38,7 @@ Then choose options in order:
      - Saves repository URL
      
 [5] ► Step 2: Deploy Backend        (5 mins)  
-     - Opens Railway.app
+     - Opens Render.app
      - Guides you through setup
      - Backend goes live automatically
      - Saves backend URL
@@ -67,7 +67,7 @@ Then choose options in order:
 
 ## 💰 Cost: 100% FREE!
 
-- **Railway Backend:** FREE (500 hours/month = always on)
+- **Render Backend:** FREE (500 hours/month = always on)
 - **Vercel Frontend:** FREE (unlimited bandwidth)
 - **HTTPS/SSL:** FREE (automatic)
 - **Domain:** Optional ($12/year)
@@ -127,8 +127,8 @@ Week 9:    Submit to App Stores
 - Automatically pushes all code
 - Saves repo URL for later
 
-### **STEP 2: Railway Backend**
-- Opens Railway.app in browser
+### **STEP 2: Render Backend**
+- Opens Render.app in browser
 - Guides you through account creation
 - Shows you how to connect GitHub
 - Automatically detects configuration
@@ -171,7 +171,7 @@ Week 9:    Submit to App Stores
 - `QUICK_DEPLOY_GUIDE.txt` - Quick reference
 
 ### **Platform Help:**
-- Railway: https://docs.railway.app
+- Render: https://docs.render.app
 - Vercel: https://vercel.com/docs
 
 ### **During Deployment:**
@@ -227,7 +227,7 @@ Everything is automated and ready to go:
 ## 🌟 What You'll Have After 30 Minutes
 
 ✅ **Live Website:** https://hiremebahamas.vercel.app  
-✅ **Backend API:** https://your-backend.railway.app  
+✅ **Backend API:** https://your-backend.render.app  
 ✅ **Privacy Policy:** Your-site/privacy-policy.html  
 ✅ **Terms of Service:** Your-site/terms-of-service.html  
 ✅ **Admin Access:** admin@hiremebahamas.com / AdminPass123!  

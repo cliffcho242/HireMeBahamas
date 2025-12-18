@@ -80,9 +80,9 @@ This checklist ensures your HireMeBahamas deployment is ready for 1M+ users with
 
 **Cost**: $25-50/month (2-4 instances)
 
-**Alternative: Railway** ($5-7/month for smaller scale)
-- Follow same steps on [railway.app](https://railway.app)
-- Configure `railway.json` instead of Render settings
+**Alternative: Render** ($5-7/month for smaller scale)
+- Follow same steps on [render.app](https://render.app)
+- Configure `render.json` instead of Render settings
 
 ---
 
@@ -252,7 +252,7 @@ This checklist ensures your HireMeBahamas deployment is ready for 1M+ users with
 ### 3.1 SSL/TLS Certificates
 
 - [x] **Frontend SSL**: Automatic via Vercel
-- [x] **Backend SSL**: Automatic via Render/Railway
+- [x] **Backend SSL**: Automatic via Render/Render
 - [ ] **Database SSL**: Verify `?sslmode=require` in connection string
 - [ ] **Redis SSL**: Verify TLS connection to Upstash
 - [ ] **R2 Storage**: HTTPS only (enforced)

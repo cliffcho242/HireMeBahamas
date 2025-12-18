@@ -161,7 +161,7 @@ curl https://your-app.vercel.app/api/forever-status
 
 ### Environment Variables
 
-Add to Vercel/Railway/Render:
+Add to Vercel/Render/Render:
 
 ```env
 # Forever Fix Configuration (all optional with defaults)
@@ -183,7 +183,7 @@ FOREVER_HEALTH_CHECK_INTERVAL=60
 FOREVER_DB_KEEPALIVE_INTERVAL=120
 ```
 
-**For Railway (Container):**
+**For Render (Container):**
 ```env
 FOREVER_HEALTH_CHECK_INTERVAL=60
 FOREVER_DB_KEEPALIVE_INTERVAL=120
@@ -248,7 +248,7 @@ Monitor cron jobs:
 - Python 3.8+: Supported with fallback
 - Python 3.10+: Native support
 - Vercel: Fully compatible
-- Railway: Fully compatible
+- Render: Fully compatible
 - Render: Fully compatible
 
 ---

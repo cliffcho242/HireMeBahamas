@@ -112,7 +112,7 @@ except Exception as e:
 ### 2. Safe Examples ✅
 - ✅ All bash examples are safe
 - ✅ No dangerous commands demonstrated
-- ✅ Clear warnings about Railway/production usage
+- ✅ Clear warnings about Render/production usage
 - ✅ Proper error handling in examples
 
 ### 3. Configuration Safety ✅
@@ -185,7 +185,7 @@ r"autovacuum launcher started"
 
 ## Deployment Security
 
-### Railway/Cloud Platform ✅
+### Render/Cloud Platform ✅
 
 **No Deployment Changes**
 - ✅ No application code changes
@@ -225,7 +225,7 @@ r"autovacuum launcher started"
 2. **Access Control**: Ensure only authorized personnel can access logs:
    ```bash
    # Good: Use proper access controls
-   railway logs | python filter_postgres_logs.py --suppress-benign | \
+   render logs | python filter_postgres_logs.py --suppress-benign | \
      send_to_secure_monitoring
    ```
 

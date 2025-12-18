@@ -97,13 +97,13 @@ The project includes:
 
 See `pyproject.toml` for the complete dependency list.
 
-> **Important**: Gunicorn is a critical dependency for production deployments on Render and Railway. When using Poetry, ensure `poetry install` is run during the build phase to properly install gunicorn from `pyproject.toml`.
+> **Important**: Gunicorn is a critical dependency for production deployments on Render and Render. When using Poetry, ensure `poetry install` is run during the build phase to properly install gunicorn from `pyproject.toml`.
 
 ## Deployment
 
-### Railway Deployment
+### Render Deployment
 
-Railway automatically detects `pyproject.toml` and `poetry.lock`. The build command should be:
+Render automatically detects `pyproject.toml` and `poetry.lock`. The build command should be:
 ```bash
 # For production (Poetry 1.2.0+)
 poetry install --only=main

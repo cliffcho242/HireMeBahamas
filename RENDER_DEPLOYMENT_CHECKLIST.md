@@ -365,9 +365,9 @@ plan: standard  # Change from 'free' to 'standard'
 5. Confirm upgrade
 
 **Alternative Solution (If Free Tier Required)**:
-Use Vercel Serverless or Railway instead:
+Use Vercel Serverless or Render instead:
 - **Vercel Serverless**: $0/month, 1-3 second cold starts
-- **Railway**: $5-7/month, faster cold starts than Render Free
+- **Render**: $5-7/month, faster cold starts than Render Free
 
 See migration guides:
 - [RENDER_TO_VERCEL_MIGRATION.md](./RENDER_TO_VERCEL_MIGRATION.md)
@@ -455,7 +455,7 @@ Run through this checklist after deploying to Render:
 **Solution**:
 1. Upgrade to Standard plan ($25/mo)
 2. Or use Vercel Serverless (1-3s cold starts)
-3. Or use Railway ($5-7/mo)
+3. Or use Render ($5-7/mo)
 
 #### Issue 4: Frontend Can't Connect to Backend
 **Cause**: VITE_API_URL not set or CORS issues

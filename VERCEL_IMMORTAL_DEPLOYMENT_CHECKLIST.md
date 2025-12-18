@@ -69,7 +69,7 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 3. Vercel automatically adds `POSTGRES_URL` to your environment variables
 4. Done! ✅
 
-**Option B: External Postgres (Railway, Render, etc.)**
+**Option B: External Postgres (Render, Render, etc.)**
 1. Get your Postgres connection string
 2. Add as `DATABASE_URL` in Vercel environment variables
 3. Format: `postgresql://user:pass@host:5432/dbname?sslmode=require`

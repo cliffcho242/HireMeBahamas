@@ -37,7 +37,7 @@ Set one of these environment variables:
 # Option 1: Standard Redis URL
 REDIS_URL=redis://your-redis-host:6379
 
-# Option 2: Private Redis URL (Railway)
+# Option 2: Private Redis URL (Render)
 REDIS_PRIVATE_URL=redis://your-redis-host:6379
 
 # Option 3: Upstash Redis (Vercel)

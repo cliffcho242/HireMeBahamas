@@ -2,7 +2,7 @@
 
 ## What Was Fixed
 
-Railway PostgreSQL databases on free/hobby tiers sleep after 15 minutes of inactivity. This has been fixed with an automatic database keepalive mechanism.
+Render PostgreSQL databases on free/hobby tiers sleep after 15 minutes of inactivity. This has been fixed with an automatic database keepalive mechanism.
 
 ## How It Works
 
@@ -13,7 +13,7 @@ The application now automatically pings the PostgreSQL database every 5 minutes 
 ### Option 1: Check Health Endpoint
 
 ```bash
-curl https://your-app.railway.app/api/health
+curl https://your-app.render.app/api/health
 ```
 
 Look for the `keepalive` section:
@@ -29,7 +29,7 @@ Look for the `keepalive` section:
 
 ### Option 2: Check Logs
 
-In Railway Dashboard:
+In Render Dashboard:
 1. Go to your backend service
 2. Click "Deployments" tab
 3. Look for these messages:
@@ -43,7 +43,7 @@ The keepalive works perfectly with default settings. If you want to customize:
 
 ### Change Ping Interval
 
-In Railway Dashboard → Environment Variables:
+In Render Dashboard → Environment Variables:
 ```
 DB_KEEPALIVE_INTERVAL_SECONDS=180  # 3 minutes (more aggressive)
 ```
@@ -57,7 +57,7 @@ DB_KEEPALIVE_INTERVAL_SECONDS=180  # 3 minutes (more aggressive)
 
 ### Database Still Shows "Sleeping"
 
-1. Check that `ENVIRONMENT=production` is set in Railway
+1. Check that `ENVIRONMENT=production` is set in Render
 2. Check that `DATABASE_URL` is configured
 3. Check logs for keepalive messages
 4. Wait 10 minutes and check again
@@ -66,7 +66,7 @@ DB_KEEPALIVE_INTERVAL_SECONDS=180  # 3 minutes (more aggressive)
 
 Make sure you're checking the `/api/health` endpoint (not just `/health`):
 ```bash
-curl https://your-app.railway.app/api/health
+curl https://your-app.render.app/api/health
 ```
 
 ## Benefits
@@ -86,4 +86,4 @@ curl https://your-app.railway.app/api/health
 ---
 
 **Status**: ✅ Implemented and ready to deploy  
-**Next**: Push to Railway and verify in production
+**Next**: Push to Render and verify in production

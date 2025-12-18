@@ -75,7 +75,7 @@ Configured in `render.yaml`:
 startCommand: cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py
 ```
 
-### Railway:
+### Render:
 Configured in `nixpacks.toml`:
 ```toml
 cmd = "cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py"

@@ -18,7 +18,7 @@ echo  3. Open Frontend in Browser
 echo.
 echo DEPLOYMENT (Step by Step):
 echo  4. Step 1: Push to GitHub
-echo  5. Step 2: Deploy Backend to Railway
+echo  5. Step 2: Deploy Backend to Render
 echo  6. Step 3: Deploy Frontend to Vercel
 echo  7. Step 4: Test Production Deployment
 echo  8. Step 5: Share With Users
@@ -140,7 +140,7 @@ echo   Code Pushed to GitHub!
 echo ============================================
 echo.
 echo Next Steps:
-echo 1. Deploy Backend: https://railway.app
+echo 1. Deploy Backend: https://render.app
 echo 2. Deploy Frontend: https://vercel.com
 echo.
 echo See DEPLOYMENT_READY.md for instructions

@@ -12,7 +12,7 @@ The asyncpg version constraint issue has been **COMPLETELY RESOLVED** across all
 
 **Root Cause:** PyPI yanked all asyncpg 0.29.x versions in December 2025. Only 0.30.0+ are available.
 
-**Impact:** Complete deployment failure on Render, Vercel, and Railway platforms.
+**Impact:** Complete deployment failure on Render, Vercel, and Render platforms.
 
 ---
 
@@ -73,7 +73,7 @@ pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r
 "installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r api/requirements.txt"
 ```
 
-### Railway (Dockerfile)
+### Render (Dockerfile)
 ```dockerfile
 RUN pip install --upgrade pip && \
     pip install --only-binary=:all: -r requirements.txt
@@ -124,7 +124,7 @@ Deployment logs should show:
 | Render Free | ✅ | <15s total | Binary-only, no build tools |
 | Render Standard | ✅ | <10s total | Binary-only, no build tools |
 | Vercel Serverless | ✅ | <10s total | installCommand configured |
-| Railway | ✅ | <20s total | Docker multi-stage build |
+| Render | ✅ | <20s total | Docker multi-stage build |
 | Python 3.12+ | ✅ | <5s | Native wheel support |
 | ARM64 | ✅ | <5s | Native wheel support |
 | Local Dev | ✅ | <5s | All platforms |
@@ -246,7 +246,7 @@ pip install -r requirements-psycopg.txt
 All systems are GO. The fix is ready for immediate deployment to:
 - ✅ Render (Free/Standard tiers)
 - ✅ Vercel (Serverless)
-- ✅ Railway
+- ✅ Render
 - ✅ Local development environments
 
 **This error will never return.**

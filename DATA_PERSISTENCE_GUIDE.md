@@ -50,7 +50,7 @@ This guide explains how HireMeBahamas ensures user data and posts are persisted 
 
 ### Production (PostgreSQL)
 1. Database URL set via `DATABASE_URL` environment variable
-2. Hosted on Railway/Render with persistent storage
+2. Hosted on Render/Render with persistent storage
 3. Data survives deployments and restarts
 4. Automatic backups (depends on hosting provider)
 
@@ -134,7 +134,7 @@ FRONTEND_URL=https://hiremebahamas.vercel.app
 **Cause**: Using SQLite in production or database not configured
 **Solution**:
 - Set DATABASE_URL to PostgreSQL connection string
-- Use Railway/Render's database services
+- Use Render/Render's database services
 - Enable persistent storage on hosting platform
 
 ## Best Practices

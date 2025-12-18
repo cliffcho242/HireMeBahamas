@@ -12,7 +12,7 @@ You have 4 pull requests that need attention:
 | PR # | Title | Status | Priority |
 |------|-------|--------|----------|
 | #30 | Frontend Build Fix | ⚠️ Unstable | High |
-| #20 | Railway Deployment | 🔴 Has Conflicts | **CRITICAL** |
+| #20 | Render Deployment | 🔴 Has Conflicts | **CRITICAL** |
 | #23 | Dependency Activation | 🔴 Has Conflicts | Medium |
 | #24 | Dependency Installation | 🔴 Has Conflicts | Medium |
 
@@ -63,7 +63,7 @@ git push --force-with-lease origin copilot/fix-procfile-application-error
 
 **Files likely to have conflicts:**
 - `Procfile`
-- `railway.json`
+- `render.json`
 - `nixpacks.toml`
 - `gunicorn.conf.py`
 
@@ -124,7 +124,7 @@ git push --force-with-lease origin <branch-name>
 
 ## 🎯 Recommended Order
 
-1. ✅ **Fix PR #20** (Railway deployment - CRITICAL)
+1. ✅ **Fix PR #20** (Render deployment - CRITICAL)
 2. ✅ **Merge PR #30** (if CI passes)
 3. ✅ **Fix PR #23 or #24** (dependency automation)
 4. ⏸️ **Close the other** (#23 or #24) or merge if still needed

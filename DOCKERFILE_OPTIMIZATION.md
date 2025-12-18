@@ -151,12 +151,12 @@ DOCKER_BUILDKIT=1 docker build \
   frontend/
 ```
 
-### Railway Deployment
+### Render Deployment
 
-Railway automatically uses BuildKit for Docker builds. The optimizations work out of the box:
+Render automatically uses BuildKit for Docker builds. The optimizations work out of the box:
 
-1. **Automatic BuildKit**: Railway enables BuildKit by default
-2. **Cache Persistence**: Railway maintains cache between deploys
+1. **Automatic BuildKit**: Render enables BuildKit by default
+2. **Cache Persistence**: Render maintains cache between deploys
 3. **No Configuration Needed**: Just push your code
 
 **Expected Results:**
@@ -302,7 +302,7 @@ If you encounter issues with the optimized builds:
 1. Check this documentation first
 2. Verify BuildKit is enabled
 3. Test locally with the optimization script
-4. Review Railway/Render build logs
+4. Review Render/Render build logs
 5. Open an issue with build logs and error messages
 
 ---

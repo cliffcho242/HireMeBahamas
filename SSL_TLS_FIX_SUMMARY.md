@@ -160,7 +160,7 @@ Test 4: URL with sslmode=require should remain unchanged
 
 ✅ **Works with all platforms**
 - Vercel Postgres (Neon) ✅
-- Railway PostgreSQL ✅
+- Render PostgreSQL ✅
 - Render PostgreSQL ✅
 - Supabase ✅
 - Any PostgreSQL database that supports SSL ✅

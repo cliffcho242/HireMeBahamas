@@ -1,13 +1,13 @@
 # 🚀 Auto-Deploy Setup Guide for HireMeBahamas
 
-This guide explains how to enable automatic deployment to Vercel (frontend) and Railway (backend) using GitHub Actions.
+This guide explains how to enable automatic deployment to Vercel (frontend) and Render (backend) using GitHub Actions.
 
 ## 📋 Prerequisites
 
 Before setting up auto-deploy, ensure you have:
 - A GitHub account with this repository
 - A Vercel account (for frontend deployment)
-- A Railway account (for backend deployment)
+- A Render account (for backend deployment)
 
 ## 🔧 Setup Instructions
 
@@ -24,7 +24,7 @@ Before setting up auto-deploy, ensure you have:
    - **Output Directory**: `dist`
 5. Add environment variable:
    - **Name**: `VITE_API_URL`
-   - **Value**: Your Railway backend URL (e.g., `https://your-backend.railway.app`)
+   - **Value**: Your Render backend URL (e.g., `https://your-backend.render.app`)
 6. Click **"Deploy"**
 
 #### Step 1.2: Get Vercel Credentials
@@ -45,41 +45,41 @@ Before setting up auto-deploy, ensure you have:
    cat .vercel/project.json
    ```
 
-### 2. Railway Setup (Backend)
+### 2. Render Setup (Backend)
 
-#### Step 2.1: Create Railway Project
-1. Go to [Railway Dashboard](https://railway.app/dashboard)
+#### Step 2.1: Create Render Project
+1. Go to [Render Dashboard](https://render.app/dashboard)
 2. Click **"New Project"**
 3. Select **"Deploy from GitHub repo"**
 4. Choose your repository `cliffcho242/HireMeBahamas`
-5. Railway will auto-detect the Python app
+5. Render will auto-detect the Python app
 6. Set environment variables:
    - `SECRET_KEY`: Generate a secure random key
-   - `DATABASE_URL`: (Railway provides PostgreSQL automatically if needed)
+   - `DATABASE_URL`: (Render provides PostgreSQL automatically if needed)
    
    📖 **[Complete DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Step-by-step instructions for adding PostgreSQL
    
-7. Deploy and note your Railway URL
+7. Deploy and note your Render URL
 
-#### Step 2.2: Get Railway Token
-1. Go to [Railway Account Settings](https://railway.app/account)
+#### Step 2.2: Get Render Token
+1. Go to [Render Account Settings](https://render.app/account)
 2. Navigate to **"Tokens"** section
 3. Create a new token named **"GitHub Actions Auto-Deploy"**
 4. Copy the token
 
-#### Step 2.3: Get Railway Project ID
+#### Step 2.3: Get Render Project ID
 ```bash
-# Install Railway CLI
-curl -fsSL https://railway.app/install.sh | sh
+# Install Render CLI
+curl -fsSL https://render.app/install.sh | sh
 
 # Login
-railway login
+render login
 
 # Link to your project
-railway link
+render link
 
 # Get project ID (it will be displayed)
-railway status
+render status
 ```
 
 ### 3. GitHub Secrets Configuration
@@ -98,15 +98,15 @@ Add the following secrets to your GitHub repository:
 - **Name**: `VERCEL_PROJECT_ID`
   - **Value**: Your Vercel project ID
 
-#### Railway Secrets:
+#### Render Secrets:
 - **Name**: `RAILWAY_TOKEN`
-  - **Value**: Your Railway token from Step 2.2
+  - **Value**: Your Render token from Step 2.2
 - **Name**: `RAILWAY_PROJECT_ID`
-  - **Value**: Your Railway project ID from Step 2.3
+  - **Value**: Your Render project ID from Step 2.3
 
 #### Optional Secrets:
 - **Name**: `VITE_API_URL`
-  - **Value**: Your Railway backend URL (e.g., `https://your-backend.railway.app`)
+  - **Value**: Your Render backend URL (e.g., `https://your-backend.render.app`)
 
 #### JFrog Secrets (for Frogbot security scanning - Optional):
 If you want to enable automated security scanning with Frogbot:
@@ -125,7 +125,7 @@ The workflow `.github/workflows/deploy-frontend.yml` triggers when:
 - Changes are made in the `frontend/` directory
 - You manually trigger the workflow
 
-### Backend Deployment (Railway)
+### Backend Deployment (Render)
 The workflow `.github/workflows/deploy-backend.yml` triggers when:
 - You push changes to the `main` branch
 - Changes are made in backend files
@@ -158,7 +158,7 @@ git push origin main
 The GitHub Actions workflows will automatically:
 1. Run CI checks (lint, build, test)
 2. Deploy frontend to Vercel (if frontend files changed)
-3. Deploy backend to Railway (if backend files changed)
+3. Deploy backend to Render (if backend files changed)
 
 ### Manual Deployment
 You can also trigger deployments manually:
@@ -166,7 +166,7 @@ You can also trigger deployments manually:
 2. Click **Actions** tab
 3. Select the workflow you want to run:
    - **Deploy Frontend to Vercel**
-   - **Deploy Backend to Railway**
+   - **Deploy Backend to Render**
 4. Click **"Run workflow"** → **"Run workflow"**
 
 ## 📊 Monitoring Deployments
@@ -181,8 +181,8 @@ You can also trigger deployments manually:
 2. Select your HireMeBahamas project
 3. View deployment history and logs
 
-### View Railway Deployments
-1. Go to [Railway Dashboard](https://railway.app/dashboard)
+### View Render Deployments
+1. Go to [Render Dashboard](https://render.app/dashboard)
 2. Select your HireMeBahamas project
 3. View deployment status and logs
 
@@ -194,10 +194,10 @@ You can also trigger deployments manually:
 - Regenerate your Vercel token
 - Update the `VERCEL_TOKEN` secret in GitHub
 
-#### "Railway deployment failed"
-- Check Railway token is valid
+#### "Render deployment failed"
+- Check Render token is valid
 - Ensure `RAILWAY_PROJECT_ID` is correct
-- Review Railway logs for specific errors
+- Review Render logs for specific errors
 
 #### "Build failed"
 - Check the Actions logs for specific error messages
@@ -206,13 +206,13 @@ You can also trigger deployments manually:
 
 #### "Frontend can't connect to backend"
 - Ensure `VITE_API_URL` is set correctly in Vercel
-- Check Railway backend is running and accessible
+- Check Render backend is running and accessible
 - Verify CORS is enabled in backend
 
 ### Getting Help
 - Check workflow logs in GitHub Actions tab
 - Review Vercel deployment logs
-- Review Railway deployment logs
+- Review Render deployment logs
 - Check the main README.md for general troubleshooting
 
 ## 🎉 Success!
@@ -223,7 +223,7 @@ Once configured, your deployments are fully automated! Every push to `main` will
 - ✅ Deploy to production
 - ✅ Notify you of success or failure
 
-## 📝 Alternative: Using Render.com Instead of Railway
+## 📝 Alternative: Using Render.com Instead of Render
 
 If you prefer Render.com for backend deployment:
 
@@ -263,7 +263,7 @@ jobs:
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Vercel Deployment Documentation](https://vercel.com/docs)
-- [Railway Deployment Documentation](https://docs.railway.app/)
+- [Render Deployment Documentation](https://docs.render.app/)
 - [Render Deployment Documentation](https://render.com/docs)
 
 ---

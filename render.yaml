@@ -31,7 +31,7 @@
 # ❌ psycopg.connect(... sslmode=...) with URL
 # ❌ Health endpoint touching DB
 # ❌ Backend on more than one platform
-# ❌ Railway + Render together
+# ❌ Render + Render together
 #
 # Configuration:
 # - Standard plan ($25/mo) with 1GB RAM for Always On

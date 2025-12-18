@@ -91,12 +91,12 @@ GOOGLE_ANALYTICS_ID=
         self.print_success(f"Created .env file at {env_path}")
         self.print_warning("Remember to update SMTP settings and ALLOWED_ORIGINS!")
 
-    def create_railway_config(self):
-        """Create Railway deployment configuration"""
-        self.print_section("Creating Railway Configuration")
+    def create_render_config(self):
+        """Create Render deployment configuration"""
+        self.print_section("Creating Render Configuration")
 
-        railway_json = {
-            "$schema": "https://railway.app/railway.schema.json",
+        render_json = {
+            "$schema": "https://render.app/render.schema.json",
             "build": {
                 "builder": "NIXPACKS",
                 "buildCommand": "pip install -r requirements.txt",
@@ -108,11 +108,11 @@ GOOGLE_ANALYTICS_ID=
             },
         }
 
-        railway_path = self.root_dir / "railway.json"
-        with open(railway_path, "w") as f:
-            json.dump(railway_json, f, indent=2)
+        render_path = self.root_dir / "render.json"
+        with open(render_path, "w") as f:
+            json.dump(render_json, f, indent=2)
 
-        self.print_success(f"Created railway.json at {railway_path}")
+        self.print_success(f"Created render.json at {render_path}")
 
     def create_vercel_config(self):
         """Create Vercel deployment configuration"""
@@ -124,7 +124,7 @@ GOOGLE_ANALYTICS_ID=
             "framework": "vite",
             "installCommand": "cd frontend && npm install",
             "devCommand": "cd frontend && npm run dev",
-            "env": {"VITE_API_URL": "https://hiremebahamas-backend.railway.app"},
+            "env": {"VITE_API_URL": "https://hiremebahamas-backend.render.app"},
         }
 
         vercel_path = self.root_dir / "vercel.json"
@@ -134,7 +134,7 @@ GOOGLE_ANALYTICS_ID=
         self.print_success(f"Created vercel.json at {vercel_path}")
 
     def create_nixpacks_config(self):
-        """Create Nixpacks configuration for Railway"""
+        """Create Nixpacks configuration for Render"""
         self.print_section("Creating Nixpacks Configuration")
 
         nixpacks_toml = """[phases.setup]
@@ -250,7 +250,7 @@ htmlcov/
 *.pem
 *.key
 .vercel
-.railway
+.render
 """
 
         gitignore_path = self.root_dir / ".gitignore"
@@ -268,8 +268,8 @@ htmlcov/
             return
 
         frontend_env = """# Frontend Production Environment
-VITE_API_URL=https://hiremebahamas-backend.railway.app
-VITE_SOCKET_URL=https://hiremebahamas-backend.railway.app
+VITE_API_URL=https://hiremebahamas-backend.render.app
+VITE_SOCKET_URL=https://hiremebahamas-backend.render.app
 VITE_APP_NAME=HireMeBahamas
 VITE_APP_VERSION=1.0.0
 """
@@ -279,7 +279,7 @@ VITE_APP_VERSION=1.0.0
             f.write(frontend_env)
 
         self.print_success(f"Created frontend .env.production")
-        self.print_warning("Update VITE_API_URL with your actual Railway backend URL!")
+        self.print_warning("Update VITE_API_URL with your actual Render backend URL!")
 
     def create_privacy_policy(self):
         """Create privacy policy page"""
@@ -409,7 +409,7 @@ echo ""
 echo "✅ Code pushed to GitHub!"
 echo ""
 echo "Next steps:"
-echo "1. Deploy backend to Railway: https://railway.app"
+echo "1. Deploy backend to Render: https://render.app"
 echo "2. Deploy frontend to Vercel: https://vercel.com"
 echo "3. Update environment variables with production URLs"
 echo ""
@@ -450,7 +450,7 @@ echo.
 echo ✅ Code pushed to GitHub!
 echo.
 echo Next steps:
-echo 1. Deploy backend to Railway: https://railway.app
+echo 1. Deploy backend to Render: https://render.app
 echo 2. Deploy frontend to Vercel: https://vercel.com
 echo 3. Update environment variables with production URLs
 echo.
@@ -507,7 +507,7 @@ pause
 All deployment configuration files have been automatically generated:
 
 - ✅ `.env` - Production environment variables
-- ✅ `railway.json` - Railway deployment config
+- ✅ `render.json` - Render deployment config
 - ✅ `vercel.json` - Vercel frontend config
 - ✅ `requirements.txt` - Python dependencies
 - ✅ `Procfile` - Heroku compatibility
@@ -533,14 +533,14 @@ git push -u origin main
 
 Or simply run: `DEPLOY.bat`
 
-### Step 2: Deploy Backend to Railway
+### Step 2: Deploy Backend to Render
 
-1. Go to: https://railway.app
+1. Go to: https://render.app
 2. Click "New Project" → "Deploy from GitHub repo"
 3. Select your HireMeBahamas repository
-4. Railway will auto-detect `railway.json` and deploy!
+4. Render will auto-detect `render.json` and deploy!
 5. Add environment variable: `SECRET_KEY` (copy from `.env` file)
-6. Copy your Railway URL (e.g., `https://hiremebahamas-backend.railway.app`)
+6. Copy your Render URL (e.g., `https://hiremebahamas-backend.render.app`)
 
 ### Step 3: Deploy Frontend to Vercel
 
@@ -549,7 +549,7 @@ Or simply run: `DEPLOY.bat`
 3. Select your HireMeBahamas repository
 4. Set Root Directory to: `frontend`
 5. Add environment variable:
-   - `VITE_API_URL` = Your Railway backend URL
+   - `VITE_API_URL` = Your Render backend URL
 6. Click "Deploy"!
 7. Your site will be live at: `https://hiremebahamas.vercel.app`
 
@@ -581,9 +581,9 @@ Once your website is live and tested:
 ## 🔒 Security Checklist
 
 Before going live:
-- [ ] Update `SECRET_KEY` in Railway environment variables
+- [ ] Update `SECRET_KEY` in Render environment variables
 - [ ] Update `ALLOWED_ORIGINS` in `.env` to your production domain
-- [ ] Enable HTTPS (automatic on Railway & Vercel)
+- [ ] Enable HTTPS (automatic on Render & Vercel)
 - [ ] Test all authentication flows
 - [ ] Set up error monitoring (Sentry)
 - [ ] Configure backup strategy for database
@@ -600,22 +600,22 @@ Add to your production deployment:
 ## 💰 Cost Breakdown
 
 ### Free Tier (Perfect for Launch):
-- Railway Backend: FREE (500 hours/month)
+- Render Backend: FREE (500 hours/month)
 - Vercel Frontend: FREE (unlimited)
 - Total: $0/month
 
 ### Paid (When You Scale):
-- Railway: $5/month
+- Render: $5/month
 - Vercel Pro: $20/month
 - Domain: $12/year
 - Total: ~$25/month + domain
 
 ## 🆘 Troubleshooting
 
-### Backend won't deploy on Railway?
-- Check `railway.json` syntax
+### Backend won't deploy on Render?
+- Check `render.json` syntax
 - Verify `requirements.txt` has all dependencies
-- Check Railway logs for errors
+- Check Render logs for errors
 
 ### Frontend won't deploy on Vercel?
 - Verify `frontend` directory structure
@@ -631,7 +631,7 @@ Add to your production deployment:
 
 - **Email**: support@hiremebahamas.com
 - **Documentation**: This file
-- **Railway Docs**: https://docs.railway.app
+- **Render Docs**: https://docs.render.app
 - **Vercel Docs**: https://vercel.com/docs
 
 ## 🎉 You're Ready!
@@ -675,7 +675,7 @@ Good luck with your launch! 🚀🇧🇸
         print("=" * 60)
         print("1. Review .env file and update settings")
         print("2. Run: DEPLOY.bat")
-        print("3. Deploy backend to Railway: https://railway.app")
+        print("3. Deploy backend to Render: https://render.app")
         print("4. Deploy frontend to Vercel: https://vercel.com")
         print("5. Test your live site!")
         print("\nRead DEPLOYMENT_READY.md for detailed instructions")
@@ -689,7 +689,7 @@ Good luck with your launch! 🚀🇧🇸
         try:
             self.check_dependencies()
             self.create_env_file()
-            self.create_railway_config()
+            self.create_render_config()
             self.create_vercel_config()
             self.create_nixpacks_config()
             self.create_requirements_txt()

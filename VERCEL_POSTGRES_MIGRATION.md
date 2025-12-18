@@ -1,8 +1,8 @@
-# ZERO-DOWNTIME MIGRATION: Railway Postgres → Vercel Postgres
+# ZERO-DOWNTIME MIGRATION: Render Postgres → Vercel Postgres
 
 ## THE 7 COMMANDS
 
-### COMMAND 1: Export from Railway
+### COMMAND 1: Export from Render
 ```bash
 pg_dump "$RAILWAY_DATABASE_URL" \
   --no-owner \
@@ -10,7 +10,7 @@ pg_dump "$RAILWAY_DATABASE_URL" \
   --format=custom \
   --compress=0 \
   --jobs=8 \
-  --file=railway_backup_$(date +%Y%m%d_%H%M%S).dump
+  --file=render_backup_$(date +%Y%m%d_%H%M%S).dump
 ```
 
 ### COMMAND 2: Import to Vercel Postgres (Neon)
@@ -20,7 +20,7 @@ pg_restore \
   --no-acl \
   --jobs=8 \
   --dbname="$VERCEL_POSTGRES_URL" \
-  railway_backup_*.dump
+  render_backup_*.dump
 ```
 
 ### COMMAND 3: Verify Row Counts
@@ -41,7 +41,7 @@ UNION ALL SELECT 'notifications', COUNT(*) FROM notifications;
 # App auto-restarts with new database connection
 ```
 
-### COMMAND 5: Set Railway to Read-Only (7-day backup)
+### COMMAND 5: Set Render to Read-Only (7-day backup)
 ```bash
 # Extract database name from your RAILWAY_DATABASE_URL
 # Example: postgresql://user:pass@host:5432/mydb → database name is "mydb"
@@ -49,20 +49,20 @@ DB_NAME=$(echo "$RAILWAY_DATABASE_URL" | sed -E 's|.*://[^/]+/([^?]+).*|\1|')
 psql "$RAILWAY_DATABASE_URL" -c "ALTER DATABASE \"$DB_NAME\" SET default_transaction_read_only = on;"
 
 # Or use the automated script:
-./scripts/migrate_railway_to_vercel.sh --set-readonly
+./scripts/migrate_render_to_vercel.sh --set-readonly
 ```
 
 ### COMMAND 6: Rollback (if needed)
 ```bash
-# Revert DATABASE_URL in Vercel Dashboard to Railway URL
-# Then remove read-only from Railway:
+# Revert DATABASE_URL in Vercel Dashboard to Render URL
+# Then remove read-only from Render:
 DB_NAME=$(echo "$RAILWAY_DATABASE_URL" | sed -E 's|.*://[^/]+/([^?]+).*|\1|')
 psql "$RAILWAY_DATABASE_URL" -c "ALTER DATABASE \"$DB_NAME\" SET default_transaction_read_only = off;"
 ```
 
 ### COMMAND 7: Cleanup (after 7 days)
 ```bash
-# Delete Railway Postgres service from Railway Dashboard
+# Delete Render Postgres service from Render Dashboard
 # Remove old RAILWAY_DATABASE_URL from all environments
 ```
 
@@ -72,18 +72,18 @@ psql "$RAILWAY_DATABASE_URL" -c "ALTER DATABASE \"$DB_NAME\" SET default_transac
 
 - [ ] **Step 1:** Create Vercel Postgres database (Vercel Dashboard → Storage → Postgres)
 - [ ] **Step 2:** Copy VERCEL_POSTGRES_URL from Vercel Dashboard
-- [ ] **Step 3:** Run Command 1 (Export from Railway)
+- [ ] **Step 3:** Run Command 1 (Export from Render)
 - [ ] **Step 4:** Run Command 2 (Import to Vercel Postgres)
 - [ ] **Step 5:** Run Command 3 (Verify row counts match)
 - [ ] **Step 6:** Run Command 4 (Switch DATABASE_URL in Vercel)
 - [ ] **Step 7:** Test app: login, create post, send message
-- [ ] **Step 8:** Run Command 5 (Set Railway read-only for 7-day backup)
+- [ ] **Step 8:** Run Command 5 (Set Render read-only for 7-day backup)
 
 ---
 
 ## FULL MIGRATION SCRIPT
 
-Run `./scripts/migrate_railway_to_vercel.sh` for automated migration.
+Run `./scripts/migrate_render_to_vercel.sh` for automated migration.
 
 ## VERIFICATION QUERIES
 
@@ -103,8 +103,8 @@ SELECT conname FROM pg_constraint;
 ## ENVIRONMENT VARIABLES
 
 ```bash
-# Before migration (Railway)
-DATABASE_URL=postgresql://user:pass@railway-host:5432/railway
+# Before migration (Render)
+DATABASE_URL=postgresql://user:pass@render-host:5432/render
 
 # After migration (Vercel/Neon)
 DATABASE_URL=postgresql://user:pass@ep-xyz.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require
@@ -124,5 +124,5 @@ DATABASE_URL=postgresql://user:pass@ep-xyz.us-east-1.aws.neon.tech:5432/verceldb
 - Zero downtime achieved via parallel `--jobs=8`
 - Uses custom format for fastest restore
 - Compression disabled for speed
-- Railway kept read-only for 7 days as backup
+- Render kept read-only for 7 days as backup
 - Rollback is instant (just change env var)

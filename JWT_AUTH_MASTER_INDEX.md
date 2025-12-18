@@ -277,7 +277,7 @@ curl http://localhost:8000/api/auth/me \
 ### Supported Platforms
 - ✅ **Vercel** - Recommended (complete guide provided)
 - ✅ **AWS Lambda** - Works via Mangum handler
-- ✅ **Railway** - Standard deployment
+- ✅ **Render** - Standard deployment
 - ✅ **Render** - Standard deployment
 - ✅ **Heroku** - Standard deployment
 - ✅ **Local** - Development server
@@ -285,7 +285,7 @@ curl http://localhost:8000/api/auth/me \
 ### Database Support
 - ✅ **PostgreSQL** - Recommended (asyncpg driver)
 - ✅ **Vercel Postgres** - Optimized for serverless
-- ✅ **Railway Postgres** - Private network support
+- ✅ **Render Postgres** - Private network support
 - ✅ **Other PostgreSQL** - Any managed service
 
 ---

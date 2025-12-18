@@ -56,9 +56,9 @@ $ python3 test_gunicorn_worker_fix.py
 ### Step 1: Deploy
 The fix is ready to deploy. No manual configuration changes needed.
 
-**Railway:**
+**Render:**
 ```bash
-# Automatic deployment via railway.toml
+# Automatic deployment via render.toml
 git push
 ```
 

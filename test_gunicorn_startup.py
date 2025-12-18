@@ -2,7 +2,7 @@
 """
 Test script to verify Gunicorn startup time with preload_app=False
 
-This simulates what happens during Railway deployment:
+This simulates what happens during Render deployment:
 1. Gunicorn master starts
 2. Master starts listening (this is when healthcheck can connect)
 3. Workers fork and initialize Flask app
@@ -116,7 +116,7 @@ def test_gunicorn_startup():
 
 
 if __name__ == "__main__":
-    print("Railway Healthcheck Fix - Gunicorn Startup Test")
+    print("Render Healthcheck Fix - Gunicorn Startup Test")
     print("This test verifies that Gunicorn starts listening quickly")
     print()
     
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     if success:
         print()
         print("✅ Test PASSED: Gunicorn starts quickly with preload_app=False")
-        print("   Railway healthcheck will succeed within first 1-2 attempts")
+        print("   Render healthcheck will succeed within first 1-2 attempts")
         sys.exit(0)
     else:
         print()

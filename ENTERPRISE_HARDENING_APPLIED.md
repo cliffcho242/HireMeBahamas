@@ -135,7 +135,7 @@ These are now set in `render.yaml` and can be overridden per environment.
 This configuration works with:
 - ✅ Neon Serverless Postgres
 - ✅ Render Web Services
-- ✅ Railway Postgres
+- ✅ Render Postgres
 - ✅ Vercel Postgres
 - ✅ Standard PostgreSQL
 - ✅ SQLAlchemy 1.4 / 2.0

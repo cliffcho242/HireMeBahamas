@@ -86,11 +86,11 @@ alembic upgrade head
 
 ### Deployment Workflows
 
-#### Option 1: Manual Migration (Railway Console)
+#### Option 1: Manual Migration (Render Console)
 
 ```bash
-# SSH into Railway container or use Railway CLI
-railway shell
+# SSH into Render container or use Render CLI
+render shell
 
 # Run migrations
 alembic upgrade head
@@ -109,9 +109,9 @@ Add to your deployment workflow:
     DATABASE_URL: ${{ secrets.DATABASE_URL }}
 ```
 
-#### Option 3: One-off Job (Recommended for Railway)
+#### Option 3: One-off Job (Recommended for Render)
 
-Create a separate service in Railway:
+Create a separate service in Render:
 1. Clone your repository
 2. Set `START_COMMAND` to: `alembic upgrade head`
 3. Run once on each deployment
@@ -125,7 +125,7 @@ Make sure `DATABASE_URL` is set in your environment:
 # Local development
 export DATABASE_URL="postgresql://user:password@localhost:5432/database"
 
-# Production (automatically set by Railway/Render/Vercel)
+# Production (automatically set by Render/Render/Vercel)
 # DATABASE_URL is provided by the platform
 ```
 

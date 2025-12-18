@@ -29,7 +29,7 @@ All configuration files in the repository are **already correct**:
    startCommand: cd backend && gunicorn app.main:app --workers ${WEB_CONCURRENCY:-3} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info
    ```
 
-2. **railway.toml** - Uses proper single-line command
+2. **render.toml** - Uses proper single-line command
    ```toml
    startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
    ```
@@ -73,7 +73,7 @@ python3 validate_deployment_config.py
 ```
 
 **Features:**
-- Validates render.yaml, railway.toml, and Procfile
+- Validates render.yaml, render.toml, and Procfile
 - Checks for database-safe gunicorn configuration
 - Verifies application entry points exist
 - Ensures required packages are in requirements.txt
@@ -84,7 +84,7 @@ python3 validate_deployment_config.py
 
 User-friendly guide specifically for this error:
 - Step-by-step fix instructions
-- Platform-specific commands (Render, Railway, Heroku)
+- Platform-specific commands (Render, Render, Heroku)
 - Visual indicators and clear formatting
 - Links to comprehensive documentation
 - Troubleshooting checklist
@@ -138,7 +138,7 @@ Passed: 7/7
 
 All checks passing:
 - ✅ render.yaml - Properly formatted
-- ✅ railway.toml - Properly formatted  
+- ✅ render.toml - Properly formatted  
 - ✅ Procfile - Properly formatted
 - ✅ gunicorn.conf.py - Database-safe configuration
 - ✅ Entry Points - FastAPI and Flask entry points found
@@ -163,7 +163,7 @@ Analysis Result for 'python'. Found 0 alerts:
 To prevent this issue in the future:
 
 1. **Use Configuration Files**
-   - Prefer `render.yaml`, `railway.toml`, `Procfile` over manual configuration
+   - Prefer `render.yaml`, `render.toml`, `Procfile` over manual configuration
    - Let platforms auto-detect these files
 
 2. **Validate Before Deploying**
@@ -220,7 +220,7 @@ Created a layered documentation approach:
 - `render.yaml` - Added warning comments about single-line format
 
 ### Verified Correct (No Changes Needed)
-- `railway.toml` - Already correct
+- `render.toml` - Already correct
 - `Procfile` - Already correct
 - `backend/Procfile` - Already correct
 - `gunicorn.conf.py` - Already correct

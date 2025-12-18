@@ -267,7 +267,7 @@ netstat -ano | findstr :8000  # Windows
 - [Backend API Documentation](http://localhost:8000/docs)
 - [PostgreSQL Setup Guide](./POSTGRESQL_SETUP.md)
 - [Docker Configuration](./docker-compose.yml)
-- [Railway Deployment Guide](./RAILWAY_DATABASE_SETUP.md)
+- [Render Deployment Guide](./RAILWAY_DATABASE_SETUP.md)
 
 ## ⚠️ Important Notes
 

@@ -17,10 +17,10 @@ Auto-deploy has been successfully enabled for the HireMeBahamas repository using
    - Platform: Vercel
    - Features: Build with environment variables, automatic production deployment
 
-3. **deploy-backend.yml** - Backend Deployment (Railway)
+3. **deploy-backend.yml** - Backend Deployment (Render)
    - Runs on: Push to `main` (when backend files change)
-   - Platform: Railway
-   - Features: Python setup, Railway CLI deployment
+   - Platform: Render
+   - Features: Python setup, Render CLI deployment
 
 4. **deploy-backend-render.yml** - Backend Deployment (Render - Alternative)
    - Runs on: Push to `main` (when backend files change)
@@ -29,7 +29,7 @@ Auto-deploy has been successfully enabled for the HireMeBahamas repository using
 
 ### Documentation Files
 1. **AUTO_DEPLOY_SETUP.md** - Complete setup guide
-   - Step-by-step instructions for Vercel and Railway/Render setup
+   - Step-by-step instructions for Vercel and Render/Render setup
    - GitHub Secrets configuration guide
    - Troubleshooting section
    - ~7.4 KB comprehensive documentation
@@ -64,7 +64,7 @@ Auto-deploy has been successfully enabled for the HireMeBahamas repository using
 
 ### Platform Support
 - ✅ **Vercel**: Frontend hosting with CDN and instant rollbacks
-- ✅ **Railway**: Backend hosting with automatic scaling
+- ✅ **Render**: Backend hosting with automatic scaling
 - ✅ **Render**: Alternative backend hosting option
 
 ### Developer Experience
@@ -85,7 +85,7 @@ VERCEL_PROJECT_ID    - Project identifier
 VITE_API_URL         - Backend API URL (optional)
 ```
 
-#### For Railway (Backend):
+#### For Render (Backend):
 ```
 RAILWAY_TOKEN        - Authentication token
 RAILWAY_PROJECT_ID   - Project identifier
@@ -108,7 +108,7 @@ GitHub Actions triggered
    CI      Frontend      Backend
   Tests     Deploy        Deploy
     ↓         ↓             ↓
- Pass/Fail  Vercel    Railway/Render
+ Pass/Fail  Vercel    Render/Render
     ↓         ↓             ↓
 Notify    Live URL      Live URL
 ```
@@ -142,13 +142,13 @@ All validation tests passed:
 1. **Configure Secrets**: Add required secrets to GitHub repository
 2. **First Deploy**: Push a commit to test the workflow
 3. **Monitor**: Check GitHub Actions tab for deployment status
-4. **Verify**: Ensure applications are running on Vercel and Railway/Render
+4. **Verify**: Ensure applications are running on Vercel and Render/Render
 
 ## 📚 Additional Resources
 
 - GitHub Actions: https://docs.github.com/en/actions
 - Vercel Docs: https://vercel.com/docs
-- Railway Docs: https://docs.railway.app/
+- Render Docs: https://docs.render.app/
 - Render Docs: https://render.com/docs
 
 ## 🎊 Benefits

@@ -10,10 +10,10 @@ Use this checklist after deploying to verify the Vercel → Backend connection f
 - [ ] **DO NOT** set `VITE_API_URL` in Vercel Environment Variables
 - [ ] Deploy to Vercel
 
-### Option B: Separate Backend (Railway/Render)
+### Option B: Separate Backend (Render/Render)
 
-- [ ] Deploy backend to Railway/Render
-- [ ] Get backend URL (e.g., `https://your-app.up.railway.app`)
+- [ ] Deploy backend to Render/Render
+- [ ] Get backend URL (e.g., `https://your-app.up.render.app`)
 - [ ] Set `VITE_API_URL` in Vercel Dashboard → Settings → Environment Variables
 - [ ] Ensure backend CORS allows your Vercel domain
 - [ ] Deploy to Vercel
@@ -129,9 +129,9 @@ If you see localhost in network requests:
 - Verify no browser extensions are intercepting requests
 - Check that old service workers are not cached
 
-### Issue: Cold Start Delays (Render/Railway)
+### Issue: Cold Start Delays (Render/Render)
 
-If using Render free tier or Railway:
+If using Render free tier or Render:
 - First request may take 30-60 seconds (cold start)
 - This is normal for free tier services
 - Consider upgrading to paid tier for instant responses

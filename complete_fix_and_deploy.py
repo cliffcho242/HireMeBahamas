@@ -2,7 +2,7 @@
 """
 DEPRECATED: Complete Build, Deploy, and Test Solution
 
-This script was created for Render deployment. After migrating to Vercel + Railway,
+This script was created for Render deployment. After migrating to Vercel + Render,
 this script is no longer needed.
 
 For deployment, use:
@@ -11,7 +11,7 @@ For deployment, use:
 - Manual: vercel --prod (in frontend directory)
 
 Usage (if still needed):
-  BACKEND_URL=https://your-app.up.railway.app python complete_fix_and_deploy.py
+  BACKEND_URL=https://your-app.up.render.app python complete_fix_and_deploy.py
 """
 import json
 import os

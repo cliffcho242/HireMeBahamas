@@ -17,7 +17,7 @@
 # This configuration is specifically designed for Neon Serverless Postgres
 # and works with PgBouncer connection pooling.
 #
-# ENV VARS (for Neon/Railway/Render deployment):
+# ENV VARS (for Neon/Render deployment):
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
 # DB_POOL_RECYCLE=300
 #
@@ -53,7 +53,7 @@ DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@invalid.local
 # Priority order:
 # 1. DATABASE_URL (primary connection URL)
 # 2. POSTGRES_URL (Vercel Postgres connection)
-# 3. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
+# 3. DATABASE_PRIVATE_URL (for private network connections)
 # 4. Local development default (only for development, not production)
 # =============================================================================
 
@@ -84,7 +84,7 @@ def _get_fallback_database_url(reason: str) -> str:
 # Priority order as per configuration requirements:
 # 1. DATABASE_URL (primary connection URL)
 # 2. POSTGRES_URL (Vercel Postgres connection)
-# 3. DATABASE_PRIVATE_URL (Railway private network - $0 egress, fastest)
+# 3. DATABASE_PRIVATE_URL (for private network connections)
 DATABASE_URL = os.getenv('DATABASE_URL') or \
                os.getenv('POSTGRES_URL') or \
                os.getenv('DATABASE_PRIVATE_URL')
@@ -231,10 +231,10 @@ POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for conne
 POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (serverless-friendly)
 
 # =============================================================================
-# CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RAILWAY
+# CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RENDER
 # =============================================================================
 # These timeouts prevent the dreaded "Connection timed out" error
-CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))  # 5s for Railway cold starts
+CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))  # 5s for Render cold starts
 COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
 STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
 
@@ -258,10 +258,10 @@ STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s
 # 1. pool_pre_ping=True - validates connections before use (detects dead connections)
 # 2. pool_recycle=300 - recycles connections (serverless-friendly)
 # 3. JIT=off - prevents first-query compilation delays
-# 4. connect_timeout=5 - allows Railway cold starts
+# 4. connect_timeout=5 - allows Render cold starts
 # 5. SSL configured via URL query string (?sslmode=require)
 #
-# COPY-PASTE ENV VARS FOR RAILWAY/RENDER/VERCEL:
+# COPY-PASTE ENV VARS FOR RENDER/VERCEL:
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
 # DB_POOL_RECYCLE=300
 # =============================================================================
@@ -493,7 +493,7 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
       - Or as a one-off job on deployment
     
     This function now only tests database connectivity to prevent race conditions.
-    Uses retry logic to handle Railway cold starts and transient failures.
+    Uses retry logic to handle Render cold starts and transient failures.
     
     ⚠️  PRODUCTION SAFETY: This function gracefully handles DB unavailability.
     The app will start successfully even if connection fails at startup.
@@ -648,7 +648,7 @@ async def get_pool_status() -> dict:
 # =============================================================================
 # CONNECTION VERIFICATION COMMAND (For Render Console)
 # =============================================================================
-# Run this from Render console to test Railway Postgres connectivity:
+# Run this from Render console to test Postgres connectivity:
 #
 # python -c "
 # import asyncio

@@ -19,7 +19,7 @@ Users were unable to sign in due to **missing backend endpoints** that the front
 
 ### 1. Added `/api/auth/refresh` Endpoint
 **Location**: 
-- `backend/app/api/auth.py` (Railway/Render deployment)
+- `backend/app/api/auth.py` (Render/Render deployment)
 - `api/backend_app/api/auth.py` (Vercel serverless deployment)
 
 **Purpose**: Allows users to refresh their JWT tokens before expiration
@@ -72,7 +72,7 @@ Both frontend and backend are deployed together on Vercel.
 
 **Files Updated**:
 1. `api/backend_app/api/auth.py` - Vercel serverless backend
-2. `backend/app/api/auth.py` - Railway/Render backend (if still in use)
+2. `backend/app/api/auth.py` - Render/Render backend (if still in use)
 3. `frontend/src/contexts/AuthContext.tsx` - Frontend error handling
 
 **Automatic Deployment**:
@@ -135,7 +135,7 @@ Both frontend and backend are deployed together on Vercel.
 - [x] Error handling improved
 - [x] Security scan completed (0 vulnerabilities)
 - [x] Code review completed
-- [x] Both Vercel and Railway backends updated
+- [x] Both Vercel and Render backends updated
 - [x] Changes committed and pushed
 - [ ] **NEXT: Merge PR to trigger Vercel deployment**
 

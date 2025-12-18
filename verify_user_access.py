@@ -33,7 +33,7 @@ except Exception as e:
 print("\n3️⃣ Testing backend API:")
 try:
     resp = requests.get(
-        "https://hiremebahamas-backend-production.up.railway.app/health", timeout=10
+        "https://hiremebahamas-backend-production.up.render.app/health", timeout=10
     )
     data = resp.json()
     print(f"   Status: {resp.status_code} ✅")
@@ -60,8 +60,8 @@ Both will load your HireMeBahamas platform correctly in any browser:
   ✓ Mobile browsers
 
 Frontend: Deployed on Vercel
-Backend: Deployed on Railway
-Database: SQLite on Railway with auto-migrations
+Backend: Deployed on Render
+Database: SQLite on Render with auto-migrations
 """
 )
 print("=" * 70)

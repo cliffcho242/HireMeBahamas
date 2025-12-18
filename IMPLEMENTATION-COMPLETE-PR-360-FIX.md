@@ -188,7 +188,7 @@ The main branch will have:
 - Updated connection string examples
 - Non-pooling migration support
 - pgbouncer parameter documentation
-- Both Railway and Vercel deployment guides
+- Both Render and Vercel deployment guides
 
 Perfect integration of both feature sets! 🎉
 

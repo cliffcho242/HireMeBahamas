@@ -89,11 +89,11 @@ def uploaded_file(filename):
 # DATABASE CONNECTION MANAGEMENT
 # ==========================================
 
-# Check if running on Railway with PostgreSQL
-# Railway Private Network Configuration:
-# To avoid egress fees, Railway provides DATABASE_PRIVATE_URL which uses the internal
-# private network (RAILWAY_PRIVATE_DOMAIN) instead of the public TCP proxy
-# (RAILWAY_TCP_PROXY_DOMAIN used by DATABASE_PUBLIC_URL).
+# Check if running on Render with PostgreSQL
+# Render Private Network Configuration:
+# To avoid egress fees, Render provides DATABASE_PRIVATE_URL which uses the internal
+# private network (RENDER_PRIVATE_DOMAIN) instead of the public TCP proxy
+# (RENDER_PUBLIC_DOMAIN used by DATABASE_PUBLIC_URL).
 # We prefer DATABASE_PRIVATE_URL > DATABASE_URL to minimize costs.
 DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None
@@ -109,7 +109,7 @@ if IS_PRODUCTION and not USE_POSTGRESQL:
     print("❌  DATABASE_URL environment variable is not set.")
     print("❌")
     print("❌  SQLite is NOT suitable for production use because:")
-    print("❌  - No data persistence in containerized environments (Railway, Docker)")
+    print("❌  - No data persistence in containerized environments (Render, Docker)")
     print("❌  - Users and data will be lost on every deployment/restart")
     print("❌  - No concurrent access support at scale")
     print("❌")
@@ -173,7 +173,7 @@ else:
 
 
 def get_db_connection():
-    """Get database connection (PostgreSQL on Railway, SQLite locally)"""
+    """Get database connection (PostgreSQL on Render, SQLite locally)"""
     if USE_POSTGRESQL:
         # ✅ Use DATABASE_URL only (SSL is already in the URL)
         conn = psycopg2.connect(
@@ -563,7 +563,7 @@ init_database()
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    """Health check endpoint for Railway"""
+    """Health check endpoint for Render"""
     try:
         # Test database connection
         conn = get_db_connection()

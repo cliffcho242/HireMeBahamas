@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-**NEVER USE `--reload` in production environments (Render, Railway, Vercel, etc.)**
+**NEVER USE `--reload` in production environments (Render, Render, Vercel, etc.)**
 
 ### Why --reload is Dangerous in Production
 
@@ -39,7 +39,7 @@ These files are **correctly configured** and do NOT use `--reload`:
 
 - ✅ **Procfile** - Uses gunicorn with config file (no --reload)
 - ✅ **render.yaml** - Uses Poetry + gunicorn with config file (no --reload)
-- ✅ **railway.json** - Configuration only, no command
+- ✅ **render.json** - Configuration only, no command
 - ✅ **gunicorn.conf.py** - Production config with `preload_app = False`
 - ✅ **start.sh** - Production startup script (no --reload)
 - ✅ **start_production.sh** - Explicitly uses `--no-reload` (Line 82)
@@ -68,7 +68,7 @@ gunicorn app.main:app --config gunicorn.conf.py
 - Uses health checks to verify new version
 - No need for auto-reload
 
-### Railway
+### Render
 - Restarts on deployment
 - Monitors service health
 - Auto-scaling handles traffic

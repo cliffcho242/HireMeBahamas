@@ -29,7 +29,7 @@ Users attempting to sign in at https://hiremebahamas.vercel.app receive errors b
 2. **Architecture Analysis** ✅ Correct Setup
    - Frontend: Deployed to Vercel at https://hiremebahamas.vercel.app
    - Backend: Vercel Serverless Functions at `/api/*`
-   - Database: PostgreSQL on Render or Railway
+   - Database: PostgreSQL on Render or Render
    - Configuration: Uses environment variables (not hardcoded URLs)
 
 3. **Configuration Gap** ❌ Missing Environment Variables
@@ -64,7 +64,7 @@ We created three comprehensive resources to help the user fix this issue:
 
 **Complete step-by-step fix guide** covering:
 
-- ✅ **Step 1**: How to get DATABASE_URL from Render or Railway
+- ✅ **Step 1**: How to get DATABASE_URL from Render or Render
   - Direct dashboard links
   - Screenshots descriptions
   - Where to find connection strings
@@ -222,7 +222,7 @@ ENVIRONMENT=production
 ### Immediate Steps (5-10 minutes)
 
 1. **Get DATABASE_URL**
-   - Go to Render dashboard or Railway dashboard
+   - Go to Render dashboard or Render dashboard
    - Copy PostgreSQL connection string
 
 2. **Configure Vercel**
@@ -354,7 +354,7 @@ All files reviewed for:
 - `DEPLOYMENT_CONNECTION_GUIDE.md` - Full deployment guide
 - `WHERE_TO_PUT_DATABASE_URL.md` - Environment variable guide
 - `VERCEL_POSTGRES_SETUP.md` - Vercel Postgres setup
-- `RAILWAY_DATABASE_SETUP.md` - Railway setup
+- `RAILWAY_DATABASE_SETUP.md` - Render setup
 
 ### Architecture Docs
 - `RENDER_TO_VERCEL_MIGRATION.md` - Migration history

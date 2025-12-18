@@ -152,7 +152,7 @@ Summary:
 - ✅ No circular imports - uses router-only pattern
 - ✅ Lazy database initialization
 - ✅ Router prefix/tags defined once in auth.py
-- ✅ Will work reliably on Render, Vercel, Railway, and other serverless platforms
+- ✅ Will work reliably on Render, Vercel, Render, and other serverless platforms
 
 ## Testing
 
@@ -204,4 +204,4 @@ All endpoints now properly accessible at:
 - Problem Statement: Fix circular imports in auth.py
 - Pattern: FastAPI APIRouter with prefix and tags
 - Database: Lazy initialization with LazyEngine wrapper
-- Deployment: Serverless-friendly (Render, Vercel, Railway)
+- Deployment: Serverless-friendly (Render, Vercel, Render)

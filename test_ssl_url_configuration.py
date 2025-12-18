@@ -143,7 +143,7 @@ if __name__ == "__main__":
         print("The database configuration is now correct:")
         print("- SSL is configured via URL query string (?sslmode=require)")
         print("- No SSL context in connect_args")
-        print("- Pattern works on Render, Railway, Neon, psycopg2, psycopg v3")
+        print("- Pattern works on Render, Vercel, Neon, psycopg2, psycopg v3")
         print("- Compatible with SQLAlchemy 1.4 and 2.0")
         sys.exit(0)
         

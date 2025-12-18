@@ -10,8 +10,8 @@ Write-Host "══════════════════════�
 
 # Get backend URL if not provided
 if (-not $BackendURL) {
-    Write-Host "📝 Enter your Railway backend URL:" -ForegroundColor Yellow
-    Write-Host "   Example: https://hiremebahamas-production.up.railway.app" -ForegroundColor Gray
+    Write-Host "📝 Enter your Render backend URL:" -ForegroundColor Yellow
+    Write-Host "   Example: https://hiremebahamas-production.up.render.app" -ForegroundColor Gray
     $BackendURL = Read-Host "   Backend URL"
 }
 
@@ -138,7 +138,7 @@ Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 Frontend (Vercel):
 https://hiremebahamas-backend-earawsqiw-cliffs-projects-a84c76c9.vercel.app
 
-Backend (Railway):
+Backend (Render):
 $BackendURL
 
 Health Check:

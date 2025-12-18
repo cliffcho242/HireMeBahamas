@@ -54,7 +54,7 @@
 
 ### Configuration Files
 - ✅ `.nixpacksignore` - Prevents admin_panel build issues
-- ✅ `.railwayignore` - Railway deployment optimization
+- ✅ `.renderignore` - Render deployment optimization
 - ✅ `nixpacks.toml` - Simplified Python provider configuration
 
 ### Final nixpacks.toml
@@ -73,8 +73,8 @@ cmd = "gunicorn -w 4 -b 0.0.0.0:$PORT final_backend:app --timeout 120"
 
 ## 🌐 Deployment Status
 
-### Railway Backend
-**URL**: https://hiremebahamas-backend.railway.app  
+### Render Backend
+**URL**: https://hiremebahamas-backend.render.app  
 **Status**: ⏳ Deploying with latest fixes  
 **GitHub Integration**: ✅ Auto-deploys from main branch
 
@@ -90,9 +90,9 @@ cmd = "gunicorn -w 4 -b 0.0.0.0:$PORT final_backend:app --timeout 120"
 
 ## ⏱️ Expected Timeline
 
-Railway automatically deploys when changes are pushed to GitHub:
+Render automatically deploys when changes are pushed to GitHub:
 - ✅ Code pushed: **Complete**
-- ⏳ Railway build: **3-5 minutes**
+- ⏳ Render build: **3-5 minutes**
 - ⏳ Service restart: **1-2 minutes**
 - ✅ Total time: **5-7 minutes from push**
 
@@ -100,8 +100,8 @@ Railway automatically deploys when changes are pushed to GitHub:
 
 ## 🔍 Verification Steps
 
-### Check Railway Deployment
-1. Go to [Railway Dashboard](https://railway.app/dashboard)
+### Check Render Deployment
+1. Go to [Render Dashboard](https://render.app/dashboard)
 2. Find `hiremebahamas-backend` project
 3. Check Deployments tab for latest build
 4. Verify build succeeds with new nixpacks.toml
@@ -109,10 +109,10 @@ Railway automatically deploys when changes are pushed to GitHub:
 ### Test Backend Endpoints
 Once deployed, test:
 ```bash
-curl https://hiremebahamas-backend.railway.app/health
+curl https://hiremebahamas-backend.render.app/health
 # Should return: OK
 
-curl -X OPTIONS https://hiremebahamas-backend.railway.app/api/auth/login
+curl -X OPTIONS https://hiremebahamas-backend.render.app/api/auth/login
 # Should return: 200 OK with CORS headers
 ```
 
@@ -125,10 +125,10 @@ Visit: https://hiremebahamas.vercel.app
 
 ## 🎯 Next Actions
 
-### If Backend Still Shows Railway Default Page
+### If Backend Still Shows Render Default Page
 1. **Wait 5 minutes** for auto-deployment to complete
-2. **Check Railway logs** for build status
-3. **Manual redeploy** if needed (Railway dashboard → Redeploy)
+2. **Check Render logs** for build status
+3. **Manual redeploy** if needed (Render dashboard → Redeploy)
 
 ### If Authentication Still Fails
 1. Verify backend is fully deployed (not default page)
@@ -146,6 +146,6 @@ Visit: https://hiremebahamas.vercel.app
 ✅ Python module errors  
 ✅ Configuration optimized  
 
-**Railway will automatically deploy these fixes to hiremebahamas.com domain.**
+**Render will automatically deploy these fixes to hiremebahamas.com domain.**
 
 The deployment should complete successfully within 5-7 minutes! 🚀

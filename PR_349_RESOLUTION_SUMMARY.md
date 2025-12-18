@@ -16,26 +16,26 @@ Created branch `copilot/fix-merge-issues-pr-349` containing all changes from PR 
 ### Conflict Resolutions
 
 #### 1. frontend/src/services/api.ts
-**Conflict**: Main had Vercel backend URL, PR had Railway backend URL with env var fallback.
+**Conflict**: Main had Vercel backend URL, PR had Render backend URL with env var fallback.
 
-**Resolution**: Kept PR's approach (Railway + env var) because:
+**Resolution**: Kept PR's approach (Render + env var) because:
 - Aligns with PR #349's goal of migrating away from Render
 - Provides flexibility via environment variables
 - Maintains all security features (strict hostname matching)
 
 **Final**: 
 ```typescript
-const DEFAULT_PROD_API = import.meta.env.VITE_API_URL || 'https://hiremebahamas-backend.up.railway.app';
+const DEFAULT_PROD_API = import.meta.env.VITE_API_URL || 'https://hiremebahamas-backend.up.render.app';
 ```
 
 #### 2. frontend/src/graphql/client.ts
 **Conflict**: Same as api.ts - different backend URL configurations.
 
-**Resolution**: Same approach - kept Railway + env var fallback for consistency.
+**Resolution**: Same approach - kept Render + env var fallback for consistency.
 
 **Final**:
 ```typescript
-const DEFAULT_PROD_API = ENV_API || 'https://hiremebahamas-backend.up.railway.app';
+const DEFAULT_PROD_API = ENV_API || 'https://hiremebahamas-backend.up.render.app';
 ```
 
 #### 3. vercel.json
@@ -127,13 +127,13 @@ gh pr create \
 After merge, set these in Vercel Dashboard → Project → Settings → Environment Variables:
 
 ```
-VITE_API_URL=https://hiremebahamas-backend.up.railway.app
-VITE_SOCKET_URL=https://hiremebahamas-backend.up.railway.app
+VITE_API_URL=https://hiremebahamas-backend.up.render.app
+VITE_SOCKET_URL=https://hiremebahamas-backend.up.render.app
 ```
 
 ### 2. Verify Deployment
 - Check that the frontend deploys successfully on Vercel
-- Verify API calls reach the Railway backend
+- Verify API calls reach the Render backend
 - Test key functionality (auth, jobs, messaging)
 
 ### 3. Monitor for Issues

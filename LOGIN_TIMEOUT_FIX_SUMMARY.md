@@ -27,7 +27,7 @@ Result: When bcrypt hung, the request would continue running until the client ga
 ## Solution Implemented
 
 ### 1. Switched to FastAPI (new requirement)
-- **Changed**: Updated `Procfile` and `railway.json` to use FastAPI instead of Flask
+- **Changed**: Updated `Procfile` and `render.json` to use FastAPI instead of Flask
 - **Before**: `gunicorn final_backend_postgresql:application`
 - **After**: `uvicorn api.backend_app.main:app`
 - **Why**: FastAPI provides native async/await support, preventing blocking operations from freezing the entire application
@@ -86,7 +86,7 @@ Created and ran `test_timeout_middleware.py` which verified:
 - ✓ Password verification timeout set to 30 seconds
 - ✓ Timeout error handling present
 - ✓ Procfile configured to use uvicorn (FastAPI)
-- ✓ railway.json configured to use uvicorn (FastAPI)
+- ✓ render.json configured to use uvicorn (FastAPI)
 
 ### Security Review
 - ✓ Code review completed - 4 minor comments addressed
@@ -126,12 +126,12 @@ Created and ran `test_timeout_middleware.py` which verified:
 
 ## Deployment Instructions
 
-### For Railway:
+### For Render:
 1. Commit and push changes to main branch
-2. Railway will auto-deploy using `railway.json` configuration
+2. Render will auto-deploy using `render.json` configuration
 3. New deployment will use: `uvicorn api.backend_app.main:app`
 4. Health check endpoint: `/health`
-5. Verify deployment: `curl https://your-app.railway.app/health`
+5. Verify deployment: `curl https://your-app.render.app/health`
 
 ### For Render (if applicable):
 1. Update start command in Render dashboard:
@@ -228,7 +228,7 @@ The timeout middleware logs all timeout events:
    - Changed to: `uvicorn api.backend_app.main:app`
    - Switched from Flask to FastAPI
 
-5. **railway.json** (MODIFIED)
+5. **render.json** (MODIFIED)
    - Updated startCommand to use uvicorn and FastAPI
    - Maintains health check at `/health`
 

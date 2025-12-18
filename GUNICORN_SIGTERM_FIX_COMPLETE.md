@@ -132,9 +132,9 @@ The Gunicorn worker SIGTERM fix is properly implemented:
 
 The fix is ready for immediate deployment:
 
-**Railway:**
+**Render:**
 ```bash
-git push origin main  # Automatic deployment via railway.toml
+git push origin main  # Automatic deployment via render.toml
 ```
 
 **Render:**
@@ -212,13 +212,13 @@ After deployment, monitor for 24-48 hours:
 1. **Check memory usage:**
    ```bash
    # Check if workers are being OOM killed
-   railway logs --tail 100 | grep -i "memory\|oom\|killed"
+   render logs --tail 100 | grep -i "memory\|oom\|killed"
    ```
 
 2. **Review application logs:**
    ```bash
    # Look for errors before SIGTERM
-   railway logs --tail 200 | grep -B 10 "SIGTERM"
+   render logs --tail 200 | grep -B 10 "SIGTERM"
    ```
 
 3. **Monitor request patterns:**
@@ -229,7 +229,7 @@ After deployment, monitor for 24-48 hours:
 4. **Consider increasing timeout** (if legitimate requests need more time):
    ```bash
    # Set GUNICORN_TIMEOUT environment variable
-   railway variables set GUNICORN_TIMEOUT=120
+   render variables set GUNICORN_TIMEOUT=120
    ```
 
 5. **Check platform resources:**
@@ -258,7 +258,7 @@ All criteria met:
 ## Next Steps
 
 1. ✅ Merge this PR to main branch
-2. ✅ Deploy to production (Railway/Render)
+2. ✅ Deploy to production (Render/Render)
 3. ✅ Monitor logs for 24-48 hours
 4. ✅ Verify SIGTERM only appears during deployments
 5. ✅ Confirm no worker_abort messages

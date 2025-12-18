@@ -173,7 +173,7 @@ No new environment variables required. Existing configuration works:
 - `SECRET_KEY` (already set)
 - `DATABASE_URL` (already set)
 
-### Backend Deployment (Railway/Render)
+### Backend Deployment (Render/Render)
 
 1. **Deploy updated backend code**
    ```bash
@@ -186,7 +186,7 @@ No new environment variables required. Existing configuration works:
 
 3. **Test login endpoint**
    ```bash
-   curl -X POST https://your-backend.railway.app/api/auth/login \
+   curl -X POST https://your-backend.render.app/api/auth/login \
      -H "Content-Type: application/json" \
      -d '{"email":"test@example.com","password":"testpass"}' \
      -v

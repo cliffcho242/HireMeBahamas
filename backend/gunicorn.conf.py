@@ -27,7 +27,7 @@ if _port_int == 5432:
     print("", file=sys.stderr)
     print("Common HTTP ports:", file=sys.stderr)
     print("  • 8000, 8080, 8888: Common development ports", file=sys.stderr)
-    print("  • 10000: Railway/Render default", file=sys.stderr)
+    print("  • 10000: Render default", file=sys.stderr)
     print("  • Use $PORT environment variable for cloud deployments", file=sys.stderr)
     print("", file=sys.stderr)
     print("To fix this:", file=sys.stderr)
@@ -230,7 +230,7 @@ proc_name = "hiremebahamas"
 # ============================================================================
 # SECURITY
 # ============================================================================
-# Trust proxy headers from cloud platform load balancers (Railway, Render, etc.)
+# Trust proxy headers from cloud platform load balancers (Render, etc.)
 forwarded_allow_ips = "*"
 
 # ============================================================================

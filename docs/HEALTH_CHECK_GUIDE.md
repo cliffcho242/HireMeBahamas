@@ -84,7 +84,7 @@ Validates environment variables:
 - **Optional**: `JWT_SECRET_KEY`, `PORT`, `ENVIRONMENT`
 - Checks for weak/default secret values
 - Validates DATABASE_URL format
-- Detects deployment platform (Railway, Vercel, Render, Local)
+- Detects deployment platform (Render, Vercel, Render, Local)
 
 ### Database Check (`--check database`)
 
@@ -268,7 +268,7 @@ pip install requests
 **Environment variables not found**
 - Set required variables in your environment
 - Check `.env` file if using one
-- Verify variables in deployment platform (Vercel/Railway)
+- Verify variables in deployment platform (Vercel/Render)
 
 ### Debug Mode
 
@@ -287,7 +287,7 @@ python scripts/health_check.py --verbose
 ## Related Tools
 
 - **Vercel Diagnostic Tool**: `diagnostic/check_vercel_connection.py`
-- **Railway PostgreSQL Check**: `railway_postgres_check.py`
+- **Render PostgreSQL Check**: `render_postgres_check.py`
 - **Startup Validation**: `validate_startup.py`
 - **Vercel Postgres Migration**: `scripts/verify_vercel_postgres_migration.py`
 

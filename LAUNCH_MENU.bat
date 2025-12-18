@@ -18,7 +18,7 @@ echo  [3] Open Frontend Browser
 echo.
 echo DEPLOYMENT - Follow in Order:
 echo  [4] ► Step 1: Push to GitHub
-echo  [5] ► Step 2: Deploy Backend (Railway)
+echo  [5] ► Step 2: Deploy Backend (Render)
 echo  [6] ► Step 3: Deploy Frontend (Vercel)
 echo  [7] ► Step 4: Test Production
 echo  [8] ► Step 5: Marketing & Share

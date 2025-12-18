@@ -48,7 +48,7 @@ try:
 
     import requests
 
-    base_url = "https://hiremebahamas-backend.railway.app"
+    base_url = "https://hiremebahamas-backend.render.app"
 
     test_cases = [
         ("GET", "/health", None),

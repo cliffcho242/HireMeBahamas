@@ -11,7 +11,7 @@
  * This is the base URL for all API requests.
  * 
  * - For Vercel serverless: Leave VITE_API_URL unset, will use same-origin
- * - For separate backend (Railway/Render): Set VITE_API_URL in environment
+ * - For separate backend (Render): Set VITE_API_URL in environment
  * - For local development: Set VITE_API_URL=http://localhost:8000
  * 
  * @example
@@ -19,8 +19,8 @@
  * ENV_API = undefined (uses window.location.origin)
  * 
  * @example
- * // Railway/Render deployment
- * ENV_API = "https://your-app.up.railway.app"
+ * // Render deployment
+ * ENV_API = "https://your-app.onrender.com"
  * 
  * @example
  * // Local development

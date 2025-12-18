@@ -13,7 +13,7 @@ This document explains how secrets and sensitive data are managed in this projec
 **Solution:** 
 - Secrets are now loaded from environment variables at runtime
 - Use `.env` files locally (never commit to git)
-- Use platform secret management for production (Railway, Render, etc.)
+- Use platform secret management for production (Render, Render, etc.)
 
 ### 2. Environment Variable Management
 
@@ -27,7 +27,7 @@ backend:
     ENVIRONMENT: development
 ```
 
-#### Production (Railway, Render, etc.)
+#### Production (Render, Render, etc.)
 - Configure secrets via platform dashboard
 - Nixpacks/buildpacks automatically inject them at runtime
 - Never use `ARG` or `ENV` for: SECRET_KEY, API keys, passwords, tokens
@@ -68,10 +68,10 @@ backend:
 
 ### Production Deployment
 
-1. **Railway:**
+1. **Render:**
    - Go to project settings → Variables
    - Add each secret as an environment variable
-   - Railway automatically injects them at runtime
+   - Render automatically injects them at runtime
 
 2. **Render:**
    - Go to service settings → Environment

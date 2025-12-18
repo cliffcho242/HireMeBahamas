@@ -10,11 +10,11 @@ All deployment automation has been set up! You now have a complete one-click dep
 
 ### **Deployment Configuration Files:**
 - ✅ `.env` - Production environment variables with secure SECRET_KEY
-- ✅ `railway.json` - Railway platform configuration
+- ✅ `render.json` - Render platform configuration
 - ✅ `vercel.json` - Vercel platform configuration  
 - ✅ `nixpacks.toml` - Nixpacks build configuration
 - ✅ `requirements.txt` - Python dependencies
-- ✅ `Procfile` - Heroku/Railway process file
+- ✅ `Procfile` - Heroku/Render process file
 - ✅ `.gitignore` - Git ignore rules
 - ✅ `frontend/.env.production` - Frontend production config
 
@@ -60,7 +60,7 @@ This will:
 - Generate all configuration files
 - Create .env with secure keys
 - Create privacy policy and terms
-- Set up Railway and Vercel configs
+- Set up Render and Vercel configs
 
 #### Step 2: Install Git (if needed)
 If Git is not installed, run: `INSTALL_GIT.bat`
@@ -75,18 +75,18 @@ This will:
 - Add and commit all files
 - Push to GitHub (you'll need to create repo first)
 
-#### Step 4: Deploy Backend to Railway
+#### Step 4: Deploy Backend to Render
 
-1. Go to: https://railway.app
+1. Go to: https://render.app
 2. Sign in with GitHub
 3. Click "New Project" → "Deploy from GitHub repo"
 4. Select: HireMeBahamas
-5. Railway auto-detects configuration!
+5. Render auto-detects configuration!
 6. Add environment variable:
    - Key: `SECRET_KEY`
    - Value: (copy from your `.env` file)
 7. Deploy! (takes ~2 minutes)
-8. Copy your Railway URL: `https://hiremebahamas-backend.railway.app`
+8. Copy your Render URL: `https://hiremebahamas-backend.render.app`
 
 #### Step 5: Deploy Frontend to Vercel
 
@@ -97,7 +97,7 @@ This will:
 5. **Root Directory**: `frontend`
 6. Add environment variable:
    - Key: `VITE_API_URL`
-   - Value: Your Railway backend URL
+   - Value: Your Render backend URL
 7. Deploy! (takes ~1 minute)
 8. Your site is live at: `https://hiremebahamas.vercel.app`
 
@@ -109,7 +109,7 @@ After deployment, your site will be live at:
 
 ### **Website:**
 - Frontend: `https://hiremebahamas.vercel.app`
-- Backend API: `https://hiremebahamas-backend.railway.app`
+- Backend API: `https://hiremebahamas-backend.render.app`
 
 ### **Required URLs for App Store Submission:**
 - Privacy Policy: `https://hiremebahamas.vercel.app/privacy-policy.html`
@@ -155,15 +155,15 @@ Once your website is live and tested:
    ALLOWED_ORIGINS=https://hiremebahamas.vercel.app,https://your-domain.com
    ```
 
-2. **Railway Environment Variables:**
+2. **Render Environment Variables:**
    - Add `SECRET_KEY` from your `.env`
-   - Add `DATABASE_URL` if using PostgreSQL (Railway provides this)
+   - Add `DATABASE_URL` if using PostgreSQL (Render provides this)
 
 3. **Vercel Environment Variables:**
-   - Add `VITE_API_URL` = Your Railway backend URL
+   - Add `VITE_API_URL` = Your Render backend URL
 
 ### **Security Best Practices:**
-- ✅ HTTPS enabled (automatic on Railway & Vercel)
+- ✅ HTTPS enabled (automatic on Render & Vercel)
 - ✅ Secure password hashing with bcrypt
 - ✅ JWT tokens with 7-day expiration
 - ✅ Rate limiting configured
@@ -176,14 +176,14 @@ Once your website is live and tested:
 ## 💰 Cost Breakdown
 
 ### **FREE TIER (Perfect for Launch):**
-- **Railway Backend**: FREE (500 hours/month = always on)
+- **Render Backend**: FREE (500 hours/month = always on)
 - **Vercel Frontend**: FREE (unlimited bandwidth)
-- **Database**: FREE (SQLite or Railway PostgreSQL)
+- **Database**: FREE (SQLite or Render PostgreSQL)
 - **HTTPS/SSL**: FREE (automatic)
 - **Total**: **$0/month** 🎉
 
 ### **When You Need to Scale:**
-- **Railway Pro**: $5/month (unlimited hours)
+- **Render Pro**: $5/month (unlimited hours)
 - **Vercel Pro**: $20/month (advanced features)
 - **Custom Domain**: $12/year
 - **Total**: ~$25-30/month when successful
@@ -228,16 +228,16 @@ Once your website is live and tested:
 ### **Check these URLs:**
 - ✅ Privacy Policy: `/privacy-policy.html`
 - ✅ Terms of Service: `/terms-of-service.html`
-- ✅ API Health: `https://your-backend.railway.app/api/health`
+- ✅ API Health: `https://your-backend.render.app/api/health`
 
 ---
 
 ## 🚨 Troubleshooting
 
 ### **Backend won't deploy?**
-- Check Railway logs for errors
+- Check Render logs for errors
 - Verify `requirements.txt` has all dependencies
-- Ensure `railway.json` is in root directory
+- Ensure `render.json` is in root directory
 - Check Python version compatibility
 
 ### **Frontend won't deploy?**
@@ -248,14 +248,14 @@ Once your website is live and tested:
 
 ### **CORS errors in production?**
 1. Update `.env` file: `ALLOWED_ORIGINS=https://your-vercel-url.app`
-2. Redeploy backend on Railway
+2. Redeploy backend on Render
 3. Clear browser cache
 4. Test in incognito mode
 
 ### **Database issues?**
 - SQLite works fine for small scale (100s of users)
 - For 1000+ users, switch to PostgreSQL:
-  - Railway provides free PostgreSQL
+  - Render provides free PostgreSQL
   - Update `DATABASE_URL` in environment variables
 
 ---
@@ -265,7 +265,7 @@ Once your website is live and tested:
 ### **Week 1: Deploy Website**
 - ✅ Run `LAUNCH_HIREMEBAHAMAS.bat`
 - ✅ Prepare deployment files
-- ✅ Deploy to Railway + Vercel
+- ✅ Deploy to Render + Vercel
 - ✅ Test thoroughly
 
 ### **Week 2-3: Beta Testing**
@@ -316,13 +316,13 @@ Once your website is live and tested:
 ## 🆘 Support Resources
 
 ### **Documentation:**
-- Railway Docs: https://docs.railway.app
+- Render Docs: https://docs.render.app
 - Vercel Docs: https://vercel.com/docs
 - Flask Deployment: https://flask.palletsprojects.com/deploying
 - React Deployment: https://vitejs.dev/guide/static-deploy.html
 
 ### **Community:**
-- Railway Discord: https://discord.gg/railway
+- Render Discord: https://discord.gg/render
 - Vercel Community: https://github.com/vercel/vercel/discussions
 
 ### **Your Files:**
@@ -341,13 +341,13 @@ Everything is automated and ready to go! Here's what to do now:
 1. **Double-click**: `LAUNCH_HIREMEBAHAMAS.bat`
 2. **Choose Option 2**: Prepare for Deployment (if not done)
 3. **Choose Option 3**: Deploy to Production
-4. **Follow Railway/Vercel steps** above
+4. **Follow Render/Vercel steps** above
 5. **Test your live site!**
 6. **Share with beta users**
 
 ### **Need Help?**
 - Read: `DEPLOYMENT_READY.md` for detailed instructions
-- Check: Railway/Vercel documentation
+- Check: Render/Vercel documentation
 - Review: Generated configuration files
 
 ---

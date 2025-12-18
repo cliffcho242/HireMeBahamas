@@ -29,7 +29,7 @@ This is a real startup hiring plan designed to minimize burn, avoid bad hires, a
 - ✅ FastAPI/Flask backend (Facebook-grade architecture)
 - ✅ PostgreSQL database (with connection pooling)
 - ✅ Redis caching (performance optimization)
-- ✅ Vercel/Railway deployment (auto-scaling)
+- ✅ Vercel/Render deployment (auto-scaling)
 - ✅ JWT authentication (enterprise-level security)
 
 ### ✅ DO NOT HIRE YET

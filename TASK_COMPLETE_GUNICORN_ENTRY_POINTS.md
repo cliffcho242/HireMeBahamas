@@ -82,7 +82,7 @@ exec gunicorn final_backend_postgresql:application --config gunicorn.conf.py
 ```
 **Status:** ✅ CORRECT (Flask with WSGI standard name)
 
-### railway.toml
+### render.toml
 ```toml
 startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 ```
@@ -125,7 +125,7 @@ cd backend && gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.U
 gunicorn final_backend_postgresql:application --config gunicorn.conf.py --bind 0.0.0.0:$PORT
 ```
 
-### Railway
+### Render
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```

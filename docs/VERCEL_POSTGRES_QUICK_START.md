@@ -87,7 +87,7 @@ Your Vercel Postgres database is now live and connected.
 
 For detailed setup, migration, and troubleshooting:
 - **[Complete Setup Guide](../VERCEL_POSTGRES_SETUP.md)**
-- **[Migration from Railway](../VERCEL_POSTGRES_MIGRATION.md)**
+- **[Migration from Render](../VERCEL_POSTGRES_MIGRATION.md)**
 
 ---
 

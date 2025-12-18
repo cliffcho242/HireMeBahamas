@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation addresses the issue where PostgreSQL's normal informational messages (particularly "database system is ready to accept connections") are being logged with "error" level in Railway's log aggregation system, when they should be categorized as informational messages.
+This implementation addresses the issue where PostgreSQL's normal informational messages (particularly "database system is ready to accept connections") are being logged with "error" level in Render's log aggregation system, when they should be categorized as informational messages.
 
 ## Problem Statement
 
@@ -24,7 +24,7 @@ This implementation addresses the issue where PostgreSQL's normal informational 
 ## Root Cause
 
 1. **PostgreSQL Log Levels**: PostgreSQL uses its own logging system with levels: LOG, WARNING, ERROR, FATAL, PANIC
-2. **Cloud Platform Interpretation**: Railway's managed PostgreSQL service captures all logs and may categorize them incorrectly
+2. **Cloud Platform Interpretation**: Render's managed PostgreSQL service captures all logs and may categorize them incorrectly
 3. **Stream-Based Categorization**: Cloud platforms often categorize stderr output as errors, but PostgreSQL writes LOG messages to stderr
 4. **Managed Service Limitation**: We cannot directly configure PostgreSQL server settings on managed databases
 
@@ -151,9 +151,9 @@ cat logs.json | python filter_postgres_logs.py --stats
 docker-compose logs postgres 2>&1 | python filter_postgres_logs.py --suppress-benign
 ```
 
-### Railway Logs
+### Render Logs
 ```bash
-railway logs | python filter_postgres_logs.py --suppress-benign
+render logs | python filter_postgres_logs.py --suppress-benign
 ```
 
 ## Output Format
@@ -201,8 +201,8 @@ Info:                47
 - ✅ Backward compatible
 
 ### Limitations
-- ⚠️ Requires manual filtering (not automatic in Railway)
-- ⚠️ Cannot change Railway's managed PostgreSQL configuration
+- ⚠️ Requires manual filtering (not automatic in Render)
+- ⚠️ Cannot change Render's managed PostgreSQL configuration
 - ⚠️ Does not prevent miscategorization, only corrects it post-hoc
 
 ## Integration Scenarios
@@ -214,13 +214,13 @@ docker-compose logs postgres | python filter_postgres_logs.py --suppress-benign
 
 ### 2. CI/CD Pipeline
 ```bash
-railway logs --tail 100 | python filter_postgres_logs.py --stats
+render logs --tail 100 | python filter_postgres_logs.py --stats
 ```
 
 ### 3. Monitoring (DataDog, Sentry)
 ```python
 import subprocess
-logs = subprocess.check_output(['railway', 'logs'])
+logs = subprocess.check_output(['render', 'logs'])
 filtered = subprocess.check_output(
     ['python', 'filter_postgres_logs.py', '--suppress-benign'],
     input=logs
@@ -231,7 +231,7 @@ filtered = subprocess.check_output(
 ### 4. Alerting
 ```bash
 # Only alert if real errors exist
-railway logs | python filter_postgres_logs.py --suppress-benign | \
+render logs | python filter_postgres_logs.py --suppress-benign | \
   grep -q ERROR && send_alert || echo "No errors"
 ```
 
@@ -290,7 +290,7 @@ The solution addresses the problem statement by:
 - `POSTGRES_LOG_FILTER_QUICK_REF.md` - Quick reference
 - `README.md` - Project overview with link to fix
 - `docker-compose.local.yml` - Local development setup
-- `railway_postgres_check.py` - PostgreSQL configuration checker
+- `render_postgres_check.py` - PostgreSQL configuration checker
 
 ## Support
 

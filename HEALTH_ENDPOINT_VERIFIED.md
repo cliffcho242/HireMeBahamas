@@ -2,7 +2,7 @@
 
 ## Summary
 
-The `/health` endpoint is **correctly implemented** and will return `{"status": "ok"}` to prevent SIGTERM issues on Render and Railway deployments.
+The `/health` endpoint is **correctly implemented** and will return `{"status": "ok"}` to prevent SIGTERM issues on Render and Render deployments.
 
 ## Verification Results
 
@@ -10,7 +10,7 @@ The `/health` endpoint is **correctly implemented** and will return `{"status": 
 
 1. **Backend Health Endpoint** - Returns correct response
 2. **Health Endpoint Code Exists** - Present in both backend and Vercel handler
-3. **Deployment Configurations** - Configured in render.yaml, railway.toml, and Procfile
+3. **Deployment Configurations** - Configured in render.yaml, render.toml, and Procfile
 4. **No Database Dependency** - Explicitly documented and verified
 5. **Response Format** - Returns 200 with correct JSON
 
@@ -51,7 +51,7 @@ The `/health` endpoint is **correctly implemented** and will return `{"status": 
 healthCheckPath: /health
 ```
 
-#### Railway (`railway.toml`)
+#### Render (`render.toml`)
 ```toml
 [deploy]
 healthcheckPath = "/health"
@@ -110,7 +110,7 @@ content-length: 17
 ## Why This Prevents SIGTERM
 
 ### Problem
-Render and Railway send SIGTERM to kill unresponsive services if health checks fail. If the health endpoint:
+Render and Render send SIGTERM to kill unresponsive services if health checks fail. If the health endpoint:
 - Takes too long to respond (>30s timeout)
 - Returns non-200 status code
 - Is not found (404)
@@ -146,22 +146,22 @@ For more detailed health information, use these endpoints:
 
 1. **Check URL:** Ensure you're using the correct backend URL
    - Render: `https://your-backend.onrender.com/health`
-   - Railway: `https://your-backend.up.railway.app/health`
+   - Render: `https://your-backend.up.render.app/health`
 
 2. **Check Deployment:** Verify the service is deployed and running
-   - Check Render/Railway dashboard
+   - Check Render/Render dashboard
    - Look for deployment logs
 
 3. **Check Configuration:**
    ```bash
    # Verify health check path matches
    grep -r "healthCheckPath" render.yaml
-   grep -r "healthcheckPath" railway.toml
+   grep -r "healthcheckPath" render.toml
    ```
 
 4. **Check Logs:** Look for errors in platform logs
    - Render: Dashboard → Logs
-   - Railway: Dashboard → Deployments → View Logs
+   - Render: Dashboard → Deployments → View Logs
 
 ### Common Issues
 
@@ -178,7 +178,7 @@ For more detailed health information, use these endpoints:
 ✅ **All verification tests pass**
 ✅ **SIGTERM issues will be prevented**
 
-When you deploy to Render or Railway and navigate to:
+When you deploy to Render or Render and navigate to:
 ```
 https://your-backend.onrender.com/health
 ```
@@ -192,7 +192,7 @@ This confirms the service is healthy and ready to serve traffic.
 
 ## Next Steps
 
-1. **Deploy to Render/Railway**
+1. **Deploy to Render/Render**
 2. **Verify in browser:** `https://your-backend.onrender.com/health`
 3. **Confirm response:** `{"status": "ok"}`
 4. **Monitor logs:** Ensure no SIGTERM issues occur
@@ -200,5 +200,5 @@ This confirms the service is healthy and ready to serve traffic.
 ## References
 
 - [Render Health Checks Documentation](https://render.com/docs/health-checks)
-- [Railway Health Check Documentation](https://docs.railway.app/deploy/healthchecks)
+- [Render Health Check Documentation](https://docs.render.app/deploy/healthchecks)
 - [FastAPI Health Check Best Practices](https://fastapi.tiangolo.com/advanced/testing/)

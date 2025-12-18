@@ -134,7 +134,7 @@ VITE_REQUIRE_BACKEND_URL=true
 
 The `VITE_REQUIRE_BACKEND_URL` environment variable can be used to prevent silent failures when the backend URL is not configured:
 
-- ✅ Set to `'true'` for development or when using an external backend (Railway, Render, etc.)
+- ✅ Set to `'true'` for development or when using an external backend (Render, Render, etc.)
 - ❌ Leave unset or `'false'` for Vercel serverless deployments (same-origin API)
 
 When enabled, the application will throw an error at startup if `VITE_API_URL` is not set, preventing unexpected behavior from using wrong backend URLs.

@@ -38,7 +38,7 @@ The HireMeBahamas application has been completely transformed and is now **100% 
 ### 2. Deployment Architecture (COMPLETE OVERHAUL)
 
 **Before:**
-- Split across Railway/Render (backend) and Vercel (frontend)
+- Split across Render/Render (backend) and Vercel (frontend)
 - Complex deployment process
 - Frequent downtime due to free tier limitations
 - Cold starts causing 502 errors
@@ -231,7 +231,7 @@ After deploying to Vercel, test:
 
 ### Before
 ```
-User → Vercel (Frontend) → Railway/Render (Backend) → Database
+User → Vercel (Frontend) → Render/Render (Backend) → Database
        ❌ Complex              ❌ Cold starts        ❌ Connection issues
        ❌ Multiple domains      ❌ Free tier limits   ❌ Downtime
 ```
@@ -276,7 +276,7 @@ User → Vercel Edge Network
 
 ## Cost Analysis
 
-### Before (Railway/Render)
+### Before (Render/Render)
 - Backend: $7-20/month (after free tier expires)
 - Database: Included or $10-20/month
 - **Total**: $7-40/month + downtime issues

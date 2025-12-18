@@ -311,7 +311,7 @@ git push
 # Deploy to all platforms
 # Render: Automatic redeploy on push
 # Vercel: vercel --prod
-# Railway: Automatic redeploy on push
+# Render: Automatic redeploy on push
 
 # Verify logs show:
 ✅ "Successfully installed asyncpg-0.30.0"
@@ -414,7 +414,7 @@ pip install --only-binary=:all: -r requirements.txt
 ### Error: Vercel still fails
 **Fix:** Add installCommand to vercel.json (see CODE BLOCK #3)
 
-### Error: Railway/Render timeout
+### Error: Render/Render timeout
 **Fix:** Update Dockerfile RUN command (see CODE BLOCK #4)
 
 ---

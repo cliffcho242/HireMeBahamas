@@ -170,7 +170,7 @@ if missing_fields:
 
 ### For Deployment:
 
-1. **Use DATABASE_PRIVATE_URL on Railway**
+1. **Use DATABASE_PRIVATE_URL on Render**
    - Reduces attack surface (internal network only)
    - No egress fees
    - Better security isolation
@@ -184,7 +184,7 @@ if missing_fields:
    - Enables production security checks
    - Disables development defaults
 
-4. **Use Railway Variable References**
+4. **Use Render Variable References**
    - Avoids manual credential copying
    - Automatically updates if database credentials change
 

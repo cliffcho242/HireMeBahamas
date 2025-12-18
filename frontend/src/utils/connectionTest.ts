@@ -35,7 +35,7 @@ export async function testConnection(baseUrl: string): Promise<ConnectionTestRes
     console.log(`[ConnectionTest] Testing connection to: ${healthUrl}`);
     
     // Test health endpoint with timeout
-    // Increased to 30 seconds to accommodate backend cold starts (Railway, Render, etc.)
+    // Increased to 30 seconds to accommodate backend cold starts (Render, etc.)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
     

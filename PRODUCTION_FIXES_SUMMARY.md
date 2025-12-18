@@ -2,7 +2,7 @@
 
 ## Summary
 
-This PR fixes critical production deployment anti-patterns that could cause issues in serverless environments like Vercel and Railway.
+This PR fixes critical production deployment anti-patterns that could cause issues in serverless environments like Vercel and Render.
 
 ## Issues Fixed
 

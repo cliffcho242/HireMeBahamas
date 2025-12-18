@@ -129,10 +129,10 @@ The Gunicorn worker SIGTERM fix is properly implemented:
 
 ## Deployment
 
-The fix is ready for deployment. No configuration changes needed on Railway/Render.
+The fix is ready for deployment. No configuration changes needed on Render/Render.
 
 The existing deployment commands will work:
-- **Railway:** Uses `railway.toml` with command defined
+- **Render:** Uses `render.toml` with command defined
 - **Render:** Uses `render.yaml` with command defined
 - **Procfile:** Already configured correctly
 
@@ -185,7 +185,7 @@ After deployment, monitor logs for:
 
 ## Next Steps
 
-1. ✅ Deploy to production (Railway/Render)
+1. ✅ Deploy to production (Render/Render)
 2. ✅ Monitor logs for the next 24-48 hours
 3. ✅ Verify no SIGTERM errors occur
 4. ✅ If worker_abort messages appear, investigate the specific cause identified in the diagnostic output

@@ -2,11 +2,11 @@
 
 ## Overview
 
-This implementation fixes database deployment crashes on Railway by adding comprehensive validation and fallback support for database environment variables.
+This implementation fixes database deployment crashes on Render by adding comprehensive validation and fallback support for database environment variables.
 
 ## Problem Statement
 
-Railway database deployments were failing with connection errors when:
+Render database deployments were failing with connection errors when:
 - `DATABASE_URL` was not properly configured
 - Individual PostgreSQL variables (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE) were not set
 - No clear error messages indicated which variables were missing
@@ -35,7 +35,7 @@ Updated the startup validation script to:
 
 **Example Output:**
 ```
-✅ DATABASE_URL configured: containers-us-west-100.railway.app
+✅ DATABASE_URL configured: containers-us-west-100.render.app
 ✅ Individual PostgreSQL variables configured (PGHOST=localhost)
 ❌ DATABASE_URL not set and missing individual variables: PGHOST, PGUSER, PGPASSWORD, PGDATABASE
 ```
@@ -50,7 +50,7 @@ Enhanced database configuration to:
 - Support multiple configuration sources with clear priority order
 
 **Configuration Priority:**
-1. `DATABASE_PRIVATE_URL` (Railway private network - recommended)
+1. `DATABASE_PRIVATE_URL` (Render private network - recommended)
 2. `POSTGRES_URL` (Vercel Postgres compatibility)
 3. `DATABASE_URL` (Standard PostgreSQL connection)
 4. Individual PG* variables (PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE)
@@ -59,7 +59,7 @@ Enhanced database configuration to:
 ### 4. Comprehensive Documentation (`RAILWAY_DATABASE_DEPLOYMENT_GUIDE.md`)
 
 Created a quick-fix guide that includes:
-- Step-by-step configuration instructions for Railway
+- Step-by-step configuration instructions for Render
 - Two configuration options (DATABASE_URL or individual variables)
 - Concrete examples with real values
 - Common errors and solutions
@@ -69,7 +69,7 @@ Created a quick-fix guide that includes:
 ### 5. Updated Environment Template (`.env.example`)
 
 Updated the environment variable template to:
-- Clearly state required variables for Railway deployment
+- Clearly state required variables for Render deployment
 - Show both configuration options
 - Include example for extracting individual variables
 - Link to the new deployment guide
@@ -107,7 +107,7 @@ Clear, actionable error messages are provided:
 ```
 ❌ DATABASE_URL not set and missing individual variables: PGHOST, PGUSER, PGPASSWORD, PGDATABASE
    Required variables: PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, DATABASE_URL
-   Configure DATABASE_URL or all individual PG* variables in Railway dashboard
+   Configure DATABASE_URL or all individual PG* variables in Render dashboard
 ```
 
 **Production Environment Error:**
@@ -196,22 +196,22 @@ CodeQL security scan completed with **0 alerts**:
 
 ## Usage Instructions
 
-### For Railway Deployment:
+### For Render Deployment:
 
 **Option 1 (Recommended):** Use DATABASE_PRIVATE_URL
 ```bash
-# In Railway Variables tab, add reference to PostgreSQL service:
+# In Render Variables tab, add reference to PostgreSQL service:
 DATABASE_PRIVATE_URL = <Reference to PostgreSQL>
 ```
 
 **Option 2:** Use Individual Variables
 ```bash
-# In Railway Variables tab:
-PGHOST=containers-us-west-XX.railway.app
+# In Render Variables tab:
+PGHOST=containers-us-west-XX.render.app
 PGPORT=5432
 PGUSER=postgres
 PGPASSWORD=your_password
-PGDATABASE=railway
+PGDATABASE=render
 ```
 
 **Also Required:**
@@ -231,7 +231,7 @@ After configuration, check deployment logs for:
 
 Or test the health endpoint:
 ```bash
-curl https://your-app.up.railway.app/health
+curl https://your-app.up.render.app/health
 ```
 
 Expected response:

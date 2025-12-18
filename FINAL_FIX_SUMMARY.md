@@ -174,7 +174,7 @@ TypeScript: ✅ No errors
 1. Get credentials from Google Cloud Console
 2. Set environment variables:
    - **Vercel:** `VITE_GOOGLE_CLIENT_ID`
-   - **Railway:** `GOOGLE_CLIENT_ID`
+   - **Render:** `GOOGLE_CLIENT_ID`
 3. Redeploy
 4. OAuth buttons will automatically appear
 

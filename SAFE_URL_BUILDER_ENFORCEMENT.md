@@ -241,7 +241,7 @@ The safe URL builder automatically handles different deployment scenarios:
 VITE_API_URL=http://localhost:8000
 ```
 
-### Production (Railway/Custom Backend)
+### Production (Render/Custom Backend)
 ```bash
 VITE_API_URL=https://api.hiremebahamas.com
 ```

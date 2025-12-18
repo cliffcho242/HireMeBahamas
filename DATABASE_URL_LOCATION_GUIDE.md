@@ -208,7 +208,7 @@ After setting all environment variables:
 
 2. If you have data to migrate, proceed with:
    ```bash
-   python scripts/migrate_railway_to_vercel.py
+   python scripts/migrate_render_to_vercel.py
    ```
 
 3. Deploy your application:

@@ -189,7 +189,7 @@ The implementation respects the following environment variables:
 ### Cloud Platforms
 
 This implementation works correctly on:
-- ✅ Railway
+- ✅ Render
 - ✅ Render
 - ✅ Vercel (serverless)
 - ✅ AWS/GCP/Azure

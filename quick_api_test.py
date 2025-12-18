@@ -1,12 +1,12 @@
 import requests
 
-print("Testing Railway backend endpoints...")
+print("Testing Render backend endpoints...")
 print("=" * 60)
 
-# Test Railway direct URL
-print("\n1. Testing hiremebahamas-backend.railway.app:")
+# Test Render direct URL
+print("\n1. Testing hiremebahamas-backend.render.app:")
 try:
-    resp = requests.get("https://hiremebahamas-backend.railway.app/health", timeout=10)
+    resp = requests.get("https://hiremebahamas-backend.render.app/health", timeout=10)
     print(f"   Status: {resp.status_code}")
     print(f"   Content-Type: {resp.headers.get('content-type')}")
     print(f"   Response: {resp.text[:100]}")
@@ -26,7 +26,7 @@ except Exception as e:
 # Test user profile endpoint
 print("\n3. Testing /api/users/1 endpoint:")
 try:
-    url = "https://hiremebahamas-backend.railway.app/api/users/1"
+    url = "https://hiremebahamas-backend.render.app/api/users/1"
     resp = requests.get(url, timeout=10)
     print(f"   Status: {resp.status_code}")
     print(f"   Content-Type: {resp.headers.get('content-type')}")
@@ -44,7 +44,7 @@ except Exception as e:
 # Test routes endpoint
 print("\n4. Testing /api/routes endpoint:")
 try:
-    url = "https://hiremebahamas-backend.railway.app/api/routes"
+    url = "https://hiremebahamas-backend.render.app/api/routes"
     resp = requests.get(url, timeout=10)
     print(f"   Status: {resp.status_code}")
     if resp.status_code == 200:

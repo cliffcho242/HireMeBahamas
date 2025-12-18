@@ -225,7 +225,7 @@ async def warm_cache_endpoint():
     
     Example cron job: */5 * * * * curl -X POST https://your-backend-url/warm-cache
     
-    For Railway: Use GitHub Actions workflow (scheduled-ping.yml)
+    For Render: Use GitHub Actions workflow (scheduled-ping.yml)
     For Vercel: Add to vercel.json cron configuration
     """
     try:

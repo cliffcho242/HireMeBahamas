@@ -29,11 +29,11 @@ class TestDatabaseURLValidation:
         assert is_valid, f"Valid Neon URL should pass: {error}"
         assert error == ""
     
-    def test_valid_railway_url(self):
-        """Test valid Railway PostgreSQL URL."""
-        url = "postgresql://user:password@db.railway.internal:5432/railway?sslmode=require"
+    def test_valid_render_url(self):
+        """Test valid Render PostgreSQL URL."""
+        url = "postgresql://user:password@db.render.internal:5432/render?sslmode=require"
         is_valid, error = validate_database_url_structure(url)
-        assert is_valid, f"Valid Railway URL should pass: {error}"
+        assert is_valid, f"Valid Render URL should pass: {error}"
         assert error == ""
     
     def test_valid_with_asyncpg_driver(self):

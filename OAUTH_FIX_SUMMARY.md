@@ -163,8 +163,8 @@ This fix is **100% backward compatible**:
 3. Add `VITE_APPLE_CLIENT_ID` with your Apple Client ID (if using Apple OAuth)
 4. Redeploy
 
-**Railway (Backend):**
-1. Go to Railway Dashboard → Project → Variables
+**Render (Backend):**
+1. Go to Render Dashboard → Project → Variables
 2. Add `GOOGLE_CLIENT_ID` with your Google Client ID (if using Google OAuth)
 3. Add `APPLE_CLIENT_ID` with your Apple Client ID (if using Apple OAuth)
 4. Redeploy

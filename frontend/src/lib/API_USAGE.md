@@ -52,8 +52,8 @@ The utility uses the `VITE_API_URL` environment variable:
 # For development
 VITE_API_URL=http://localhost:8000
 
-# For production (Railway)
-VITE_API_URL=https://your-app.up.railway.app
+# For production (Render)
+VITE_API_URL=https://your-app.up.render.app
 
 # For Vercel serverless (no variable needed)
 # It will use window.location.origin automatically

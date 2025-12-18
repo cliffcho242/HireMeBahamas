@@ -17,7 +17,7 @@ docker-compose -f docker-compose.local.yml up
 
 The docker-compose.local.yml automatically uses the optimized Dockerfiles.
 
-**Note**: The file was renamed from `docker-compose.yml` to `docker-compose.local.yml` to prevent accidental deployment to cloud platforms like Railway.
+**Note**: The file was renamed from `docker-compose.yml` to `docker-compose.local.yml` to prevent accidental deployment to cloud platforms like Render.
 
 ### Database Admin Interface
 
@@ -63,7 +63,7 @@ After this PR is merged to `main`:
    - Check: https://github.com/cliffcho242/HireMeBahamas/actions
    - Wait for "Build and Push Docker Base Images" workflow to complete
 
-2. **Make base images public** (required for Railway/Render):
+2. **Make base images public** (required for Render/Render):
    - Go to: https://github.com/cliffcho242?tab=packages
    - Click on `hiremebahamas-base-backend`
    - Click "Package settings" → "Change visibility" → "Public"
@@ -79,7 +79,7 @@ After this PR is merged to `main`:
 
 Once setup is complete:
 
-- **Railway**: Deployments will automatically use new base images (70-80% faster!)
+- **Render**: Deployments will automatically use new base images (70-80% faster!)
 - **Render**: Deployments will automatically use new base images (70-80% faster!)
 - **No more build timeouts** during "Build › Build image" phase
 - **Consistent builds** every time

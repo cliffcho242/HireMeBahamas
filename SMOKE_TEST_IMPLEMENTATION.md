@@ -155,7 +155,7 @@ All changes have been scanned for security vulnerabilities:
 
 ## Deployment
 
-### Backend (Railway/Render)
+### Backend (Render/Render)
 The backend `/health` endpoint is already deployed and working.
 No changes required.
 

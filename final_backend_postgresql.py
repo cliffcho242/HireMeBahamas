@@ -801,11 +801,11 @@ def log_request_end(response):
 # DATABASE CONNECTION MANAGEMENT
 # ==========================================
 
-# Check if running on Railway with PostgreSQL
-# Railway Private Network Configuration:
-# To avoid egress fees, Railway provides DATABASE_PRIVATE_URL which uses the internal
-# private network (RAILWAY_PRIVATE_DOMAIN) instead of the public TCP proxy
-# (RAILWAY_TCP_PROXY_DOMAIN used by DATABASE_PUBLIC_URL).
+# Check if running on Render with PostgreSQL
+# Render Private Network Configuration:
+# To avoid egress fees, Render provides DATABASE_PRIVATE_URL which uses the internal
+# private network (RENDER_PRIVATE_DOMAIN) instead of the public TCP proxy
+# (RENDER_PUBLIC_DOMAIN used by DATABASE_PUBLIC_URL).
 # We prefer DATABASE_PRIVATE_URL > DATABASE_URL to minimize costs.
 DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
 
@@ -859,37 +859,31 @@ USE_POSTGRESQL = DATABASE_URL is not None
 # Pre-defined SQL statements prevent SQL injection by avoiding string formatting
 # Note: Extensions like pg_stat_statements require server-side configuration
 # (shared_preload_libraries) which is not available on managed database services
-# like Railway. Only add extensions that don't require server-side configuration.
+# like Render. Only add extensions that don't require server-side configuration.
 # 
-# For pg_stat_statements setup on Railway PostgreSQL, see:
-# RAILWAY_PG_STAT_STATEMENTS_SETUP.md for comprehensive setup instructions.
+# For pg_stat_statements setup on Render PostgreSQL, see Render documentation
+# for comprehensive setup instructions.
 # 
 # The /api/query-stats endpoint provides graceful error handling when 
 # pg_stat_statements is not available, with alternative solutions.
 POSTGRESQL_EXTENSIONS = {
     # Empty - all previously listed extensions required shared_preload_libraries
-    # configuration which is not available on Railway and similar managed services.
+    # configuration which is not available on Render and similar managed services.
     # The pg_stat_statements extension was removed because it causes:
     # "ERROR: pg_stat_statements must be loaded via shared_preload_libraries"
 }
 
 # Check if this is a production environment
-# Detect Railway environment using Railway-specific variables:
-# - RAILWAY_ENVIRONMENT: Set by Railway to indicate the environment (e.g., "production")
-# - RAILWAY_PROJECT_ID: Always present in Railway deployments, used as fallback detection
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT", "").lower()
-IS_RAILWAY = os.getenv("RAILWAY_PROJECT_ID") is not None
-
 # Detect Render environment using Render-specific variables:
 # - RENDER: Set to "true" by Render in all web services
 # - RENDER_SERVICE_ID: Set by Render to identify the service
-# See: https://render.com/docs/environment-variables
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 IS_RENDER = os.getenv("RENDER") == "true" or os.getenv("RENDER_SERVICE_ID") is not None
+
 
 # Production is determined by:
 # 1. Explicit ENVIRONMENT=production setting, OR
-# 2. Running on Railway (Railway is inherently a production platform), OR
+# 2. Running on Render (Render is inherently a production platform), OR
 # 3. Running on Render (Render is inherently a production platform)
 # Deployments on these platforms automatically enable production mode to ensure:
 # - Database keepalive is active (prevents PostgreSQL from sleeping)
@@ -897,7 +891,6 @@ IS_RENDER = os.getenv("RENDER") == "true" or os.getenv("RENDER_SERVICE_ID") is n
 # - Proper data persistence with PostgreSQL
 IS_PRODUCTION = (
     ENVIRONMENT in ["production", "prod"] or 
-    IS_RAILWAY or  # Railway deployments are always considered production
     IS_RENDER      # Render deployments are always considered production
 )
 
@@ -916,7 +909,7 @@ if IS_PRODUCTION and not USE_POSTGRESQL:
     print("⚠️  DATABASE_URL environment variable is not set.")
     print("⚠️")
     print("⚠️  SQLite is NOT suitable for production use because:")
-    print("⚠️  - No data persistence in containerized environments (Railway, Docker)")
+    print("⚠️  - No data persistence in containerized environments (Render, Docker)")
     print("⚠️  - Users and data will be lost on every deployment/restart")
     print("⚠️  - No concurrent access support at scale")
     print("⚠️")
@@ -1074,8 +1067,8 @@ if USE_POSTGRESQL:
         print(f"⚠️")
         print(f"⚠️  Where to find your real DATABASE_URL:")
         print(f"⚠️")
-        print(f"⚠️  For Railway:")
-        print(f"⚠️    1. Go to your Railway project dashboard")
+        print(f"⚠️  For Render:")
+        print(f"⚠️    1. Go to your Render project dashboard")
         print(f"⚠️    2. Click on your PostgreSQL service")
         print(f"⚠️    3. Go to 'Variables' tab")
         print(f"⚠️    4. Copy DATABASE_PRIVATE_URL or DATABASE_URL")
@@ -1213,7 +1206,7 @@ def _log_database_connection_error(error: Exception, context: str = "connection"
 STATEMENT_TIMEOUT_MS = _get_env_int("STATEMENT_TIMEOUT_MS", 30000, 1000, 300000)
 
 # =============================================================================
-# TOP 3 TIMEOUT FIXES FOR CLOUD POSTGRESQL (Railway/Render)
+# TOP 3 TIMEOUT FIXES FOR CLOUD POSTGRESQL (Render/Render)
 # =============================================================================
 # These three settings fix 99% of PostgreSQL timeout errors in cloud environments:
 #
@@ -1232,8 +1225,8 @@ STATEMENT_TIMEOUT_MS = _get_env_int("STATEMENT_TIMEOUT_MS", 30000, 1000, 300000)
 # =============================================================================
 
 # Connection timeout in seconds for PostgreSQL
-# Set to 45 seconds for cloud databases (Railway/Render) which may have higher latency
-# This is FIX #1 of the top 3 timeout fixes - handles Railway cold starts
+# Set to 45 seconds for cloud databases (Render/Render) which may have higher latency
+# This is FIX #1 of the top 3 timeout fixes - handles Render cold starts
 DB_CONNECT_TIMEOUT = _get_env_int("DB_CONNECT_TIMEOUT", 45, 5, 120)
 
 # Maximum connection pool size
@@ -1274,7 +1267,7 @@ DB_CONNECT_JITTER_FACTOR = 0.2
 # - If no response after keepalives_count probes, the connection is marked dead
 # - This allows the application to detect and recover from stale connections
 #
-# Default values optimized for cloud environments (Railway, Render, AWS, etc.):
+# Default values optimized for cloud environments (Render, Render, AWS, etc.):
 # - keepalives_idle: 20s (start probing after 20 seconds of idle)
 # - keepalives_interval: 5s (probe every 5 seconds)
 # - keepalives_count: 3 (mark dead after 3 failed probes)
@@ -1572,7 +1565,7 @@ def _is_transient_connection_error(error: Exception) -> bool:
     - Temporary network issues
     - Connection pool exhaustion
     - Database restarts or failovers
-    - Container transitions (Railway/Docker)
+    - Container transitions (Render/Docker)
     
     Args:
         error: The exception that occurred during connection attempt
@@ -1822,7 +1815,7 @@ def _warmup_connection_pool():
     - Reduces first-request latency by ~500-1000ms
     - Validates database connectivity on startup
     - Pre-populates connection pool for immediate availability
-    - Creates dummy pg_stat_statements view to prevent Railway monitoring errors
+    - Creates dummy pg_stat_statements view to prevent Render monitoring errors
     
     Called asynchronously to avoid blocking app startup.
     """
@@ -1853,7 +1846,7 @@ def _warmup_connection_pool():
                     cursor.fetchone()
                     
                     # Create dummy pg_stat_statements view on first connection
-                    # This prevents Railway monitoring errors that occur before app initialization
+                    # This prevents Render monitoring errors that occur before app initialization
                     # The constant CREATE_DUMMY_PG_STAT_STATEMENTS is defined at module level (line 4280)
                     # and is guaranteed to be initialized before this function is called
                     if not dummy_view_created and CREATE_DUMMY_PG_STAT_STATEMENTS:
@@ -1922,7 +1915,7 @@ def _shutdown_connection_pool():
     
     Called via atexit and signal handlers to ensure cleanup happens for:
     - Normal application termination (atexit)
-    - SIGTERM from container orchestrators (Railway, Docker)
+    - SIGTERM from container orchestrators (Render, Docker)
     - SIGINT from Ctrl+C during development
     """
     global _connection_pool
@@ -1969,7 +1962,7 @@ def _signal_handler(signum, frame):
 
 
 # Register signal handlers for graceful shutdown
-# SIGTERM: Sent by container orchestrators (Railway, Docker) to stop the container
+# SIGTERM: Sent by container orchestrators (Render, Docker) to stop the container
 # SIGINT: Sent by Ctrl+C during development
 signal.signal(signal.SIGTERM, _signal_handler)
 signal.signal(signal.SIGINT, _signal_handler)
@@ -2098,7 +2091,7 @@ def _create_direct_postgresql_connection(use_fallback_ssl: bool = False):
 
 
 def get_db_connection():
-    """Get database connection (PostgreSQL on Railway, SQLite locally)
+    """Get database connection (PostgreSQL on Render, SQLite locally)
     
     For PostgreSQL, uses connection pool for better performance.
     Falls back to direct connection if pool is unavailable or exhausted.
@@ -2650,7 +2643,7 @@ def cleanup_orphaned_extensions(cursor, conn):
     but cannot function without server-side configuration.
     
     This is particularly important for pg_stat_statements which causes errors
-    when Railway's monitoring dashboard tries to query it, but the extension
+    when Render's monitoring dashboard tries to query it, but the extension
     isn't loaded in shared_preload_libraries.
     
     Also cleans up orphaned tables/views left behind in the public schema
@@ -2708,10 +2701,10 @@ def cleanup_orphaned_extensions(cursor, conn):
     
     # Also clean up orphaned tables/views in the public schema that may have been
     # left behind by extensions or previous installations. These cause errors when
-    # Railway's monitoring dashboard tries to query them (e.g., pg_stat_statements).
+    # Render's monitoring dashboard tries to query them (e.g., pg_stat_statements).
     # 
     # If CREATE_DUMMY_PG_STAT_STATEMENTS is enabled, we create a dummy view instead
-    # of just dropping the relation. This allows Railway's monitoring queries to
+    # of just dropping the relation. This allows Render's monitoring queries to
     # succeed with 0 rows instead of failing with an error.
     orphaned_relations = ["pg_stat_statements"]
     
@@ -2784,7 +2777,7 @@ def create_dummy_pg_stat_statements_view(cursor, conn):
     """
     Create a dummy pg_stat_statements view that returns empty results.
     
-    This view satisfies Railway's monitoring queries that periodically run:
+    This view satisfies Render's monitoring queries that periodically run:
     - SET statement_timeout = '30s'; SELECT COUNT(*) FROM public."pg_stat_statements"
     - SET statement_timeout = '30s'; SELECT * FROM public."pg_stat_statements" LIMIT 10
     
@@ -2863,8 +2856,8 @@ def create_dummy_pg_stat_statements_view(cursor, conn):
         #
         # Compatibility notes:
         # - PostgreSQL 12 and earlier use different column names (e.g., total_time vs total_exec_time)
-        # - Railway typically runs PostgreSQL 14+ where this schema is fully compatible
-        # - For older PostgreSQL versions, Railway's monitoring may use different queries
+        # - Render typically runs PostgreSQL 14+ where this schema is fully compatible
+        # - For older PostgreSQL versions, Render's monitoring may use different queries
         # - This schema covers the core columns used by monitoring tools
         # - If monitoring queries fail due to schema differences, update this definition
         cursor.execute(
@@ -2897,7 +2890,7 @@ def create_dummy_pg_stat_statements_view(cursor, conn):
             """
         )
         conn.commit()
-        print("✅ Created dummy pg_stat_statements view (Railway monitoring queries will succeed with 0 rows)")
+        print("✅ Created dummy pg_stat_statements view (Render monitoring queries will succeed with 0 rows)")
         return True
         
     except psycopg2.Error as e:
@@ -2917,10 +2910,10 @@ def init_postgresql_extensions(cursor, conn):
     
     Note: Extensions like pg_stat_statements have been removed because they require
     shared_preload_libraries configuration on the PostgreSQL server, which is not
-    available on managed database services like Railway.
+    available on managed database services like Render.
     
     Currently, no extensions are configured because all previously listed extensions
-    required server-side configuration that is unavailable on Railway.
+    required server-side configuration that is unavailable on Render.
     
     Returns True if all extensions initialized successfully, False otherwise.
     Extension failures are non-fatal - the application continues regardless.
@@ -2928,7 +2921,7 @@ def init_postgresql_extensions(cursor, conn):
     success = True
     
     # First, clean up any orphaned extensions that require shared_preload_libraries
-    # This prevents errors from Railway's monitoring dashboard trying to query
+    # This prevents errors from Render's monitoring dashboard trying to query
     # extensions like pg_stat_statements that can't function without server-side config
     cleanup_success = cleanup_orphaned_extensions(cursor, conn)
     if not cleanup_success:
@@ -2985,7 +2978,7 @@ def init_postgresql_extensions(cursor, conn):
             if "shared_preload_libraries" in error_msg:
                 print(f"⚠️  Extension '{ext_name}' requires server-side configuration")
                 print(f"   The extension must be added to shared_preload_libraries in postgresql.conf")
-                print(f"   On Railway/managed PostgreSQL: Contact your provider to enable this extension")
+                print(f"   On Render/managed PostgreSQL: Contact your provider to enable this extension")
             else:
                 print(f"⚠️  Database operation error for extension '{ext_name}': {error_details}")
             
@@ -4266,7 +4259,7 @@ def _log_startup_recovery_status():
     - "database system was not properly shut down; automatic recovery in progress"
     
     These logs are normal and expected after container restarts or deployments
-    on platforms like Railway where the database container may be stopped
+    on platforms like Render where the database container may be stopped
     without a graceful shutdown signal.
     """
     if not USE_POSTGRESQL:
@@ -4279,7 +4272,7 @@ def _log_startup_recovery_status():
         if in_recovery is True:
             print("📊 Database Recovery Status: RECOVERING")
             print("   └─ PostgreSQL is replaying WAL logs after improper shutdown")
-            print("   └─ This is normal on Railway/Docker after container restarts")
+            print("   └─ This is normal on Render/Docker after container restarts")
             print("   └─ Database will be fully operational once recovery completes")
         elif in_recovery is False:
             print("📊 Database Recovery Status: NORMAL")
@@ -4350,10 +4343,10 @@ print("🏥 IMMORTAL HEALTH ENDPOINTS LOADED — /health (GET+HEAD), /ready, /pi
 
 # Database keepalive configuration
 # Keeps database connections alive to prevent connection pool timeout issues
-# when web services restart from sleep (Railway/Render free tier sleep after 15 min)
+# when web services restart from sleep (Render/Render free tier sleep after 15 min)
 #
 # Enabled when:
-# - Running on Railway (IS_RAILWAY=True, detected via RAILWAY_PROJECT_ID), OR
+# - Running on Render (IS_RENDER=True, detected via RENDER_SERVICE_ID), OR
 # - Running on Render (IS_RENDER=True, detected via RENDER env var), OR
 # - Running in production environment (IS_PRODUCTION=True)
 # AND PostgreSQL is configured (USE_POSTGRESQL=True)
@@ -4364,7 +4357,7 @@ print("🏥 IMMORTAL HEALTH ENDPOINTS LOADED — /health (GET+HEAD), /ready, /pi
 # Note: For Render free tier, the web service itself also sleeps after 15 minutes.
 # Use an external pinger (UptimeRobot, Healthchecks.io) or upgrade to paid plan.
 # See docs/RENDER_502_FIX_GUIDE.md for complete instructions.
-DB_KEEPALIVE_ENABLED = (IS_PRODUCTION or IS_RAILWAY or IS_RENDER) and USE_POSTGRESQL
+DB_KEEPALIVE_ENABLED = (IS_PRODUCTION or IS_RENDER or IS_RENDER) and USE_POSTGRESQL
 # Ping database every 2 minutes (120s) to keep connections fresh
 # This provides a safety margin for maintaining connection pool health
 DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "120"))  # 2 minutes
@@ -4390,7 +4383,7 @@ DB_KEEPALIVE_HEALTH_CHECK_INTERVAL_SECONDS = 60  # Check thread health every min
 DB_KEEPALIVE_MAX_PING_AGE_SECONDS = 300  # Consider thread dead if no ping for 5 minutes
 
 # Periodic cleanup of pg_stat_statements extension
-# This prevents Railway's monitoring dashboard from getting errors when it tries
+# This prevents Render's monitoring dashboard from getting errors when it tries
 # to query pg_stat_statements (which requires shared_preload_libraries configuration)
 # Cleanup runs every hour (3600 seconds) to catch any newly created extensions
 DB_EXTENSION_CLEANUP_INTERVAL_SECONDS = int(os.getenv("DB_EXTENSION_CLEANUP_INTERVAL_SECONDS", "3600"))
@@ -4403,11 +4396,11 @@ DB_EXTENSION_CLEANUP_INTERVAL_SECONDS = int(os.getenv("DB_EXTENSION_CLEANUP_INTE
 # Default: "false" (cleanup enabled)
 DISABLE_EXTENSION_CLEANUP = os.getenv("DISABLE_EXTENSION_CLEANUP", "false").lower() == "true"
 
-# Create a dummy pg_stat_statements view to satisfy Railway's monitoring queries
+# Create a dummy pg_stat_statements view to satisfy Render's monitoring queries
 # When enabled, instead of dropping the pg_stat_statements table/view, we create a
-# dummy empty view that returns no rows. This allows Railway's monitoring queries
+# dummy empty view that returns no rows. This allows Render's monitoring queries
 # (SELECT COUNT(*) FROM public."pg_stat_statements") to succeed with 0 rows instead
-# of failing with an error. This reduces log noise from Railway's monitoring.
+# of failing with an error. This reduces log noise from Render's monitoring.
 # Set to "true" to enable this behavior.
 CREATE_DUMMY_PG_STAT_STATEMENTS = os.getenv("CREATE_DUMMY_PG_STAT_STATEMENTS", "true").lower() == "true"
 
@@ -4509,12 +4502,12 @@ def periodic_extension_cleanup():
     
     This function is called periodically by the keepalive worker to remove
     orphaned extensions that require shared_preload_libraries configuration
-    (which is not available on Railway's managed PostgreSQL).
+    (which is not available on Render's managed PostgreSQL).
     
     Currently cleans up:
     - pg_stat_statements extension and any related orphaned tables/views
     
-    The cleanup prevents errors from Railway's monitoring dashboard which tries
+    The cleanup prevents errors from Render's monitoring dashboard which tries
     to query pg_stat_statements. Without this cleanup, queries fail with:
     "ERROR: pg_stat_statements must be loaded via shared_preload_libraries"
     
@@ -4588,7 +4581,7 @@ def database_keepalive_worker():
     """
     Background worker that periodically pings the database to prevent it from sleeping.
     
-    Railway databases on free/hobby tiers sleep after 15 minutes of inactivity.
+    Render databases on free/hobby tiers sleep after 15 minutes of inactivity.
     This worker uses an adaptive interval strategy:
     - Aggressive mode (first 4 hours): Ping every 1 minute to ensure database stays awake
     - Normal mode (after 4 hours): Ping every 2 minutes for maintenance
@@ -4600,7 +4593,7 @@ def database_keepalive_worker():
     - Non-intrusive to production operations
     
     Additionally, the worker periodically cleans up orphaned PostgreSQL extensions
-    (like pg_stat_statements) that cause errors in Railway's monitoring dashboard.
+    (like pg_stat_statements) that cause errors in Render's monitoring dashboard.
     """
     global _keepalive_running, _keepalive_last_ping, _keepalive_consecutive_failures
     global _keepalive_start_time, _keepalive_total_pings, _last_extension_cleanup
@@ -4614,7 +4607,7 @@ def database_keepalive_worker():
     print(f"   Normal mode: {DB_KEEPALIVE_INTERVAL_SECONDS}s interval after")
     
     # Perform aggressive initial pings to ensure database is fully awake
-    # Railway databases may take multiple queries to fully wake up after sleeping
+    # Render databases may take multiple queries to fully wake up after sleeping
     for i in range(DB_KEEPALIVE_WARMUP_PING_COUNT):
         try:
             conn = get_db_connection()
@@ -4705,7 +4698,7 @@ def database_keepalive_worker():
                 print(f"✅ Database keepalive ping #{_keepalive_total_pings} [{mode}] at {_keepalive_last_ping.isoformat()} (uptime: {elapsed_hours:.1f}h)")
                 
                 # Perform periodic extension cleanup to remove pg_stat_statements
-                # This prevents errors in Railway's monitoring dashboard
+                # This prevents errors in Render's monitoring dashboard
                 if should_run_extension_cleanup():
                     periodic_extension_cleanup()
                 
@@ -4739,11 +4732,11 @@ def start_database_keepalive():
     
     Only starts if:
     - Running in production environment (IS_PRODUCTION=True), OR
-    - Running on Railway (IS_RAILWAY=True)
+    - Running on Render (IS_RENDER=True)
     - AND PostgreSQL is configured (USE_POSTGRESQL=True)
     - Keepalive is not already running
     
-    The keepalive prevents Railway PostgreSQL databases from sleeping
+    The keepalive prevents Render PostgreSQL databases from sleeping
     after periods of inactivity.
     """
     global _keepalive_thread, _keepalive_running
@@ -4753,7 +4746,7 @@ def start_database_keepalive():
         # but environment conditions prevent keepalive from running.
         # Skip message for SQLite/development since keepalive is not applicable.
         if USE_POSTGRESQL:
-            print("ℹ️ Database keepalive disabled (not in production or Railway environment)")
+            print("ℹ️ Database keepalive disabled (not in production or Render environment)")
         return
     
     if _keepalive_thread is not None and _keepalive_thread.is_alive():
@@ -4808,7 +4801,7 @@ def ensure_keepalive_running():
     global _keepalive_thread, _keepalive_running, _keepalive_last_ping
     
     if not DB_KEEPALIVE_ENABLED:
-        return {"status": "disabled", "reason": "Not in production or Railway environment"}
+        return {"status": "disabled", "reason": "Not in production or Render environment"}
     
     thread_alive = _keepalive_thread is not None and _keepalive_thread.is_alive()
     
@@ -4968,7 +4961,7 @@ def root():
 @limiter.exempt
 def health_check():
     """
-    Lightning-fast health check endpoint for Render/Railway.
+    Lightning-fast health check endpoint for Render/Render.
     
     Returns 200 OK with {"status":"ok"} in <10ms.
     No database access, no logging overhead - just a quick response.
@@ -5003,7 +4996,7 @@ def liveness_probe():
 @limiter.exempt
 def readiness_probe():
     """
-    Database readiness probe for Render/Railway cold start handling.
+    Database readiness probe for Render/Render cold start handling.
     
     Returns 200 ONLY when PostgreSQL is fully connected and responsive.
     Returns 503 if database is down or not ready.
@@ -5121,7 +5114,7 @@ def auth_ping():
 def api_health_check():
     """
     Detailed health check endpoint with database status
-    This can be used for monitoring but won't block Railway/Render healthcheck
+    This can be used for monitoring but won't block Render/Render healthcheck
     Attempts to retry database initialization if it failed on startup
     Exempt from rate limiting to allow monitoring services to check frequently
     """
@@ -5137,7 +5130,7 @@ def api_health_check():
         "db_initialized": _db_initialized,
         "environment": ENVIRONMENT,
         "is_production": IS_PRODUCTION,
-        "is_railway": IS_RAILWAY,
+        "is_render": IS_RENDER,
         "is_render": IS_RENDER,
         "database_url_configured": USE_POSTGRESQL,
     }
@@ -5327,7 +5320,7 @@ def database_ping_endpoint():
     Dedicated database ping endpoint to keep PostgreSQL awake.
     
     This endpoint is specifically designed for external services (like GitHub Actions)
-    to call periodically to ensure the Railway PostgreSQL database does not go to sleep.
+    to call periodically to ensure the Render PostgreSQL database does not go to sleep.
     
     The endpoint:
     - Performs a direct database ping (SELECT 1)
@@ -5455,14 +5448,14 @@ def database_wakeup():
     Wake up the database and verify connectivity.
     
     This endpoint is specifically designed to help users who encounter
-    "Database not connecting" errors in Railway's Data tab. It:
+    "Database not connecting" errors in Render's Data tab. It:
     - Performs multiple connection attempts with retries
     - Wakes up sleeping databases
     - Returns detailed connection status
     
     Usage:
-    - Call this endpoint before accessing Railway's Data tab
-    - Wait for successful response, then refresh Railway dashboard
+    - Call this endpoint before accessing Render's Data tab
+    - Wait for successful response, then refresh Render dashboard
     
     Returns:
         JSON with:
@@ -5516,12 +5509,12 @@ def database_wakeup():
             success_response = jsonify({
                 "success": True,
                 "timestamp": timestamp,
-                "message": "Database is awake and accepting connections. You can now access Railway's Data tab.",
+                "message": "Database is awake and accepting connections. You can now access Render's Data tab.",
                 "database_type": "PostgreSQL" if USE_POSTGRESQL else "SQLite",
                 "attempts": attempt,
                 "attempt_details": attempt_results,
                 "next_steps": [
-                    "Refresh the Railway Dashboard",
+                    "Refresh the Render Dashboard",
                     "Navigate to your PostgreSQL service",
                     "Click on the 'Data' tab",
                     "The database connection should now work"
@@ -5577,9 +5570,9 @@ def database_wakeup():
         "attempt_details": attempt_results,
         "troubleshooting": [
             "Wait 30-60 seconds and try again",
-            "Check if PostgreSQL service shows 'Active' in Railway",
+            "Check if PostgreSQL service shows 'Active' in Render",
             "If PostgreSQL is 'Sleeping', make any API request to wake it",
-            "Check Railway status page for any incidents: https://status.railway.app"
+            "Check Render status page for any incidents: https://status.render.app"
         ]
     }), 503
 
@@ -10013,7 +10006,7 @@ def get_query_stats():
                 "message": f"Error checking pg_stat_statements extension: {str(ext_check_error)}",
                 "extension_available": False,
                 "query_stats": [],
-                "setup_guide": "See RAILWAY_PG_STAT_STATEMENTS_SETUP.md for setup instructions"
+                "setup_guide": "See Render PostgreSQL documentation for setup instructions"
             }), 200
 
         if not extension_exists:
@@ -10022,8 +10015,8 @@ def get_query_stats():
                 "message": "pg_stat_statements extension is not installed. See setup guide for instructions.",
                 "extension_available": False,
                 "query_stats": [],
-                "setup_guide": "See RAILWAY_PG_STAT_STATEMENTS_SETUP.md for setup instructions",
-                "alternative": "Use PgHero (https://railway.app/template/pghero) for query monitoring"
+                "setup_guide": "See Render PostgreSQL documentation for setup instructions",
+                "alternative": "Use PgHero (https://render.app/template/pghero) for query monitoring"
             }), 200
 
         # Query pg_stat_statements for performance data
@@ -10086,11 +10079,11 @@ def get_query_stats():
                     "error": str(query_error),
                     "extension_available": False,
                     "query_stats": [],
-                    "setup_guide": "See RAILWAY_PG_STAT_STATEMENTS_SETUP.md for setup instructions",
+                    "setup_guide": "See Render PostgreSQL documentation for setup instructions",
                     "solutions": [
                         "Use a custom PostgreSQL image with shared_preload_libraries configured",
                         "Use Neon or Supabase which have pg_stat_statements enabled by default",
-                        "Deploy PgHero (https://railway.app/template/pghero) for query monitoring"
+                        "Deploy PgHero (https://render.app/template/pghero) for query monitoring"
                     ]
                 }), 200
             
@@ -10220,7 +10213,7 @@ def get_database_health():
             "slow_query_alert": slow_query_alert,
             "slow_query_count": slow_query_count,
             "monitoring_tips": {
-                "pghero": "Deploy PgHero for comprehensive query monitoring: https://railway.app/template/pghero",
+                "pghero": "Deploy PgHero for comprehensive query monitoring: https://render.app/template/pghero",
                 "api_endpoint": "/api/query-stats - Query performance statistics (requires auth)"
             }
         }), 200

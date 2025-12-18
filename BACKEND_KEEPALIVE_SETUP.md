@@ -2,11 +2,11 @@
 
 ## Overview
 
-This document explains the automatic database keepalive mechanism implemented in HireMeBahamas to prevent Railway PostgreSQL databases from going to sleep due to inactivity.
+This document explains the automatic database keepalive mechanism implemented in HireMeBahamas to prevent Render PostgreSQL databases from going to sleep due to inactivity.
 
 ## Problem
 
-Railway databases on free/hobby tiers automatically sleep after **15 minutes of inactivity** to save resources. When a database is sleeping:
+Render databases on free/hobby tiers automatically sleep after **15 minutes of inactivity** to save resources. When a database is sleeping:
 - The first request after sleep takes significantly longer (cold start)
 - Users experience increased latency
 - The database needs to wake up before serving requests
@@ -44,7 +44,7 @@ The keepalive automatically starts when:
 You can monitor the keepalive status via the `/api/health` endpoint:
 
 ```bash
-curl https://your-app.railway.app/api/health
+curl https://your-app.render.app/api/health
 ```
 
 Response includes:
@@ -78,7 +78,7 @@ Response includes:
 
 ### Adjusting Keepalive Interval
 
-To change the ping interval, set the environment variable in Railway:
+To change the ping interval, set the environment variable in Render:
 
 ```bash
 DB_KEEPALIVE_INTERVAL_SECONDS=300  # Ping every 5 minutes (default)
@@ -86,10 +86,10 @@ DB_KEEPALIVE_INTERVAL_SECONDS=300  # Ping every 5 minutes (default)
 
 **Recommended values:**
 - `180` (3 minutes) - Most aggressive, maximum reliability
-- `300` (5 minutes) - Default, recommended for Railway
+- `300` (5 minutes) - Default, recommended for Render
 - `600` (10 minutes) - Less frequent, may be too close to sleep threshold
 
-**Note:** Railway sleeps after 15 minutes, so keep the interval well under 15 minutes (5 minutes recommended).
+**Note:** Render sleeps after 15 minutes, so keep the interval well under 15 minutes (5 minutes recommended).
 
 ## Benefits
 
@@ -144,12 +144,12 @@ The keepalive uses the existing connection pool:
 
 ```bash
 # Check if keepalive is running
-curl https://your-app.railway.app/api/health | jq '.keepalive'
+curl https://your-app.render.app/api/health | jq '.keepalive'
 ```
 
 ### View Keepalive Logs
 
-In Railway dashboard:
+In Render dashboard:
 1. Go to your service
 2. Click "Deployments" tab
 3. View logs
@@ -190,13 +190,13 @@ In Railway dashboard:
 **Solutions:**
 1. Check DATABASE_URL is correct
 2. Verify PostgreSQL service is running
-3. Check Railway service status
+3. Check Render service status
 4. Review connection pool settings
 
 ### Database Still Sleeping
 
 **Symptoms:**
-- Database shows "sleeping" in Railway
+- Database shows "sleeping" in Render
 - Keepalive appears to be running
 
 **Possible Causes:**
@@ -246,14 +246,14 @@ python final_backend_postgresql.py
 
 **A:** Yes, set `ENVIRONMENT=development` or remove `DATABASE_URL`. However, this is not recommended for production as your database will sleep.
 
-### Q: What if my Railway plan doesn't have database sleep?
+### Q: What if my Render plan doesn't have database sleep?
 
-**A:** The keepalive won't harm anything. Railway Pro and higher plans don't have database sleep, but the keepalive adds negligible overhead.
+**A:** The keepalive won't harm anything. Render Pro and higher plans don't have database sleep, but the keepalive adds negligible overhead.
 
 ### Q: Does keepalive work with other database providers?
 
 **A:** Yes! The keepalive works with any PostgreSQL database:
-- Railway PostgreSQL
+- Render PostgreSQL
 - Heroku PostgreSQL
 - AWS RDS
 - Supabase
@@ -271,11 +271,11 @@ python final_backend_postgresql.py
 ## Summary
 
 The automatic database keepalive:
-- ✅ Prevents Railway PostgreSQL from sleeping
+- ✅ Prevents Render PostgreSQL from sleeping
 - ✅ Runs automatically in production
 - ✅ Requires no manual configuration
 - ✅ Provides monitoring via `/api/health`
 - ✅ Minimal resource overhead
 - ✅ Improves user experience
 
-The keepalive is production-ready and enabled by default when deploying to Railway with PostgreSQL configured.
+The keepalive is production-ready and enabled by default when deploying to Render with PostgreSQL configured.

@@ -293,9 +293,9 @@ Deploy:
 vercel --prod
 ```
 
-### Railway
+### Render
 
-Set environment variables in Railway dashboard:
+Set environment variables in Render dashboard:
 
 ```bash
 # Add to service variables

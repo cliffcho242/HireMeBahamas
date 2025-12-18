@@ -2,7 +2,7 @@
 
 **Problem**: Users cannot sign in on Vercel deployment because database connection is not properly configured.
 
-**Root Cause**: The old Render service is still active, and Vercel environment variables may not be correctly set to use the Railway PostgreSQL database.
+**Root Cause**: The old Render service is still active, and Vercel environment variables may not be correctly set to use the Render PostgreSQL database.
 
 ---
 
@@ -10,7 +10,7 @@
 
 Follow these steps in order to fix the issue:
 
-- [ ] **Step 1**: Get your Railway PostgreSQL connection URL
+- [ ] **Step 1**: Get your Render PostgreSQL connection URL
 - [ ] **Step 2**: Configure Vercel environment variables
 - [ ] **Step 3**: Verify Vercel deployment
 - [ ] **Step 4**: Test sign-in functionality
@@ -18,11 +18,11 @@ Follow these steps in order to fix the issue:
 
 ---
 
-## 📋 Step 1: Get Your Railway PostgreSQL Connection URL
+## 📋 Step 1: Get Your Render PostgreSQL Connection URL
 
-### Option A: Using Railway Dashboard
+### Option A: Using Render Dashboard
 
-1. Go to **Railway Dashboard**: https://railway.app/dashboard
+1. Go to **Render Dashboard**: https://render.app/dashboard
 2. Click on your **HireMeBahamas project**
 3. Click on the **PostgreSQL service** (not the backend service)
 4. Click on the **Variables** tab
@@ -31,7 +31,7 @@ Follow these steps in order to fix the issue:
    - `DATABASE_URL` (public URL)
 6. **Copy the DATABASE_URL** - it should look like:
    ```
-   postgresql://postgres:PASSWORD@containers-us-west-XXX.railway.app:PORT/railway
+   postgresql://postgres:PASSWORD@containers-us-west-XXX.render.app:PORT/render
    ```
 
 ### Option B: Using Render Dashboard (if database is on Render)
@@ -276,23 +276,23 @@ vercel env pull .env.local
 # Then run your local backend to create tables and admin user
 ```
 
-#### Option B: Using Railway CLI
+#### Option B: Using Render CLI
 
 ```bash
-# Install Railway CLI
-npm i -g @railway/cli
+# Install Render CLI
+npm i -g @render/cli
 
 # Login
-railway login
+render login
 
 # Link to your project
-railway link
+render link
 
 # Connect to database
-railway connect postgres
+render connect postgres
 
 # In the PostgreSQL shell, run:
-\c railway  # or your database name
+\c render  # or your database name
 
 # Check if users table exists
 \dt
@@ -366,7 +366,7 @@ If you have keep-alive workers or cron jobs:
 If your DATABASE_URL is from Render:
 - **DO NOT** suspend or delete the PostgreSQL database
 - You can keep it running since the free tier allows one free database
-- Only suspend if you've migrated to Railway/Vercel Postgres
+- Only suspend if you've migrated to Render/Vercel Postgres
 
 ---
 
@@ -446,7 +446,7 @@ If you're still experiencing issues after following this guide:
 
 1. **Check Logs**: 
    - Vercel: Dashboard → Project → Logs
-   - Railway: Dashboard → Project → Logs
+   - Render: Dashboard → Project → Logs
    - Render: Dashboard → Service → Logs
 
 2. **Common Issues**:

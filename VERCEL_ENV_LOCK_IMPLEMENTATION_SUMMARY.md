@@ -146,7 +146,7 @@ VITE_API_URL=https://your-backend.onrender.com
    VITE_SECRET_KEY=your-key
    VITE_CRON_SECRET=your-cron-secret
    
-   # ✅ CORRECT - Backend only (Render/Railway)
+   # ✅ CORRECT - Backend only (Render/Render)
    DATABASE_URL=postgresql://...
    JWT_SECRET=your-secret
    SECRET_KEY=your-key

@@ -69,7 +69,7 @@ NEXT STEPS:
 4. Share URL with users or submit to app stores
 
 NOTE: This URL is temporary and will change when you restart.
-For permanent deployment, use Render.com or Railway.
+For permanent deployment, use Render.com or Render.
 
 ========================================
 "@

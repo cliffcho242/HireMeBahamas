@@ -5,7 +5,7 @@
 # 🚀 PRODUCTION DEPLOYMENT - Scale to 1M+ Users
 #
 # This configuration demonstrates the scaling architecture for HireMeBahamas.
-# In production, use managed services (Render, Railway, Neon, Upstash, R2).
+# In production, use managed services (Render, Render, Neon, Upstash, R2).
 #
 # 📖 Documentation:
 #    - Scaling blueprint: SCALE_TO_1M_USERS_BLUEPRINT.md
@@ -31,7 +31,7 @@ services:
   # =========================================================================
   # NGINX LOAD BALANCER
   # Distributes traffic across multiple backend pods
-  # Production: Handled by Render/Railway automatically
+  # Production: Handled by Render/Render automatically
   # =========================================================================
   nginx-lb:
     image: nginx:1.25-alpine
@@ -64,7 +64,7 @@ services:
   # =========================================================================
   # BACKEND PODS (FastAPI + Gunicorn)
   # Multiple pods for horizontal scaling
-  # Production: Render/Railway auto-scales 2-10 pods
+  # Production: Render/Render auto-scales 2-10 pods
   # =========================================================================
   backend-1:
     build:

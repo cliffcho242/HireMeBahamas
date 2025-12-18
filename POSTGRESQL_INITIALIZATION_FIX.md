@@ -163,9 +163,9 @@ docker-compose -f docker-compose.local.yml logs postgres
 
 These changes are automatically applied when using:
 - `docker-compose -f docker-compose.local.yml up` for local development
-- Docker-based deployments (Railway, Render, etc.)
+- Docker-based deployments (Render, Render, etc.)
 
-For Railway/Render deployments, the platform's container orchestration will respect the `stop_grace_period` settings.
+For Render/Render deployments, the platform's container orchestration will respect the `stop_grace_period` settings.
 
 ## Monitoring
 

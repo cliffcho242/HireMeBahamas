@@ -37,7 +37,7 @@ This PR adds scripts and documentation for quick local development setup. All ch
 3. Users are warned not to commit secrets to version control
 4. Terminal history is user's responsibility
 
-**Recommendation**: This is acceptable for a local development setup script. Production deployments should use platform-specific secret management (Vercel/Railway environment variables).
+**Recommendation**: This is acceptable for a local development setup script. Production deployments should use platform-specific secret management (Vercel/Render environment variables).
 
 #### Python Availability Check
 **Security**: Scripts verify Python 3 is available before execution

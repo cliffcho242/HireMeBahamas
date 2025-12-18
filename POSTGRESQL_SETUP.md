@@ -4,24 +4,24 @@
 
 This application is tested and compatible with **PostgreSQL 17.x** (recommended) and PostgreSQL 16.x.
 
-The Docker setup uses PostgreSQL 17 by default. When deploying to Railway, Render, or other platforms, PostgreSQL 17 is recommended for the latest features and security updates.
+The Docker setup uses PostgreSQL 17 by default. When deploying to Render, Render, or other platforms, PostgreSQL 17 is recommended for the latest features and security updates.
 
 > **Note**: For information about PostgreSQL initialization and recovery fixes (handling improper shutdowns), see [POSTGRESQL_INITIALIZATION_FIX.md](./POSTGRESQL_INITIALIZATION_FIX.md).
 
 ## ⚠️ Important: PostgreSQL is REQUIRED for Production
 
 **SQLite is NOT suitable for production use** because:
-- Data does not persist in containerized environments (Railway, Docker, Render, etc.)
+- Data does not persist in containerized environments (Render, Docker, Render, etc.)
 - Users and all data will be lost on every deployment or restart
 - No support for concurrent access at scale
 - No backup/restore capabilities in cloud environments
 
 ## Quick Start
 
-### For Production Deployment (Railway, Render, etc.)
+### For Production Deployment (Render, Render, etc.)
 
 1. **Add PostgreSQL to your project:**
-   - Railway: Add PostgreSQL plugin to your project
+   - Render: Add PostgreSQL plugin to your project
    - Render: Add a PostgreSQL database
    - Other: Use any PostgreSQL provider (e.g., ElephantSQL, Supabase, Neon)
 
@@ -37,17 +37,17 @@ The Docker setup uses PostgreSQL 17 by default. When deploying to Railway, Rende
 
 4. **Deploy your application** - it will automatically use PostgreSQL
 
-## Railway Setup (Recommended)
+## Render Setup (Recommended)
 
-Railway makes PostgreSQL setup easy:
+Render makes PostgreSQL setup easy:
 
 1. **Add PostgreSQL Plugin:**
-   - Go to your Railway project
+   - Go to your Render project
    - Click "New" → "Database" → "PostgreSQL"
-   - Railway will automatically create the database
+   - Render will automatically create the database
 
 2. **Connect to your app:**
-   - Railway automatically sets the `DATABASE_URL` variable
+   - Render automatically sets the `DATABASE_URL` variable
    - Your app will detect and use PostgreSQL automatically
 
 3. **Verify setup:**
@@ -143,7 +143,7 @@ When you start the app, look for:
 
 When deploying updates that change the database schema:
 
-1. **Backup your data** (Railway/Render usually do this automatically)
+1. **Backup your data** (Render/Render usually do this automatically)
 2. **Deploy the new version**
 3. **Database tables are auto-created** on first run
 4. **Check logs** to verify successful initialization
@@ -212,7 +212,7 @@ PORT=8080
    - Configured automatically in the app
 
 4. **Regular backups**
-   - Railway/Render: Enable automatic backups
+   - Render/Render: Enable automatic backups
    - Self-hosted: Set up pg_dump cron jobs
 
 ## Database Schema
@@ -303,7 +303,7 @@ If you encounter issues:
 2. Verify environment variables are set correctly
 3. Test database connection manually
 4. Review this guide's troubleshooting section
-5. Check Railway/Render platform status
+5. Check Render/Render platform status
 
 ## Summary
 

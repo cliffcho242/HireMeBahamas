@@ -202,7 +202,7 @@ To enable OAuth in production:
 
 2. **Set Environment Variables**
    - Add OAuth credentials to Vercel (frontend)
-   - Add OAuth credentials to Railway/Render (backend)
+   - Add OAuth credentials to Render/Render (backend)
 
 3. **Run Database Migration**
    - Execute `migrate_oauth.py` on production database

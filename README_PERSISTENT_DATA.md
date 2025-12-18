@@ -10,13 +10,13 @@
 
 ## ROOT CAUSE
 
-Railway uses **ephemeral (temporary) file systems**. Your SQLite database file `hiremebahamas.db` gets **DELETED** every time:
+Render uses **ephemeral (temporary) file systems**. Your SQLite database file `hiremebahamas.db` gets **DELETED** every time:
 - The app restarts
 - You deploy new code
-- Railway scales your container
+- Render scales your container
 - Admin makes any code changes
 
-This is **BY DESIGN** - Railway containers don't have persistent file storage.
+This is **BY DESIGN** - Render containers don't have persistent file storage.
 
 ## THE SOLUTION
 
@@ -27,18 +27,18 @@ PostgreSQL is a **separate service** with **persistent storage** that:
 ✅ Survives deployments  
 ✅ Survives code changes  
 ✅ Never loses data  
-✅ Free on Railway (512MB included)
+✅ Free on Render (512MB included)
 
 ## FILES I CREATED FOR YOU
 
 ### 1. **CRITICAL_DATABASE_FIX.md**
 - Explains the problem in detail
-- Why SQLite doesn't work on Railway
+- Why SQLite doesn't work on Render
 - Why PostgreSQL is the solution
 
 ### 2. **final_backend_postgresql.py**
 - New backend code with PostgreSQL support
-- Automatically uses PostgreSQL on Railway
+- Automatically uses PostgreSQL on Render
 - Falls back to SQLite for local development
 - Creates all tables automatically
 - Handles migrations
@@ -48,7 +48,7 @@ PostgreSQL is a **separate service** with **persistent storage** that:
 
 ### 4. **migrate_to_postgresql.py**
 - Automated migration script
-- Checks Railway PostgreSQL setup
+- Checks Render PostgreSQL setup
 - Backs up current database
 - Replaces backend file safely
 - Tests database connections
@@ -62,20 +62,20 @@ PostgreSQL is a **separate service** with **persistent storage** that:
 ### 6. **VISUAL_GUIDE.py**
 - Visual diagrams showing the problem
 - Visual diagrams showing the solution
-- Railway dashboard screenshots
+- Render dashboard screenshots
 
 ## QUICK START (5 MINUTES)
 
-### Step 1: Add PostgreSQL on Railway (2 minutes)
+### Step 1: Add PostgreSQL on Render (2 minutes)
 
-1. Go to https://railway.app
+1. Go to https://render.app
 2. Open your **HireMeBahamas** project
 3. Click **"New"** button (top right)
 4. Select **"Database"**
 5. Choose **"PostgreSQL"**
 6. Wait for it to provision (1-2 minutes)
 
-✅ Railway automatically creates `DATABASE_URL` and links it to your backend!
+✅ Render automatically creates `DATABASE_URL` and links it to your backend!
 
 ### Step 2: Run Migration Script (1 minute)
 
@@ -90,7 +90,7 @@ The script will:
 - Test the connection
 - Show you what to do next
 
-### Step 3: Deploy to Railway (1 minute)
+### Step 3: Deploy to Render (1 minute)
 
 ```bash
 git add .
@@ -98,7 +98,7 @@ git commit -m "Add PostgreSQL for persistent data storage"
 git push origin main
 ```
 
-Railway will automatically:
+Render will automatically:
 - Install `psycopg2-binary`
 - Connect to PostgreSQL
 - Create all database tables
@@ -116,7 +116,7 @@ Railway will automatically:
 
 ### Step 5: Verify in Logs
 
-Check Railway logs for:
+Check Render logs for:
 - `"PostgreSQL (Production)"` message
 - `"Database tables created successfully"`
 - No database connection errors
@@ -125,7 +125,7 @@ Check Railway logs for:
 
 The new backend automatically detects the environment:
 
-**On Railway** (Production):
+**On Render** (Production):
 - Detects `DATABASE_URL` environment variable
 - Connects to PostgreSQL
 - Uses persistent storage
@@ -145,17 +145,17 @@ The new backend automatically detects the environment:
 ✅ **Admin safe** - Edit features without resetting database  
 ✅ **Scalable** - Handles thousands of concurrent users  
 ✅ **Professional** - Industry-standard production setup  
-✅ **Backed up** - Railway automatically backs up PostgreSQL  
-✅ **Free** - Included in Railway free tier
+✅ **Backed up** - Render automatically backs up PostgreSQL  
+✅ **Free** - Included in Render free tier
 
 ## VERIFICATION CHECKLIST
 
 After migration, verify these:
 
-- [ ] Railway dashboard shows PostgreSQL service
+- [ ] Render dashboard shows PostgreSQL service
 - [ ] DATABASE_URL exists in backend environment variables
-- [ ] Railway logs show "PostgreSQL (Production)"
-- [ ] Railway logs show "Database tables created successfully"
+- [ ] Render logs show "PostgreSQL (Production)"
+- [ ] Render logs show "Database tables created successfully"
 - [ ] Register a test user on live site
 - [ ] User remains registered after 5 minutes
 - [ ] Can log in with same credentials
@@ -164,11 +164,11 @@ After migration, verify these:
 ## TROUBLESHOOTING
 
 ### "psycopg2 not found"
-**Solution:** Wait for Railway to finish installing packages from requirements.txt
+**Solution:** Wait for Render to finish installing packages from requirements.txt
 
 ### "Database connection failed"
 **Solution:** 
-1. Verify PostgreSQL service exists in Railway dashboard
+1. Verify PostgreSQL service exists in Render dashboard
 2. Check that DATABASE_URL is set in environment variables
 3. Restart the backend service
 
@@ -177,19 +177,19 @@ After migration, verify these:
 
 ### "Still losing data"
 **Solution:**
-1. Check Railway logs for "PostgreSQL (Production)" (not "SQLite")
+1. Check Render logs for "PostgreSQL (Production)" (not "SQLite")
 2. Verify `final_backend.py` was replaced with PostgreSQL version
 3. Confirm DATABASE_URL environment variable exists
 
 ## COST
 
-**$0** - Railway includes 512MB PostgreSQL in the free tier.  
+**$0** - Render includes 512MB PostgreSQL in the free tier.  
 That's enough for thousands of users and millions of records.
 
 ## TIMELINE
 
 - **Step 1-3:** 5 minutes to set up
-- **Railway deployment:** 2-3 minutes
+- **Render deployment:** 2-3 minutes
 - **Database initialization:** 30 seconds (automatic)
 - **Total time:** ~10 minutes
 - **Data persistence:** Forever! ✅
@@ -204,7 +204,7 @@ Once PostgreSQL is working, consider:
    - Use Cloudinary or AWS S3 for persistent file storage
 
 2. **Set up database backups**
-   - Railway auto-backs up PostgreSQL
+   - Render auto-backs up PostgreSQL
    - Add manual backup scripts for extra safety
 
 3. **Add database migrations**
@@ -223,7 +223,7 @@ Once PostgreSQL is working, consider:
 ## Need Help?
 
 If you run into issues:
-1. Check Railway logs for error messages
+1. Check Render logs for error messages
 2. Verify PostgreSQL service is running
 3. Confirm DATABASE_URL is set
 4. Review POSTGRESQL_SETUP_GUIDE.py for detailed troubleshooting

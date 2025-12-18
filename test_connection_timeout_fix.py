@@ -100,8 +100,8 @@ def test_env_example_documentation():
             content = f.read()
             assert 'DB_CONNECT_TIMEOUT=45' in content, \
                 ".env.example should document DB_CONNECT_TIMEOUT=45"
-            assert '45s' in content and 'Railway' in content, \
-                ".env.example should mention Railway's need for 45s timeout"
+            assert '45s' in content and 'Render' in content, \
+                ".env.example should mention Render's need for 45s timeout"
     except FileNotFoundError:
         raise AssertionError(".env.example not found")
     
@@ -131,7 +131,7 @@ def test_no_10_second_defaults():
                 if re.search(old_timeout_pattern, content):
                     raise AssertionError(
                         f"{filepath} still uses 10s default timeout. "
-                        f"It should be changed to 45s for Railway compatibility."
+                        f"It should be changed to 45s for Render compatibility."
                     )
         except FileNotFoundError:
             raise AssertionError(f"{filepath} not found")
@@ -145,7 +145,7 @@ if __name__ == '__main__':
     print("=" * 70)
     print()
     print("Testing that all database modules use 45s default timeout...")
-    print("This prevents 'Connection timed out' errors with Railway PostgreSQL.")
+    print("This prevents 'Connection timed out' errors with Render PostgreSQL.")
     print()
     
     try:
@@ -162,7 +162,7 @@ if __name__ == '__main__':
         print()
         print("Summary:")
         print("  • All database modules default to 45s connection timeout")
-        print("  • This prevents Railway PostgreSQL connection timeouts")
+        print("  • This prevents Render PostgreSQL connection timeouts")
         print("  • Documentation is updated to reflect the change")
         print()
         

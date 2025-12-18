@@ -60,7 +60,7 @@ T = TypeVar('T')
 # Redis configuration with production-safe defaults
 # Priority order:
 # 1. REDIS_URL (primary - supports rediss:// for SSL)
-# 2. REDIS_PRIVATE_URL (Railway private network)
+# 2. REDIS_PRIVATE_URL (for private network connections)
 # 3. UPSTASH_REDIS_REST_URL (Upstash REST API)
 # 4. REDIS_HOST + REDIS_PORT (component-based configuration)
 

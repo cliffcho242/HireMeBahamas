@@ -376,13 +376,13 @@ exclude = ["frontend*", "tests*"]
 # Check status: Dashboard → Storage → Your Database → Metrics
 ```
 
-### External Postgres (Railway, Supabase, etc.)
+### External Postgres (Render, Supabase, etc.)
 ```bash
-# Railway (1 click):
+# Render (1 click):
 # Dashboard → Database → Settings → Restart
 
-# Railway CLI (1 command):
-railway restart --service database
+# Render CLI (1 command):
+render restart --service database
 
 # Supabase (auto-managed):
 # No manual restart needed - auto-healing

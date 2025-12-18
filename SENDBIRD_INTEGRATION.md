@@ -166,7 +166,7 @@ Add custom CSS to override Sendbird styles. See `SENDBIRD_SETUP_GUIDE.md` for ex
 
 ## Production Deployment
 
-1. **Add to Vercel/Railway environment variables**:
+1. **Add to Vercel/Render environment variables**:
    - Go to your deployment dashboard
    - Add `VITE_SENDBIRD_APP_ID` environment variable
    - Redeploy

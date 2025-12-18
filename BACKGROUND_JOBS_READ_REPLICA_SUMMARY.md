@@ -81,7 +81,7 @@ Created detailed guides for developers:
 - Architecture overview
 - Setup instructions for Celery, RQ, Redis
 - Code examples for all task types
-- Production deployment (Docker, Railway, Vercel)
+- Production deployment (Docker, Render, Vercel)
 - Monitoring and troubleshooting
 - Best practices
 
@@ -244,7 +244,7 @@ celery -A backend_app.core.celery_app flower --port=5555
 
 ## Production Deployment
 
-### Railway:
+### Render:
 1. Add Redis service
 2. Add worker services:
    - Celery Worker: `celery -A backend_app.core.celery_app worker -Q emails`
@@ -253,7 +253,7 @@ celery -A backend_app.core.celery_app flower --port=5555
 ### Vercel + Upstash:
 1. Create Upstash Redis
 2. Set `REDIS_URL` in Vercel
-3. Deploy workers on Railway/Render
+3. Deploy workers on Render/Render
 
 ### Neon Read Replica:
 1. Create read replica in Neon Console

@@ -83,8 +83,8 @@ python scripts/verify_vercel_postgres_migration.py
 - `0`: All checks passed
 - `1`: One or more checks failed
 
-#### `migrate_railway_to_vercel.sh` (Shell)
-Zero-downtime migration from Railway Postgres to Vercel Postgres (Neon).
+#### `migrate_render_to_vercel.sh` (Shell)
+Zero-downtime migration from Render Postgres to Vercel Postgres (Neon).
 
 **Features:**
 - Parallel export/import with 8 jobs
@@ -96,26 +96,26 @@ Zero-downtime migration from Railway Postgres to Vercel Postgres (Neon).
 ```bash
 export RAILWAY_DATABASE_URL='postgresql://...'
 export VERCEL_POSTGRES_URL='postgresql://...'
-./scripts/migrate_railway_to_vercel.sh
+./scripts/migrate_render_to_vercel.sh
 ```
 
-#### `migrate_railway_to_vercel.py` (Python)
+#### `migrate_render_to_vercel.py` (Python)
 Python version of the migration script with identical functionality.
 
 **Usage:**
 ```bash
 export RAILWAY_DATABASE_URL='postgresql://...'
 export VERCEL_POSTGRES_URL='postgresql://...'
-python scripts/migrate_railway_to_vercel.py
+python scripts/migrate_render_to_vercel.py
 
 # Set old database to read-only after migration
-python scripts/migrate_railway_to_vercel.py --set-readonly
+python scripts/migrate_render_to_vercel.py --set-readonly
 ```
 
 **Complete Migration Workflow:**
 ```bash
 # 1. Export and import data
-python scripts/migrate_railway_to_vercel.py
+python scripts/migrate_render_to_vercel.py
 
 # 2. Verify migration success
 python scripts/verify_vercel_postgres_migration.py
@@ -125,7 +125,7 @@ python scripts/verify_vercel_postgres_migration.py
 # 4. Test application
 
 # 5. Set old database to read-only (7-day grace period)
-python scripts/migrate_railway_to_vercel.py --set-readonly
+python scripts/migrate_render_to_vercel.py --set-readonly
 ```
 
 For complete migration documentation, see:
@@ -489,7 +489,7 @@ jobs:
         run: python scripts/verify_installation.py
 ```
 
-### Railway
+### Render
 
 Add to `nixpacks.toml`:
 ```toml

@@ -52,7 +52,7 @@ gunicorn backend.app.main:app
 | `render.yaml` | ✅ YES | ❌ NO | ✅ CORRECT |
 | `Procfile` | ✅ YES | ❌ NO | ✅ CORRECT |
 | `backend/Procfile` | ✅ YES | ❌ NO | ✅ CORRECT |
-| `railway.toml` | ✅ YES | ❌ NO | ✅ CORRECT |
+| `render.toml` | ✅ YES | ❌ NO | ✅ CORRECT |
 | `nixpacks.toml` | ✅ YES | ❌ NO | ✅ CORRECT |
 
 ---

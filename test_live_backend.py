@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Test the live Railway backend to diagnose 404 errors on auth routes."""
+"""Test the live Render backend to diagnose 404 errors on auth routes."""
 
 import requests
 import json
 
-BACKEND_URL = "https://hiremebahamas-backend.railway.app"
+BACKEND_URL = "https://hiremebahamas-backend.render.app"
 
-print("🔍 Testing HireBahamas Railway Backend")
+print("🔍 Testing HireBahamas Render Backend")
 print("=" * 60)
 
 # Test 1: Health Check

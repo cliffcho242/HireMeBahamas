@@ -75,7 +75,7 @@ def test_nixpacks_build():
             return False
 
     except FileNotFoundError:
-        print("⚠️ nixpacks CLI not found (this is OK for Railway)")
+        print("⚠️ nixpacks CLI not found (this is OK for Render)")
         return True
     except Exception as e:
         print(f"⚠️ Could not test nixpacks: {e}")
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     print("\n" + "=" * 40)
     if toml_valid:
         print("✅ Configuration is ready for deployment!")
-        print("🚀 You can now deploy to Railway")
+        print("🚀 You can now deploy to Render")
     else:
         print("❌ Fix configuration before deploying")
 

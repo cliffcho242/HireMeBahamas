@@ -6,7 +6,7 @@ Deployment fails with "gunicorn: error: unrecognized arguments"
 
 ## Root Cause
 
-The deployment platform (Render, Railway, or Heroku) has a **multi-line command with backslashes** configured in the "Start Command" field. When this command is executed, the backslashes (`\`) and extra whitespace are treated as **literal arguments** instead of line continuation characters, causing gunicorn to fail with "unrecognized arguments".
+The deployment platform (Render, Render, or Heroku) has a **multi-line command with backslashes** configured in the "Start Command" field. When this command is executed, the backslashes (`\`) and extra whitespace are treated as **literal arguments** instead of line continuation characters, causing gunicorn to fail with "unrecognized arguments".
 
 ## Why This Happens
 
@@ -17,7 +17,7 @@ Multi-line shell commands with backslashes are valid in:
 - ✅ Documentation examples
 
 But they **DO NOT work** in:
-- ❌ Deployment platform web dashboards (Render, Railway, Heroku)
+- ❌ Deployment platform web dashboards (Render, Render, Heroku)
 - ❌ YAML string values (unless properly escaped)
 - ❌ JSON string values
 - ❌ Environment variable values
@@ -28,7 +28,7 @@ But they **DO NOT work** in:
 
 Check where your application is deployed:
 - **Render**: Dashboard at https://dashboard.render.com
-- **Railway**: Dashboard at https://railway.app
+- **Render**: Dashboard at https://render.app
 - **Heroku**: Dashboard at https://dashboard.heroku.com
 
 ### Step 2: Update Start Command
@@ -42,7 +42,7 @@ Go to your service settings and replace the multi-line command with a **single-l
 cd backend && gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info
 ```
 
-**Railway - Use railway.toml or set Start Command:**
+**Render - Use render.toml or set Start Command:**
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
@@ -59,7 +59,7 @@ web: gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWor
 gunicorn final_backend_postgresql:application --config gunicorn.conf.py --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --log-level info
 ```
 
-**Railway - Start Command:**
+**Render - Start Command:**
 ```bash
 gunicorn final_backend_postgresql:application --config gunicorn.conf.py
 ```
@@ -109,13 +109,13 @@ If you're running FastAPI and using plain Gunicorn (not with Uvicorn workers), y
 7. Click "Save Changes"
 8. Go to "Manual Deploy" → "Deploy latest commit"
 
-### Railway Dashboard
+### Render Dashboard
 
-1. Go to https://railway.app
+1. Go to https://render.app
 2. Select your project
 3. Click on the backend service
 4. Go to "Settings" tab
-5. Look for "Start Command" or check `railway.toml` file
+5. Look for "Start Command" or check `render.toml` file
 6. Update to single-line command (see examples above)
 7. Redeploy the service
 
@@ -132,7 +132,7 @@ services:
     startCommand: cd backend && gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info
 ```
 
-**railway.toml** (already configured correctly):
+**render.toml** (already configured correctly):
 ```toml
 [deploy]
 startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
@@ -171,7 +171,7 @@ After fixing the command and redeploying:
 To prevent this issue in the future:
 
 1. ✅ **Always use single-line commands in deployment dashboards**
-2. ✅ **Use configuration files (render.yaml, railway.toml, Procfile)**
+2. ✅ **Use configuration files (render.yaml, render.toml, Procfile)**
 3. ✅ **Test commands locally first**: `python -c "import app.main"`
 4. ✅ **Check GUNICORN_ENTRY_POINTS.md for correct commands**
 5. ❌ **Never copy multi-line commands with `\` into web dashboards**
@@ -180,12 +180,12 @@ To prevent this issue in the future:
 
 - [GUNICORN_ENTRY_POINTS.md](./GUNICORN_ENTRY_POINTS.md) - Complete entry points reference
 - [render.yaml](./render.yaml) - Render configuration (already correct)
-- [railway.toml](./railway.toml) - Railway configuration (already correct)
+- [render.toml](./render.toml) - Render configuration (already correct)
 - [Procfile](./Procfile) - Platform-agnostic configuration (already correct)
 
 ## Quick Checklist
 
-- [ ] Identified deployment platform (Render/Railway/Heroku)
+- [ ] Identified deployment platform (Render/Render/Heroku)
 - [ ] Updated start command to single-line format
 - [ ] Used correct entry point (`app.main:app` for FastAPI, `final_backend_postgresql:application` for Flask)
 - [ ] Removed any backslashes or line breaks from command
@@ -201,6 +201,6 @@ If the error persists after following this guide:
 1. Share the exact start command you're using
 2. Share the complete deployment logs
 3. Confirm which platform you're deploying to
-4. Check if you're using configuration files (render.yaml, railway.toml) or dashboard settings
+4. Check if you're using configuration files (render.yaml, render.toml) or dashboard settings
 
 The issue is almost always that a multi-line command with backslashes is being used in a context where it should be a single-line command.

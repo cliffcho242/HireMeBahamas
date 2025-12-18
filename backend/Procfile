@@ -2,7 +2,7 @@
 # HireMeBahamas Procfile - Production FastAPI Configuration
 # =============================================================================
 # 
-# This Procfile is for Railway/Heroku deployments where root directory is 'backend/'
+# This Procfile is for Render/Heroku deployments where root directory is 'backend/'
 # For Render, see render.yaml in the root directory
 #
 # ✅ FINAL "DO NOT EVER DO" LIST COMPLIANT:

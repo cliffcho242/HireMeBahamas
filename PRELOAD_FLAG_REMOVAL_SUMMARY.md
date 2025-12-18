@@ -35,7 +35,7 @@ gunicorn final_backend_postgresql:application --config gunicorn.conf.py --preloa
 4. **Health Check Problems**
    - Server can't respond to health checks until full app loads
    - Deployment systems may mark service as failed during initialization
-   - Railway/Render healthchecks timeout
+   - Render/Render healthchecks timeout
 
 ---
 
@@ -272,7 +272,7 @@ grep -r "\-\-preload" --include="*.sh" --include="*.py" | grep -v "# "
 
 ## 📚 Related Documentation
 
-- `RAILWAY_HEALTHCHECK_FIX_SUMMARY.md` - Why preload_app=False fixed Railway deployments
+- `RAILWAY_HEALTHCHECK_FIX_SUMMARY.md` - Why preload_app=False fixed Render deployments
 - `SECURITY_SUMMARY_RAILWAY_HEALTHCHECK_FIX.md` - Security implications of preload
 - `gunicorn.conf.py` - Current safe configuration
 - `start.sh` - Current safe startup script

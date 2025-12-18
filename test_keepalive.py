@@ -81,18 +81,18 @@ def test_keepalive_production_config():
     return True
 
 
-def test_keepalive_railway_config():
-    """Test keepalive is enabled on Railway even without explicit production flag"""
+def test_keepalive_render_config():
+    """Test keepalive is enabled on Render even without explicit production flag"""
     print("\n" + "=" * 70)
-    print("Testing Keepalive Railway Configuration")
+    print("Testing Keepalive Render Configuration")
     print("=" * 70)
     
-    # Test: Railway environment should enable keepalive
+    # Test: Render environment should enable keepalive
     # This tests the fix for "Postgres sleeping since 15 hours ago" issue
-    os.environ['RAILWAY_PROJECT_ID'] = 'some-railway-project-id'
+    os.environ['RENDER_SERVICE_ID'] = 'some-render-project-id'
     os.environ['ENVIRONMENT'] = 'development'  # Explicitly NOT production
     os.environ['DATABASE_URL'] = 'postgresql://user:pass@host:5432/db'
-    os.environ.pop('RAILWAY_ENVIRONMENT', None)  # No explicit Railway environment
+    os.environ.pop('RENDER_ENVIRONMENT', None)  # No explicit Render environment
     
     # Clear the module cache to reimport with new settings
     if 'final_backend_postgresql' in sys.modules:
@@ -115,10 +115,10 @@ def test_keepalive_railway_config():
     sys.modules['jwt'] = Mock()
     sys.modules['dotenv'] = Mock()
     
-    print("\n1. Verifying keepalive enabled on Railway without production flag...")
-    print("   ✅ RAILWAY_PROJECT_ID is set (simulating Railway deployment)")
+    print("\n1. Verifying keepalive enabled on Render without production flag...")
+    print("   ✅ RENDER_SERVICE_ID is set (simulating Render deployment)")
     print("   ✅ ENVIRONMENT=development (NOT production)")
-    print("   ✅ RAILWAY_ENVIRONMENT not set (no explicit production)")
+    print("   ✅ RENDER_ENVIRONMENT not set (no explicit production)")
     print("   ✅ DATABASE_URL is set")
     print("   ✅ Keepalive should still be enabled because IS_RAILWAY=True")
     
@@ -126,11 +126,11 @@ def test_keepalive_railway_config():
     # reload issues, but we've tested the logic manually above
     
     # Clean up all modified environment variables to avoid affecting subsequent tests
-    os.environ.pop('RAILWAY_PROJECT_ID', None)
+    os.environ.pop('RENDER_SERVICE_ID', None)
     os.environ.pop('ENVIRONMENT', None)
     os.environ.pop('DATABASE_URL', None)
     
-    print("\n✅ Railway configuration test passed!")
+    print("\n✅ Render configuration test passed!")
     return True
 
 
@@ -213,7 +213,7 @@ def main():
     tests = [
         test_keepalive_configuration,
         test_keepalive_production_config,
-        test_keepalive_railway_config,
+        test_keepalive_render_config,
         test_keepalive_worker_logic,
         test_keepalive_interval_configuration,
     ]

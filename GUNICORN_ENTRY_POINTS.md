@@ -19,7 +19,7 @@ For this project, use these **recommended** entry points:
 
 ### Single-Line Commands for Deployment Dashboards
 
-**IMPORTANT:** When configuring deployment platforms (Render, Railway, Heroku, etc.) through their web dashboard:
+**IMPORTANT:** When configuring deployment platforms (Render, Render, Heroku, etc.) through their web dashboard:
 - **ALWAYS use single-line commands** (no backslashes or line breaks)
 - Multi-line commands with `\` are ONLY for shell scripts
 - Copy-pasting multi-line commands into dashboard fields will cause parsing errors
@@ -36,7 +36,7 @@ The Flask backend is defined in `final_backend_postgresql.py` and provides a tra
 
 ### Recommended Entry Point
 
-**For Deployment Dashboards (Render, Railway, Heroku) - SINGLE LINE:**
+**For Deployment Dashboards (Render, Render, Heroku) - SINGLE LINE:**
 ```bash
 gunicorn final_backend_postgresql:application --config gunicorn.conf.py --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --graceful-timeout 30 --log-level info
 ```
@@ -101,7 +101,7 @@ cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
 For production deployments, use Gunicorn for worker management with Uvicorn workers:
 
-**For Deployment Dashboards (Render, Railway, Heroku) - SINGLE LINE:**
+**For Deployment Dashboards (Render, Render, Heroku) - SINGLE LINE:**
 ```bash
 gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --preload --log-level info
 ```
@@ -151,7 +151,7 @@ CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 
 **Entry Point:** `app.main:app` (FastAPI via wrapper)
 
-### railway.toml
+### render.toml
 
 ```toml
 [deploy]
@@ -239,7 +239,7 @@ cd backend && gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.U
 gunicorn final_backend_postgresql:application --config gunicorn.conf.py
 ```
 
-### Railway
+### Render
 
 **Start Command (FastAPI):**
 ```bash
@@ -304,7 +304,7 @@ To verify the correct entry point is being used:
 **Cause:** Command with backslashes was copied into a deployment dashboard field, causing the backslashes and extra whitespace to be treated as literal arguments.
 
 **Solution:**
-1. Go to your deployment platform dashboard (Render, Railway, etc.)
+1. Go to your deployment platform dashboard (Render, Render, etc.)
 2. Find the "Start Command" or "Run Command" field
 3. Replace it with a **single-line command** (no backslashes or line breaks)
 4. Use one of the recommended commands from this document
@@ -312,8 +312,8 @@ To verify the correct entry point is being used:
 **Example Fix for Render:**
 - ✅ **Correct:** `cd backend && gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info`
 
-**Example Fix for Railway:**
-- Use railway.toml or nixpacks.toml instead of manual commands
+**Example Fix for Render:**
+- Use render.toml or nixpacks.toml instead of manual commands
 - Or set single-line command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
 ### Error: "ModuleNotFoundError: No module named 'app'"

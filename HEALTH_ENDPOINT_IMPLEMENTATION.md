@@ -113,7 +113,7 @@ The port is configured via deployment settings:
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-### Railway Deployment
+### Render Deployment
 - Port is automatically assigned via `$PORT` environment variable
 - No manual configuration needed
 

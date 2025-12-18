@@ -323,7 +323,7 @@ engine = create_async_engine(
 
 #### Add More Servers
 1. Deploy multiple instances
-2. Use load balancer (Railway/Render auto-scaling)
+2. Use load balancer (Render/Render auto-scaling)
 3. Shared PostgreSQL database
 4. Shared Redis cache
 
@@ -400,7 +400,7 @@ DB_CONNECT_TIMEOUT=5       # Connection timeout (seconds)
 DB_COMMAND_TIMEOUT=30      # Query timeout (seconds)
 ```
 
-### Railway Configuration
+### Render Configuration
 
 ```json
 {

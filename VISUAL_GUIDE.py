@@ -8,7 +8,7 @@
 
 Day 1:
 ┌──────────────────┐
-│  Railway Server  │
+│  Render Server  │
 │                  │
 │  ┌────────────┐  │
 │  │ Flask App  │  │
@@ -23,7 +23,7 @@ Day 1:
 
 Day 2 (After restart/deployment):
 ┌──────────────────┐
-│  Railway Server  │
+│  Render Server  │
 │                  │
 │  ┌────────────┐  │
 │  │ Flask App  │  │
@@ -37,7 +37,7 @@ Day 2 (After restart/deployment):
 └──────────────────┘
 
 WHY THIS HAPPENS:
-Railway containers use EPHEMERAL file systems.
+Render containers use EPHEMERAL file systems.
 Every restart = Fresh container = All files deleted!
 
 
@@ -47,7 +47,7 @@ Every restart = Fresh container = All files deleted!
 
 Day 1:
 ┌──────────────────┐          ┌────────────────────┐
-│  Railway Server  │          │ Railway PostgreSQL │
+│  Render Server  │          │ Render PostgreSQL │
 │                  │          │    (Separate       │
 │  ┌────────────┐  │          │     Service)       │
 │  │ Flask App  │  │          │                    │
@@ -63,7 +63,7 @@ Day 1:
 
 Day 2 (After restart/deployment):
 ┌──────────────────┐          ┌────────────────────┐
-│  Railway Server  │          │ Railway PostgreSQL │
+│  Render Server  │          │ Render PostgreSQL │
 │  (NEW CONTAINER) │          │                    │
 │  ┌────────────┐  │          │  ┌──────────────┐  │
 │  │ Flask App  │  │          │  │  Users Table │  │
@@ -85,11 +85,11 @@ Container restarts don't affect the database!
 │                    RAILWAY SETUP - STEP BY STEP                  │
 └─────────────────────────────────────────────────────────────────┘
 
-STEP 1: Go to Railway Dashboard
-https://railway.app
+STEP 1: Go to Render Dashboard
+https://render.app
 
 ┌──────────────────────────────────────────────────┐
-│ Railway Project: HireMeBahamas                   │
+│ Render Project: HireMeBahamas                   │
 │                                                  │
 │  Current Services:                               │
 │  ┌────────────────┐                              │
@@ -123,7 +123,7 @@ STEP 3: Choose PostgreSQL
 └──────────────────────────────────────────────────┘
 
 
-STEP 4: Railway Automatically Creates:
+STEP 4: Render Automatically Creates:
 ┌──────────────────────────────────────────────────┐
 │ ✅ PostgreSQL database created                   │
 │ ✅ DATABASE_URL variable set automatically       │
@@ -136,7 +136,7 @@ STEP 4: Railway Automatically Creates:
 
 STEP 5: Your New Setup
 ┌──────────────────────────────────────────────────┐
-│ Railway Project: HireMeBahamas                   │
+│ Render Project: HireMeBahamas                   │
 │                                                  │
 │  Services:                                       │
 │  ┌────────────────┐    ┌──────────────────┐     │
@@ -185,13 +185,13 @@ User tries login → "Login successful" ✅
 # 1. Run migration script
 python migrate_to_postgresql.py
 
-# 2. Deploy to Railway
+# 2. Deploy to Render
 git add .
 git commit -m "Add PostgreSQL for persistent storage"
 git push origin main
 
 # 3. Check logs
-# Go to Railway dashboard → Backend service → Logs
+# Go to Render dashboard → Backend service → Logs
 # Look for: "PostgreSQL (Production)" ✅
 
 # 4. Test your site
@@ -239,7 +239,7 @@ After successful migration, you'll see:
 ✅ Data survives deployments
 ✅ Admin can edit code without data loss
 ✅ Multiple users can use the app simultaneously
-✅ Railway logs show "PostgreSQL (Production)"
+✅ Render logs show "PostgreSQL (Production)"
 ✅ No more "User not found" errors
 ✅ Professional production-ready database
 
@@ -249,15 +249,15 @@ After successful migration, you'll see:
 └─────────────────────────────────────────────────────────────────┘
 
 Problem: "psycopg2 not found"
-Solution: Wait for Railway to finish installing packages
+Solution: Wait for Render to finish installing packages
          Check requirements.txt includes psycopg2-binary
 
 Problem: "Connection refused"
-Solution: Verify PostgreSQL service is running in Railway
+Solution: Verify PostgreSQL service is running in Render
          Check DATABASE_URL exists in environment variables
 
 Problem: "Still losing data"
-Solution: Check Railway logs for "SQLite" (should say PostgreSQL)
+Solution: Check Render logs for "SQLite" (should say PostgreSQL)
          Verify final_backend.py was replaced correctly
          Make sure DATABASE_URL is set
 
@@ -271,19 +271,19 @@ Solution: Database creates tables automatically on first run
 └─────────────────────────────────────────────────────────────────┘
 
 Current Problem:
-  Railway deletes SQLite file → All data lost ❌
+  Render deletes SQLite file → All data lost ❌
 
 Solution:
   Use PostgreSQL (separate persistent service) → Data saved forever ✅
 
 Action Required:
-  1. Add PostgreSQL in Railway dashboard (2 min)
+  1. Add PostgreSQL in Render dashboard (2 min)
   2. Run: python migrate_to_postgresql.py
   3. Deploy: git push origin main
   4. Test: Register user, wait, login again
   5. ✅ Done! Never lose data again!
 
-Cost: $0 (Railway free tier includes PostgreSQL)
+Cost: $0 (Render free tier includes PostgreSQL)
 Time: 5 minutes
 Result: Professional, persistent, production-ready database
 

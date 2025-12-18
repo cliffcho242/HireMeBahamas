@@ -492,9 +492,9 @@ curl -I https://your-domain.com | grep -E "X-Content-Type-Options|X-Frame-Option
 
 - [ ] **Preview deployments secured** (if needed)
 
-#### Railway Backend Deployment
+#### Render Backend Deployment
 
-- [ ] **Environment variables set in Railway Dashboard**
+- [ ] **Environment variables set in Render Dashboard**
   - DATABASE_PRIVATE_URL (for zero egress) or DATABASE_URL
   - SECRET_KEY (same as Vercel)
   - JWT_SECRET_KEY (same as Vercel)
@@ -504,7 +504,7 @@ curl -I https://your-domain.com | grep -E "X-Content-Type-Options|X-Frame-Option
 
 - [ ] **Health checks configured**
   ```bash
-  # Railway checks /health endpoint every 5 minutes
+  # Render checks /health endpoint every 5 minutes
   ```
 
 - [ ] **Private networking enabled** (if available)

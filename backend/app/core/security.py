@@ -23,7 +23,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
 # =============================================================================
 # COOKIE CONFIGURATION - SAFARI & CROSS-ORIGIN COMPATIBLE
 # =============================================================================
-# Critical settings for Vercel (frontend) ↔ Railway/Render (backend) authentication
+# Critical settings for Vercel (frontend) ↔ Render (backend) authentication
 # 
 # MUST-HAVE for Safari/iPhone support:
 # - SameSite=None: Required for cross-origin requests (frontend on different domain than backend)

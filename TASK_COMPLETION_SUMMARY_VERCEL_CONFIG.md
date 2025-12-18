@@ -43,7 +43,7 @@ This PR adds comprehensive documentation and tooling to help developers understa
 #### **Updated frontend/.env.example** (2,698 bytes)
 - Clearer instructions for different environments
 - Explicit guidance on when to set vs. not set VITE_API_URL
-- Examples for local development, Vercel, and Railway
+- Examples for local development, Vercel, and Render
 
 ### 3. Validation Tooling
 
@@ -88,7 +88,7 @@ JWT_SECRET_KEY=your-random-32-char-jwt-secret
 # Do NOT set VITE_API_URL - frontend auto-detects
 ```
 
-**For Separate Backend (Railway, etc.):**
+**For Separate Backend (Render, etc.):**
 ```bash
 # Additionally set:
 VITE_API_URL=https://your-backend-url.com

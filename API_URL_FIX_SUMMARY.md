@@ -133,13 +133,13 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 # This means frontend and backend are on the same domain
 ```
 
-### For Railway/Render Backend
+### For Render/Render Backend
 ```bash
 # Vite/React apps
-VITE_API_URL=https://your-app.up.railway.app
+VITE_API_URL=https://your-app.up.render.app
 
 # Next.js apps
-NEXT_PUBLIC_API_URL=https://your-app.up.railway.app
+NEXT_PUBLIC_API_URL=https://your-app.up.render.app
 ```
 
 ---
@@ -159,14 +159,14 @@ API URL: https://your-backend.com
 ### 2. Verify API Calls
 Watch the Network tab in DevTools. API calls should go to:
 - Same origin (e.g., `https://yoursite.vercel.app/api/login`) - if VITE_API_URL is undefined
-- Your backend URL (e.g., `https://backend.railway.app/api/login`) - if VITE_API_URL is set
+- Your backend URL (e.g., `https://backend.render.app/api/login`) - if VITE_API_URL is set
 
 ### 3. Test Different Scenarios
 
 | Scenario | VITE_API_URL Value | Expected Behavior |
 |----------|-------------------|-------------------|
 | Vercel Serverless | `undefined` | Uses `window.location.origin` ✅ |
-| Railway Backend | `https://app.railway.app` | Uses Railway URL ✅ |
+| Render Backend | `https://app.render.app` | Uses Render URL ✅ |
 | Local Dev | `http://localhost:8000` | Uses localhost ✅ |
 | Empty String | `""` | Falls back to `window.location.origin` ✅ |
 | Malformed | `not-a-url` | May cause errors ❌ |
@@ -206,9 +206,9 @@ Watch the Network tab in DevTools. API calls should go to:
 - [ ] Backend code in `/api` directory
 - [ ] Frontend uses relative paths (`/api/...`)
 
-### Vercel Frontend + Railway/Render Backend
+### Vercel Frontend + Render/Render Backend
 - [ ] Set VITE_API_URL in Vercel dashboard
-- [ ] Point to full backend URL (e.g., `https://app.railway.app`)
+- [ ] Point to full backend URL (e.g., `https://app.render.app`)
 - [ ] Configure CORS on backend
 
 ### Local Development

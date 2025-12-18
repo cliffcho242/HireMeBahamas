@@ -16,18 +16,18 @@ echo    ✅ Frontend: DEPLOYED
 echo       URL: https://hiremebahamas-backend-earawsqiw-cliffs-projects-a84c76c9.vercel.app
 echo.
 echo    ⏳ Backend:  PENDING
-echo       Platform: Railway.app
+echo       Platform: Render.app
 echo.
 echo ═══════════════════════════════════════════════════════════════
 echo.
 echo 📋 DEPLOYMENT MENU:
 echo.
-echo    [1] Deploy Backend to Railway (Guided)
+echo    [1] Deploy Backend to Render (Guided)
 echo    [2] Connect Frontend to Backend
 echo    [3] Test Deployment (Health Checks)
 echo    [4] View Deployment Status
 echo    [5] Open Frontend in Browser
-echo    [6] Open Backend Dashboard (Railway)
+echo    [6] Open Backend Dashboard (Render)
 echo    [7] View All URLs
 echo    [0] Exit
 echo.
@@ -41,7 +41,7 @@ if "%choice%"=="2" goto connect_frontend
 if "%choice%"=="3" goto test_deployment
 if "%choice%"=="4" goto view_status
 if "%choice%"=="5" goto open_frontend
-if "%choice%"=="6" goto open_railway
+if "%choice%"=="6" goto open_render
 if "%choice%"=="7" goto view_urls
 if "%choice%"=="0" goto end
 
@@ -53,7 +53,7 @@ goto start
 :deploy_backend
 cls
 echo.
-echo 🚂 Deploying Backend to Railway...
+echo 🚂 Deploying Backend to Render...
 echo.
 powershell.exe -ExecutionPolicy Bypass -File "DEPLOY_BACKEND_RAILWAY.ps1"
 pause
@@ -103,10 +103,10 @@ echo 🌐 Opening Frontend...
 start https://hiremebahamas-backend-earawsqiw-cliffs-projects-a84c76c9.vercel.app
 goto start
 
-:open_railway
+:open_render
 echo.
-echo 🚂 Opening Railway Dashboard...
-start https://railway.app/dashboard
+echo 🚂 Opening Render Dashboard...
+start https://render.app/dashboard
 goto start
 
 :view_urls
@@ -121,7 +121,7 @@ echo.
 echo 🌐 FRONTEND (Vercel):
 echo    https://hiremebahamas-backend-earawsqiw-cliffs-projects-a84c76c9.vercel.app
 echo.
-echo 🔧 BACKEND (Railway):
+echo 🔧 BACKEND (Render):
 echo    [Deploy using Option 1 in menu]
 echo.
 echo 📄 LEGAL PAGES:

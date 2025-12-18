@@ -75,14 +75,14 @@ curl https://your-project.vercel.app/api/health
 
 ## RECOMMENDED: Quick Free Deployment
 
-**🔗 [Complete Database Connection Guide](./DATABASE_CONNECTION_GUIDE.md)** - Essential reading! Step-by-step instructions with direct links for connecting your database on Vercel, Railway, or Render.
+**🔗 [Complete Database Connection Guide](./DATABASE_CONNECTION_GUIDE.md)** - Essential reading! Step-by-step instructions with direct links for connecting your database on Vercel, Render, or Render.
 
-### Option 1: Vercel (Frontend) + Railway (Backend)
+### Option 1: Vercel (Frontend) + Render (Backend)
 
-#### A. Deploy Backend to Railway
+#### A. Deploy Backend to Render
 
-1. **Create Railway Account:**
-   - Go to: https://railway.app
+1. **Create Render Account:**
+   - Go to: https://render.app
    - Sign up with GitHub
 
 2. **Create New Project:**
@@ -93,7 +93,7 @@ curl https://your-project.vercel.app/api/health
    ```
 
 3. **Configure Backend:**
-   Create `railway.json` in root:
+   Create `render.json` in root:
    ```json
    {
      "build": {
@@ -107,18 +107,18 @@ curl https://your-project.vercel.app/api/health
    }
    ```
 
-4. **Add Environment Variables in Railway:**
+4. **Add Environment Variables in Render:**
    ```
    SECRET_KEY=your-production-secret-key-here
-   DATABASE_URL=postgresql://... (Railway provides this)
+   DATABASE_URL=postgresql://... (Render provides this)
    FLASK_ENV=production
    ```
    
-   📖 **[Detailed DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Complete step-by-step instructions for adding PostgreSQL to Railway.
+   📖 **[Detailed DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Complete step-by-step instructions for adding PostgreSQL to Render.
 
 5. **Deploy:**
-   - Railway auto-deploys on git push
-   - Get your backend URL: `https://your-app.railway.app`
+   - Render auto-deploys on git push
+   - Get your backend URL: `https://your-app.render.app`
 
 #### B. Deploy Frontend to Vercel
 
@@ -142,8 +142,8 @@ curl https://your-project.vercel.app/api/health
 
 4. **Add Environment Variables in Vercel:**
    ```
-   VITE_API_URL=https://your-backend.railway.app
-   VITE_SOCKET_URL=https://your-backend.railway.app
+   VITE_API_URL=https://your-backend.render.app
+   VITE_SOCKET_URL=https://your-backend.render.app
    ```
 
 5. **Deploy:**
@@ -169,10 +169,10 @@ Go to: **Vercel Dashboard** → **Your Project** → **Settings** → **Environm
 
 **Direct Link:** `https://vercel.com/[your-team]/[project-name]/settings/environment-variables`
 
-##### For Railway Backend:
+##### For Render Backend:
 ```bash
-VITE_API_URL=https://your-backend.up.railway.app
-VITE_SOCKET_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
+VITE_SOCKET_URL=https://your-backend.up.render.app
 ```
 
 ##### For Render Backend:
@@ -203,7 +203,7 @@ VITE_SOCKET_URL=https://your-backend.onrender.com
 curl https://your-frontend.vercel.app
 
 # Check browser console to see detected API URL:
-# Should log: "API Base URL: https://your-backend.up.railway.app"
+# Should log: "API Base URL: https://your-backend.up.render.app"
 ```
 
 **📖 For detailed troubleshooting and examples, see:** [VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md](./VERCEL_FRONTEND_ENV_QUICK_REFERENCE.md)
@@ -312,7 +312,7 @@ curl https://your-frontend.vercel.app
 
 For production, migrate to PostgreSQL:
 
-### On Railway/DigitalOcean:
+### On Render/DigitalOcean:
 
 1. **Create PostgreSQL database**
 2. **Update connection string:**
@@ -407,7 +407,7 @@ For production, migrate to PostgreSQL:
 ```
 A Record: @ → Your server IP
 A Record: www → Your server IP
-CNAME: api → your-backend.railway.app (if using Railway)
+CNAME: api → your-backend.render.app (if using Render)
 ```
 
 ---
@@ -460,7 +460,7 @@ sentry_sdk.init(dsn="your-sentry-dsn")
 ## Timeline
 
 ### Week 1: Deploy to Free Platforms
-- Deploy backend to Railway
+- Deploy backend to Render
 - Deploy frontend to Vercel
 - Test thoroughly
 
@@ -485,7 +485,7 @@ sentry_sdk.init(dsn="your-sentry-dsn")
 ## Cost Breakdown
 
 ### Free Option (Recommended for Start):
-- **Railway Backend:** Free tier (500 hrs/month)
+- **Render Backend:** Free tier (500 hrs/month)
 - **Vercel Frontend:** Free tier (unlimited)
 - **Domain:** $8.88/year (optional)
 - **Total:** ~$0-9/year
@@ -501,7 +501,7 @@ sentry_sdk.init(dsn="your-sentry-dsn")
 ## Next Steps
 
 1. **Push code to GitHub** (if not already)
-2. **Choose deployment platform** (Railway + Vercel recommended)
+2. **Choose deployment platform** (Render + Vercel recommended)
 3. **Deploy backend first**
 4. **Deploy frontend** 
 5. **Test thoroughly**
@@ -515,7 +515,7 @@ sentry_sdk.init(dsn="your-sentry-dsn")
 
 ## Resources
 
-- **Railway Docs:** https://docs.railway.app
+- **Render Docs:** https://docs.render.app
 - **Vercel Docs:** https://vercel.com/docs
 - **DigitalOcean Tutorials:** https://www.digitalocean.com/community/tutorials
 - **Flask Deployment:** https://flask.palletsprojects.com/en/2.3.x/deploying/

@@ -35,7 +35,7 @@ Removed ALL SSL parameters from `connect_args` in all database configuration fil
 - Breaking changes: None
 - Configuration: Uses existing DATABASE_URL
 
-### 2. backend/test_railway_postgres_settings.py
+### 2. backend/test_render_postgres_settings.py
 ```diff
 - # Test 11: Verify SSL require is set (NUCLEAR FIX)
 - assert connect_args.get("ssl") == "require"
@@ -124,9 +124,9 @@ DATABASE_URL=postgresql://user:password@host:5432/database?sslmode=require
 
 ### Platform-Specific Examples
 
-#### Railway
+#### Render
 ```bash
-DATABASE_URL=postgresql://postgres:pass@containers-us-west-XX.railway.app:5432/railway?sslmode=require
+DATABASE_URL=postgresql://postgres:pass@containers-us-west-XX.render.app:5432/render?sslmode=require
 ```
 
 #### Render
@@ -209,5 +209,5 @@ This fix ensures stable database connections by eliminating SSL configuration co
 **Date**: December 16, 2025  
 **PR**: copilot/update-database-ssl-requirements  
 **Commit**: 6be3381  
-**Files Modified**: app/database.py, backend/test_railway_postgres_settings.py  
+**Files Modified**: app/database.py, backend/test_render_postgres_settings.py  
 **Test Coverage**: 100% (all database configuration files verified)

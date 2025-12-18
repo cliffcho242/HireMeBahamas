@@ -15,15 +15,15 @@ Pull requests #445 and #459 were unable to merge to main branch, causing deploym
 - **Changes**: Updated Vercel configuration and dependencies
 - **Issue**: Deployment error about `functions` vs `builds` property (already fixed in main)
 
-### 3. Railway Deployment Configuration Mismatch
+### 3. Render Deployment Configuration Mismatch
 - **Status**: **FIXED in this PR**
-- **Issue**: `railway.json` had incorrect startCommand that didn't match Dockerfile
+- **Issue**: `render.json` had incorrect startCommand that didn't match Dockerfile
 - **Original Command**: `uvicorn api.backend_app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 5 --limit-concurrency 100`
-- **Fix**: Updated `railway.json` to use `gunicorn final_backend_postgresql:application --config gunicorn.conf.py`
+- **Fix**: Updated `render.json` to use `gunicorn final_backend_postgresql:application --config gunicorn.conf.py`
 
 ## Fixes Applied
 
-### ✅ Railway Configuration (railway.json)
+### ✅ Render Configuration (render.json)
 **Before:**
 ```json
 "startCommand": "uvicorn api.backend_app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 5 --limit-concurrency 100"
@@ -39,7 +39,7 @@ This now matches the Dockerfile CMD and ensures consistent deployment behavior.
 ## Verified Configurations
 
 ### ✅ Requirements Files
-- `requirements.txt`: Has mangum==0.19.0, python-jose[cryptography]==3.5.0, all Flask/Railway dependencies
+- `requirements.txt`: Has mangum==0.19.0, python-jose[cryptography]==3.5.0, all Flask/Render dependencies
 - `api/requirements.txt`: Has mangum==0.19.0, python-jose[cryptography]==3.5.0, all FastAPI/Vercel dependencies
 
 ### ✅ Vercel Configuration (vercel.json)
@@ -64,10 +64,10 @@ This now matches the Dockerfile CMD and ensures consistent deployment behavior.
 - ✅ Correct Python runtime configured
 - ✅ Proper routing to API serverless function
 
-### ✅ Railway Configuration (railway.json)
+### ✅ Render Configuration (render.json)
 ```json
 {
-  "$schema": "https://railway.app/railway.schema.json",
+  "$schema": "https://render.app/render.schema.json",
   "build": {
     "builder": "DOCKERFILE"
   },
@@ -113,7 +113,7 @@ VERCEL_ENV=production
 DEBUG=false
 ```
 
-### For Railway Deployment (final_backend_postgresql.py)
+### For Render Deployment (final_backend_postgresql.py)
 ```bash
 # Required
 DATABASE_URL=postgresql://user:pass@host:5432/db
@@ -135,8 +135,8 @@ GUNICORN_TIMEOUT=120
 - [ ] Health check at `/health` returns 200
 - [ ] API endpoints at `/api/*` respond correctly
 
-### Railway  
-- [ ] Environment variables set in Railway dashboard
+### Render  
+- [ ] Environment variables set in Render dashboard
 - [ ] Dockerfile build completes successfully
 - [ ] Container starts without errors
 - [ ] Health check at `/health` returns 200
@@ -144,11 +144,11 @@ GUNICORN_TIMEOUT=120
 
 ## Next Steps
 
-1. **Merge this PR** to fix Railway deployment configuration
+1. **Merge this PR** to fix Render deployment configuration
 2. **Close PR #445** - Changes already in main (dependencies synchronized)
 3. **Close PR #459** - Changes already in main (Vercel config fixed)
 4. **Monitor deployments**:
-   - Railway: Check that gunicorn starts correctly
+   - Render: Check that gunicorn starts correctly
    - Vercel: Check that serverless functions deploy
 5. **Verify app is operational**:
    - Frontend loads correctly
@@ -158,7 +158,7 @@ GUNICORN_TIMEOUT=120
 
 ## Files Modified in This PR
 
-1. `railway.json` - Fixed startCommand to match Dockerfile
+1. `render.json` - Fixed startCommand to match Dockerfile
 2. `DEPLOYMENT_FIX_SUMMARY.md` - This documentation
 
 ## Files Already Fixed in Main (from PR #445 & #459)
@@ -173,7 +173,7 @@ GUNICORN_TIMEOUT=120
 ## Security Notes
 
 - Never commit actual secret keys to the repository
-- Use platform environment variable injection (Railway, Vercel dashboards)
+- Use platform environment variable injection (Render, Vercel dashboards)
 - Generate secrets with: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`
 - Keep DATABASE_URL secret and use SSL connections in production
 
@@ -182,4 +182,4 @@ GUNICORN_TIMEOUT=120
 - See `.env.example` for detailed environment variable documentation
 - See `gunicorn.conf.py` for Gunicorn configuration details
 - See `Dockerfile` for build process details
-- See `nixpacks.toml` for Railway build configuration (alternative to Dockerfile)
+- See `nixpacks.toml` for Render build configuration (alternative to Dockerfile)

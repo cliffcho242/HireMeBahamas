@@ -96,7 +96,7 @@ EOF
 This fix ensures proper PORT variable expansion on:
 
 - **Render.com**: Automatically sets PORT variable
-- **Railway.app**: Automatically sets PORT variable
+- **Render.app**: Automatically sets PORT variable
 - **Heroku**: Automatically sets PORT variable
 - **Google Cloud Run**: Automatically sets PORT variable
 - **AWS ECS/Fargate**: Manual PORT configuration

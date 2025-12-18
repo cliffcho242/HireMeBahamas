@@ -2,7 +2,7 @@
 
 ## Issue Description
 
-The Railway PostgreSQL database was going to sleep after 15 minutes of inactivity on the free/hobby tier. This caused:
+The Render PostgreSQL database was going to sleep after 15 minutes of inactivity on the free/hobby tier. This caused:
 - Increased latency on the first request after sleep (cold start)
 - Poor user experience
 - Database connection timeouts
@@ -105,7 +105,7 @@ Added post-deployment health check that:
 - Verifies keepalive is running
 
 #### deploy-backend-render.yml (ENHANCED)
-Added post-deployment health check similar to Railway workflow
+Added post-deployment health check similar to Render workflow
 
 ### 3. Documentation (BACKEND_KEEPALIVE_SETUP.md)
 
@@ -131,8 +131,8 @@ Created test suite to verify:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ENVIRONMENT` | `development` | Set to `production` to enable keepalive (OR deploy on Railway) |
-| `RAILWAY_PROJECT_ID` | - | Automatically set by Railway; if present, keepalive is enabled |
+| `ENVIRONMENT` | `development` | Set to `production` to enable keepalive (OR deploy on Render) |
+| `RAILWAY_PROJECT_ID` | - | Automatically set by Render; if present, keepalive is enabled |
 | `DATABASE_URL` | - | PostgreSQL connection string (required) |
 | `DB_KEEPALIVE_INTERVAL_SECONDS` | `120` | Normal interval between pings (2 minutes) |
 | `DB_KEEPALIVE_AGGRESSIVE_PERIOD_SECONDS` | `14400` | Duration of aggressive mode after startup (4 hours) |
@@ -142,18 +142,18 @@ Created test suite to verify:
 
 | Variable | Description |
 |----------|-------------|
-| `RAILWAY_BACKEND_URL` | URL of the Railway backend (e.g., `https://your-app.railway.app`) |
+| `RAILWAY_BACKEND_URL` | URL of the Render backend (e.g., `https://your-app.render.app`) |
 | `RENDER_BACKEND_URL` | URL of the Render backend (e.g., `https://your-app.onrender.com`) |
 
-**Note**: When deployed on Railway (detected via `RAILWAY_PROJECT_ID`), the keepalive is automatically enabled even without explicitly setting `ENVIRONMENT=production`. This ensures the database stays active on Railway deployments.
+**Note**: When deployed on Render (detected via `RAILWAY_PROJECT_ID`), the keepalive is automatically enabled even without explicitly setting `ENVIRONMENT=production`. This ensures the database stays active on Render deployments.
 
 ### Recommended Intervals (Updated)
 
 - **60 seconds (1 min)**: Aggressive mode for first 4 hours after deployment
 - **120 seconds (2 min)**: Normal mode - still very aggressive for maximum reliability
-- **300 seconds (5 min)**: Default normal mode (recommended for Railway)
+- **300 seconds (5 min)**: Default normal mode (recommended for Render)
 
-⚠️ **Important**: Keep the interval well under 15 minutes, as Railway databases sleep after 15 minutes of inactivity. The default of 5 minutes provides a good safety margin.
+⚠️ **Important**: Keep the interval well under 15 minutes, as Render databases sleep after 15 minutes of inactivity. The default of 5 minutes provides a good safety margin.
 
 ## How It Works
 
@@ -207,7 +207,7 @@ Created test suite to verify:
 
 ```bash
 # Via health endpoint
-curl https://your-app.railway.app/api/health | jq '.keepalive'
+curl https://your-app.render.app/api/health | jq '.keepalive'
 
 # Expected output:
 {
@@ -222,7 +222,7 @@ curl https://your-app.railway.app/api/health | jq '.keepalive'
 
 ### View Logs
 
-In Railway dashboard:
+In Render dashboard:
 1. Go to your service
 2. Click "Deployments" tab
 3. View logs for keepalive messages:
@@ -252,7 +252,7 @@ In Railway dashboard:
 
 ## Deployment Instructions
 
-### For Railway
+### For Render
 
 1. **No changes needed** - Keepalive activates automatically when:
    - `ENVIRONMENT=production` is set
@@ -261,7 +261,7 @@ In Railway dashboard:
 
 2. **Verify after deployment**:
    ```bash
-   curl https://your-app.railway.app/api/health
+   curl https://your-app.render.app/api/health
    ```
    
    Should show `"keepalive": { "enabled": true, "running": true }`
@@ -273,7 +273,7 @@ In Railway dashboard:
 If you want to change the ping interval:
 
 ```bash
-# In Railway dashboard, add environment variable:
+# In Render dashboard, add environment variable:
 DB_KEEPALIVE_INTERVAL_SECONDS=300  # 5 minutes
 ```
 
@@ -347,7 +347,7 @@ Possible improvements for future iterations:
 
 ## Summary
 
-The PostgreSQL database keepalive implementation successfully addresses the Railway database sleeping issue. The solution is:
+The PostgreSQL database keepalive implementation successfully addresses the Render database sleeping issue. The solution is:
 
 - ✅ Production-ready
 - ✅ Automatically activated
@@ -357,11 +357,11 @@ The PostgreSQL database keepalive implementation successfully addresses the Rail
 - ✅ Minimal overhead
 - ✅ Easy to monitor
 
-The keepalive will prevent the Railway PostgreSQL database from sleeping and ensure consistent performance for all users.
+The keepalive will prevent the Render PostgreSQL database from sleeping and ensure consistent performance for all users.
 
 ## Next Steps
 
-1. **Deploy to Railway**: Push changes and verify deployment
+1. **Deploy to Render**: Push changes and verify deployment
 2. **Monitor**: Check `/api/health` endpoint after deployment
 3. **Verify**: Confirm keepalive pings are occurring in logs
 4. **Observe**: Monitor database for 24-48 hours to ensure it stays active

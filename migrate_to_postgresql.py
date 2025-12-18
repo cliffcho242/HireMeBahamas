@@ -1,7 +1,7 @@
 """
 🚀 POSTGRESQL MIGRATION SCRIPT
 ================================
-This script will help you migrate from SQLite to PostgreSQL on Railway.
+This script will help you migrate from SQLite to PostgreSQL on Render.
 """
 
 import os
@@ -15,9 +15,9 @@ def print_banner():
     print()
 
 
-def check_railway_postgresql():
-    """Check if Railway PostgreSQL is configured"""
-    print("📋 Step 1: Check Railway PostgreSQL Setup")
+def check_render_postgresql():
+    """Check if Render PostgreSQL is configured"""
+    print("📋 Step 1: Check Render PostgreSQL Setup")
     print("-" * 70)
 
     database_url = os.getenv("DATABASE_URL")
@@ -31,9 +31,9 @@ def check_railway_postgresql():
         print("❌ DATABASE_URL not found!")
         print()
         print("🔧 TO FIX THIS:")
-        print("   1. Go to your Railway project dashboard")
+        print("   1. Go to your Render project dashboard")
         print("   2. Click 'New' → 'Database' → 'PostgreSQL'")
-        print("   3. Railway will automatically create DATABASE_URL")
+        print("   3. Render will automatically create DATABASE_URL")
         print("   4. Wait for database to provision (1-2 minutes)")
         print("   5. Re-run this script")
         print()
@@ -130,7 +130,7 @@ def test_local_connection():
 
 def deployment_instructions():
     """Show deployment instructions"""
-    print("📋 Step 5: Deploy to Railway")
+    print("📋 Step 5: Deploy to Render")
     print("-" * 70)
     print()
     print("🚀 DEPLOYMENT STEPS:")
@@ -140,7 +140,7 @@ def deployment_instructions():
     print('   git commit -m "Add PostgreSQL support for persistent data storage"')
     print("   git push origin main")
     print()
-    print("2. Railway will automatically:")
+    print("2. Render will automatically:")
     print("   ✅ Detect the changes")
     print("   ✅ Install psycopg2-binary")
     print("   ✅ Connect to PostgreSQL database")
@@ -148,7 +148,7 @@ def deployment_instructions():
     print("   ✅ Keep your data forever (no more resets!)")
     print()
     print("3. Verify deployment:")
-    print("   - Check Railway logs for 'PostgreSQL (Production)'")
+    print("   - Check Render logs for 'PostgreSQL (Production)'")
     print("   - Test user registration on your site")
     print("   - Register a test user")
     print("   - Wait 5 minutes, then check if user still exists")
@@ -169,29 +169,29 @@ def deployment_instructions():
 def main():
     print_banner()
 
-    # Check if running locally or on Railway
-    is_railway = os.getenv("RAILWAY_ENVIRONMENT") is not None
+    # Check if running locally or on Render
+    is_render = os.getenv("RENDER_ENVIRONMENT") is not None
 
-    if is_railway:
-        print("🚂 Running on Railway - PostgreSQL should be available")
+    if is_render:
+        print("🚂 Running on Render - PostgreSQL should be available")
         print()
     else:
         print("💻 Running locally - checking configuration")
         print()
 
-    # Step 1: Check Railway PostgreSQL
-    has_postgresql = check_railway_postgresql()
+    # Step 1: Check Render PostgreSQL
+    has_postgresql = check_render_postgresql()
 
-    if not has_postgresql and not is_railway:
+    if not has_postgresql and not is_render:
         print("⚠️ PostgreSQL not configured yet.")
         print()
         print("OPTIONS:")
-        print("1. Set up PostgreSQL on Railway (recommended for production)")
+        print("1. Set up PostgreSQL on Render (recommended for production)")
         print("2. Continue with SQLite for local development")
         print()
         choice = input("Continue anyway? (y/n): ").strip().lower()
         if choice != "y":
-            print("Exiting. Set up PostgreSQL on Railway and try again.")
+            print("Exiting. Set up PostgreSQL on Render and try again.")
             return
         print()
 

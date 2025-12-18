@@ -29,20 +29,20 @@ This project uses **Vite (React)**, NOT Next.js.
 
 Choose the option that matches your deployment architecture:
 
-#### Option 1: Railway Backend (Recommended)
+#### Option 1: Render Backend (Recommended)
 
 ```bash
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 ```
 
 **When to use:**
-- ✅ Backend deployed to Railway
+- ✅ Backend deployed to Render
 - ✅ Frontend deployed to Vercel
 - ✅ Separate frontend/backend deployments
 
 **Example:**
 ```bash
-VITE_API_URL=https://hiremebahamas-production.up.railway.app
+VITE_API_URL=https://hiremebahamas-production.up.render.app
 ```
 
 ---
@@ -97,7 +97,7 @@ VITE_API_URL=https://hiremebahamas.onrender.com
 3. **Add New Variable**
    - Click **"Add New"** button
    - **Name:** `VITE_API_URL`
-   - **Value:** Your backend URL (e.g., `https://your-app.up.railway.app`)
+   - **Value:** Your backend URL (e.g., `https://your-app.up.render.app`)
    - **Environments:** Select all:
      - ✅ Production
      - ✅ Preview
@@ -119,7 +119,7 @@ After deployment, open your Vercel site and check the browser console:
 
 ```
 === API CONFIGURATION ===
-API Base URL: https://your-backend.up.railway.app
+API Base URL: https://your-backend.up.render.app
 Source: Environment Variable
 ========================
 ```
@@ -128,7 +128,7 @@ Source: Environment Variable
 
 ```bash
 # Test backend health endpoint
-curl https://your-backend.up.railway.app/api/health
+curl https://your-backend.up.render.app/api/health
 
 # Expected response:
 {"status":"healthy","database":"connected"}
@@ -150,10 +150,10 @@ curl https://your-backend.up.railway.app/api/health
 
 ```bash
 # WRONG - This will NOT work in Vite:
-NEXT_PUBLIC_BACKEND_URL=https://your-backend.up.railway.app
+NEXT_PUBLIC_BACKEND_URL=https://your-backend.up.render.app
 
 # CORRECT - Use VITE_ prefix:
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 ```
 
 **Why?** Vite requires `VITE_` prefix for client-side environment variables. Next.js uses `NEXT_PUBLIC_` which is completely ignored by Vite.
@@ -162,11 +162,11 @@ VITE_API_URL=https://your-backend.up.railway.app
 
 ```bash
 # WRONG - Won't be exposed to frontend:
-API_URL=https://your-backend.up.railway.app
-BACKEND_URL=https://your-backend.up.railway.app
+API_URL=https://your-backend.up.render.app
+BACKEND_URL=https://your-backend.up.render.app
 
 # CORRECT:
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 ```
 
 ### ❌ Mistake #3: Forgetting to Redeploy
@@ -179,10 +179,10 @@ Environment variable changes don't automatically take effect. You MUST:
 
 ```bash
 # WRONG - Production should use HTTPS:
-VITE_API_URL=http://your-backend.up.railway.app
+VITE_API_URL=http://your-backend.up.render.app
 
 # CORRECT - Always use HTTPS in production:
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 ```
 
 ### ❌ Mistake #5: Setting VITE_API_URL for Same-Origin Deployment
@@ -204,8 +204,8 @@ VITE_API_URL=https://your-frontend.vercel.app
 ```
 Question: Where is your backend deployed?
 
-├─ Railway
-│  └─ Set: VITE_API_URL=https://your-app.up.railway.app
+├─ Render
+│  └─ Set: VITE_API_URL=https://your-app.up.render.app
 │
 ├─ Render  
 │  └─ Set: VITE_API_URL=https://your-app.onrender.com
@@ -220,7 +220,7 @@ Question: Where is your backend deployed?
 
 | Deployment | Variable to Set | Example Value |
 |-----------|----------------|---------------|
-| Railway Backend | `VITE_API_URL` | `https://your-app.up.railway.app` |
+| Render Backend | `VITE_API_URL` | `https://your-app.up.render.app` |
 | Render Backend | `VITE_API_URL` | `https://your-app.onrender.com` |
 | Vercel Serverless | *(leave unset)* | N/A |
 | Local Development | `VITE_API_URL` | `http://localhost:8000` |

@@ -68,7 +68,7 @@ These settings are **permanently configured** and should NOT be changed:
 - **No Fork Issues**: No database connection sharing problems across processes
 - **Predictable Performance**: One worker with async event loop handles 100+ concurrent connections
 - **Faster Startup**: No coordination overhead between workers
-- **Railway/Render Optimized**: Small instances work best with 1 worker
+- **Render/Render Optimized**: Small instances work best with 1 worker
 
 #### 2 Threads
 - **Minimal Overhead**: Uvicorn uses async event loop, not threads for concurrency
@@ -280,7 +280,7 @@ services:
    - Use asyncpg or SQLAlchemy async
 
 5. **Multiple Backend Platforms**
-   - Don't run on Railway + Render simultaneously
+   - Don't run on Render + Render simultaneously
    - Causes split-brain state issues
    - Difficult to debug
 

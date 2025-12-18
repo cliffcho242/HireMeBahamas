@@ -49,15 +49,15 @@ REDIS_URL=rediss://:abc123xyz@global.upstash.io:6379
 REDIS_URL=rediss://:password@red-xxxxx.render.com:6379
 ```
 
-#### 3. **Railway Redis**
+#### 3. **Render Redis**
 - ✅ **Simple setup** - One-click deployment
 - ✅ **Private networking** - Fast internal connections
 - ✅ **Usage-based pricing** - No idle charges
-- 🔗 [Get started](https://railway.app/)
+- 🔗 [Get started](https://render.app/)
 
 **Setup:**
 ```bash
-# Railway provides REDIS_URL automatically
+# Render provides REDIS_URL automatically
 # Format: rediss://:password@hostname:port
 REDIS_URL=${{Redis.REDIS_URL}}
 ```
@@ -90,13 +90,13 @@ rediss://:password@host:port
 REDIS_URL=rediss://:your-password@your-host:6379
 ```
 
-#### For Railway (Backend Deployment):
+#### For Render (Backend Deployment):
 ```bash
-# In Railway Dashboard > Variables
+# In Render Dashboard > Variables
 REDIS_URL=rediss://:your-password@your-host:6379
 
-# OR use Railway's Redis plugin (auto-configures)
-# Railway will set REDIS_URL automatically
+# OR use Render's Redis plugin (auto-configures)
+# Render will set REDIS_URL automatically
 ```
 
 #### For Vercel (If using Vercel backend):
@@ -394,7 +394,7 @@ REDIS_URL=rediss://:STRONG_RANDOM_PASSWORD@host:port
 ### Redis Providers:
 - [Upstash Documentation](https://docs.upstash.com/)
 - [Render Redis Guide](https://render.com/docs/redis)
-- [Railway Redis Plugin](https://docs.railway.app/databases/redis)
+- [Render Redis Plugin](https://docs.render.app/databases/redis)
 
 ### Redis Best Practices:
 - [Redis Official Documentation](https://redis.io/documentation)

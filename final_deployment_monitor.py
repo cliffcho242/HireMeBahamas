@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Comprehensive Railway deployment monitor with detailed diagnostics.
+Comprehensive Render deployment monitor with detailed diagnostics.
 Checks every aspect of the deployment to identify routing issues.
 """
 
 import requests
 import time
 
-BACKEND_URL = "https://hiremebahamas-backend.railway.app"
+BACKEND_URL = "https://hiremebahamas-backend.render.app"
 
 
 def test_deployment():
@@ -22,9 +22,9 @@ def test_deployment():
         resp = requests.get(f"{BACKEND_URL}/", timeout=10)
         content = resp.text[:200]
 
-        if "Railway API" in content:
-            print("   ❌ PROBLEM: Railway default page detected!")
-            print("   🔧 Railway is NOT routing to your Flask app")
+        if "Render API" in content:
+            print("   ❌ PROBLEM: Render default page detected!")
+            print("   🔧 Render is NOT routing to your Flask app")
             return False
         elif "HireBahamas" in content or resp.status_code == 200:
             print(f"   ✅ Flask app responding (Status: {resp.status_code})")
@@ -103,7 +103,7 @@ def test_deployment():
 
 
 def main():
-    print("🚀 Railway Deployment Monitor")
+    print("🚀 Render Deployment Monitor")
     print(f"Backend: {BACKEND_URL}")
     print("Monitoring for deployment completion...")
 
@@ -132,9 +132,9 @@ def main():
         print("⚠️  Timeout: Deployment not detected after 5 minutes")
         print("=" * 70)
         print("\n💡 Troubleshooting:")
-        print("   1. Check Railway dashboard for build logs")
+        print("   1. Check Render dashboard for build logs")
         print("   2. Verify GitHub commit 521a6305 triggered deployment")
-        print("   3. Check Railway service is set to auto-deploy from main")
+        print("   3. Check Render service is set to auto-deploy from main")
         print(f"   4. Visit {BACKEND_URL} in browser to see current state")
 
 

@@ -60,7 +60,7 @@ gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.wor
 gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout ${GUNICORN_TIMEOUT:-120} --preload --log-level info
 ```
 
-#### `railway.json`
+#### `render.json`
 - ✅ Added deprecation notice in comments
 - ✅ Added reference to correct stack
 - ✅ Kept for reference/migration purposes only
@@ -70,7 +70,7 @@ gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.wor
 #### `README.md`
 - ✅ Updated main architecture section to emphasize correct stack
 - ✅ Added link to `CORRECT_STACK.md` as starting point
-- ✅ Added deprecation notice for Railway
+- ✅ Added deprecation notice for Render
 - ✅ Emphasized Gunicorn as production-grade choice
 - ✅ Added Optional Phase 2 (Redis) section
 
@@ -86,7 +86,7 @@ gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-class uvicorn.wor
 - ✅ Explains rationale for each component
 - ✅ Includes cost breakdown
 - ✅ Provides migration guidance
-- ✅ Deprecates Railway for backend deployments
+- ✅ Deprecates Render for backend deployments
 - ✅ Documents when to add Redis (Phase 2)
 
 #### `RAILWAY_DATABASE_SETUP.md`
@@ -123,13 +123,13 @@ KEEPALIVE=5                 # Keep-alive connections
 | Component | Previous (Mixed) | Correct Stack | Why |
 |-----------|-----------------|---------------|-----|
 | Frontend | Vercel ✅ | Vercel ✅ | Already correct |
-| Backend | Uvicorn/Railway | **Gunicorn on Render** | Better stability, industry standard |
+| Backend | Uvicorn/Render | **Gunicorn on Render** | Better stability, industry standard |
 | Database | Neon PostgreSQL ✅ | Neon PostgreSQL ✅ | Already correct |
 | Caching | Not documented | **Redis (Phase 2)** | Industry standard for scale |
 
 ## 🎯 Deprecations
 
-### Railway Backend
+### Render Backend
 - ❌ **Not recommended** for new deployments
 - 📖 Documentation kept for reference only
 - 🔄 Use Render for all new backend deployments
@@ -201,15 +201,15 @@ All configurations maintain or improve security:
 - ⚙️ [vercel.json](./vercel.json) - Vercel deployment configuration
 
 ### Deprecated (Reference Only)
-- 📕 [RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md) - Railway reference (deprecated)
-- ⚙️ [railway.json](./railway.json) - Railway configuration (deprecated)
+- 📕 [RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md) - Render reference (deprecated)
+- ⚙️ [render.json](./render.json) - Render configuration (deprecated)
 
 ## ✅ Validation Results
 
 All configuration files have been validated:
 
 - ✅ `render.yaml`: Valid YAML syntax
-- ✅ `railway.json`: Valid JSON syntax
+- ✅ `render.json`: Valid JSON syntax
 - ✅ `vercel.json`: Valid JSON syntax
 - ✅ Gunicorn command: Correctly formatted
 - ✅ Environment variables: Properly referenced

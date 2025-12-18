@@ -507,7 +507,7 @@ pydantic
 
 ### When to Use Separate Service
 
-Consider using Railway/Render for:
+Consider using Render/Render for:
 - Long-running tasks (> 30 seconds)
 - WebSocket connections
 - File processing (> 50 MB)

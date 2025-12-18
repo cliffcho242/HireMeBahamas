@@ -69,7 +69,7 @@ def get_engine():
 - ✅ `pool_pre_ping=True` - Validates connections before use (detects stale connections)
 - ✅ `pool_recycle=POOL_RECYCLE` - Default 300s, recycles connections to prevent stale connections
 - ✅ `connect_args={"sslmode": "require"}` - Forces SSL/TLS encryption
-- ✅ `"ssl": _get_ssl_context()` - Provides TLS 1.3 SSL context for Railway compatibility
+- ✅ `"ssl": _get_ssl_context()` - Provides TLS 1.3 SSL context for Render compatibility
 
 ### 3. Startup Event Changes
 
@@ -226,7 +226,7 @@ Ready:    GET /ready/db (with DB check)
 
 1. **Faster Cold Starts**: App responds to health checks in <5ms without waiting for DB
 2. **Better Resource Usage**: No idle database connections consuming resources
-3. **Railway/Vercel Compatible**: Works perfectly with serverless platforms
+3. **Render/Vercel Compatible**: Works perfectly with serverless platforms
 4. **Prevents Connection Exhaustion**: No background tasks keeping connections alive
 5. **SSL/TLS Secure**: Forces TCP + SSL for all database connections
 6. **Connection Pool Optimization**: 
@@ -244,7 +244,7 @@ Ready:    GET /ready/db (with DB check)
 
 ## Related Files
 
-- `backend/app/main.py` - Main application entry point (Railway/direct run)
+- `backend/app/main.py` - Main application entry point (Render/direct run)
 - `api/backend_app/main.py` - Backend app for Vercel serverless
 - `backend/app/core/database.py` - Database configuration with LazyEngine
 - `backend/app/database.py` - Alternative database configuration
@@ -263,13 +263,13 @@ DB_POOL_TIMEOUT=30          # Wait max 30s for connection from pool
 DB_POOL_RECYCLE=300         # Recycle connections every 5 minutes
 
 # Connection Timeouts
-DB_CONNECT_TIMEOUT=45       # 45s for Railway cold starts
+DB_CONNECT_TIMEOUT=45       # 45s for Render cold starts
 DB_COMMAND_TIMEOUT=30       # 30s per query
 DB_STATEMENT_TIMEOUT_MS=30000  # 30s in milliseconds
 
 # SSL Configuration
 DB_SSL_MODE=require         # require, verify-ca, or verify-full
-DB_FORCE_TLS_1_3=true       # Force TLS 1.3 for Railway compatibility
+DB_FORCE_TLS_1_3=true       # Force TLS 1.3 for Render compatibility
 
 # Initialization (not used in strict lazy mode, but kept for manual init)
 DB_INIT_MAX_RETRIES=3       # For manual init_db() calls only
@@ -295,4 +295,4 @@ DB_INIT_RETRY_DELAY=2.0     # For manual init_db() calls only
 
 - [SQLAlchemy Connection Pooling](https://docs.sqlalchemy.org/en/20/core/pooling.html)
 - [asyncpg SSL Configuration](https://magicstack.github.io/asyncpg/current/api/index.html#ssl)
-- [Railway PostgreSQL Best Practices](https://docs.railway.app/guides/postgresql)
+- [Render PostgreSQL Best Practices](https://docs.render.app/guides/postgresql)

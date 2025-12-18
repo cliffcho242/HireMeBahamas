@@ -10,7 +10,7 @@ This guide will help you deploy HireMeBahamas to production in **10-15 minutes**
 
 ### Where Do I Configure Everything?
 
-**👉 [DIRECT_LINKS_WHERE_TO_CONFIGURE.md](./DIRECT_LINKS_WHERE_TO_CONFIGURE.md)** - Direct clickable links to exactly where to configure environment variables on Vercel, Railway, and Render dashboards.
+**👉 [DIRECT_LINKS_WHERE_TO_CONFIGURE.md](./DIRECT_LINKS_WHERE_TO_CONFIGURE.md)** - Direct clickable links to exactly where to configure environment variables on Vercel, Render, and Render dashboards.
 
 ### Where Do I Put the Database URL?
 
@@ -29,7 +29,7 @@ By the end of this guide, you'll have:
 - ✅ A PostgreSQL database connected and working
 - ✅ HTTPS/SSL enabled automatically
 - ✅ Users can register, login, and use the app
-- ✅ All three platforms (Vercel, Railway, Render) connection instructions
+- ✅ All three platforms (Vercel, Render, Render) connection instructions
 
 ---
 
@@ -40,7 +40,7 @@ We have **4 comprehensive guides** to help you:
 ### 1. 🌟 **[DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)** ⭐ START HERE
 **What it covers**: Complete step-by-step instructions for all deployment options
 - Vercel Full Stack (Recommended)
-- Vercel + Railway Backend
+- Vercel + Render Backend
 - Vercel + Render Backend
 - Database setup for all platforms
 - Environment variables configuration
@@ -77,7 +77,7 @@ We have **4 comprehensive guides** to help you:
 
 ### 4. 📖 **Existing Platform-Specific Guides**
 - **[VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md)** - Detailed Vercel Postgres setup
-- **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Railway database configuration
+- **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Render database configuration
 - **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - Original deployment guide
 
 ---
@@ -101,13 +101,13 @@ https://vercel.com/new
 
 ---
 
-### Path 2: Vercel Frontend + Railway Backend
+### Path 2: Vercel Frontend + Render Backend
 
 **Time**: 15 minutes | **Cost**: $0-5/month | **Difficulty**: Medium
 
 ```bash
-# 1. Deploy backend to Railway
-https://railway.app/new
+# 1. Deploy backend to Render
+https://render.app/new
 
 # 2. Deploy frontend to Vercel
 https://vercel.com/new
@@ -115,7 +115,7 @@ https://vercel.com/new
 # 3. Connect them together (see guide)
 ```
 
-📖 **[Follow the complete guide](./DEPLOYMENT_CONNECTION_GUIDE.md#option-2-vercel-frontend--railway-backend)**
+📖 **[Follow the complete guide](./DEPLOYMENT_CONNECTION_GUIDE.md#option-2-vercel-frontend--render-backend)**
 
 ---
 
@@ -143,12 +143,12 @@ https://vercel.com/new
 | Platform | Dashboard | New Project | Documentation |
 |----------|-----------|-------------|---------------|
 | Vercel | [Dashboard](https://vercel.com/dashboard) | [New](https://vercel.com/new) | [Docs](https://vercel.com/docs) |
-| Railway | [Dashboard](https://railway.app/dashboard) | [New](https://railway.app/new) | [Docs](https://docs.railway.app) |
+| Render | [Dashboard](https://render.app/dashboard) | [New](https://render.app/new) | [Docs](https://docs.render.app) |
 | Render | [Dashboard](https://dashboard.render.com) | [New](https://dashboard.render.com/select-repo) | [Docs](https://docs.render.com) |
 
 ### Database Setup Links
 - **Vercel Postgres**: https://vercel.com/dashboard → Storage → Create Database
-- **Railway Postgres**: In your project → + New → Database → PostgreSQL
+- **Render Postgres**: In your project → + New → Database → PostgreSQL
 - **Render Postgres**: https://dashboard.render.com → New + → PostgreSQL
 
 ---
@@ -158,7 +158,7 @@ https://vercel.com/new
 Before you start, make sure you have:
 
 - [ ] GitHub account with your code pushed
-- [ ] Account on your chosen platform (Vercel/Railway/Render)
+- [ ] Account on your chosen platform (Vercel/Render/Render)
 - [ ] 10-15 minutes of time
 - [ ] Basic understanding of environment variables
 
@@ -233,7 +233,7 @@ curl https://your-app.vercel.app/api/health
 2. **Review the [Quick fixes](./QUICK_DEPLOYMENT_REFERENCE.md#common-issues-1-minute-fixes)** - 1-minute solutions
 3. **Check platform status pages**:
    - Vercel: https://www.vercel-status.com
-   - Railway: https://status.railway.app
+   - Render: https://status.render.app
    - Render: https://status.render.com
 4. **Open a GitHub Issue** in the repository
 
@@ -241,7 +241,7 @@ curl https://your-app.vercel.app/api/health
 
 ## 📊 Comparison: Which Option to Choose?
 
-| Feature | Vercel Full Stack | Vercel + Railway | Vercel + Render |
+| Feature | Vercel Full Stack | Vercel + Render | Vercel + Render |
 |---------|------------------|------------------|-----------------|
 | **Setup Time** | 10 min | 15 min | 15 min |
 | **Monthly Cost** | $0-5 | $0-5 | $0-7 |
@@ -267,13 +267,13 @@ curl https://your-app.vercel.app/api/health
 
 ### Configuration Files
 - `vercel.json` - Vercel deployment configuration
-- `railway.json` - Railway deployment configuration
-- `Dockerfile` - Container configuration for Railway/Render
+- `render.json` - Render deployment configuration
+- `Dockerfile` - Container configuration for Render/Render
 - `.env.example` - Environment variables template
 
 ### Database Guides
 - [VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md) - Vercel Postgres detailed guide
-- [RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md) - Railway database guide
+- [RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md) - Render database guide
 - [POSTGRESQL_SETUP.md](./POSTGRESQL_SETUP.md) - General PostgreSQL setup
 
 ### Development Guides

@@ -18,11 +18,11 @@ cd backend && gunicorn app.main:app --workers ${WEB_CONCURRENCY:-2} --worker-cla
 
 **Or use render.yaml (recommended)** - already configured correctly in the repository.
 
-### Railway
+### Render
 
-**Option 1: Use railway.toml (recommended)** - already configured correctly in the repository.
+**Option 1: Use render.toml (recommended)** - already configured correctly in the repository.
 
-**Option 2: In Railway Dashboard → Settings → Start Command:**
+**Option 2: In Render Dashboard → Settings → Start Command:**
 ```
 uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
@@ -46,9 +46,9 @@ Located at: `/render.yaml`
 - Already configured with correct start command
 - No manual configuration needed
 
-### For Railway: `railway.toml`
-Located at: `/railway.toml`
-- Automatically detected by Railway
+### For Render: `render.toml`
+Located at: `/render.toml`
+- Automatically detected by Render
 - Already configured with correct start command
 - No manual configuration needed
 
@@ -75,7 +75,7 @@ gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker -
 **Why it works:** Single line, correct module path, proper arguments.
 
 ### ✅ CORRECT: Use configuration files
-Just deploy the repository as-is. The configuration files (`render.yaml`, `railway.toml`, `Procfile`) are already set up correctly.
+Just deploy the repository as-is. The configuration files (`render.yaml`, `render.toml`, `Procfile`) are already set up correctly.
 
 ## Backend Options
 
@@ -180,7 +180,7 @@ Expected response:
 - [GUNICORN_ENTRY_POINTS.md](./GUNICORN_ENTRY_POINTS.md) - Detailed entry points reference
 - [GUNICORN_ARGS_ERROR_FIX.md](./GUNICORN_ARGS_ERROR_FIX.md) - Fix for "unrecognized arguments" error
 - [render.yaml](./render.yaml) - Render configuration
-- [railway.toml](./railway.toml) - Railway configuration
+- [render.toml](./render.toml) - Render configuration
 - [Procfile](./Procfile) - Platform-agnostic configuration
 
 ## Quick Decision Tree
@@ -191,8 +191,8 @@ Are you deploying to...?
 ├─ Render?
 │  └─ Just use render.yaml (already configured) ✅
 │
-├─ Railway?
-│  └─ Just use railway.toml (already configured) ✅
+├─ Render?
+│  └─ Just use render.toml (already configured) ✅
 │
 ├─ Heroku?
 │  └─ Just use Procfile (already configured) ✅

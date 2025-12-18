@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Monitor Railway deployment and test when new version is live."""
+"""Monitor Render deployment and test when new version is live."""
 
 import requests
 import time
 
-BACKEND_URL = "https://hiremebahamas-backend.railway.app"
+BACKEND_URL = "https://hiremebahamas-backend.render.app"
 CHECK_INTERVAL = 10  # seconds
 MAX_WAIT = 300  # 5 minutes
 
-print("🚀 Monitoring Railway Deployment")
+print("🚀 Monitoring Render Deployment")
 print("=" * 70)
 print(f"Backend: {BACKEND_URL}")
 print(f"Checking every {CHECK_INTERVAL} seconds...")
@@ -64,6 +64,6 @@ while (time.time() - start_time) < MAX_WAIT:
 
 else:
     print(f"\n⚠️  Timeout after {MAX_WAIT}s")
-    print(f"   Check Railway dashboard for deployment status")
+    print(f"   Check Render dashboard for deployment status")
 
 print("\n" + "=" * 70)

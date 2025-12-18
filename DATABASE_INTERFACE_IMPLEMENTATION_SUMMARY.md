@@ -51,7 +51,7 @@ docker-compose up -d postgres adminer
 
 ### Development vs Production
 - ✅ **Development**: Adminer is safe and convenient
-- ⚠️ **Production**: Railway provides built-in database interface
+- ⚠️ **Production**: Render provides built-in database interface
 - 🚫 **Never expose Adminer publicly** without proper authentication
 
 ### Security Features Implemented
@@ -119,7 +119,7 @@ docker-compose restart adminer
 - [Full Guide](./DATABASE_ADMIN_INTERFACE.md) - Complete setup and usage guide
 - [Quick Reference](./DATABASE_INTERFACE_QUICK_REF.md) - Common tasks and commands
 - [README](./README.md) - Main project documentation
-- [Railway Setup](./RAILWAY_DATABASE_SETUP.md) - Production database setup
+- [Render Setup](./RAILWAY_DATABASE_SETUP.md) - Production database setup
 
 ## ✨ Benefits
 
@@ -136,7 +136,7 @@ docker-compose restart adminer
 - No additional authentication setup needed
 
 ### For Production
-- Railway provides built-in database interface
+- Render provides built-in database interface
 - More secure than exposing Adminer
 - No additional deployment needed
 

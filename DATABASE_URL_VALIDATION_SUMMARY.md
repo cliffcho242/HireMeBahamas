@@ -70,8 +70,8 @@ This ensures developers are warned about issues while preventing production depl
 # Neon PostgreSQL
 postgresql://USER:PASSWORD@ep-xxxx.us-east-1.aws.neon.tech:5432/dbname?sslmode=require
 
-# Railway PostgreSQL
-postgresql://user:password@db.railway.internal:5432/railway?sslmode=require
+# Render PostgreSQL
+postgresql://user:password@db.render.internal:5432/render?sslmode=require
 
 # With asyncpg driver
 postgresql+asyncpg://user:password@db.example.com:5432/dbname?sslmode=require
@@ -105,7 +105,7 @@ postgresql://user:pass@db.example.com:5432/dbname
 
 Created `test_database_url_hostname_validation.py` with 18 test cases:
 
-- ✅ Valid URLs (Neon, Railway, with params)
+- ✅ Valid URLs (Neon, Render, with params)
 - ✅ Invalid empty/None URLs
 - ✅ Invalid localhost/127.0.0.1/::1 hostnames
 - ✅ Invalid missing port
@@ -192,8 +192,8 @@ If you have an existing DATABASE_URL that doesn't meet the new requirements:
    # Example for Neon
    DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech:5432/db?sslmode=require
    
-   # Example for Railway
-   DATABASE_URL=postgresql://user:pass@db.railway.internal:5432/railway?sslmode=require
+   # Example for Render
+   DATABASE_URL=postgresql://user:pass@db.render.internal:5432/render?sslmode=require
    ```
 
 4. **Deploy:**

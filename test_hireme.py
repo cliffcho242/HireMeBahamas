@@ -3,7 +3,7 @@
 Test HireMe functionality
 
 Usage:
-  BACKEND_URL=https://your-app.up.railway.app python test_hireme.py
+  BACKEND_URL=https://your-app.up.render.app python test_hireme.py
 """
 
 import os

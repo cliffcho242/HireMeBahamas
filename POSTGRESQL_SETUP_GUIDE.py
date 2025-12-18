@@ -12,9 +12,9 @@ YOUR CURRENT PROBLEM
 ✗ Admin edits cause data loss
 ✗ Everything resets unexpectedly
 
-ROOT CAUSE: Railway uses EPHEMERAL storage
+ROOT CAUSE: Render uses EPHEMERAL storage
 - SQLite file (hiremebahamas.db) gets deleted on restart
-- No persistent file storage on Railway containers
+- No persistent file storage on Render containers
 - Data only lives in memory/temporary disk
 
 THE SOLUTION: PostgreSQL Database
@@ -22,25 +22,25 @@ THE SOLUTION: PostgreSQL Database
 ✓ Separate persistent database service
 ✓ Data survives restarts, deployments, scaling
 ✓ Industry standard for production apps
-✓ Free tier on Railway
+✓ Free tier on Render
 ✓ Automatic backups
 
 IMPLEMENTATION STEPS
 ====================
 
-STEP 1: Add PostgreSQL on Railway (2 minutes)
+STEP 1: Add PostgreSQL on Render (2 minutes)
 ---------------------------------------------
-1. Go to: https://railway.app
+1. Go to: https://render.app
 2. Open your HireMeBahamas project
 3. Click "New" button (top right)
 4. Select "Database"
 5. Choose "PostgreSQL"
-6. Railway automatically:
+6. Render automatically:
    - Creates the database
    - Sets DATABASE_URL environment variable
    - Links it to your backend service
 
-✓ That's it! Railway handles the connection.
+✓ That's it! Render handles the connection.
 
 
 STEP 2: Update Your Code (1 minute)
@@ -49,7 +49,7 @@ I've created 3 files for you:
 
 1. final_backend_postgresql.py
    - New backend with PostgreSQL support
-   - Auto-detects Railway PostgreSQL
+   - Auto-detects Render PostgreSQL
    - Falls back to SQLite locally
    - Same API, just persistent storage
 
@@ -77,7 +77,7 @@ The script will:
 ✓ Show you deployment instructions
 
 
-STEP 4: Deploy to Railway (1 minute)
+STEP 4: Deploy to Render (1 minute)
 -------------------------------------
 After running the migration script:
 
@@ -85,7 +85,7 @@ After running the migration script:
     git commit -m "Add PostgreSQL for persistent storage"
     git push origin main
 
-Railway will:
+Render will:
 ✓ Install psycopg2-binary automatically
 ✓ Connect to PostgreSQL
 ✓ Create all tables on first run
@@ -100,7 +100,7 @@ STEP 5: Test & Verify (2 minutes)
 4. Try to login with same credentials
 5. ✅ User should still exist!
 
-Check Railway logs for:
+Check Render logs for:
 - "PostgreSQL (Production)" message
 - "Database tables created successfully"
 - No database errors
@@ -127,7 +127,7 @@ User tries to login → Logs in successfully ✓
 LOCAL DEVELOPMENT
 =================
 The new backend is smart:
-- On Railway: Uses PostgreSQL (persistent)
+- On Render: Uses PostgreSQL (persistent)
 - On your computer: Uses SQLite (convenient)
 
 No changes needed for local testing!
@@ -138,16 +138,16 @@ FREQUENTLY ASKED QUESTIONS
 
 Q: Will I lose my current data?
 A: The migration script backs up your SQLite database.
-   Since Railway resets anyway, there's likely no data to lose.
+   Since Render resets anyway, there's likely no data to lose.
    Fresh start with PostgreSQL is the best option.
 
 Q: Does PostgreSQL cost money?
-A: Railway provides 512MB PostgreSQL free.
+A: Render provides 512MB PostgreSQL free.
    That's enough for thousands of users.
 
 Q: What if I want to keep SQLite?
-A: Don't. SQLite doesn't work on Railway for persistent storage.
-   Railway's file system is ephemeral by design.
+A: Don't. SQLite doesn't work on Render for persistent storage.
+   Render's file system is ephemeral by design.
 
 Q: Will this slow down my app?
 A: No! PostgreSQL is faster than SQLite for concurrent users.
@@ -167,7 +167,7 @@ TECHNICAL DETAILS
 =================
 
 The new backend automatically:
-1. Detects if DATABASE_URL exists (Railway sets this)
+1. Detects if DATABASE_URL exists (Render sets this)
 2. Connects to PostgreSQL if available
 3. Falls back to SQLite for local dev
 4. Creates all tables on first run
@@ -187,15 +187,15 @@ TROUBLESHOOTING
 ===============
 
 Issue: "psycopg2 not found"
-Solution: Railway auto-installs from requirements.txt
+Solution: Render auto-installs from requirements.txt
           Wait for deployment to complete
 
 Issue: "Database connection failed"
-Solution: Verify PostgreSQL is added in Railway dashboard
+Solution: Verify PostgreSQL is added in Render dashboard
           Check DATABASE_URL exists in environment variables
 
 Issue: "Tables not found"
-Solution: Check Railway logs for initialization messages
+Solution: Check Render logs for initialization messages
           Database creates tables on first startup
 
 Issue: Still losing data
@@ -214,7 +214,7 @@ Once PostgreSQL is working:
    - Update upload endpoints
 
 2. Add database backups
-   - Railway auto-backs up PostgreSQL
+   - Render auto-backs up PostgreSQL
    - Set up manual backup scripts
    - Export data regularly
 
@@ -234,13 +234,13 @@ SUMMARY
 
 ✓ Run: python migrate_to_postgresql.py
 ✓ Follow instructions in output
-✓ Deploy to Railway
+✓ Deploy to Render
 ✓ Test user registration
 ✓ Data persists forever!
 
 Your database will NEVER reset again after this fix.
 
-Questions? Check Railway logs for errors.
+Questions? Check Render logs for errors.
 The migration script provides detailed feedback.
 
 Good luck! 🚀

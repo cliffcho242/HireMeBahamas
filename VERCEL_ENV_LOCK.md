@@ -16,10 +16,10 @@ Environment variables for Vercel frontend deployment:
 VITE_API_URL=https://your-backend.onrender.com
 ```
 
-**OR** if using Railway:
+**OR** if using Render:
 
 ```bash
-VITE_API_URL=https://your-backend.up.railway.app
+VITE_API_URL=https://your-backend.up.render.app
 ```
 
 ---
@@ -52,7 +52,7 @@ VITE_SECRET_KEY=your-key                    # Security risk!
 VITE_CRON_SECRET=your-cron-secret          # Security risk!
 
 # ✅ CORRECT - These belong in backend environment only
-# Set these in Render/Railway backend service (NOT Vercel frontend)
+# Set these in Render/Render backend service (NOT Vercel frontend)
 DATABASE_URL=postgresql://...               # Backend only
 JWT_SECRET=your-secret                      # Backend only
 SECRET_KEY=your-key                         # Backend only
@@ -109,7 +109,7 @@ Add these variables in your Vercel project:
 
 1. **VITE_API_URL** (Required)
    - **Name**: `VITE_API_URL`
-   - **Value**: `https://your-backend.onrender.com` (or your Railway URL)
+   - **Value**: `https://your-backend.onrender.com` (or your Render URL)
    - **Environments**: Production, Preview, Development (all three)
 
 2. **DO NOT ADD** (Backend-only variables)
@@ -132,7 +132,7 @@ VITE_SENDBIRD_APP_ID=your_sendbird_app_id
 ```
 
 ```bash
-# Backend Environment Variables (Render/Railway Dashboard)
+# Backend Environment Variables (Render/Render Dashboard)
 # ========================================================
 DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
 JWT_SECRET=your-jwt-secret-here
@@ -280,7 +280,7 @@ has been blocked by CORS policy
 
 **Solution:**
 1. Configure backend CORS to allow your Vercel domain
-2. In backend (Render/Railway), add environment variable:
+2. In backend (Render/Render), add environment variable:
    ```bash
    FRONTEND_URL=https://hiremebahamas.vercel.app
    ```

@@ -24,7 +24,7 @@ The conflicts were resolved by merging with `--allow-unrelated-histories` flag a
 2. `.gitignore` - Git ignore file
 3. `.vercelignore` - Vercel ignore file
 4. `README.md` - Main README
-5. `RAILWAY_PG_STAT_STATEMENTS_SETUP.md` - Railway setup documentation
+5. `RAILWAY_PG_STAT_STATEMENTS_SETUP.md` - Render setup documentation
 6. `VERCEL_EDGE_IMPLEMENTATION.md` - Vercel Edge implementation guide
 7. `VERCEL_POSTGRES_MIGRATION.md` - Postgres migration guide
 8. `backend/.env.example` - Backend environment example

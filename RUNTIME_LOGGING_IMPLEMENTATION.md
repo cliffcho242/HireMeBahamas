@@ -90,7 +90,7 @@ env:
 
 ### For Production
 - No impact on production deployments (no runtime logs directory exists)
-- Continues logging to stdout/stderr for Railway/Render log aggregation
+- Continues logging to stdout/stderr for Render/Render log aggregation
 - Can be enabled in production by setting RUNTIME_LOG_DIR and creating the directory
 
 ### For Development
@@ -126,7 +126,7 @@ tail -f /tmp/runtime-logs/backend-runtime.log
 To enable file logging in production:
 
 ```bash
-# In Railway/Render environment variables
+# In Render/Render environment variables
 RUNTIME_LOG_DIR=/tmp/runtime-logs
 
 # In your start command or Dockerfile

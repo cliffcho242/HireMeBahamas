@@ -64,7 +64,7 @@ have the benefits of full Vercel DNS management.
 ADDING BACKEND SUBDOMAIN:
 =========================
 
-To connect your Railway backend to api.hiremebahamas.com:
+To connect your Render backend to api.hiremebahamas.com:
 
 Method A: Using Current Registrar DNS
 --------------------------------------
@@ -73,10 +73,10 @@ Method A: Using Current Registrar DNS
 3. Add CNAME record:
    Type: CNAME
    Host: api
-   Value: hiremebahamas-backend.railway.app
+   Value: hiremebahamas-backend.render.app
    TTL: Automatic
 
-Result: https://api.hiremebahamas.com → Railway backend
+Result: https://api.hiremebahamas.com → Render backend
 
 Method B: After Switching to Vercel Nameservers
 ------------------------------------------------
@@ -84,7 +84,7 @@ Method B: After Switching to Vercel Nameservers
 2. Add DNS record:
    Type: CNAME
    Name: api
-   Value: hiremebahamas-backend.railway.app
+   Value: hiremebahamas-backend.render.app
 
 Result: Same as Method A but managed in Vercel
 
@@ -105,7 +105,7 @@ After setting up api.hiremebahamas.com, update your frontend:
 File: frontend/.env.production (or .env)
 
 Current:
-  VITE_API_URL=https://hiremebahamas-backend.railway.app
+  VITE_API_URL=https://hiremebahamas-backend.render.app
 
 Change to:
   VITE_API_URL=https://api.hiremebahamas.com
@@ -181,7 +181,7 @@ print(
    4. Update frontend .env with new API URL
 
 🚀 ONCE RAILWAY BACKEND IS DEPLOYED:
-   1. Add CNAME: api → hiremebahamas-backend.railway.app
+   1. Add CNAME: api → hiremebahamas-backend.render.app
    2. Update frontend to use: https://api.hiremebahamas.com
    3. Test authentication flow end-to-end
 """

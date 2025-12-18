@@ -57,6 +57,6 @@ def show_config():
 if __name__ == "__main__":
     if check_toml_syntax():
         show_config()
-        print("✅ Ready for Railway deployment!")
+        print("✅ Ready for Render deployment!")
     else:
         print("❌ Fix syntax errors before deploying")

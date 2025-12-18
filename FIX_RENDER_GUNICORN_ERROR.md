@@ -83,7 +83,7 @@ If you need more detailed help:
 
 1. **[GUNICORN_ARGS_ERROR_FIX.md](./GUNICORN_ARGS_ERROR_FIX.md)**
    - Comprehensive troubleshooting guide
-   - Platform-specific instructions (Render, Railway, Heroku)
+   - Platform-specific instructions (Render, Render, Heroku)
    - Common issues and fixes
 
 2. **[DEPLOYMENT_COMMANDS_QUICK_REF.md](./DEPLOYMENT_COMMANDS_QUICK_REF.md)**
@@ -133,7 +133,7 @@ If none of the above works:
 | Platform | Configuration File | Start Command Location |
 |----------|-------------------|----------------------|
 | Render | `render.yaml` | Dashboard → Settings → Start Command |
-| Railway | `railway.toml` | Dashboard → Settings → Start Command |
+| Render | `render.toml` | Dashboard → Settings → Start Command |
 | Heroku | `Procfile` | File in repository |
 
 **Golden Rule:** Always use **single-line commands** in web dashboards. Multi-line commands with `\` only work in shell scripts!

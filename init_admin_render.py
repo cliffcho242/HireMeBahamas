@@ -2,7 +2,7 @@
 Initialize admin user on production deployment
 
 Usage:
-  BACKEND_URL=https://your-app.up.railway.app python init_admin_render.py
+  BACKEND_URL=https://your-app.up.render.app python init_admin_render.py
 """
 
 import json

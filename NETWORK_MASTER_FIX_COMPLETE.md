@@ -116,7 +116,7 @@ python -c "from final_backend import app; app.run(host='0.0.0.0', port=9999, deb
 ### Permanent Fix:
 1. Deploy backend to a Linux server (or WSL)
 2. Use Docker container for consistent environment
-3. Or use a cloud platform (Heroku, Railway, Render)
+3. Or use a cloud platform (Heroku, Render, Render)
 
 ## 📝 ADMIN CREDENTIALS:
 ```

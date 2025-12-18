@@ -13,7 +13,7 @@ cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py
 
 This single command is now used across all deployment platforms:
 - ✅ Render (render.yaml)
-- ✅ Railway (railway.toml, nixpacks.toml)
+- ✅ Render (render.toml, nixpacks.toml)
 - ✅ Heroku/Generic (Procfile)
 
 ## Files Modified
@@ -28,7 +28,7 @@ This single command is now used across all deployment platforms:
 3. **backend/Procfile**
    - Updated web command to use Poetry
 
-4. **railway.toml**
+4. **render.toml**
    - Updated startCommand with proper working directory
 
 5. **nixpacks.toml**

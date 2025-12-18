@@ -1,15 +1,15 @@
 """
-Test ALL possible Railway URL patterns
+Test ALL possible Render URL patterns
 """
 
 import requests
 import time
 
-# All possible URL patterns for Railway
+# All possible URL patterns for Render
 urls_to_test = [
-    "https://hiremebahamas-backend.railway.app",
-    "https://hiremebahamas-backend-production.up.railway.app",
-    "https://web-production.up.railway.app",
+    "https://hiremebahamas-backend.render.app",
+    "https://hiremebahamas-backend-production.up.render.app",
+    "https://web-production.up.render.app",
     "https://api.hiremebahamas.com",
 ]
 
@@ -70,11 +70,11 @@ print("CONCLUSION")
 print("=" * 70)
 print(
     """
-If all URLs show 404 or 'OK' (2 bytes), but Railway logs show 209 bytes:
-→ Railway's CDN is caching old responses
+If all URLs show 404 or 'OK' (2 bytes), but Render logs show 209 bytes:
+→ Render's CDN is caching old responses
 
 SOLUTION:
-1. Go to Railway Dashboard: https://railway.app/dashboard
+1. Go to Render Dashboard: https://render.app/dashboard
 2. Click your backend service
 3. Settings → Networking → Click "Generate Domain" 
 4. Get the NEW domain and test with that

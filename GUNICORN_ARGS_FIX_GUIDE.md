@@ -23,7 +23,7 @@ This guide will help you identify and fix the issue.
 Check these files for invalid gunicorn arguments:
 - `Procfile` (root and backend/)
 - `render.yaml`
-- `railway.toml`
+- `render.toml`
 - `start.sh` or other startup scripts
 
 ### 2. --preload Flag Conflicts
@@ -69,7 +69,7 @@ Extra text or commands added in the deployment platform's web dashboard.
 
 **Check these locations:**
 
-#### Railway
+#### Render
 1. Go to your service settings
 2. Check "Custom Start Command"
 3. Ensure it matches your Procfile or uses the default
@@ -92,7 +92,7 @@ Environment variables with extra text being interpolated into commands.
 ```bash
 # Check all environment variables
 heroku config  # For Heroku
-railway variables # For Railway
+render variables # For Render
 # Or check in your platform's dashboard
 ```
 
@@ -149,7 +149,7 @@ gunicorn app.main:app --config gunicorn.conf.py
 - [ ] `Procfile` (root)
 - [ ] `backend/Procfile`
 - [ ] `render.yaml`
-- [ ] `railway.toml`
+- [ ] `render.toml`
 - [ ] `gunicorn.conf.py`
 - [ ] Deployment platform dashboard settings
 
@@ -173,6 +173,6 @@ If you've checked everything and still have issues:
 
 - `gunicorn.conf.py` - Main Gunicorn configuration
 - `test_gunicorn_commands.py` - Validation script
-- `Procfile` - Heroku/Railway start command
+- `Procfile` - Heroku/Render start command
 - `render.yaml` - Render deployment configuration
 - `FIX_RENDER_GUNICORN_ERROR.md` - Render-specific fixes

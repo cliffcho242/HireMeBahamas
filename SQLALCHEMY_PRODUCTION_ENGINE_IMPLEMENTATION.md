@@ -140,11 +140,11 @@ DB_POOL_RECYCLE=600
 
 ## Deployment Considerations
 
-### Railway/Render/Vercel
+### Render/Render/Vercel
 These defaults are optimal for:
 - Serverless environments (Vercel)
-- Container deployments (Railway/Render)
-- Cloud databases (Neon, Supabase, Railway Postgres)
+- Container deployments (Render/Render)
+- Cloud databases (Neon, Supabase, Render Postgres)
 
 ### Memory Usage
 With defaults:

@@ -91,7 +91,7 @@ All endpoints are now publicly accessible via your ngrok URL:
 ### For Permanent Deployment
 If you want a URL that doesn't change, consider:
 - **Render.com** (Free tier, permanent URL)
-- **Railway.app** (Free tier, permanent URL)
+- **Render.app** (Free tier, permanent URL)
 - **PythonAnywhere** (Free tier with limitations)
 
 ## 🎉 You're Live!

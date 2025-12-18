@@ -137,9 +137,9 @@ The Gunicorn worker SIGTERM fix is properly implemented:
 
 ## Deployment Commands
 
-### Railway
+### Render
 ```bash
-# Configuration is in railway.toml - automatic deployment
+# Configuration is in render.toml - automatic deployment
 git push origin main
 ```
 

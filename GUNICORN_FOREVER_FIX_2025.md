@@ -11,7 +11,7 @@ gunicorn: error: unrecognized arguments:
 - ❌ Line breaks in start commands
 - ❌ Smart quotes
 - ❌ Copy-pasted commands with hidden characters
-- ❌ Render/Railway start commands split incorrectly
+- ❌ Render/Render start commands split incorrectly
 - ❌ Extra text after the command
 
 Gunicorn is very strict about argument formatting.
@@ -40,12 +40,12 @@ gunicorn app.main:app --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.
 startCommand: cd backend && poetry run gunicorn app.main:app --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --workers 1 --timeout 120
 ```
 
-### 2. Procfile (Heroku/Railway)
+### 2. Procfile (Heroku/Render)
 ```
 web: cd backend && poetry run gunicorn app.main:app --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --workers 1 --timeout 120
 ```
 
-### 3. nixpacks.toml (Railway)
+### 3. nixpacks.toml (Render)
 ```toml
 cmd = "cd backend && poetry run gunicorn app.main:app --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --workers 1 --timeout 120"
 ```
@@ -76,7 +76,7 @@ CMD ["sh", "-c", "gunicorn app.main:app --worker-class uvicorn.workers.UvicornWo
 - ✅ Predictable memory usage
 - ✅ No coordination overhead
 - ✅ Faster startup
-- ✅ Optimal for Render/Railway small instances
+- ✅ Optimal for Render/Render small instances
 
 ### UvicornWorker
 - ✅ Async/await support for FastAPI
@@ -121,11 +121,11 @@ gunicorn app.main:app --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.
 5. Click **"Save Changes"**
 6. Click **"Manual Deploy"** → **"Deploy latest commit"**
 
-### Railway
-1. Go to https://railway.app
+### Render
+1. Go to https://render.app
 2. Click your project → backend service → **Settings**
 3. Look for **"Start Command"** override
-4. Railway will use `nixpacks.toml` by default (already fixed)
+4. Render will use `nixpacks.toml` by default (already fixed)
 5. If you have a manual override, replace with exact command
 6. Redeploy
 
@@ -232,7 +232,7 @@ This fix ensures Gunicorn receives clean, properly formatted arguments on all de
 
 **Time to fix:** 5 minutes  
 **Success rate:** 100% when followed exactly  
-**Deployment platforms:** Render, Railway, Heroku, Docker
+**Deployment platforms:** Render, Render, Heroku, Docker
 
 ---
 

@@ -8,8 +8,8 @@
 
 ### Conflicts Identified & Resolved
 ```
-frontend/src/services/api.ts        → Railway backend + env var fallback
-frontend/src/graphql/client.ts      → Railway backend + env var fallback  
+frontend/src/services/api.ts        → Render backend + env var fallback
+frontend/src/graphql/client.ts      → Render backend + env var fallback  
 vercel.json                         → Removed hardcoded VITE_API_URL
 RENDER_TO_VERCEL_MIGRATION.md       → Kept PR #349's updated version
 ```
@@ -51,7 +51,7 @@ Close PR #349 and create new PR from `copilot/fix-merge-issues-pr-349` → `main
 ## What's Preserved
 ✅ All original PR #349 changes  
 ✅ Render to Vercel migration guide  
-✅ Railway backend configuration  
+✅ Render backend configuration  
 ✅ Environment variable flexibility  
 ✅ Security headers and CORS settings  
 ✅ All documentation and comments  

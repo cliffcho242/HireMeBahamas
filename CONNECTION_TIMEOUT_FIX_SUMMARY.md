@@ -12,9 +12,9 @@ connection to server at "dpg-d4glkqp5pdvs738m9nf0-a" (10.230.242.14), port 5432 
 
 The `api/database.py` module was using a default connection timeout of only **10 seconds**, which is insufficient for cloud database connections, particularly with:
 
-- **Railway PostgreSQL** - Requires time for cold starts and service initialization
+- **Render PostgreSQL** - Requires time for cold starts and service initialization
 - **Network latency** - Cloud-to-cloud connections can experience delays
-- **Private network routing** - Internal Railway networking adds overhead
+- **Private network routing** - Internal Render networking adds overhead
 - **SSL/TLS negotiation** - Secure connection setup takes additional time
 
 Other database modules (`backend/app/database.py` and `api/backend_app/database.py`) were already using **45 seconds**, creating inconsistency.
@@ -24,7 +24,7 @@ Other database modules (`backend/app/database.py` and `api/backend_app/database.
 Increased the default `DB_CONNECT_TIMEOUT` from **10 seconds** to **45 seconds** in `api/database.py` to:
 
 1. **Prevent timeout errors** - Allow sufficient time for connection establishment
-2. **Match Railway standards** - Align with recommended Railway PostgreSQL timeout settings
+2. **Match Render standards** - Align with recommended Render PostgreSQL timeout settings
 3. **Ensure consistency** - Use the same timeout across all database modules
 
 ## Changes Made
@@ -35,7 +35,7 @@ Increased the default `DB_CONNECT_TIMEOUT` from **10 seconds** to **45 seconds**
 connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
 
 # AFTER:
-# CRITICAL: 45s timeout for Railway cold starts and cloud database latency
+# CRITICAL: 45s timeout for Render cold starts and cloud database latency
 connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "45"))
 ```
 
@@ -47,7 +47,7 @@ Updated documentation to reflect the 45-second timeout requirement:
 #    - Maximum time to wait for TCP connection and PostgreSQL handshake
 #    - Cloud databases need higher timeout (45s) due to network latency and cold starts
 #    - This is the #1 cause of timeout errors in cloud deployments
-#    - Railway PostgreSQL requires 45s for cold starts and private network connections
+#    - Render PostgreSQL requires 45s for cold starts and private network connections
 # DB_CONNECT_TIMEOUT=45
 ```
 
@@ -76,7 +76,7 @@ $ python test_connection_timeout_fix.py
 ## Impact
 
 ### Benefits
-- ✅ Prevents "Connection timed out" errors with Railway PostgreSQL
+- ✅ Prevents "Connection timed out" errors with Render PostgreSQL
 - ✅ Maintains consistency across all database connection modules
 - ✅ Improves reliability for cloud database connections
 - ✅ Better developer experience with proper timeout configuration
@@ -92,7 +92,7 @@ $ python test_connection_timeout_fix.py
 Set custom timeout value if needed:
 
 ```bash
-# In Railway/Vercel environment variables:
+# In Render/Vercel environment variables:
 DB_CONNECT_TIMEOUT=45
 
 # For local development (if needed):
@@ -103,7 +103,7 @@ export DB_CONNECT_TIMEOUT=45
 
 | Platform | Recommended Timeout | Notes |
 |----------|-------------------|-------|
-| Railway PostgreSQL | 45s | Default, handles cold starts |
+| Render PostgreSQL | 45s | Default, handles cold starts |
 | Vercel Postgres (Neon) | 45s | Good for serverless |
 | Local Development | 45s | Safe default, no harm |
 | Other Cloud Providers | 30-45s | Adjust based on latency |
@@ -111,8 +111,8 @@ export DB_CONNECT_TIMEOUT=45
 ## Related Documentation
 
 - `.env.example` - Environment variable configuration
-- `RAILWAY_DATABASE_SETUP.md` - Railway PostgreSQL setup guide
-- `RAILWAY_TROUBLESHOOT.md` - Railway troubleshooting guide
+- `RAILWAY_DATABASE_SETUP.md` - Render PostgreSQL setup guide
+- `RAILWAY_TROUBLESHOOT.md` - Render troubleshooting guide
 - `SECURITY.md` - Database security guidelines
 
 ## Verification

@@ -33,7 +33,7 @@ Prevents database from sleeping:
 - ✅ Pings database every 2 minutes (configurable)
 - ✅ Automatic reconnection on failures
 - ✅ Exponential backoff for retries
-- ✅ Works with Railway, Render, and Vercel Postgres
+- ✅ Works with Render, Render, and Vercel Postgres
 - ✅ Zero overhead on application performance
 
 ### 3. 🏥 Health Check Monitor
@@ -68,7 +68,7 @@ Built-in Vercel crons:
 
 ### 1. Configuration (Environment Variables)
 
-Add these to your Vercel/Railway/Render environment:
+Add these to your Vercel/Render/Render environment:
 
 ```env
 # Forever Fix Configuration
@@ -225,7 +225,7 @@ FOREVER_DB_KEEPALIVE_INTERVAL=120
 - ✅ GitHub Actions provides backup
 - ✅ No need for aggressive intervals
 
-#### Railway (Container)
+#### Render (Container)
 ```env
 FOREVER_HEALTH_CHECK_INTERVAL=60
 FOREVER_DB_KEEPALIVE_INTERVAL=120
@@ -279,7 +279,7 @@ FOREVER_DB_KEEPALIVE_INTERVAL=180
 **Check:**
 1. Database connection string is correct
 2. Database is accessible from your deployment
-3. Review logs in Vercel/Railway/Render dashboard
+3. Review logs in Vercel/Render/Render dashboard
 4. Check database service status
 
 **Fix:**
@@ -297,7 +297,7 @@ FOREVER_DB_KEEPALIVE_INTERVAL=300  # 5 minutes
 3. Check Vercel cron jobs are active
 4. Review application logs
 
-### Issue: Database still sleeping (Railway/Render)
+### Issue: Database still sleeping (Render/Render)
 
 **Solution:**
 ```env
@@ -372,9 +372,9 @@ If you experience any issues:
 
 1. Check the `/api/forever-status` endpoint
 2. Review GitHub Actions workflow runs
-3. Check Vercel/Railway/Render logs
+3. Check Vercel/Render/Render logs
 4. Open an issue with:
-   - Platform (Vercel/Railway/Render)
+   - Platform (Vercel/Render/Render)
    - Error messages
    - Forever Fix status output
 

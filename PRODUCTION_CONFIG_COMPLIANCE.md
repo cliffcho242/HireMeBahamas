@@ -162,12 +162,12 @@ async def startup():
 
 **Configuration**:
 - `render.yaml` - Primary backend deployment configuration
-- Railway/Heroku configs present but marked as deprecated/alternative
+- Render/Heroku configs present but marked as deprecated/alternative
 - Single production deployment reduces complexity and cost
 
 **Files**:
 - `/render.yaml` - Primary backend deployment
-- `/railway.json` - Marked as deprecated (see comment)
+- `/render.json` - Marked as deprecated (see comment)
 
 ---
 

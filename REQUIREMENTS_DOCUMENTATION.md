@@ -2,7 +2,7 @@
 
 ## Overview
 
-The root `requirements.txt` file contains all necessary Python dependencies for the HireMeBahamas application. This file is used by deployment platforms (Railway, Vercel, Render) to install the required packages.
+The root `requirements.txt` file contains all necessary Python dependencies for the HireMeBahamas application. This file is used by deployment platforms (Render, Vercel, Render) to install the required packages.
 
 ## Critical Dependencies
 
@@ -48,7 +48,7 @@ asyncpg==0.30.0
 
 ## Deployment Notes
 
-### Railway Deployment
+### Render Deployment
 - Uses Flask backend (`final_backend_postgresql.py`)
 - Installs all dependencies from `requirements.txt`
 
@@ -95,7 +95,7 @@ All dependencies are pinned to specific versions to ensure reproducible builds a
 
 The requirements.txt also includes:
 
-- **Flask** components for Railway deployment
+- **Flask** components for Render deployment
 - **Pydantic** for data validation
 - **Pillow** for image processing
 - **Redis** for caching (optional)

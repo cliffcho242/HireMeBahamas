@@ -19,12 +19,12 @@
 
 **Current Architecture**:
 - Frontend: Vercel (Edge + Static) - https://hiremebahamas.vercel.app
-- Backend: Railway (Python/Flask) OR Vercel Serverless Functions
-- Database: Railway PostgreSQL OR Vercel Postgres
+- Backend: Render (Python/Flask) OR Vercel Serverless Functions
+- Database: Render PostgreSQL OR Vercel Postgres
 - Monitoring: GitHub Actions workflows (keep-database-awake.yml, scheduled-ping.yml, uptime-monitoring.yml)
 
 **To Deploy Backend**:
-- Railway: Configure RAILWAY_BACKEND_URL in GitHub Secrets
+- Render: Configure RAILWAY_BACKEND_URL in GitHub Secrets
 - Vercel: Backend is automatically deployed with frontend (api/ directory)
 
 ---
@@ -103,8 +103,8 @@ Copy these from Render Dashboard → Environment:
 # Required Variables (copy values from Render)
 SECRET_KEY=<your-secret-key>
 JWT_SECRET_KEY=<your-jwt-secret-key>
-DATABASE_URL=<your-railway-postgres-url>
-DATABASE_PRIVATE_URL=<your-railway-private-url>
+DATABASE_URL=<your-render-postgres-url>
+DATABASE_PRIVATE_URL=<your-render-private-url>
 FRONTEND_URL=https://hiremebahamas.com
 FLASK_ENV=production
 ENVIRONMENT=production
@@ -119,22 +119,22 @@ ENVIRONMENT=production
 |-----|-------|-------------|
 | `VITE_API_URL` | `https://YOUR-BACKEND-URL` | Production |
 | `VITE_SOCKET_URL` | `https://YOUR-BACKEND-URL` | Production |
-| `DATABASE_URL` | `<railway-postgres-url>` | Production |
+| `DATABASE_URL` | `<render-postgres-url>` | Production |
 | `SECRET_KEY` | `<your-secret-key>` | Production |
 | `JWT_SECRET_KEY` | `<your-jwt-secret-key>` | Production |
 | `FRONTEND_URL` | `https://hiremebahamas.com` | Production |
 
 **Note**: Replace `YOUR-BACKEND-URL` with your actual backend URL:
-- If using Railway: `https://your-app.up.railway.app`
+- If using Render: `https://your-app.up.render.app`
 - If using custom domain: `https://api.hiremebahamas.com` (requires DNS setup)
 
 ### Step 3.3: Backend API on Vercel Serverless
 Since Vercel is for frontend (static + serverless), the Flask backend needs:
 - **Option A**: Deploy backend as Vercel Serverless Functions (Python)
-- **Option B**: Keep backend on Railway (recommended for Python/Flask)
+- **Option B**: Keep backend on Render (recommended for Python/Flask)
 - **Option C**: Migrate backend to Vercel Edge Functions with Node.js
 
-**Recommended**: Deploy Flask backend on **Railway** (already has PostgreSQL there)
+**Recommended**: Deploy Flask backend on **Render** (already has PostgreSQL there)
 
 ---
 
@@ -182,17 +182,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 ```
 
 ### Step 4.3: Alternative - Use External Cron Service (Free)
-If backend stays on Railway, use:
+If backend stays on Render, use:
 - **UptimeRobot** (free): https://uptimerobot.com/
 - **Cron-job.org** (free): https://cron-job.org/
-- **Railway Cron** (built-in)
+- **Render Cron** (built-in)
 
 ---
 
 ## SECTION 5: RAILWAY POSTGRES CONFIRMATION
 
-### Step 5.1: Verify Railway PostgreSQL
-1. Go to: https://railway.app/dashboard
+### Step 5.1: Verify Render PostgreSQL
+1. Go to: https://render.app/dashboard
 2. Click your PostgreSQL service
 3. Copy connection string from **Connect** tab
 
@@ -200,8 +200,8 @@ If backend stays on Railway, use:
 Ensure these are set in your backend deployment:
 
 ```bash
-DATABASE_URL=postgresql://user:pass@host:5432/railway
-DATABASE_PRIVATE_URL=postgresql://user:pass@internal-host:5432/railway
+DATABASE_URL=postgresql://user:pass@host:5432/render
+DATABASE_PRIVATE_URL=postgresql://user:pass@internal-host:5432/render
 ```
 
 ### Step 5.3: Test Database Connection
@@ -214,7 +214,7 @@ psql $DATABASE_URL -c "SELECT 1;"
 If migrating to Vercel Postgres:
 1. Go to: Vercel Dashboard → Storage → Create Database
 2. Select PostgreSQL
-3. Use `pg_dump` to export Railway data
+3. Use `pg_dump` to export Render data
 4. Import to Vercel Postgres
 5. Update `DATABASE_URL` in Vercel environment
 
@@ -381,7 +381,7 @@ Files to update:
 # Production Environment - Vercel
 # Replace YOUR-BACKEND-URL with your actual backend URL
 # Examples:
-#   - Railway: https://your-app.up.railway.app
+#   - Render: https://your-app.up.render.app
 #   - Custom domain: https://api.hiremebahamas.com
 VITE_API_URL=https://YOUR-BACKEND-URL
 VITE_SOCKET_URL=https://YOUR-BACKEND-URL
@@ -404,7 +404,7 @@ Set the same environment variable in Vercel.
 ### ✅ PRE-MIGRATION (Do First)
 - [ ] **Step 1**: Export all Render environment variables to a secure file
 - [ ] **Step 2**: Backup current `vercel.json` and frontend code
-- [ ] **Step 3**: Verify Railway PostgreSQL is accessible and healthy
+- [ ] **Step 3**: Verify Render PostgreSQL is accessible and healthy
 
 ### ✅ MIGRATION (Execute)
 - [ ] **Step 4**: Update `frontend/src/services/api.ts` - change `DEFAULT_PROD_API`
@@ -452,9 +452,9 @@ Set the same environment variable in Vercel.
 3. Force refresh browser (Ctrl+Shift+R)
 
 ### If database connection fails:
-1. Verify `DATABASE_URL` in Railway
+1. Verify `DATABASE_URL` in Render
 2. Check SSL mode (`sslmode=require`)
-3. Whitelist Vercel IPs in Railway if needed
+3. Whitelist Vercel IPs in Render if needed
 
 ---
 

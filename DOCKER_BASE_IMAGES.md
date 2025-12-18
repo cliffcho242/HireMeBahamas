@@ -144,7 +144,7 @@ The script will:
 
 ### Making Images Public
 
-By default, GitHub Container Registry images are private. To make them public (so Railway/Render can pull them):
+By default, GitHub Container Registry images are private. To make them public (so Render/Render can pull them):
 
 1. Go to https://github.com/cliffcho242?tab=packages
 2. Find the package (e.g., `hiremebahamas-base-backend`)
@@ -176,9 +176,9 @@ Repeat for both base images.
 
 ## Deployment Platforms
 
-### Railway
+### Render
 
-Railway automatically pulls public images from GitHub Container Registry:
+Render automatically pulls public images from GitHub Container Registry:
 ```dockerfile
 FROM ghcr.io/cliffcho242/hiremebahamas-base-backend:latest
 ```
@@ -295,7 +295,7 @@ Base images are tagged with:
 
 - [Docker Multi-stage Builds](https://docs.docker.com/build/building/multi-stage/)
 - [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
-- [Railway Docker Deployments](https://docs.railway.app/deploy/dockerfiles)
+- [Render Docker Deployments](https://docs.render.app/deploy/dockerfiles)
 - [Render Docker Deployments](https://render.com/docs/docker)
 
 ## Support

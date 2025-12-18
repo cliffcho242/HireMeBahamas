@@ -13,7 +13,7 @@ See error message above for instructions on finding your real DATABASE_URL
 This crash prevented:
 - Development environments without proper PostgreSQL setup from starting
 - CI/CD environments from running with test configurations
-- Render/Railway deployments with incomplete configuration from starting
+- Render/Render deployments with incomplete configuration from starting
 - Health check endpoints from reporting the misconfiguration
 
 ## Root Cause
@@ -99,7 +99,7 @@ All tests pass successfully:
 ✅ 'example.com' detected as placeholder
 ✅ 'your-db-host' detected as placeholder
 ✅ 'HOST' (case-insensitive) detected as placeholder
-✅ 'real-host.railway.app' passes validation
+✅ 'real-host.render.app' passes validation
 ✅ 'neon-db.aws.neon.tech' passes validation
 ```
 

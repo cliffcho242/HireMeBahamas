@@ -16,7 +16,7 @@ After merging this PR to `main`, follow these steps to complete the setup:
   - `hiremebahamas-base-backend`
   - `hiremebahamas-base-frontend`
 
-### 3. Make Base Images Public (REQUIRED for Railway/Render)
+### 3. Make Base Images Public (REQUIRED for Render/Render)
 
 For **hiremebahamas-base-backend**:
 - [ ] Click on the package name
@@ -61,7 +61,7 @@ docker build -t test-frontend .
 
 Expected: Builds complete in 1-2 minutes (much faster than before!)
 
-## ✅ Railway/Render Deployment (Optional - for immediate testing)
+## ✅ Render/Render Deployment (Optional - for immediate testing)
 
 ### 6. Trigger Test Deployment
 To verify everything works in production:
@@ -73,7 +73,7 @@ git push
 ```
 
 **Option B: Manual Trigger**
-- Railway: Use "Manual Deploy" button
+- Render: Use "Manual Deploy" button
 - Render: Use "Manual Deploy" button
 
 ### 7. Monitor Deployment

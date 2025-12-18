@@ -200,9 +200,9 @@ npx prisma db seed
 3. Add the `DATABASE_URL` environment variable in Vercel dashboard
 4. Deploy!
 
-### Railway Deployment
+### Render Deployment
 
-1. Connect your repo to Railway
+1. Connect your repo to Render
 2. Add the `DATABASE_URL` environment variable
 3. Deploy!
 

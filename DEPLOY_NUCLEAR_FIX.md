@@ -7,7 +7,7 @@
 [POST]499 /api/auth/login → 89172 ms (89 seconds) → iPhone user rage-quit
 ```
 
-**This is THE ONE complete, copy-paste solution that works 100% on Render + Railway right now.**
+**This is THE ONE complete, copy-paste solution that works 100% on Render + Render right now.**
 
 **Target Performance After Deployment:**
 - ✅ Boot < 10 seconds (no more cold start delays)
@@ -20,22 +20,22 @@
 
 ## 1. FINAL DATABASE_URL (private networking + jit=off + connect_timeout=45)
 
-**Railway Private Networking (RECOMMENDED - $0 egress, lowest latency):**
+**Render Private Networking (RECOMMENDED - $0 egress, lowest latency):**
 
 ```
-DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@postgres.railway.internal:5432/railway?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@postgres.render.internal:5432/render?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
 ```
 
-**Railway Public TCP Proxy (fallback):**
+**Render Public TCP Proxy (fallback):**
 
 ```
-DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@viaduct.proxy.rlwy.net:PORT/railway?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@viaduct.proxy.rlwy.net:PORT/render?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
 ```
 
 **Key Parameters:**
-- `sslmode=require` — Required for Railway SSL
+- `sslmode=require` — Required for Render SSL
 - `options=-c%20jit%3Doff` — Disables JIT compilation (prevents 60s+ first-query delays)
-- `connect_timeout=45` — Survives Railway cold starts without timeout
+- `connect_timeout=45` — Survives Render cold starts without timeout
 
 ---
 
@@ -54,13 +54,13 @@ DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
 # NUCLEAR POOL SETTINGS — PREVENTS OOM ON 512MB-1GB INSTANCES
 POOL_SIZE = 2           # CRITICAL: 2 = safe for 512MB RAM
 MAX_OVERFLOW = 3        # Burst capacity
-POOL_RECYCLE = 120      # Recycle every 2 min before Railway drops connections
+POOL_RECYCLE = 120      # Recycle every 2 min before Render drops connections
 POOL_TIMEOUT = 30       # Wait max 30s for connection from pool
-CONNECT_TIMEOUT = 45    # 45s for Railway cold starts
+CONNECT_TIMEOUT = 45    # 45s for Render cold starts
 COMMAND_TIMEOUT = 30    # 30s per query
 
 def _get_ssl_context():
-    """TLS 1.3 only - prevents SSL EOF errors on Railway."""
+    """TLS 1.3 only - prevents SSL EOF errors on Render."""
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.minimum_version = ssl.TLSVersion.TLSv1_3
     ctx.maximum_version = ssl.TLSVersion.TLSv1_3
@@ -292,7 +292,7 @@ while True:
 
 **Environment Variables (copy-paste):**
 ```
-DATABASE_URL=postgresql://user:pass@postgres.railway.internal:5432/railway?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
+DATABASE_URL=postgresql://user:pass@postgres.render.internal:5432/render?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
 WEB_CONCURRENCY=1
 WEB_THREADS=4
 GUNICORN_TIMEOUT=180
@@ -307,9 +307,9 @@ DB_POOL_RECYCLE=120
 
 ## 7. FINAL RAILWAY POSTGRES VARIABLES (shared_preload_libraries fix)
 
-Railway PostgreSQL does NOT support `shared_preload_libraries` for pg_stat_statements.
+Render PostgreSQL does NOT support `shared_preload_libraries` for pg_stat_statements.
 
-**Alternative monitoring:** Deploy [PgHero](https://railway.app/template/pghero) for query performance monitoring.
+**Alternative monitoring:** Deploy [PgHero](https://render.app/template/pghero) for query performance monitoring.
 
 **Connection Strategy:**
 1. Use `DATABASE_PRIVATE_URL` for private networking ($0 egress)
@@ -326,7 +326,7 @@ Railway PostgreSQL does NOT support `shared_preload_libraries` for pg_stat_state
 
 ### Step 1: Update DATABASE_URL in Render Dashboard
 ```
-DATABASE_URL=postgresql://user:pass@postgres.railway.internal:5432/railway?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
+DATABASE_URL=postgresql://user:pass@postgres.render.internal:5432/render?sslmode=require&options=-c%20jit%3Doff&connect_timeout=45
 ```
 
 ### Step 2: Set Environment Variables

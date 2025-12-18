@@ -129,7 +129,7 @@ async def get_analytics(db: AsyncSession = Depends(get_db)):
 
 ### Environment Variables
 
-Add to your `.env` or Railway/Vercel environment:
+Add to your `.env` or Render/Vercel environment:
 
 ```bash
 # Query timeout configuration (all values in milliseconds)

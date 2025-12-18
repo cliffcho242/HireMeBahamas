@@ -130,7 +130,7 @@ alembic history
 
 **📖 [Complete Migration Guide: MIGRATIONS.md](./MIGRATIONS.md)** - Detailed instructions for creating and running migrations
 
-⚠️ **Note**: Railway backend documentation in this repository is deprecated. Use **Render** for all new deployments.
+⚠️ **Note**: Render backend documentation in this repository is deprecated. Use **Render** for all new deployments.
 
 ### 🔧 Validation Tools
 ```bash
@@ -146,7 +146,7 @@ python validate_render_service_type.py
 
 ### 🚀 **Quick Migration (30-60 minutes)**
 
-**➡️ [Complete Migration Guide: MIGRATE_FROM_RENDER.md](./MIGRATE_FROM_RENDER.md)** - Step-by-step instructions for migrating from Render to Vercel or Railway
+**➡️ [Complete Migration Guide: MIGRATE_FROM_RENDER.md](./MIGRATE_FROM_RENDER.md)** - Step-by-step instructions for migrating from Render to Vercel or Render
 
 **What you'll gain:**
 - 💰 **Save $20-45/month** - Move to $0-7/month platforms
@@ -157,14 +157,14 @@ python validate_render_service_type.py
 **Migration steps include:**
 1. ✅ Follow migration documentation (30 min read)
 2. ✅ Backup your database (automated script provided)
-3. ✅ Deploy to Vercel or Railway (10-15 minutes)
+3. ✅ Deploy to Vercel or Render (10-15 minutes)
 4. ✅ Update frontend `VITE_API_URL` (or remove it for Vercel serverless)
 5. ✅ Test and verify (5 minutes)
 6. ✅ Delete Render services (after verification period)
 
 **Quick links:**
 - 📖 [RENDER_TO_VERCEL_MIGRATION.md](./RENDER_TO_VERCEL_MIGRATION.md) - Migrate to Vercel ($0/month)
-- 📖 [RENDER_TO_RAILWAY_MIGRATION.md](./RENDER_TO_RAILWAY_MIGRATION.md) - Migrate to Railway ($5-7/month)
+- 📖 [RENDER_TO_RAILWAY_MIGRATION.md](./RENDER_TO_RAILWAY_MIGRATION.md) - Migrate to Render ($5-7/month)
 - 🔧 [Database Backup Script](./scripts/backup_database.py) - Automated backup tool
 - ✅ [Test Your Migration](./scripts/test_deployment.py) - Verify everything works
 
@@ -226,8 +226,8 @@ All critical items verified:
 # DO NOT set VITE_API_URL in Vercel Dashboard
 # Frontend automatically uses /api/* (same-origin)
 
-# Option B: Separate Backend (Railway/Render)
-VITE_API_URL=https://your-backend.up.railway.app  # Railway
+# Option B: Separate Backend (Render/Render)
+VITE_API_URL=https://your-backend.up.render.app  # Render
 VITE_API_URL=https://your-backend.onrender.com    # Render
 ```
 
@@ -237,7 +237,7 @@ VITE_API_URL=https://your-backend.onrender.com    # Render
 
 ---
 
-## 🔴 **CRITICAL: PostgreSQL "root execution not permitted" Error on Railway?**
+## 🔴 **CRITICAL: PostgreSQL "root execution not permitted" Error on Render?**
 
 **Seeing this error?**
 ```
@@ -249,21 +249,21 @@ possible system security compromise.
 **➡️ READ THIS IMMEDIATELY: [RAILWAY_POSTGRES_ROOT_ERROR_FIX.md](./RAILWAY_POSTGRES_ROOT_ERROR_FIX.md)**
 
 **Quick Summary:**
-- ❌ You're trying to deploy PostgreSQL as a container on Railway (WRONG!)
-- ✅ Use Railway's **managed PostgreSQL database service** instead
+- ❌ You're trying to deploy PostgreSQL as a container on Render (WRONG!)
+- ✅ Use Render's **managed PostgreSQL database service** instead
 - 📖 Complete fix guide: [RAILWAY_POSTGRES_ROOT_ERROR_FIX.md](./RAILWAY_POSTGRES_ROOT_ERROR_FIX.md)
-- 🔧 Validation tool: Run `python3 validate_railway_postgres_config.py` before deploying
+- 🔧 Validation tool: Run `python3 validate_render_postgres_config.py` before deploying
 - 📋 Setup reference: [RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)
 
-**Why this happens:** Railway provides managed PostgreSQL databases. You should NEVER deploy PostgreSQL as a container/application. See the guide above for the correct setup.
+**Why this happens:** Render provides managed PostgreSQL databases. You should NEVER deploy PostgreSQL as a container/application. See the guide above for the correct setup.
 
 ---
 
-## 📊 **PostgreSQL Log Level Miscategorization on Railway**
+## 📊 **PostgreSQL Log Level Miscategorization on Render**
 
 **Seeing PostgreSQL startup messages logged as "errors"?**
 
-Railway's managed PostgreSQL database may log normal informational messages (like "database system is ready to accept connections") with "error" level in their log aggregation system. **This is expected behavior and does NOT indicate actual errors.**
+Render's managed PostgreSQL database may log normal informational messages (like "database system is ready to accept connections") with "error" level in their log aggregation system. **This is expected behavior and does NOT indicate actual errors.**
 
 **Quick Fix:**
 - 📖 **Explanation**: [RAILWAY_POSTGRES_LOG_LEVEL_FIX.md](./RAILWAY_POSTGRES_LOG_LEVEL_FIX.md)
@@ -272,7 +272,7 @@ Railway's managed PostgreSQL database may log normal informational messages (lik
 
 **What's happening:**
 - ✅ PostgreSQL uses "LOG" level for informational messages (not errors)
-- ⚠️ Railway's log system may categorize these as "error" level
+- ⚠️ Render's log system may categorize these as "error" level
 - ✅ The database is functioning correctly
 - 🔧 Use the filter tool to correct log levels or suppress benign messages
 
@@ -349,12 +349,12 @@ npm run check:deployment
 ```
 
 **What it checks:**
-- 🌐 **Platform Detection:** Vercel, Railway, or other platforms
+- 🌐 **Platform Detection:** Vercel, Render, or other platforms
 - 📱 **Frontend Health:** Accessibility, React app loading, static assets
 - 🔧 **Backend API:** /api/health, /api/status, /api/ready endpoints
 - 💾 **Database:** Connection, DATABASE_URL validation, pattern matching
 - 🔐 **Environment:** Required variables (DATABASE_URL, SECRET_KEY, JWT_SECRET_KEY)
-- ⚙️ **Configuration:** vercel.json, railway.json validation
+- ⚙️ **Configuration:** vercel.json, render.json validation
 
 **Features:**
 - 📊 Beautiful dashboard-style output with emoji indicators
@@ -408,9 +408,9 @@ python diagnostic/check_vercel_connection.py --url https://your-app.vercel.app
 
 ### ⚠️ **Still Using Render PostgreSQL?**
 
-🔄 **[MIGRATE NOW: Render to Railway PostgreSQL](./RENDER_TO_RAILWAY_MIGRATION.md)** - Complete migration guide (30 minutes)
+🔄 **[MIGRATE NOW: Render to Render PostgreSQL](./RENDER_TO_RAILWAY_MIGRATION.md)** - Complete migration guide (30 minutes)
 
-If your database is still connected to Render, this may prevent users from signing in. Railway PostgreSQL is now the recommended database provider with better performance and compatibility.
+If your database is still connected to Render, this may prevent users from signing in. Render PostgreSQL is now the recommended database provider with better performance and compatibility.
 
 ### 🔧 Quick Fix (5 minutes):
 
@@ -419,7 +419,7 @@ If your database is still connected to Render, this may prevent users from signi
 This guide covers:
 - ✅ Configuring GitHub Secrets for automated deployments
 - ✅ Setting up Vercel environment variables
-- ✅ Connecting PostgreSQL database (Railway recommended)
+- ✅ Connecting PostgreSQL database (Render recommended)
 - ✅ Troubleshooting common deployment issues
 - ✅ Verifying sign-in functionality
 
@@ -456,7 +456,7 @@ python3 scripts/verify-vercel-deployment.py
 
 **📖 [START HERE: Deployment Guide](./START_HERE_DEPLOYMENT.md)** - Your starting point for deployment
 
-**🔗 [DIRECT LINKS: Where to Configure Everything](./DIRECT_LINKS_WHERE_TO_CONFIGURE.md)** - Exact dashboard links for Vercel, Railway, and Render
+**🔗 [DIRECT LINKS: Where to Configure Everything](./DIRECT_LINKS_WHERE_TO_CONFIGURE.md)** - Exact dashboard links for Vercel, Render, and Render
 
 **🎯 [WHERE TO PUT DATABASE URL](./WHERE_TO_PUT_DATABASE_URL.md)** - Exact instructions showing where to paste your database URL
 
@@ -486,13 +486,13 @@ Choose your deployment platform and follow the step-by-step guide:
 - 🌟 **[VERCEL_SERVERLESS_SETUP.md](./VERCEL_SERVERLESS_SETUP.md)** - **RECOMMENDED**: Complete guide for Vercel serverless deployment with same-origin API routing (/api/*), no CORS issues, 1-3s cold starts, automatic keep-warm
 - 📚 **[VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md)** - Detailed Vercel Postgres database setup
 
-#### **Option B: Separate Backend (Railway/Render)**
-- 🌟 **[DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Complete guide with direct links and instructions for Vercel, Railway, and Render
+#### **Option B: Separate Backend (Render/Render)**
+- 🌟 **[DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Complete guide with direct links and instructions for Vercel, Render, and Render
 - ⚡ **[QUICK_DEPLOYMENT_REFERENCE.md](./QUICK_DEPLOYMENT_REFERENCE.md)** - One-page quick reference with all commands and URLs
-- 🚂 **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Railway database configuration
-- 🔧 **[RAILWAY_DATABASE_VARIABLES_GUIDE.md](./RAILWAY_DATABASE_VARIABLES_GUIDE.md)** - **Exact configuration for Railway database (DATABASE_URL only)**
+- 🚂 **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Render database configuration
+- 🔧 **[RAILWAY_DATABASE_VARIABLES_GUIDE.md](./RAILWAY_DATABASE_VARIABLES_GUIDE.md)** - **Exact configuration for Render database (DATABASE_URL only)**
 - 🔴 **[RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)** - **CRITICAL FIX**: PostgreSQL "root execution not permitted" error
-- ⚠️ **[RAILWAY_POSTGRESQL_SETUP.md](./RAILWAY_POSTGRESQL_SETUP.md)** - **How to correctly set up PostgreSQL on Railway (use managed database service!)**
+- ⚠️ **[RAILWAY_POSTGRESQL_SETUP.md](./RAILWAY_POSTGRESQL_SETUP.md)** - **How to correctly set up PostgreSQL on Render (use managed database service!)**
 
 ### Quick Deploy to Vercel
 
@@ -510,7 +510,7 @@ Choose your deployment platform and follow the step-by-step guide:
    - ⚡ **[VERCEL_ENV_CHECK_QUICKREF.md](./VERCEL_ENV_CHECK_QUICKREF.md)** - 30-second quick reference
 5. **Deploy!** ✅
 
-📚 **[Complete Deployment & Connection Guide](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Everything you need to connect your database and deploy to Vercel, Railway, or Render
+📚 **[Complete Deployment & Connection Guide](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Everything you need to connect your database and deploy to Vercel, Render, or Render
 
 ---
 
@@ -599,7 +599,7 @@ cd frontend && npm install
 
 This repository is configured with **automated deployments** via GitHub Actions:
 - 🌐 **Frontend**: Auto-deploys to Vercel on every push to `main`
-- ⚡ **Backend**: Auto-deploys to Railway/Render on every push to `main`
+- ⚡ **Backend**: Auto-deploys to Render/Render on every push to `main`
 - ✅ **CI/CD**: Automatic testing and linting on pull requests
 
 👉 **[View Auto-Deploy Setup Guide](./AUTO_DEPLOY_SETUP.md)** for configuration instructions.
@@ -608,7 +608,7 @@ This repository is configured with **automated deployments** via GitHub Actions:
 
 **New**: Docker deployments now use **pre-built base images** for significantly faster builds:
 - 🚀 **5-10x faster deployments** (no apt-get/apk install during builds)
-- ✅ **No more build timeouts** on Railway/Render
+- ✅ **No more build timeouts** on Render/Render
 - 🔄 **Consistent environment** across all deployments
 - 📦 **Base images automatically updated** via GitHub Actions
 
@@ -623,7 +623,7 @@ Base images include all system dependencies pre-installed:
 **🔗 NEW: [Complete Database Connection Guide with Direct Links](./DATABASE_CONNECTION_GUIDE.md)** 
 
 This comprehensive guide provides:
-- ✅ **Direct clickable links** to find database URLs on Vercel, Railway, and Render
+- ✅ **Direct clickable links** to find database URLs on Vercel, Render, and Render
 - ✅ **Step-by-step instructions** with exact navigation paths
 - ✅ **Copy-paste commands** to connect your database
 - ✅ **Troubleshooting** for common connection issues
@@ -641,28 +641,28 @@ Vercel Postgres offers the best integration for this application:
 - ✅ **Free Tier**: 0.5GB storage, perfect for development and small apps
 - ✅ **Auto-Scaling**: Serverless architecture scales with your app
 - ✅ **Built-in Pooling**: Connection pooling handled automatically
-- ✅ **Cost Effective**: $0-5/month vs $7-20/month on Railway/Render
+- ✅ **Cost Effective**: $0-5/month vs $7-20/month on Render/Render
 
 **Quick Setup:**
 1. 🔗 **[Database Connection Guide](./DATABASE_CONNECTION_GUIDE.md)** - Direct links and complete walkthrough
 2. 📖 **[Complete Setup Guide](./VERCEL_POSTGRES_SETUP.md)** - Detailed step-by-step instructions
-3. 📖 **[Migration from Railway/Render](./VERCEL_POSTGRES_MIGRATION_GUIDE.md)** - Zero-downtime migration guide
+3. 📖 **[Migration from Render/Render](./VERCEL_POSTGRES_MIGRATION_GUIDE.md)** - Zero-downtime migration guide
 4. 📖 **[Quick Start](./docs/VERCEL_POSTGRES_QUICK_START.md)** - 5-minute setup
 
 **Automated Migration:**
 ```bash
 # Set environment variables
-export RAILWAY_DATABASE_URL="postgresql://user:pass@railway.app:5432/railway"
+export RAILWAY_DATABASE_URL="postgresql://user:pass@render.app:5432/render"
 export VERCEL_POSTGRES_URL="postgresql://user:pass@ep-xxxxx.neon.tech:5432/verceldb"
 
 # Run migration (includes verification)
-python scripts/migrate_railway_to_vercel.py
+python scripts/migrate_render_to_vercel.py
 
 # Verify migration success
 python scripts/verify_vercel_postgres_migration.py
 ```
 
-#### Railway Postgres (Alternative)
+#### Render Postgres (Alternative)
 
 Vercel Postgres (powered by Neon) provides serverless PostgreSQL optimized for Vercel:
 
@@ -673,16 +673,16 @@ Vercel Postgres (powered by Neon) provides serverless PostgreSQL optimized for V
 
 📖 **[Complete Vercel Postgres Setup Guide](./VERCEL_POSTGRES_SETUP.md)** - Step-by-step instructions with connection string configuration, migration guide, and troubleshooting.
 
-#### Railway Postgres (Alternative Option)
+#### Render Postgres (Alternative Option)
 
-For production deployments on Railway, you need to configure PostgreSQL for persistent data storage:
+For production deployments on Render, you need to configure PostgreSQL for persistent data storage:
 
-1. **Add PostgreSQL** to your Railway project via the "+ New" button
+1. **Add PostgreSQL** to your Render project via the "+ New" button
 2. **DATABASE_URL** is automatically configured
 3. **Add required environment variables** (SECRET_KEY, JWT_SECRET_KEY, ENVIRONMENT)
 
-🔗 **[Database Connection Guide - Railway Section](./DATABASE_CONNECTION_GUIDE.md#railway-setup)** - Direct links and step-by-step instructions  
-📖 **[Complete Railway DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Detailed guide with screenshots and troubleshooting
+🔗 **[Database Connection Guide - Render Section](./DATABASE_CONNECTION_GUIDE.md#render-setup)** - Direct links and step-by-step instructions  
+📖 **[Complete Render DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Detailed guide with screenshots and troubleshooting
 
 ### 🗄️ Database Admin Interface
 
@@ -1092,7 +1092,7 @@ The platform is fully responsive with:
 - `POST /api/users/{id}/friend` - Send friend request
 
 ### Health Check
-- `GET /health` - Simple health check endpoint (used by Railway/Render for monitoring)
+- `GET /health` - Simple health check endpoint (used by Render/Render for monitoring)
 - `GET /api/health` - Detailed health check with database status and connection pool info
 
 ## 🎯 User Roles
@@ -1195,12 +1195,12 @@ JWT_SECRET=your-jwt-secret
 
 ---
 
-### Automated Deployment (Legacy - Railway/Render) ⚡
+### Automated Deployment (Legacy - Render/Render) ⚡
 
 The repository includes GitHub Actions workflows for automatic deployment:
 
 **Prerequisites:**
-1. Set up accounts: Vercel (frontend) and Railway/Render (backend)
+1. Set up accounts: Vercel (frontend) and Render/Render (backend)
 2. Configure GitHub Secrets (see [AUTO_DEPLOY_SETUP.md](./AUTO_DEPLOY_SETUP.md))
 
 **Deploy with a single push:**
@@ -1213,7 +1213,7 @@ git push origin main
 GitHub Actions will automatically:
 - ✅ Run tests and linting
 - ✅ Build and deploy frontend to Vercel
-- ✅ Deploy backend to Railway/Render
+- ✅ Deploy backend to Render/Render
 
 📚 **Complete Guide**: [AUTO_DEPLOY_SETUP.md](./AUTO_DEPLOY_SETUP.md)  
 ⚡ **Quick Reference**: [AUTO_DEPLOY_QUICK_REF.md](./AUTO_DEPLOY_QUICK_REF.md)
@@ -1222,7 +1222,7 @@ GitHub Actions will automatically:
 
 For production deployments requiring high availability:
 
-- **Load Balancing**: Automatic via Railway/Render/Vercel managed platforms
+- **Load Balancing**: Automatic via Render/Render/Vercel managed platforms
 - **Auto-Scaling**: Configure in `render.yaml` or platform dashboard
 - **Health Checks**: Built-in `/health` endpoint for load balancer integration
 - **Zero-Downtime Deploys**: Rolling updates with graceful shutdown
@@ -1368,8 +1368,8 @@ GCS_MAKE_PUBLIC=False  # Set to True for public files, False for signed URLs
 VITE_API_URL=http://localhost:8000
 VITE_SOCKET_URL=http://localhost:8000
 
-# Production with Railway backend:
-VITE_API_URL=https://your-app.up.railway.app
+# Production with Render backend:
+VITE_API_URL=https://your-app.up.render.app
 
 # Production with Render backend:
 VITE_API_URL=https://your-app.onrender.com

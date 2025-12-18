@@ -50,7 +50,7 @@ class IntelliSense405Diagnostics:
         self.setup_logging()
 
         # API endpoints to check
-        self.api_base = "https://hiremebahamas-backend.railway.app"
+        self.api_base = "https://hiremebahamas-backend.render.app"
         self.local_api = "http://localhost:5000"
 
         # Known authentication routes

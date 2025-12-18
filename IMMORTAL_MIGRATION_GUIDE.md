@@ -1,6 +1,6 @@
 # 🚀 Immortal Vercel Postgres Migration Guide
 
-This guide walks you through the complete process of migrating your HireMeBahamas database from Railway/Render to Vercel Postgres with zero downtime and immortal reliability.
+This guide walks you through the complete process of migrating your HireMeBahamas database from Render/Render to Vercel Postgres with zero downtime and immortal reliability.
 
 ## 📋 Overview
 
@@ -8,7 +8,7 @@ The migration process consists of 5 main steps:
 
 1. **Run Immortal Fix** - Prepare your environment and generate configuration
 2. **Set Environment Variables** - Configure Vercel Dashboard with required variables
-3. **Run Migration** - Migrate data from Railway/Render to Vercel Postgres
+3. **Run Migration** - Migrate data from Render/Render to Vercel Postgres
 4. **Verify Migration** - Validate the migration was successful
 5. **Deploy** - Push changes and deploy your immortal application
 
@@ -21,7 +21,7 @@ Before starting, ensure you have:
 - [ ] Python 3.12+ installed
 - [ ] PostgreSQL client tools (pg_dump, pg_restore, psql)
 - [ ] Access to Vercel Dashboard
-- [ ] Access to your Railway/Render database
+- [ ] Access to your Render/Render database
 - [ ] Git configured and repository cloned
 
 ### Install Required Python Dependencies
@@ -178,12 +178,12 @@ After adding all variables, you should see them listed at: `https://vercel.com/[
 
 ### Step 3: Run Migration 🔄
 
-Now you're ready to migrate your data from Railway/Render to Vercel Postgres.
+Now you're ready to migrate your data from Render/Render to Vercel Postgres.
 
 #### 3.1: Set Migration Environment Variables
 
 ```bash
-# Set your Railway/Render database URL
+# Set your Render/Render database URL
 export RAILWAY_DATABASE_URL="postgresql://user:password@host:5432/database"
 
 # Set your Vercel Postgres URL (from Step 2.1)
@@ -193,12 +193,12 @@ export VERCEL_POSTGRES_URL="postgresql://default:PASSWORD@ep-xxxxx.neon.tech:543
 #### 3.2: Run the Migration Script
 
 ```bash
-python scripts/migrate_railway_to_vercel.py
+python scripts/migrate_render_to_vercel.py
 ```
 
 **What this does:**
 - ✅ Tests connection to both source and target databases
-- ✅ Exports data from Railway/Render using pg_dump
+- ✅ Exports data from Render/Render using pg_dump
 - ✅ Imports data to Vercel Postgres using pg_restore
 - ✅ Verifies row counts match between source and target
 - ✅ Creates a backup file for safety
@@ -214,8 +214,8 @@ python scripts/migrate_railway_to_vercel.py
 ✓ RAILWAY_DATABASE_URL is set
 ✓ VERCEL_POSTGRES_URL is set
 
-Testing Railway connection...
-✓ Railway connection OK
+Testing Render connection...
+✓ Render connection OK
 
 Testing Vercel Postgres connection...
 ✓ Vercel Postgres connection OK
@@ -240,12 +240,12 @@ Testing Vercel Postgres connection...
 - Medium databases (100-500 MB): 2-10 minutes
 - Large databases (> 500 MB): 10+ minutes
 
-#### 3.3: Optional - Set Railway to Read-Only (7-Day Backup)
+#### 3.3: Optional - Set Render to Read-Only (7-Day Backup)
 
-After migration, you can set your old Railway database to read-only mode for a 7-day backup period:
+After migration, you can set your old Render database to read-only mode for a 7-day backup period:
 
 ```bash
-python scripts/migrate_railway_to_vercel.py --set-readonly
+python scripts/migrate_render_to_vercel.py --set-readonly
 ```
 
 This prevents writes to the old database while keeping it as a backup.
@@ -445,12 +445,12 @@ If you encounter critical issues within the 7-day grace period:
 
 1. **Update DATABASE_URL in Vercel Dashboard**
    - Go to: Settings → Environment Variables
-   - Change `DATABASE_URL` back to your Railway/Render URL
+   - Change `DATABASE_URL` back to your Render/Render URL
    - Save changes
 
 2. **Redeploy**
    ```bash
-   git commit --allow-empty -m "Rollback to Railway/Render database"
+   git commit --allow-empty -m "Rollback to Render/Render database"
    git push origin main
    ```
 
@@ -477,8 +477,8 @@ After 7 days of stable operation:
 - [ ] No critical or high-severity issues
 - [ ] Backup/restore procedures tested
 
-### Railway Decommission
-1. Go to [Railway Dashboard](https://railway.app/dashboard)
+### Render Decommission
+1. Go to [Render Dashboard](https://render.app/dashboard)
 2. Select your PostgreSQL service
 3. Click **Settings** → **Delete Service**
 4. Type service name to confirm deletion
@@ -563,7 +563,7 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 # Step 3: Set environment variables and run migration
 export RAILWAY_DATABASE_URL="postgresql://..."
 export VERCEL_POSTGRES_URL="postgresql://..."
-python scripts/migrate_railway_to_vercel.py
+python scripts/migrate_render_to_vercel.py
 
 # Step 4: Verify migration
 python scripts/verify_vercel_postgres_migration.py

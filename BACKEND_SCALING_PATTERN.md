@@ -10,7 +10,7 @@ Handle 1M+ users with <200ms response time
 ```
                         ┌─────────────────────────────────┐
                         │    API LOAD BALANCER            │
-                        │    (Render/Railway)             │
+                        │    (Render/Render)             │
                         │  • Health checks                │
                         │  • SSL termination              │
                         │  • Request distribution         │
@@ -103,9 +103,9 @@ services:
         value: "production"
 ```
 
-### Configuration (Railway)
+### Configuration (Render)
 
-**File**: `railway.json`
+**File**: `render.json`
 ```json
 {
   "build": {
@@ -191,7 +191,7 @@ access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
 
 # Server Mechanics
 worker_tmp_dir = "/dev/shm"  # Use RAM for worker heartbeat (faster than disk)
-daemon = False  # Don't daemonize (needed for Docker/Railway/Render)
+daemon = False  # Don't daemonize (needed for Docker/Render/Render)
 
 # Hooks
 def on_starting(server):

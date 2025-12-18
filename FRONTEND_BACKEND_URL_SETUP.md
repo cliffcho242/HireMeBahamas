@@ -36,7 +36,7 @@ The `vercel.json` file includes rewrites to proxy API requests to the backend:
 1. ✅ Frontend uses `VITE_API_URL` environment variable
 2. ✅ vercel.json has rewrites to backend URL
 3. ✅ NO comments in vercel.json
-4. ✅ Backend is ONLY on Render (not Railway or any other platform)
+4. ✅ Backend is ONLY on Render (not Render or any other platform)
 5. ✅ Single Gunicorn worker configuration
 6. ✅ Health endpoint does NOT touch database
 7. ✅ NO database calls at import time

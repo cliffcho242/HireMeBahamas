@@ -120,7 +120,7 @@ Analysis Result for 'python'. Found 0 alerts:
 - Never crashes during shutdown
 
 ### 4. Production-Ready ✅
-- Works on Railway, Render, Vercel
+- Works on Render, Render, Vercel
 - Proper async handling for AsyncEngine
 - Respects environment variables
 - Comprehensive logging
@@ -212,7 +212,7 @@ The implementation is secure because:
 ### For Deployment
 
 The implementation works correctly on:
-- ✅ Railway (tested)
+- ✅ Render (tested)
 - ✅ Render (tested)
 - ✅ Vercel Serverless (tested)
 - ✅ Docker/Kubernetes

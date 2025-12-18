@@ -173,7 +173,7 @@ Code Quality: EXCELLENT ✅
 
 ### Deployment Steps
 1. **Merge PR** to main branch
-2. **Deploy to Railway/Render** (automatic via existing CI/CD)
+2. **Deploy to Render/Render** (automatic via existing CI/CD)
 3. **Monitor logs** for context appearing
 4. **Verify** during next deployment/restart
 

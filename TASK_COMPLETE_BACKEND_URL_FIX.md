@@ -136,7 +136,7 @@ This change **improves security** by:
 Created comprehensive documentation in `BACKEND_URL_USAGE_GUIDE.md` covering:
 - ✅ Correct usage patterns for Vite
 - ❌ Wrong usage patterns to avoid
-- 🔧 Configuration options (Vercel, Railway, local)
+- 🔧 Configuration options (Vercel, Render, local)
 - 🐛 Troubleshooting guide
 - 📝 Implementation examples
 
@@ -147,9 +147,9 @@ Created comprehensive documentation in `BACKEND_URL_USAGE_GUIDE.md` covering:
 - Frontend automatically uses same-origin (`window.location.origin`)
 - API available at `/api/*` on same domain
 
-### For Separate Backend (Railway/Render)
+### For Separate Backend (Render/Render)
 - **Set** `VITE_API_URL` to backend URL
-- Example: `VITE_API_URL=https://your-app.up.railway.app`
+- Example: `VITE_API_URL=https://your-app.up.render.app`
 - Requires proper CORS configuration
 
 ### For Local Development

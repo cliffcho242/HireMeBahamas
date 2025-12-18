@@ -114,7 +114,7 @@ MAX TOTAL:      10 connections
 
 ✅ **Serverless & Cloud Ready**
 - Suitable for serverless deployments
-- Works with Neon, Render, Railway
+- Works with Neon, Render, Render
 - Compatible with all deployment platforms
 
 ## Testing
@@ -163,10 +163,10 @@ export DB_COMMAND_TIMEOUT=30    # Default: 30
 - Hard limit prevents OOM
 - Suitable for all Render tiers
 
-### Railway
+### Render
 - Private network support
 - Connection pooling compatible
-- Works with Railway Postgres
+- Works with Render Postgres
 
 ### Vercel Serverless
 - Serverless-friendly configuration

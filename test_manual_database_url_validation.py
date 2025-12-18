@@ -78,8 +78,8 @@ def main():
     )
     
     test_url(
-        "postgresql://user:password@db.railway.internal:5432/railway?sslmode=require",
-        "Railway PostgreSQL (all requirements met)"
+        "postgresql://user:password@db.render.internal:5432/render?sslmode=require",
+        "Render PostgreSQL (all requirements met)"
     )
     
     test_url(

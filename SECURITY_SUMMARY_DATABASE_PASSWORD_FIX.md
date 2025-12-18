@@ -85,7 +85,7 @@ def _log_database_connection_error(error: Exception, context: str = "connection"
 # - Special character encoding
 # - Double encoding detection
 # - Empty passwords
-# - Complex Railway passwords
+# - Complex Render passwords
 ```
 
 **Security Considerations**:
@@ -174,7 +174,7 @@ Tests cover:
 - Full DATABASE_URL parsing
 - **NEW**: Whitespace handling (leading/trailing)
 - **NEW**: Double-encoding detection (6/6 test cases pass)
-- **NEW**: Complex Railway-style passwords
+- **NEW**: Complex Render-style passwords
 - **NEW**: Empty and None password edge cases
 
 ## Deployment Security Checklist

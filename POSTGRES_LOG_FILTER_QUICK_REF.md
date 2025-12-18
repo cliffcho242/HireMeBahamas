@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `filter_postgres_logs.py` script corrects PostgreSQL log level miscategorization issues where Railway's managed PostgreSQL logs informational messages as "error" level.
+The `filter_postgres_logs.py` script corrects PostgreSQL log level miscategorization issues where Render's managed PostgreSQL logs informational messages as "error" level.
 
 ## Quick Start
 
@@ -21,11 +21,11 @@ cat logs.json | python filter_postgres_logs.py --stats
 
 ### Common Scenarios
 
-#### 1. Railway Logs Analysis
+#### 1. Render Logs Analysis
 
 ```bash
-# Download logs from Railway and filter them
-railway logs | python filter_postgres_logs.py --suppress-benign > filtered_logs.json
+# Download logs from Render and filter them
+render logs | python filter_postgres_logs.py --suppress-benign > filtered_logs.json
 ```
 
 #### 2. Local Development
@@ -213,10 +213,10 @@ fi
 ## Related Documentation
 
 - `RAILWAY_POSTGRES_LOG_LEVEL_FIX.md` - Detailed explanation of the issue
-- `railway_postgres_check.py` - Checks PostgreSQL configuration
-- `RAILWAY_POSTGRESQL_SETUP.md` - Railway database setup guide
+- `render_postgres_check.py` - Checks PostgreSQL configuration
+- `RAILWAY_POSTGRESQL_SETUP.md` - Render database setup guide
 
 ## See Also
 
 - [PostgreSQL Error Reporting](https://www.postgresql.org/docs/current/runtime-config-logging.html)
-- [Railway Logs Documentation](https://docs.railway.app/reference/logs)
+- [Render Logs Documentation](https://docs.render.app/reference/logs)

@@ -12,10 +12,10 @@ VERCEL_PROJECT_ID    → Get from: vercel link (in .vercel/project.json)
 VITE_API_URL         → Your backend URL (optional, has default)
 ```
 
-### For Railway (Backend):
+### For Render (Backend):
 ```
-RAILWAY_TOKEN        → Get from: https://railway.app/account (Tokens section)
-RAILWAY_PROJECT_ID   → Get from: railway status (after railway link)
+RAILWAY_TOKEN        → Get from: https://render.app/account (Tokens section)
+RAILWAY_PROJECT_ID   → Get from: render status (after render link)
 ```
 
 ### For Render (Alternative Backend):
@@ -33,12 +33,12 @@ vercel link
 cat .vercel/project.json
 ```
 
-### Get Railway Project ID:
+### Get Render Project ID:
 ```bash
-curl -fsSL https://railway.app/install.sh | sh
-railway login
-railway link
-railway status
+curl -fsSL https://render.app/install.sh | sh
+render login
+render link
+render status
 ```
 
 ## 🔄 Deployment Workflows
@@ -46,7 +46,7 @@ railway status
 | Workflow | Triggers | What it deploys |
 |----------|----------|-----------------|
 | `deploy-frontend.yml` | Push to main (frontend/ changes) | Frontend → Vercel |
-| `deploy-backend.yml` | Push to main (backend changes) | Backend → Railway |
+| `deploy-backend.yml` | Push to main (backend changes) | Backend → Render |
 | `deploy-backend-render.yml` | Push to main (backend changes) | Backend → Render |
 | `ci.yml` | Push/PR to main | Runs tests & builds |
 
@@ -58,7 +58,7 @@ Go to: **GitHub → Actions → Select Workflow → Run workflow**
 
 - **GitHub**: Repository → Actions tab
 - **Vercel**: https://vercel.com/dashboard
-- **Railway**: https://railway.app/dashboard
+- **Render**: https://render.app/dashboard
 - **Render**: https://dashboard.render.com
 
 ## 🔥 Quick Deploy
@@ -78,7 +78,7 @@ git push origin main
 - Backend deploys only when backend files change
 - CI runs on every push and pull request
 - Manual triggers available via Actions tab
-- Choose either Railway OR Render for backend (not both)
+- Choose either Render OR Render for backend (not both)
 
 ---
 

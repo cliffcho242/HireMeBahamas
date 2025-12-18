@@ -50,7 +50,7 @@ DATABASE_URL=postgresql://USER:PASSWORD@example.com:5432/dbname?sslmode=require
 # ✅ CORRECT (real domain)
 DATABASE_URL=postgresql://user:pass@ep-cool-sound-12345.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require
 DATABASE_URL=postgresql://user:pass@dpg-abc123-a.oregon-postgres.render.com:5432/dbname?sslmode=require
-DATABASE_URL=postgresql://postgres:pass@containers-us-west-1.railway.app:5432/railway?sslmode=require
+DATABASE_URL=postgresql://postgres:pass@containers-us-west-1.render.app:5432/render?sslmode=require
 ```
 
 ### ✔ Includes `sslmode=require`
@@ -90,8 +90,8 @@ postgresql://USER:PASSWORD@HOSTNAME.DOMAIN.TLD:PORT/DATABASE?sslmode=require
 # Vercel Postgres (Neon)
 postgresql://default:abc123xyz@ep-cool-sound-12345.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require
 
-# Railway Postgres
-postgresql://postgres:abc123xyz@containers-us-west-1.railway.app:5432/railway?sslmode=require
+# Render Postgres
+postgresql://postgres:abc123xyz@containers-us-west-1.render.app:5432/render?sslmode=require
 
 # Render Postgres
 postgresql://hiremebahamas_user:abc123xyz@dpg-xyz123-a.oregon-postgres.render.com:5432/hiremebahamas?sslmode=require
@@ -170,7 +170,7 @@ DATABASE_URL=postgresql://USER:PASSWORD@host:5432/dbname?sslmode=require
 
 **✅ FIX**: Replace with your **actual** database credentials:
 1. If using **Vercel Postgres**: Copy from Vercel Dashboard → Storage → Your Database → Connection String
-2. If using **Railway Postgres**: Copy from Railway Dashboard → PostgreSQL Service → Variables → `DATABASE_URL`
+2. If using **Render Postgres**: Copy from Render Dashboard → PostgreSQL Service → Variables → `DATABASE_URL`
 3. If using **Render Postgres**: Copy from Render Dashboard → Your Database → Info → External Database URL
 
 ### Mistake 2: Quotes Around URL
@@ -345,7 +345,7 @@ Before considering this task complete, verify:
 ## 📚 Additional Resources
 
 - **[WHERE_TO_PUT_DATABASE_URL.md](./WHERE_TO_PUT_DATABASE_URL.md)** - Detailed guide on where to configure DATABASE_URL
-- **[RENDER_TO_RAILWAY_MIGRATION.md](./RENDER_TO_RAILWAY_MIGRATION.md)** - Guide for migrating from Render to Railway
+- **[RENDER_TO_RAILWAY_MIGRATION.md](./RENDER_TO_RAILWAY_MIGRATION.md)** - Guide for migrating from Render to Render
 - **[DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Complete deployment guide
 - **[TROUBLESHOOTING_DEPLOYMENT_NOT_FOUND.md](./TROUBLESHOOTING_DEPLOYMENT_NOT_FOUND.md)** - Common deployment issues
 

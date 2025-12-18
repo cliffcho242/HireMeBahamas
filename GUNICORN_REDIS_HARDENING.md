@@ -250,9 +250,9 @@ REDIS_POOL_SIZE=10
 REDIS_POOL_TIMEOUT=5.0
 ```
 
-### Railway Deployment
+### Render Deployment
 
-Railway automatically provides `REDIS_PRIVATE_URL` when you add Redis:
+Render automatically provides `REDIS_PRIVATE_URL` when you add Redis:
 
 ```bash
 # No configuration needed - automatically detected

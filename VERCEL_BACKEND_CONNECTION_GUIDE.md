@@ -10,7 +10,7 @@ All hardcoded `localhost` and `127.0.0.1` URLs have been removed from the fronte
 
 The frontend automatically detects the correct backend URL using this priority order:
 
-1. **`VITE_API_URL` environment variable** (if set) - for Railway, Render, or local development
+1. **`VITE_API_URL` environment variable** (if set) - for Render, Render, or local development
 2. **Same-origin (`window.location.origin`)** (if no env var) - for Vercel serverless backend
 3. **Localhost fallback** (only for SSR/build-time, should not be reached in production)
 
@@ -35,14 +35,14 @@ The frontend will automatically use same-origin API calls:
 2. Open browser console
 3. You should see: `🌐 Using same-origin API (Vercel serverless): https://your-project.vercel.app`
 
-### Option B: Separate Backend (Railway, Render, Custom Server)
+### Option B: Separate Backend (Render, Render, Custom Server)
 
 **✅ SET `VITE_API_URL` in Vercel Dashboard → Environment Variables**
 
 Examples:
 ```bash
-# Railway backend
-VITE_API_URL=https://your-app.up.railway.app
+# Render backend
+VITE_API_URL=https://your-app.up.render.app
 
 # Render backend
 VITE_API_URL=https://your-app.onrender.com
@@ -57,7 +57,7 @@ VITE_API_URL=https://api.hiremebahamas.com
 
 **❌ DO NOT use:**
 - `localhost` or `127.0.0.1` (won't work in production)
-- Railway private network URLs (not accessible from Vercel)
+- Render private network URLs (not accessible from Vercel)
 - Internal Render hostnames (not accessible from Vercel)
 
 ### Option C: Local Development
@@ -150,7 +150,7 @@ To verify the configuration:
 
 **Solution:**
 - If using Render free tier: Cold starts can take 30-60 seconds on first request
-- If using Railway: Check that service is running and publicly accessible
+- If using Render: Check that service is running and publicly accessible
 - Check that backend URL is correct and accessible from browser
 
 ## 📚 Related Documentation

@@ -108,8 +108,8 @@ Set `VITE_API_URL` in your environment:
 # Development (Local)
 VITE_API_URL=http://localhost:8000
 
-# Production (Railway)
-VITE_API_URL=https://hiremebahamas.up.railway.app
+# Production (Render)
+VITE_API_URL=https://hiremebahamas.up.render.app
 
 # Vercel Serverless (same-origin)
 # Leave VITE_API_URL unset - uses window.location.origin automatically

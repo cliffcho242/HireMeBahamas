@@ -203,7 +203,7 @@ The filter provides built-in guidance when investigation IS needed:
 
 ## Deployment
 
-### Railway/Render/Cloud Platforms
+### Render/Render/Cloud Platforms
 
 The fix is automatically active once deployed because:
 - `gunicorn.conf.py` is loaded automatically by Gunicorn

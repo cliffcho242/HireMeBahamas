@@ -2,7 +2,7 @@
 
 ## Summary
 
-This implementation provides a **complete, production-ready solution** for migrating the HireMeBahamas PostgreSQL database from Railway or Render to Vercel Postgres (powered by Neon). The migration is designed for **zero downtime** and includes comprehensive verification, monitoring, and rollback procedures.
+This implementation provides a **complete, production-ready solution** for migrating the HireMeBahamas PostgreSQL database from Render or Render to Vercel Postgres (powered by Neon). The migration is designed for **zero downtime** and includes comprehensive verification, monitoring, and rollback procedures.
 
 ---
 
@@ -13,7 +13,7 @@ This implementation provides a **complete, production-ready solution** for migra
 #### **VERCEL_POSTGRES_MIGRATION_GUIDE.md** (14KB)
 Comprehensive step-by-step migration guide covering all 8 phases:
 - Phase 1: Setup Vercel Postgres Database
-- Phase 2: Export Data from Railway/Render
+- Phase 2: Export Data from Render/Render
 - Phase 3: Import Data to Vercel Postgres
 - Phase 4: Verify Data Integrity
 - Phase 5: Update Application Configuration
@@ -24,7 +24,7 @@ Comprehensive step-by-step migration guide covering all 8 phases:
 **Features:**
 - ✅ Command-line examples with actual syntax
 - ✅ Troubleshooting section for common issues
-- ✅ Cost comparison (Railway/Render vs Vercel Postgres)
+- ✅ Cost comparison (Render/Render vs Vercel Postgres)
 - ✅ Performance optimization tips
 - ✅ Security best practices
 
@@ -52,7 +52,7 @@ Post-migration monitoring and verification checklist:
 
 ### 2. Automated Migration Tools
 
-#### **scripts/migrate_railway_to_vercel.py** (Existing, Enhanced)
+#### **scripts/migrate_render_to_vercel.py** (Existing, Enhanced)
 Zero-downtime migration script with:
 - ✅ Parallel export/import (8 jobs for speed)
 - ✅ Connection testing before migration
@@ -65,7 +65,7 @@ Zero-downtime migration script with:
 ```bash
 export RAILWAY_DATABASE_URL="postgresql://..."
 export VERCEL_POSTGRES_URL="postgresql://..."
-python scripts/migrate_railway_to_vercel.py
+python scripts/migrate_render_to_vercel.py
 ```
 
 #### **scripts/verify_vercel_postgres_migration.py** (NEW!)
@@ -130,7 +130,7 @@ Updated with Vercel Postgres configuration:
 - ✅ Example connection strings for Vercel Postgres
 - ✅ Performance tuning parameters
 - ✅ Clear comments explaining priority order
-- ✅ Examples for Railway, Vercel, and local development
+- ✅ Examples for Render, Vercel, and local development
 
 #### **frontend/.env.example**
 Enhanced with Vercel deployment notes:
@@ -204,8 +204,8 @@ Added migration tools documentation:
                    │
                    ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 2. Export from Railway/Render                           │
-│    python scripts/migrate_railway_to_vercel.py          │
+│ 2. Export from Render/Render                           │
+│    python scripts/migrate_render_to_vercel.py          │
 │    (2-30 minutes depending on size)                     │
 └──────────────────┬──────────────────────────────────────┘
                    │
@@ -239,7 +239,7 @@ Added migration tools documentation:
                    ▼
 ┌─────────────────────────────────────────────────────────┐
 │ 7. Set Old Database to Read-Only                        │
-│    python scripts/migrate_railway_to_vercel.py \        │
+│    python scripts/migrate_render_to_vercel.py \        │
 │           --set-readonly                                │
 │    (1 minute)                                           │
 └──────────────────┬──────────────────────────────────────┘
@@ -265,7 +265,7 @@ Added migration tools documentation:
 ## 💰 Cost Impact
 
 ### Before Migration
-- **Railway Postgres**: $5-20/month
+- **Render Postgres**: $5-20/month
 - **Render Postgres**: $7/month (Starter)
 - **Keep-alive Services**: $5-10/month
 - **Total**: $12-30/month
@@ -284,7 +284,7 @@ Added migration tools documentation:
 ## 🚀 Performance Benefits
 
 ### Response Times
-- **Before (Railway/Render)**: 200-500ms (cold starts: 2-5 minutes)
+- **Before (Render/Render)**: 200-500ms (cold starts: 2-5 minutes)
 - **After (Vercel Postgres)**: <100ms (no cold starts)
 - **Improvement**: 2-5x faster
 
@@ -317,7 +317,7 @@ HireMeBahamas/
 │   └── .env.example                            # Updated with deployment notes
 └── scripts/
     ├── README.md                               # Updated with migration docs
-    ├── migrate_railway_to_vercel.py            # Existing migration script
+    ├── migrate_render_to_vercel.py            # Existing migration script
     └── verify_vercel_postgres_migration.py     # NEW verification script
 ```
 
@@ -393,7 +393,7 @@ Expected results:
    ```bash
    export RAILWAY_DATABASE_URL="postgresql://..."
    export VERCEL_POSTGRES_URL="postgresql://..."
-   python scripts/migrate_railway_to_vercel.py
+   python scripts/migrate_render_to_vercel.py
    ```
 
 4. **Verify Migration**
@@ -428,7 +428,7 @@ Expected results:
 - [Neon Docs](https://neon.tech/docs/introduction) - Neon documentation
 
 ### Scripts
-- `scripts/migrate_railway_to_vercel.py` - Migration script
+- `scripts/migrate_render_to_vercel.py` - Migration script
 - `scripts/verify_vercel_postgres_migration.py` - Verification script
 
 ### Getting Help
@@ -443,7 +443,7 @@ If you encounter issues:
 
 ## 🎉 Summary
 
-This implementation provides everything needed for a **successful, zero-downtime migration** from Railway/Render to Vercel Postgres:
+This implementation provides everything needed for a **successful, zero-downtime migration** from Render/Render to Vercel Postgres:
 
 ✅ **Complete documentation** (32KB total)  
 ✅ **Automated migration tools** (with verification)  

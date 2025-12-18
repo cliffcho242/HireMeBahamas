@@ -5,7 +5,7 @@
 HireMeBahamas includes **two rate limiting implementations** to protect against DDoS attacks and API abuse:
 
 1. **Serverless Rate Limiting** (Vercel) - In-memory, no Redis required
-2. **Backend Rate Limiting** (Railway/Render) - Redis-based with in-memory fallback
+2. **Backend Rate Limiting** (Render/Render) - Redis-based with in-memory fallback
 
 Both implementations provide:
 
@@ -266,7 +266,7 @@ done
 ## Which Implementation Is Used?
 
 - **Vercel Serverless** (`/api/*`): Uses serverless rate limiting (api/index.py)
-- **Backend Server** (Railway/Render): Uses Redis-based rate limiting (backend_app/main.py)
+- **Backend Server** (Render/Render): Uses Redis-based rate limiting (backend_app/main.py)
 
 Both protect the same resources but are optimized for their respective deployment environments.
 

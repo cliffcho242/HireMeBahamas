@@ -25,7 +25,7 @@ Moved ALL database logic from `app/database.py` to `core/database.py`:
 - Database engine creation (with lazy initialization)
 - Session management
 - Connection pooling configuration
-- SSL/TLS setup for Railway/Vercel
+- SSL/TLS setup for Render/Vercel
 - Database initialization with retry logic
 - Health check functions
 

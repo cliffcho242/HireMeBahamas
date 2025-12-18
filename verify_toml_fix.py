@@ -99,11 +99,11 @@ def main():
     if toml_ok and git_ok:
         print("✅ TOML syntax fix is complete!")
         print("\n🚀 Next steps:")
-        print("1. Railway should auto-deploy with the corrected configuration")
+        print("1. Render should auto-deploy with the corrected configuration")
         print(
             "2. The 'invalid type: sequence, expected a string' error should be resolved"
         )
-        print("\n⏱️ Railway deployment may take 1-3 minutes to pick up changes")
+        print("\n⏱️ Render deployment may take 1-3 minutes to pick up changes")
     else:
         print("⚠️ Some issues detected - check the output above")
 

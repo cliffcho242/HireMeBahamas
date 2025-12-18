@@ -147,7 +147,7 @@ However, this is **not recommended** as the file contains useful build configura
 
 - [Render Python Deployment Guide](https://render.com/docs/deploy-python)
 - [Render Poetry Version Issues](https://render.com/docs/poetry-version)
-- Main: `RENDER_TO_VERCEL_MIGRATION.md` (note: Render is deprecated in favor of Railway/Vercel)
+- Main: `RENDER_TO_VERCEL_MIGRATION.md` (note: Render is deprecated in favor of Render/Vercel)
 
 ## Troubleshooting
 
@@ -182,8 +182,8 @@ This fix is provided for **backward compatibility** and **legacy Render deployme
 
 **Recommended Architecture** (for new deployments):
 - Frontend: Vercel
-- Backend: Railway  
-- Database: Railway PostgreSQL
+- Backend: Render  
+- Database: Render PostgreSQL
 
 See `RENDER_TO_VERCEL_MIGRATION.md` for the recommended deployment architecture.
 

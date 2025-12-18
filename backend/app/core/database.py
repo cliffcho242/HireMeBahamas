@@ -7,7 +7,7 @@
 #
 # This configuration works on:
 # - Render
-# - Railway
+# - Render
 # - Neon
 # - Vercel
 # - SQLAlchemy 1.4 / 2.0
@@ -15,7 +15,7 @@
 # DATABASE_URL FORMAT (copy-paste):
 # postgresql+asyncpg://user:password@host:5432/database?sslmode=require
 #
-# ENV VARS (for Railway/Render/Vercel deployment):
+# ENV VARS (for Render/Vercel deployment):
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
 # DB_POOL_RECYCLE=300
 #
@@ -87,7 +87,7 @@ if parsed.hostname:
             f"❌ ABSOLUTE BAN: DATABASE_URL uses 'localhost' in production. "
             f"Found: '{parsed.hostname}'. "
             "Production MUST use remote database hostname. "
-            "Example: ep-xxxx.us-east-1.aws.neon.tech or containers-us-west-123.railway.app"
+            "Example: ep-xxxx.us-east-1.aws.neon.tech or your-db.render.com"
         )
     elif hostname in ('localhost', '127.0.0.1', '::1'):
         logger.warning(
@@ -145,7 +145,7 @@ POOL_TIMEOUT = settings.DB_POOL_TIMEOUT
 POOL_RECYCLE = settings.DB_POOL_RECYCLE
 
 # =============================================================================
-# CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RAILWAY
+# CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RENDER
 # =============================================================================
 # These timeouts prevent the dreaded "Connection timed out" error
 CONNECT_TIMEOUT = settings.DB_CONNECT_TIMEOUT
@@ -177,7 +177,7 @@ STATEMENT_TIMEOUT_MS = settings.DB_STATEMENT_TIMEOUT_MS
 #     max_overflow=10,
 # )
 #
-# COPY-PASTE ENV VARS FOR RAILWAY/RENDER/VERCEL:
+# COPY-PASTE ENV VARS FOR RENDER/VERCEL:
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
 # DB_POOL_RECYCLE=300
 # =============================================================================
@@ -357,7 +357,7 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
       - Or as a one-off job on deployment
     
     This function now only tests database connectivity to prevent race conditions.
-    Uses retry logic to handle Railway cold starts and transient failures.
+    Uses retry logic to handle Render cold starts and transient failures.
     
     ⚠️  PRODUCTION SAFETY: This function gracefully handles DB unavailability.
     The app will start successfully even if connection fails at startup.
@@ -512,7 +512,7 @@ async def get_pool_status() -> dict:
 # =============================================================================
 # CONNECTION VERIFICATION COMMAND (For Render Console)
 # =============================================================================
-# Run this from Render console to test Railway Postgres connectivity:
+# Run this from Render console to test Postgres connectivity:
 #
 # python -c "
 # import asyncio

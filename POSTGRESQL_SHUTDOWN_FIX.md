@@ -2,7 +2,7 @@
 
 ## Problem
 
-Railway deployment logs showed PostgreSQL database recovery messages:
+Render deployment logs showed PostgreSQL database recovery messages:
 ```
 2025-11-26 05:26:45.191 UTC [29] LOG:  database system was interrupted; last known up at 2025-11-25 17:46:25 UTC
 2025-11-26 05:26:45.624 UTC [29] LOG:  database system was not properly shut down; automatic recovery in progress
@@ -12,7 +12,7 @@ This indicates the Flask application was not gracefully closing database connect
 
 ## Root Cause
 
-1. **No signal handlers**: The application didn't handle SIGTERM (sent by Railway/Docker when stopping containers)
+1. **No signal handlers**: The application didn't handle SIGTERM (sent by Render/Docker when stopping containers)
 2. **No connection pool cleanup**: The PostgreSQL connection pool wasn't being closed on application exit
 3. **Ungraceful shutdowns**: Connections were left open when the application was terminated
 
@@ -89,7 +89,7 @@ def worker_exit(server, worker):
 
 ### Normal Shutdown Flow
 
-1. **Signal received**: Railway/Docker sends SIGTERM to stop the container
+1. **Signal received**: Render/Docker sends SIGTERM to stop the container
 2. **Signal handler**: `_signal_handler()` catches SIGTERM and calls `sys.exit(0)`
 3. **Atexit cleanup**: Python calls all registered atexit handlers:
    - `_shutdown_connection_pool()`: Closes all PostgreSQL connections
@@ -99,7 +99,7 @@ def worker_exit(server, worker):
 ### Container Orchestrator Integration
 
 ```
-Railway/Docker Container Stop
+Render/Docker Container Stop
         ↓
    SIGTERM sent to Gunicorn
         ↓
@@ -143,7 +143,7 @@ Expected output:
 
 ## Verification in Production
 
-After deploying to Railway, you should see clean shutdown logs instead of recovery messages:
+After deploying to Render, you should see clean shutdown logs instead of recovery messages:
 
 **Before (with recovery):**
 ```
@@ -213,7 +213,7 @@ The detailed health check endpoint (`/api/health`) now includes database recover
 
 - **Python**: 3.8+ (with fallback for signal name lookup)
 - **PostgreSQL**: All versions
-- **Container orchestrators**: Railway, Docker, Kubernetes
+- **Container orchestrators**: Render, Docker, Kubernetes
 - **Web servers**: Gunicorn (with gthread workers)
 
 ## Security Considerations

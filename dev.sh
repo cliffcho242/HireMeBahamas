@@ -2,7 +2,7 @@
 
 # Simple development server startup script
 # ⚠️ WARNING: This script is for LOCAL DEVELOPMENT ONLY
-# NEVER use --reload in production (Render, Railway, etc.)
+# NEVER use --reload in production (Render, Render, etc.)
 # Auto-reload doubles memory usage and causes SIGTERM errors
 echo "Starting HireBahamas Development Servers..."
 

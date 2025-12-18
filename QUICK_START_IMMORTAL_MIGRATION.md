@@ -82,15 +82,15 @@ postgresql://default:ABC123xyz...@ep-cool-name-123456.us-east-1.aws.neon.tech:54
 
 ```bash
 # Set source and target database URLs
-export RAILWAY_DATABASE_URL="postgresql://user:password@railway.app.host:5432/railway"
+export RAILWAY_DATABASE_URL="postgresql://user:password@render.app.host:5432/render"
 export VERCEL_POSTGRES_URL="postgresql://default:YOUR_PASSWORD@ep-xxxxx-xxx.region.aws.neon.tech:5432/verceldb?sslmode=require"
 
 # Run migration
-python scripts/migrate_railway_to_vercel.py
+python scripts/migrate_render_to_vercel.py
 ```
 
 **What it does:**
-- ✅ Exports data from Railway/Render using pg_dump
+- ✅ Exports data from Render/Render using pg_dump
 - ✅ Imports data to Vercel Postgres using pg_restore
 - ✅ Verifies row counts match
 - ✅ Creates backup file

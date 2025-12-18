@@ -169,7 +169,7 @@ UPSTASH_REDIS_REST_URL=https://your-upstash-redis.upstash.io
 ### Redis Services
 
 Compatible with:
-- **Railway Redis** (recommended for Railway deployments)
+- **Render Redis** (recommended for Render deployments)
 - **Upstash Redis** (recommended for Vercel serverless)
 - **AWS ElastiCache**
 - **Redis Cloud**

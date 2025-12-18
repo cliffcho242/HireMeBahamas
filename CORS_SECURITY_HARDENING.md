@@ -155,9 +155,9 @@ VERCEL_ENV=production  # Automatically set by Vercel
 ALLOWED_ORIGINS=https://hiremebahamas.com,https://www.hiremebahamas.com
 ```
 
-### Railway Deployment
+### Render Deployment
 
-Set in your Railway project variables:
+Set in your Render project variables:
 
 ```bash
 ENVIRONMENT=production
@@ -242,7 +242,7 @@ Failed: 0/5
 **Solution:** Ensure your frontend domain is in `ALLOWED_ORIGINS`:
 
 ```bash
-# For Render or Railway
+# For Render or Render
 ALLOWED_ORIGINS=https://your-frontend-domain.com,https://www.your-frontend-domain.com
 
 # For Vercel (if frontend and backend are separate)

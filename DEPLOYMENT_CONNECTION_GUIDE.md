@@ -1,6 +1,6 @@
 # 🚀 HireMeBahamas Deployment & Database Connection Guide
 
-**Complete step-by-step guide to deploy and connect your database to Vercel, Render, and Railway.**
+**Complete step-by-step guide to deploy and connect your database to Vercel, Render, and Render.**
 
 ---
 
@@ -9,7 +9,7 @@
 1. [Quick Links & URLs](#quick-links--urls)
 2. [Deployment Options Overview](#deployment-options-overview)
 3. [Option 1: Vercel (Full Stack - Recommended)](#option-1-vercel-full-stack---recommended)
-4. [Option 2: Vercel Frontend + Railway Backend](#option-2-vercel-frontend--railway-backend)
+4. [Option 2: Vercel Frontend + Render Backend](#option-2-vercel-frontend--render-backend)
 5. [Option 3: Vercel Frontend + Render Backend](#option-3-vercel-frontend--render-backend)
 6. [Database Connection Instructions](#database-connection-instructions)
 7. [Environment Variables Reference](#environment-variables-reference)
@@ -22,20 +22,20 @@
 
 ### Platform Dashboards
 - **Vercel Dashboard**: https://vercel.com/dashboard
-- **Railway Dashboard**: https://railway.app/dashboard
+- **Render Dashboard**: https://render.app/dashboard
 - **Render Dashboard**: https://dashboard.render.com
 
 ### Direct Setup Links
 - **Create Vercel Account**: https://vercel.com/signup
-- **Create Railway Account**: https://railway.app/login
+- **Create Render Account**: https://render.app/login
 - **Create Render Account**: https://dashboard.render.com/register
 - **Import GitHub to Vercel**: https://vercel.com/new
-- **Deploy to Railway**: https://railway.app/new
+- **Deploy to Render**: https://render.app/new
 - **Deploy to Render**: https://dashboard.render.com/select-repo
 
 ### Documentation Links
 - **Vercel Postgres Setup**: https://vercel.com/docs/storage/vercel-postgres
-- **Railway Database Guide**: https://docs.railway.app/databases/postgresql
+- **Render Database Guide**: https://docs.render.app/databases/postgresql
 - **Render Postgres Guide**: https://docs.render.com/databases
 
 ---
@@ -50,16 +50,16 @@
 - **Cost**: $0-5/month
 - **Setup Time**: 10 minutes
 
-### **Option 2: Vercel + Railway**
+### **Option 2: Vercel + Render**
 **Best for**: Backend-heavy applications
 - **Frontend**: Vercel
-- **Backend**: Railway (Docker container)
-- **Database**: Railway Postgres or Vercel Postgres
-- **Cost**: $0-5/month (Railway free tier)
+- **Backend**: Render (Docker container)
+- **Database**: Render Postgres or Vercel Postgres
+- **Cost**: $0-5/month (Render free tier)
 - **Setup Time**: 15 minutes
 
 ### **Option 3: Vercel + Render**
-**Best for**: Alternative to Railway
+**Best for**: Alternative to Render
 - **Frontend**: Vercel
 - **Backend**: Render (Docker container)
 - **Database**: Render Postgres or Vercel Postgres
@@ -179,25 +179,25 @@ curl https://your-app.vercel.app/api/health
 
 ---
 
-## 🔄 Option 2: Vercel Frontend + Railway Backend
+## 🔄 Option 2: Vercel Frontend + Render Backend
 
 ### When to Use This?
 - Need long-running background tasks
 - Want containerized backend deployment
-- Prefer Railway's deployment model
+- Prefer Render's deployment model
 
-### Step 1: Deploy Backend to Railway
+### Step 1: Deploy Backend to Render
 
-#### A. Create Railway Account & Project
+#### A. Create Render Account & Project
 
-1. **Go to**: https://railway.app/new
+1. **Go to**: https://render.app/new
 2. **Click "Start a New Project"**
 3. **Select "Deploy from GitHub repo"**
 4. **Connect GitHub** and select `HireMeBahamas`
 
 #### B. Add PostgreSQL Database
 
-1. In your Railway project, click **"+ New"**
+1. In your Render project, click **"+ New"**
 2. Select **"Database"**
 3. Click **"Add PostgreSQL"**
 4. Wait 1-2 minutes for provisioning
@@ -207,9 +207,9 @@ curl https://your-app.vercel.app/api/health
 Click on your **Backend service** (not the database), then **"Variables"** tab:
 
 ```bash
-# Database (automatically added by Railway)
-DATABASE_PRIVATE_URL=postgresql://postgres:password@postgres.railway.internal:5432/railway
-DATABASE_URL=postgresql://postgres:password@containers-us-west-1.railway.app:5432/railway
+# Database (automatically added by Render)
+DATABASE_PRIVATE_URL=postgresql://postgres:password@postgres.render.internal:5432/render
+DATABASE_URL=postgresql://postgres:password@containers-us-west-1.render.app:5432/render
 
 # Authentication
 SECRET_KEY=your-secret-key-here
@@ -222,9 +222,9 @@ PORT=8000
 
 **Note**: The app automatically prefers `DATABASE_PRIVATE_URL` (no egress fees) over `DATABASE_URL`.
 
-#### D. Configure railway.json
+#### D. Configure render.json
 
-The repository already includes `railway.json`. Verify it exists:
+The repository already includes `render.json`. Verify it exists:
 
 ```json
 {
@@ -244,7 +244,7 @@ The repository already includes `railway.json`. Verify it exists:
 After deployment completes (2-5 minutes):
 1. Click on your backend service
 2. Go to **"Settings"** tab
-3. Copy the **"Public Domain"**: `https://your-app.up.railway.app`
+3. Copy the **"Public Domain"**: `https://your-app.up.render.app`
 
 ### Step 2: Deploy Frontend to Vercel
 
@@ -258,15 +258,15 @@ After deployment completes (2-5 minutes):
 
 4. **Add Environment Variables**:
    ```bash
-   VITE_API_URL=https://your-app.up.railway.app
-   VITE_SOCKET_URL=https://your-app.up.railway.app
+   VITE_API_URL=https://your-app.up.render.app
+   VITE_SOCKET_URL=https://your-app.up.render.app
    ```
 
 5. **Deploy**
 
 ### Step 3: Update CORS in Backend
 
-After getting your Vercel URL, update Railway environment variables:
+After getting your Vercel URL, update Render environment variables:
 
 ```bash
 FRONTEND_URL=https://your-app.vercel.app
@@ -274,14 +274,14 @@ FRONTEND_URL=https://your-app.vercel.app
 
 Redeploy backend for CORS changes to take effect.
 
-**🎉 Done!** Frontend at Vercel, Backend at Railway.
+**🎉 Done!** Frontend at Vercel, Backend at Render.
 
 ---
 
 ## 🌐 Option 3: Vercel Frontend + Render Backend
 
 ### When to Use This?
-- Alternative to Railway
+- Alternative to Render
 - Need persistent disk storage
 - Prefer Render's deployment model
 
@@ -379,11 +379,11 @@ FRONTEND_URL=https://your-app.vercel.app
 **Free Tier**: 0.5 GB storage, 60 compute hours/month
 **Pro Tier**: $0.10/GB/month
 
-### Railway Postgres
+### Render Postgres
 
-**Direct Link**: https://railway.app/dashboard
+**Direct Link**: https://render.app/dashboard
 
-1. **In your Railway project**, click **"+ New"**
+1. **In your Render project**, click **"+ New"**
 2. **Select "Database"** → **"PostgreSQL"**
 3. **Connection Variables** (auto-created):
    - `DATABASE_PRIVATE_URL` - Internal network (no egress fees) ✅
@@ -456,15 +456,15 @@ JWT_SECRET_KEY=your-jwt-secret
 ENVIRONMENT=production
 ```
 
-### Vercel Frontend + Railway Backend
+### Vercel Frontend + Render Backend
 
 **Vercel (Frontend)**:
 ```bash
-VITE_API_URL=https://your-app.up.railway.app
-VITE_SOCKET_URL=https://your-app.up.railway.app
+VITE_API_URL=https://your-app.up.render.app
+VITE_SOCKET_URL=https://your-app.up.render.app
 ```
 
-**Railway (Backend)**:
+**Render (Backend)**:
 ```bash
 DATABASE_PRIVATE_URL=postgresql://... (auto-created)
 DATABASE_URL=postgresql://... (auto-created)
@@ -503,8 +503,8 @@ PORT=10000
 # For Vercel Full Stack
 curl https://your-app.vercel.app/api/health
 
-# For Railway Backend
-curl https://your-app.up.railway.app/health
+# For Render Backend
+curl https://your-app.up.render.app/health
 
 # For Render Backend
 curl https://your-app.onrender.com/health
@@ -556,13 +556,13 @@ curl https://your-app.vercel.app/api/health
 3. Check build logs in Vercel dashboard
 4. Ensure `api/index.py` exists
 
-### Railway: "Database not connecting"
+### Render: "Database not connecting"
 
 **Solution**:
 1. Wait 30-60 seconds (cold start)
 2. Verify `DATABASE_PRIVATE_URL` is set
 3. Check PostgreSQL service is "Active"
-4. Test with: `curl https://your-app.up.railway.app/api/database/wakeup`
+4. Test with: `curl https://your-app.up.render.app/api/database/wakeup`
 
 ### Render: "502 Bad Gateway"
 
@@ -637,8 +637,8 @@ python create_posts_table.py
 # Vercel
 vercel ls
 
-# Railway
-railway status
+# Render
+render status
 
 # Render
 # Check dashboard.render.com
@@ -650,13 +650,13 @@ railway status
 
 ### Official Documentation
 - [Vercel Documentation](https://vercel.com/docs)
-- [Railway Documentation](https://docs.railway.app)
+- [Render Documentation](https://docs.render.app)
 - [Render Documentation](https://docs.render.com)
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 
 ### Project-Specific Guides
 - [Vercel Postgres Setup Guide](./VERCEL_POSTGRES_SETUP.md)
-- [Railway Database Setup Guide](./RAILWAY_DATABASE_SETUP.md)
+- [Render Database Setup Guide](./RAILWAY_DATABASE_SETUP.md)
 - [Deployment Guide](./DEPLOYMENT_GUIDE.md)
 - [README](./README.md)
 

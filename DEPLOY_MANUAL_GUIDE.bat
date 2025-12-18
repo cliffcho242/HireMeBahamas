@@ -22,12 +22,12 @@ pause
 
 echo.
 echo ╔═══════════════════════════════════════════════════════════╗
-echo ║  PART 1: Deploy Backend to Railway (10 minutes)          ║
+echo ║  PART 1: Deploy Backend to Render (10 minutes)          ║
 echo ╚═══════════════════════════════════════════════════════════╝
 echo.
 
-echo Opening Railway.app...
-start https://railway.app/new
+echo Opening Render.app...
+start https://render.app/new
 
 timeout /t 2 >nul
 
@@ -38,19 +38,19 @@ echo.
 echo 1. Click "Login with GitHub"
 echo    └─ Sign up if you don't have a GitHub account
 echo.
-echo 2. Authorize Railway to access GitHub
+echo 2. Authorize Render to access GitHub
 echo.
 echo 3. Click "Deploy from GitHub repo"
 echo.
 echo 4. Click "Configure GitHub App"
 echo.
-echo 5. Install Railway on your account
+echo 5. Install Render on your account
 echo.
 echo 6. Go back and select "Create New Repository"
 echo    └─ Name it: HireMeBahamas
 echo    └─ Make it Public or Private (your choice)
 echo.
-echo 7. Railway will create the repo and start deploying!
+echo 7. Render will create the repo and start deploying!
 echo.
 pause
 
@@ -67,7 +67,7 @@ for /f "tokens=2 delims==" %%a in ('findstr "SECRET_KEY" .env') do set SECRET_KE
 echo    Variable Name:  SECRET_KEY
 echo    Variable Value: %SECRET_KEY%
 echo.
-echo    (Copy the value above and paste in Railway)
+echo    (Copy the value above and paste in Render)
 echo.
 pause
 
@@ -79,19 +79,19 @@ echo.
 pause
 
 echo.
-echo 10. Get your Railway URL:
+echo 10. Get your Render URL:
 echo     └─ Click "Settings" tab
 echo     └─ Find "Domains" section  
 echo     └─ Click "Generate Domain"
-echo     └─ Copy your URL (e.g., https://hiremebahamas-backend-production.up.railway.app)
+echo     └─ Copy your URL (e.g., https://hiremebahamas-backend-production.up.render.app)
 echo.
 
-set /p RAILWAY_URL="Paste your Railway backend URL here: "
+set /p RAILWAY_URL="Paste your Render backend URL here: "
 
 if not "%RAILWAY_URL%"=="" (
     echo %RAILWAY_URL% > RAILWAY_URL.txt
     echo.
-    echo ✅ Railway URL saved!
+    echo ✅ Render URL saved!
 )
 
 echo.
@@ -146,7 +146,7 @@ echo.
 echo    Name:  VITE_API_URL
 echo    Value: %RAILWAY_URL%
 echo.
-echo    (Copy your Railway URL from above)
+echo    (Copy your Render URL from above)
 echo.
 pause
 

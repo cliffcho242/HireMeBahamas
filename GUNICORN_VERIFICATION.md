@@ -8,10 +8,10 @@ This document verifies that all critical server dependencies are properly instal
 
 ### 1. **gunicorn==23.0.0**
 - **Purpose**: WSGI/ASGI HTTP server for production deployments
-- **Why Critical**: Required for Railway and other production deployments
+- **Why Critical**: Required for Render and other production deployments
 - **Random Errors if Missing**: 
   - `ModuleNotFoundError: No module named 'gunicorn'`
-  - Deployment failures on Railway/Render
+  - Deployment failures on Render/Render
   - Worker process crashes
 
 ### 2. **uvicorn[standard]==0.32.0**
@@ -113,7 +113,7 @@ All workflows use:
 
 ## Deployment Configuration
 
-### Railway (Production)
+### Render (Production)
 
 **Procfile:**
 ```bash
@@ -200,7 +200,7 @@ pip install fastapi==0.115.6
 - [Gunicorn Documentation](https://docs.gunicorn.org/)
 - [Uvicorn Documentation](https://www.uvicorn.org/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [Railway Deployment Guide](DEPLOYMENT_GUIDE.md)
+- [Render Deployment Guide](DEPLOYMENT_GUIDE.md)
 - [Vercel Deployment Guide](VERCEL_DEPLOYMENT_GUIDE.md)
 
 ---

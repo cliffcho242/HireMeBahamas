@@ -86,9 +86,9 @@ curl https://your-backend.onrender.com/health
 
 ## 🔗 Backend URL Examples
 
-### Railway
+### Render
 ```bash
-VITE_API_URL=https://hiremebahamas-production.up.railway.app
+VITE_API_URL=https://hiremebahamas-production.up.render.app
 ```
 
 ### Render

@@ -111,13 +111,13 @@ python3 -c "from urllib.parse import quote; print(quote('p@ssw;ord!'))"
 node -e "console.log(encodeURIComponent('p@ssw;ord!'))"
 ```
 
-## Setting DATABASE_URL on Railway
+## Setting DATABASE_URL on Render
 
-1. Go to your Railway project
+1. Go to your Render project
 2. Click on your PostgreSQL database
 3. Go to the **Connect** tab
 4. Copy the **Database URL**
-5. Railway automatically URL-encodes the password for you
+5. Render automatically URL-encodes the password for you
 6. Set this as `DATABASE_URL` in your backend service environment variables
 
 ## Verification

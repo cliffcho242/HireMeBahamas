@@ -126,7 +126,7 @@ proc_name = "hiremebahamas"
 # ============================================================================
 # SECURITY
 # ============================================================================
-# Trust proxy headers from Render/Railway load balancers
+# Trust proxy headers from Render/Render load balancers
 forwarded_allow_ips = "*"
 
 # ============================================================================
@@ -332,9 +332,9 @@ postgresql://user:password@host.render.com:5432/database?sslmode=require&connect
 postgresql://default:password@ep-xxxx.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require&connect_timeout=30
 ```
 
-### For Railway Postgres (Private Network):
+### For Render Postgres (Private Network):
 ```
-postgresql://postgres:password@postgres.railway.internal:5432/railway?sslmode=require&connect_timeout=30
+postgresql://postgres:password@postgres.render.internal:5432/render?sslmode=require&connect_timeout=30
 ```
 
 ### Connection Pool Settings (Environment Variables):
@@ -538,7 +538,7 @@ After deployment, you should see:
 - ✅ Zero DATABASE_URL errors (validated format)
 - ✅ Works on Render Free tier
 - ✅ Works on Vercel Serverless
-- ✅ No Railway dependency
+- ✅ No Render dependency
 
 ---
 

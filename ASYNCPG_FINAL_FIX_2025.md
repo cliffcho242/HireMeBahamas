@@ -158,7 +158,7 @@ pip install --upgrade pip setuptools wheel && pip install --only-binary=:all: -r
 "installCommand": "pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt"
 ```
 
-**Railway (Dockerfile):**
+**Render (Dockerfile):**
 ```dockerfile
 RUN pip install --upgrade pip && pip install --only-binary=:all: -r requirements.txt
 ```
@@ -218,7 +218,7 @@ curl https://your-app.com/health
 ```
 ⚡ Install time: <8 seconds
 ✅ Zero build errors
-✅ Works on ALL platforms (Render/Vercel/Railway)
+✅ Works on ALL platforms (Render/Vercel/Render)
 ✅ Zero system dependencies needed
 💾 Build log: 10 lines total
 ```
@@ -263,7 +263,7 @@ pip install --only-binary=:all: -r requirements.txt
 - ⏱️  Build time: ~10 seconds total
 - 💰 Cost: $0/month (Hobby tier)
 
-### Railway
+### Render
 - ✅ Works with binary wheels + Docker
 - ⏱️  Build time: ~20 seconds total
 - 💰 Cost: $5-10/month
@@ -292,7 +292,7 @@ pip install --only-binary=:all: -r requirements.txt
 
 After deployment, verify:
 ```bash
-# SSH into your container (Render/Railway)
+# SSH into your container (Render/Render)
 python -c "import asyncpg; print(f'✅ asyncpg {asyncpg.__version__} installed')"
 
 # Check build log shows:
