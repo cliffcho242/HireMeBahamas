@@ -106,7 +106,9 @@ def main():
         'api/backend_app/main.py',
     ]
     
-    repo_root = '/home/runner/work/HireMeBahamas/HireMeBahamas'
+    # Get repo root relative to this script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = script_dir  # This script is in the repo root
     all_passed = True
     
     for filepath in files_to_check:
