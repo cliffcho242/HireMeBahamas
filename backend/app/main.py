@@ -268,16 +268,16 @@ async def wait_for_db(max_retries: int = 5, retry_delay: float = 2.0) -> bool:
     return False
 
 
-def create_indexes() -> bool:
-    """Create database indexes synchronously.
+async def create_indexes_async():
+    """Create database indexes asynchronously.
     
-    This is a blocking function that should be called via asyncio.to_thread().
+    This function imports and runs the create_indexes module.
+    Should be called from background_bootstrap().
     
     Returns:
         bool: True if indexes created successfully, False otherwise
     """
     try:
-        import sys
         import importlib.util
         
         # Import the create_indexes module
@@ -298,14 +298,9 @@ def create_indexes() -> bool:
         indexes_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(indexes_module)
         
-        # Run the index creation in the same thread
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            success = loop.run_until_complete(indexes_module.create_indexes())
-            return success
-        finally:
-            loop.close()
+        # Run the async index creation function
+        success = await indexes_module.create_indexes()
+        return success
             
     except Exception as e:
         logger.error(f"Failed to create indexes: {e}", exc_info=True)
@@ -331,10 +326,10 @@ async def background_bootstrap():
             logger.warning("Database not ready, skipping index creation")
             return
         
-        # Create indexes using asyncio.to_thread (runs in thread pool)
+        # Create indexes asynchronously
         logger.info("Creating database indexes...")
         try:
-            success = await asyncio.to_thread(create_indexes)
+            success = await create_indexes_async()
             if success:
                 logger.info("✅ Database indexes created successfully")
             else:
@@ -751,11 +746,9 @@ async def shutdown():
     if _background_tasks:
         logger.info(f"Waiting for {len(_background_tasks)} background task(s) to complete...")
         try:
-            # Use asyncio.sleep(0) to yield control and allow tasks to complete
+            # Yield control to allow tasks to progress, then wait for completion
             await asyncio.sleep(0)
-            # Wait for all tasks with a reasonable timeout
-            if _background_tasks:
-                await asyncio.wait(_background_tasks, timeout=5.0)
+            await asyncio.wait(_background_tasks, timeout=5.0)
         except Exception as e:
             logger.warning(f"Error waiting for background tasks: {e}")
     
