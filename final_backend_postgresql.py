@@ -804,8 +804,8 @@ def log_request_end(response):
 # Check if running on Render with PostgreSQL
 # Render Private Network Configuration:
 # To avoid egress fees, Render provides DATABASE_PRIVATE_URL which uses the internal
-# private network (RAILWAY_PRIVATE_DOMAIN) instead of the public TCP proxy
-# (RAILWAY_TCP_PROXY_DOMAIN used by DATABASE_PUBLIC_URL).
+# private network (RENDER_PRIVATE_DOMAIN) instead of the public TCP proxy
+# (RENDER_PUBLIC_DOMAIN used by DATABASE_PUBLIC_URL).
 # We prefer DATABASE_PRIVATE_URL > DATABASE_URL to minimize costs.
 DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
 
@@ -861,8 +861,8 @@ USE_POSTGRESQL = DATABASE_URL is not None
 # (shared_preload_libraries) which is not available on managed database services
 # like Render. Only add extensions that don't require server-side configuration.
 # 
-# For pg_stat_statements setup on Render PostgreSQL, see:
-# RAILWAY_PG_STAT_STATEMENTS_SETUP.md for comprehensive setup instructions.
+# For pg_stat_statements setup on Render PostgreSQL, see Render documentation
+# for comprehensive setup instructions.
 # 
 # The /api/query-stats endpoint provides graceful error handling when 
 # pg_stat_statements is not available, with alternative solutions.
@@ -875,17 +875,11 @@ POSTGRESQL_EXTENSIONS = {
 
 # Check if this is a production environment
 # Detect Render environment using Render-specific variables:
-# - RAILWAY_ENVIRONMENT: Set by Render to indicate the environment (e.g., "production")
-# - RAILWAY_PROJECT_ID: Always present in Render deployments, used as fallback detection
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT", "").lower()
-IS_RAILWAY = os.getenv("RAILWAY_PROJECT_ID") is not None
-
-# Detect Render environment using Render-specific variables:
 # - RENDER: Set to "true" by Render in all web services
 # - RENDER_SERVICE_ID: Set by Render to identify the service
-# See: https://render.com/docs/environment-variables
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 IS_RENDER = os.getenv("RENDER") == "true" or os.getenv("RENDER_SERVICE_ID") is not None
+
 
 # Production is determined by:
 # 1. Explicit ENVIRONMENT=production setting, OR
@@ -897,7 +891,6 @@ IS_RENDER = os.getenv("RENDER") == "true" or os.getenv("RENDER_SERVICE_ID") is n
 # - Proper data persistence with PostgreSQL
 IS_PRODUCTION = (
     ENVIRONMENT in ["production", "prod"] or 
-    IS_RAILWAY or  # Render deployments are always considered production
     IS_RENDER      # Render deployments are always considered production
 )
 
@@ -4353,7 +4346,7 @@ print("🏥 IMMORTAL HEALTH ENDPOINTS LOADED — /health (GET+HEAD), /ready, /pi
 # when web services restart from sleep (Render/Render free tier sleep after 15 min)
 #
 # Enabled when:
-# - Running on Render (IS_RAILWAY=True, detected via RAILWAY_PROJECT_ID), OR
+# - Running on Render (IS_RENDER=True, detected via RENDER_SERVICE_ID), OR
 # - Running on Render (IS_RENDER=True, detected via RENDER env var), OR
 # - Running in production environment (IS_PRODUCTION=True)
 # AND PostgreSQL is configured (USE_POSTGRESQL=True)
@@ -4364,7 +4357,7 @@ print("🏥 IMMORTAL HEALTH ENDPOINTS LOADED — /health (GET+HEAD), /ready, /pi
 # Note: For Render free tier, the web service itself also sleeps after 15 minutes.
 # Use an external pinger (UptimeRobot, Healthchecks.io) or upgrade to paid plan.
 # See docs/RENDER_502_FIX_GUIDE.md for complete instructions.
-DB_KEEPALIVE_ENABLED = (IS_PRODUCTION or IS_RAILWAY or IS_RENDER) and USE_POSTGRESQL
+DB_KEEPALIVE_ENABLED = (IS_PRODUCTION or IS_RENDER or IS_RENDER) and USE_POSTGRESQL
 # Ping database every 2 minutes (120s) to keep connections fresh
 # This provides a safety margin for maintaining connection pool health
 DB_KEEPALIVE_INTERVAL_SECONDS = int(os.getenv("DB_KEEPALIVE_INTERVAL_SECONDS", "120"))  # 2 minutes
@@ -4739,7 +4732,7 @@ def start_database_keepalive():
     
     Only starts if:
     - Running in production environment (IS_PRODUCTION=True), OR
-    - Running on Render (IS_RAILWAY=True)
+    - Running on Render (IS_RENDER=True)
     - AND PostgreSQL is configured (USE_POSTGRESQL=True)
     - Keepalive is not already running
     
@@ -5137,7 +5130,7 @@ def api_health_check():
         "db_initialized": _db_initialized,
         "environment": ENVIRONMENT,
         "is_production": IS_PRODUCTION,
-        "is_render": IS_RAILWAY,
+        "is_render": IS_RENDER,
         "is_render": IS_RENDER,
         "database_url_configured": USE_POSTGRESQL,
     }
@@ -10013,7 +10006,7 @@ def get_query_stats():
                 "message": f"Error checking pg_stat_statements extension: {str(ext_check_error)}",
                 "extension_available": False,
                 "query_stats": [],
-                "setup_guide": "See RAILWAY_PG_STAT_STATEMENTS_SETUP.md for setup instructions"
+                "setup_guide": "See Render PostgreSQL documentation for setup instructions"
             }), 200
 
         if not extension_exists:
@@ -10022,7 +10015,7 @@ def get_query_stats():
                 "message": "pg_stat_statements extension is not installed. See setup guide for instructions.",
                 "extension_available": False,
                 "query_stats": [],
-                "setup_guide": "See RAILWAY_PG_STAT_STATEMENTS_SETUP.md for setup instructions",
+                "setup_guide": "See Render PostgreSQL documentation for setup instructions",
                 "alternative": "Use PgHero (https://render.app/template/pghero) for query monitoring"
             }), 200
 
@@ -10086,7 +10079,7 @@ def get_query_stats():
                     "error": str(query_error),
                     "extension_available": False,
                     "query_stats": [],
-                    "setup_guide": "See RAILWAY_PG_STAT_STATEMENTS_SETUP.md for setup instructions",
+                    "setup_guide": "See Render PostgreSQL documentation for setup instructions",
                     "solutions": [
                         "Use a custom PostgreSQL image with shared_preload_libraries configured",
                         "Use Neon or Supabase which have pg_stat_statements enabled by default",

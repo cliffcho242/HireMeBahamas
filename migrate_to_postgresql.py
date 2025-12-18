@@ -170,7 +170,7 @@ def main():
     print_banner()
 
     # Check if running locally or on Render
-    is_render = os.getenv("RAILWAY_ENVIRONMENT") is not None
+    is_render = os.getenv("RENDER_ENVIRONMENT") is not None
 
     if is_render:
         print("🚂 Running on Render - PostgreSQL should be available")

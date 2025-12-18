@@ -22,7 +22,7 @@
 # 
 # ⚡ SINGLE BACKEND PLATFORM - RENDER ONLY:
 # - Frontend: Vercel (CDN, Edge, static & dynamic UI)
-# - Backend API: Render (ONLY backend platform, NO Render, NO others)
+# - Backend API: Render (ONLY backend platform, NO Railway, NO others)
 # - Database: Neon PostgreSQL (managed, scalable)
 # 
 # ABSOLUTE PROHIBITIONS:

@@ -155,7 +155,7 @@ def main():
         print()
         print("Next steps:")
         print("  1. Commit and push changes to your repository")
-        print("  2. Deploy to Render/Render using the configured build commands")
+        print("  2. Deploy to Render using the configured build commands")
         print("  3. Verify deployment logs show gunicorn starting successfully")
         return 0
     else:

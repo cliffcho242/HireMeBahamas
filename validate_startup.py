@@ -101,8 +101,7 @@ def validate_environment():
     
     # Check environment type
     print("\n🌍 Environment Detection:")
-    is_render = os.getenv("RAILWAY_PROJECT_ID") is not None
-    is_render = os.getenv("RENDER") == "true"
+    is_render = os.getenv("RENDER") == "true" or os.getenv("RENDER_SERVICE_ID") is not None
     environment = os.getenv("ENVIRONMENT", "development")
     
     if is_render:
@@ -138,7 +137,7 @@ def validate_environment():
   2. Add managed database: Dashboard → + New → Database → PostgreSQL
   3. Render will auto-inject DATABASE_URL
   
-  See: RAILWAY_POSTGRES_ROOT_ERROR_FIX.md for detailed instructions
+  See: Render PostgreSQL documentation for detailed instructions
         """
         print(postgres_server_warning)
         

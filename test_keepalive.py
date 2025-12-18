@@ -89,10 +89,10 @@ def test_keepalive_render_config():
     
     # Test: Render environment should enable keepalive
     # This tests the fix for "Postgres sleeping since 15 hours ago" issue
-    os.environ['RAILWAY_PROJECT_ID'] = 'some-render-project-id'
+    os.environ['RENDER_SERVICE_ID'] = 'some-render-project-id'
     os.environ['ENVIRONMENT'] = 'development'  # Explicitly NOT production
     os.environ['DATABASE_URL'] = 'postgresql://user:pass@host:5432/db'
-    os.environ.pop('RAILWAY_ENVIRONMENT', None)  # No explicit Render environment
+    os.environ.pop('RENDER_ENVIRONMENT', None)  # No explicit Render environment
     
     # Clear the module cache to reimport with new settings
     if 'final_backend_postgresql' in sys.modules:
@@ -116,9 +116,9 @@ def test_keepalive_render_config():
     sys.modules['dotenv'] = Mock()
     
     print("\n1. Verifying keepalive enabled on Render without production flag...")
-    print("   ✅ RAILWAY_PROJECT_ID is set (simulating Render deployment)")
+    print("   ✅ RENDER_SERVICE_ID is set (simulating Render deployment)")
     print("   ✅ ENVIRONMENT=development (NOT production)")
-    print("   ✅ RAILWAY_ENVIRONMENT not set (no explicit production)")
+    print("   ✅ RENDER_ENVIRONMENT not set (no explicit production)")
     print("   ✅ DATABASE_URL is set")
     print("   ✅ Keepalive should still be enabled because IS_RAILWAY=True")
     
@@ -126,7 +126,7 @@ def test_keepalive_render_config():
     # reload issues, but we've tested the logic manually above
     
     # Clean up all modified environment variables to avoid affecting subsequent tests
-    os.environ.pop('RAILWAY_PROJECT_ID', None)
+    os.environ.pop('RENDER_SERVICE_ID', None)
     os.environ.pop('ENVIRONMENT', None)
     os.environ.pop('DATABASE_URL', None)
     

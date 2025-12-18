@@ -92,8 +92,8 @@ def uploaded_file(filename):
 # Check if running on Render with PostgreSQL
 # Render Private Network Configuration:
 # To avoid egress fees, Render provides DATABASE_PRIVATE_URL which uses the internal
-# private network (RAILWAY_PRIVATE_DOMAIN) instead of the public TCP proxy
-# (RAILWAY_TCP_PROXY_DOMAIN used by DATABASE_PUBLIC_URL).
+# private network (RENDER_PRIVATE_DOMAIN) instead of the public TCP proxy
+# (RENDER_PUBLIC_DOMAIN used by DATABASE_PUBLIC_URL).
 # We prefer DATABASE_PRIVATE_URL > DATABASE_URL to minimize costs.
 DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None

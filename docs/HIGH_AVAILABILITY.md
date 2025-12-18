@@ -43,7 +43,7 @@ HireMeBahamas uses a multi-tier high availability architecture:
 
 ### Platform-Managed Load Balancing
 
-Both Render and Render provide built-in load balancing with their managed infrastructure:
+Render provides built-in load balancing with their managed infrastructure:
 
 #### Render Load Balancing
 - **Automatic load balancing** across multiple instances
@@ -51,7 +51,7 @@ Both Render and Render provide built-in load balancing with their managed infras
 - **Health-based routing** to automatically route traffic away from unhealthy instances
 - **Geographic distribution** based on deployment regions
 
-#### Render Load Balancing
+#### Additional Features
 - **Zero-config load balancing** for web services
 - **Automatic TLS termination** at the load balancer level
 - **WebSocket support** with proper connection handling
