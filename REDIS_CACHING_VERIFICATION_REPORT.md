@@ -18,7 +18,7 @@ The issue requested implementing Redis caching for the feed endpoint with the fo
 
 ```python
 def get_feed(user_id):
-    key = f"feed:{user_id}"
+    key = f"feed:{user_id}"  # Note: actual implementation uses "feed:global"
     cached = redis.get(key)
     if cached:
         return json.loads(cached)
@@ -127,17 +127,16 @@ async def create_post(...):
 
 **File:** `api/backend_app/main.py`
 
-Redis is initialized during application startup:
+Redis is initialized during application startup using FastAPI's lifespan management:
 
 ```python
-@app.on_event("startup")
-async def startup():
-    # Initialize Redis cache
-    redis_available = await redis_cache.connect()
-    if redis_available:
-        logger.info("✅ Redis cache connected successfully")
-    else:
-        logger.debug("Using in-memory cache (Redis not configured)")
+# Redis is initialized in the startup event handler
+# Connection is established with graceful fallback
+redis_available = await redis_cache.connect()
+if redis_available:
+    logger.info("✅ Redis cache connected successfully")
+else:
+    logger.debug("Using in-memory cache (Redis not configured)")
 ```
 
 **Health Endpoint:**

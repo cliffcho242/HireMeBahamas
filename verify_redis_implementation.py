@@ -39,7 +39,9 @@ def main():
     print("=" * 80)
     print()
     
-    base_path = "/home/runner/work/HireMeBahamas/HireMeBahamas"
+    # Get base path relative to script location
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    base_path = script_dir
     
     # Check core files exist
     print("📁 Core Files:")
@@ -75,7 +77,7 @@ def main():
     patterns_exist.append(check_code_pattern(
         f"{base_path}/api/backend_app/api/feed.py",
         "Feed uses redis_cache.get()",
-        "await redis_cache.get(key)"
+        "cached = await redis_cache.get(key)"
     ))
     patterns_exist.append(check_code_pattern(
         f"{base_path}/api/backend_app/api/feed.py",
