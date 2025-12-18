@@ -49,9 +49,21 @@ def is_production() -> bool:
 # These settings are REQUIRED for Vercel (frontend) → Render (backend) to work on Safari/iPhone
 COOKIE_NAME_ACCESS = "access_token"
 COOKIE_NAME_REFRESH = "refresh_token"
-COOKIE_SECURE = True  # REQUIRED for Safari - always use HTTPS-only cookies
+# COOKIE_SECURE: True in production for HTTPS-only (required for Safari with SameSite=None)
+# Can be overridden in development with COOKIE_SECURE=False environment variable
+_cookie_secure_env = os.getenv("COOKIE_SECURE", "").lower()
+if _cookie_secure_env in ("true", "1"):
+    COOKIE_SECURE = True
+elif _cookie_secure_env in ("false", "0"):
+    COOKIE_SECURE = False
+else:
+    # Default: True in production, False in development
+    COOKIE_SECURE = is_production()
+
 COOKIE_HTTPONLY = True  # REQUIRED - prevents JavaScript access (XSS protection)
-COOKIE_SAMESITE = "None"  # REQUIRED for cross-origin (Vercel → Render) - must be capitalized "None"
+# COOKIE_SAMESITE: "None" in production for cross-origin (Vercel → Render)
+# "lax" in development for better security and local testing
+COOKIE_SAMESITE = "None" if is_production() else "lax"
 COOKIE_DOMAIN = None  # Let browser determine domain for better compatibility
 COOKIE_PATH = "/"  # REQUIRED - cookie available on all paths
 
