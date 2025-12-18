@@ -4936,12 +4936,13 @@ start_database_keepalive()
 # ==========================================
 
 
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "HEAD"])
 @limiter.exempt
 def root():
     """
     Root endpoint - returns API information
     Provides a welcome message and basic API status for monitoring tools
+    Supports both GET and HEAD methods for maximum compatibility with health checks
     Exempt from rate limiting to allow monitoring services to check frequently
     """
     return (
