@@ -9,7 +9,9 @@ echo ""
 
 # Start the server in background
 echo "Starting test server..."
-cd /home/runner/work/HireMeBahamas/HireMeBahamas
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
 export DATABASE_URL="sqlite:///./test.db"
 export ENVIRONMENT="test"
 
