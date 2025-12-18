@@ -17,8 +17,9 @@ Date: December 2025
 
 import asyncio
 import sys
+import logging
 from pathlib import Path
-from unittest.mock import AsyncMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch, call
 import pytest
 
 # Add backend to path
@@ -31,7 +32,6 @@ class TestWaitForDb:
 
     def _create_mock_engine_success(self):
         """Create a mock engine that succeeds on connection."""
-        from unittest.mock import MagicMock
         
         mock_engine = MagicMock()
         mock_conn = AsyncMock()
@@ -49,7 +49,6 @@ class TestWaitForDb:
 
     def _create_mock_engine_failure(self, error_msg="Connection failed"):
         """Create a mock engine that fails on connection."""
-        from unittest.mock import MagicMock
         
         mock_engine = MagicMock()
         mock_conn = AsyncMock()
@@ -83,7 +82,6 @@ class TestWaitForDb:
     async def test_retry_on_connection_failure(self):
         """Test retry logic when connection fails."""
         from backend.app.database import wait_for_db
-        from unittest.mock import MagicMock
         
         # Create a mock engine that fails twice then succeeds
         call_count = [0]  # Use list to allow mutation in nested function
@@ -175,8 +173,6 @@ class TestWaitForDb:
     async def test_logging_on_retry(self, caplog):
         """Test that retry attempts are properly logged."""
         from backend.app.database import wait_for_db
-        from unittest.mock import MagicMock
-        import logging
         
         # Set up logging to capture warnings
         caplog.set_level(logging.WARNING)
@@ -217,7 +213,6 @@ class TestWaitForDb:
     async def test_logging_on_success(self, caplog):
         """Test that success is properly logged."""
         from backend.app.database import wait_for_db
-        import logging
         
         # Set up logging to capture info messages
         caplog.set_level(logging.INFO)

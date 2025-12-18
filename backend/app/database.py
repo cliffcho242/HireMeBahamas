@@ -40,6 +40,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import ArgumentError
 from sqlalchemy.engine.url import make_url
+from sqlalchemy import text
 
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
@@ -682,7 +683,6 @@ async def wait_for_db(max_retries: int = 5) -> None:
                 raise RuntimeError("Database engine is not available (check DATABASE_URL)")
             
             # Test database connectivity
-            from sqlalchemy import text
             async with actual_engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
             
