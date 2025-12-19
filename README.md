@@ -641,13 +641,13 @@ Vercel Postgres offers the best integration for this application:
 **Quick Setup:**
 1. 🔗 **[Database Connection Guide](./DATABASE_CONNECTION_GUIDE.md)** - Direct links and complete walkthrough
 2. 📖 **[Complete Setup Guide](./VERCEL_POSTGRES_SETUP.md)** - Detailed step-by-step instructions
-3. 📖 **[Migration from Render/Render](./VERCEL_POSTGRES_MIGRATION_GUIDE.md)** - Zero-downtime migration guide
+3. 📖 **[Migration from Render](./VERCEL_POSTGRES_MIGRATION_GUIDE.md)** - Zero-downtime migration guide
 4. 📖 **[Quick Start](./docs/VERCEL_POSTGRES_QUICK_START.md)** - 5-minute setup
 
 **Automated Migration:**
 ```bash
 # Set environment variables
-export RAILWAY_DATABASE_URL="postgresql://user:pass@render.app:5432/render"
+export RENDER_DATABASE_URL="postgresql://user:pass@host.render.com:5432/database"
 export VERCEL_POSTGRES_URL="postgresql://user:pass@ep-xxxxx.neon.tech:5432/verceldb"
 
 # Run migration (includes verification)
@@ -668,7 +668,7 @@ Vercel Postgres (powered by Neon) provides serverless PostgreSQL optimized for V
 
 📖 **[Complete Vercel Postgres Setup Guide](./VERCEL_POSTGRES_SETUP.md)** - Step-by-step instructions with connection string configuration, migration guide, and troubleshooting.
 
-#### Render Postgres (Alternative Option)
+#### Render Postgres (Production Option)
 
 For production deployments on Render, you need to configure PostgreSQL for persistent data storage:
 
@@ -677,7 +677,9 @@ For production deployments on Render, you need to configure PostgreSQL for persi
 3. **Add required environment variables** (SECRET_KEY, JWT_SECRET_KEY, ENVIRONMENT)
 
 🔗 **[Database Connection Guide - Render Section](./DATABASE_CONNECTION_GUIDE.md#render-setup)** - Direct links and step-by-step instructions  
-📖 **[Complete Render DATABASE_URL Setup Guide](./RAILWAY_DATABASE_SETUP.md)** - Detailed guide with screenshots and troubleshooting
+📖 **[Render DATABASE_URL Verification Guide](./RENDER_DATABASE_URL_VERIFICATION.md)** - Detailed verification and troubleshooting
+
+**Note:** Railway is no longer supported. All production deployments should use Render backend (https://hiremebahamas.onrender.com).
 
 ### 🗄️ Database Admin Interface
 
