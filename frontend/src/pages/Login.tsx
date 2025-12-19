@@ -262,7 +262,7 @@ const Login = () => {
 
       {/* Connection Status Banner */}
       {connectionStatus && connectionStatus !== 'connected' && (() => {
-        const isColdStart = connectionMessage.includes('cold start');
+        const isTimeout = connectionMessage.includes('timeout');
         return (
           <motion.div
             initial={{ opacity: 0, y: -20 }}

@@ -42,7 +42,7 @@ interface UseLoadingMessagesReturn {
 /**
  * Custom hook for managing progressive loading messages.
  * 
- * During slow operations (like login during cold starts), this hook updates
+ * During slow operations (like login during poor network conditions), this hook updates
  * the loading message at configured intervals to provide feedback to users.
  * 
  * @example
