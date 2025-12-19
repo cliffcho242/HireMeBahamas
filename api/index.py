@@ -69,9 +69,20 @@ logger.info("="*60)
 # This prevents the app from accidentally connecting to Railway
 logger.info("Checking for Railway references in environment...")
 railway_vars_found = []
+
+# Check for specific Railway environment variable patterns
+railway_patterns = ['RAILWAY_', '_RAILWAY', '.railway.app', 'up.railway.app']
+
 for key, value in os.environ.items():
-    if 'railway' in key.lower() or (value and 'railway' in str(value).lower()):
+    # Check variable name for Railway patterns
+    if any(pattern.lower() in key.lower() for pattern in railway_patterns):
         railway_vars_found.append(key)
+        continue
+    
+    # Check variable value for Railway URLs (only if value is a string and reasonably short)
+    if value and isinstance(value, str) and len(value) < 500:
+        if any(pattern in value.lower() for pattern in ['.railway.app', 'up.railway.app']):
+            railway_vars_found.append(f"{key} (contains Railway URL)")
 
 if railway_vars_found:
     error_msg = (
