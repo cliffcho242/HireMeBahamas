@@ -263,13 +263,13 @@ export async function registerWithRetry<T, D = unknown>(
     () => registerFn(userData),
     {
       maxRetries: 3,
-      baseDelay: 20000,
+      baseDelay: 3000, // 3 seconds base delay
       onRetry: (attempt, error) => {
-        const isColdStart = isColdStartError(error) || hasColdStartMessage(error);
+        const isTemporary = isTemporaryError(error) || hasTemporaryErrorMessage(error);
         
         let message: string;
-        if (isColdStart) {
-          message = `Backend is waking up... Attempt ${attempt + 1}. Please wait...`;
+        if (isTemporary) {
+          message = `Connection issue detected. Retrying (attempt ${attempt + 1})...`;
         } else {
           message = `Retrying registration... Attempt ${attempt + 1}`;
         }
@@ -298,7 +298,7 @@ export async function registerWithRetry<T, D = unknown>(
           return false;
         }
         
-        // Retry cold starts and network errors
+        // Retry network errors and temporary server issues
         return true;
       }
     }
