@@ -5,7 +5,7 @@ HireMeBahamas is a job platform application built with:
 - **Frontend**: React (Vite)
 - **Backend**: Flask/Python
 - **Database**: PostgreSQL
-- **Deployment**: Railway (backend), Vercel (frontend)
+- **Deployment**: Render (backend), Vercel (frontend)
 
 ## Development Guidelines
 
