@@ -677,7 +677,7 @@ For production deployments on Render, you need to configure PostgreSQL for persi
 3. **Add required environment variables** (SECRET_KEY, JWT_SECRET_KEY, ENVIRONMENT)
 
 🔗 **[Database Connection Guide - Render Section](./DATABASE_CONNECTION_GUIDE.md#render-setup)** - Direct links and step-by-step instructions  
-📖 **[Complete Render DATABASE_URL Setup Guide](./RENDER_DATABASE_SETUP.md)** - Detailed guide with screenshots and troubleshooting
+📖 **[Render DATABASE_URL Verification Guide](./RENDER_DATABASE_URL_VERIFICATION.md)** - Detailed verification and troubleshooting
 
 **Note:** Railway is no longer supported. All production deployments should use Render backend (https://hiremebahamas.onrender.com).
 

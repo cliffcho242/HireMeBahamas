@@ -140,11 +140,15 @@ if (typeof window !== 'undefined') {
       }
       
       // Test backend connectivity with a lightweight health check
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       fetch(`${backendUrl}/health/ping`, {
         method: 'GET',
-        signal: AbortSignal.timeout(5000), // 5 second timeout
+        signal: controller.signal,
       })
         .then(response => {
+          clearTimeout(timeoutId);
           if (response.ok) {
             return response.text();
           }
@@ -154,6 +158,7 @@ if (typeof window !== 'undefined') {
           console.log('✅ Backend connectivity verified');
         })
         .catch(error => {
+          clearTimeout(timeoutId);
           console.error('❌ Backend connection failed:', error.message);
           console.error('   This may indicate the backend is starting up or unreachable');
           console.error('   Backend URL:', backendUrl);
