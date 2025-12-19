@@ -14,6 +14,12 @@ interface ConnectionStatusProps {
 const CONNECTION_TIMEOUT_MS = 10000;
 
 /**
+ * Expected cold start duration in milliseconds.
+ * Render.com free tier can take up to 30-45 seconds to wake up.
+ */
+const COLD_START_DURATION_MS = 45000;
+
+/**
  * Tips to show while the server is waking up
  */
 const WAKE_UP_TIPS = [
