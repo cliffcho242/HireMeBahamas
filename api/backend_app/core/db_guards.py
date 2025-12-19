@@ -176,15 +176,3 @@ def assert_no_sslmode_in_code():
     # This function is intentionally simple and serves as a placeholder
     # for more sophisticated runtime checks if needed in the future.
     logger.debug("✅ sslmode not found in connection parameters (best-effort check)")
-
-
-# =============================================================================
-# AUTO-RUN VALIDATION (OPTIONAL)
-# =============================================================================
-# Uncomment the lines below to automatically run validation when this module
-# is imported. This provides immediate feedback if configuration is wrong.
-#
-# if __name__ != "__main__":
-#     # Only validate when imported as a module (not when run directly)
-#     validate_database_config(strict=False)
-# =============================================================================
