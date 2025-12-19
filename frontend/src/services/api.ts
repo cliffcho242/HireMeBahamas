@@ -112,6 +112,7 @@ const api = axios.create({
 const MAX_RETRIES = 3; // Reduced from 5 to prevent excessive waiting
 const RETRY_DELAY = 2000; // 2 seconds base delay for retries (reduced from 3s)
 const BACKEND_TIMEOUT = 10000; // 10 seconds timeout (backend is always on)
+const BACKEND_WAKE_TIME = 45000; // 45 seconds timeout when backend is waking up (cold start)
 const MAX_WAKE_RETRIES = 3; // Reduced from 4 to prevent excessive waiting
 const INITIAL_WAIT_MS = 3000; // 3 seconds initial wait before first retry (reduced from 5s)
 const BASE_BACKOFF_MS = 5000; // Base for exponential backoff (reduced from 10s)
