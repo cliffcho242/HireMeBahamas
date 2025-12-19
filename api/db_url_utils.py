@@ -1,8 +1,18 @@
 """
 Database URL utility functions for Vercel Postgres and other cloud databases.
 
-This module provides shared utilities for processing database connection URLs,
-including automatic SSL mode enforcement for Vercel Postgres (Neon).
+This module provides shared utilities for processing database connection URLs.
+
+⚠️ DEPRECATION NOTICE (Dec 2025):
+The ensure_sslmode() function is DEPRECATED. asyncpg does NOT support sslmode
+parameter. SSL must be configured via ssl.create_default_context() in connect_args.
+
+For asyncpg-based connections:
+- ❌ DO NOT use sslmode in DATABASE_URL
+- ✅ USE ssl context in connect_args
+
+For psycopg2/psycopg3 connections:
+- ✅ sslmode in DATABASE_URL works fine
 """
 import logging
 from urllib.parse import quote
@@ -16,35 +26,42 @@ logger = logging.getLogger(__name__)
 
 
 def ensure_sslmode(db_url: str) -> str:
-    """Ensure SSL mode is set in the database URL.
+    """DEPRECATED: Ensure SSL mode is set in the database URL.
     
-    Vercel Postgres (Neon) and other cloud databases require SSL connections.
-    This function automatically adds ?sslmode=require to URLs that don't have
-    SSL mode specified.
+    ⚠️ WARNING: This function is DEPRECATED and should NOT be used with asyncpg.
+    asyncpg does NOT support sslmode parameter. Attempting to use sslmode with
+    asyncpg will cause: connect() got an unexpected keyword argument 'sslmode'
+    
+    For asyncpg connections:
+    - Remove this function call
+    - Configure SSL via ssl.create_default_context() in connect_args
+    
+    For psycopg2/psycopg3 connections:
+    - This function still works but is unnecessary
+    - You can configure sslmode directly in DATABASE_URL
     
     Args:
         db_url: Database connection URL
         
     Returns:
-        Database URL with sslmode parameter added if it was missing
+        Database URL unchanged (this function no longer modifies URLs)
         
-    Examples:
-        >>> ensure_sslmode("postgresql://user:pass@host/db")
-        'postgresql://user:pass@host/db?sslmode=require'
+    Deprecated:
+        Use ssl context in connect_args instead:
         
-        >>> ensure_sslmode("postgresql://user:pass@host/db?timeout=10")
-        'postgresql://user:pass@host/db?timeout=10&sslmode=require'
-        
-        >>> ensure_sslmode("postgresql://user:pass@host/db?sslmode=prefer")
-        'postgresql://user:pass@host/db?sslmode=prefer'
+        import ssl
+        ssl_context = ssl.create_default_context()
+        engine = create_async_engine(
+            db_url,
+            connect_args={"ssl": ssl_context}
+        )
     """
-    if "?" not in db_url:
-        # No query parameters - add sslmode=require
-        return f"{db_url}?sslmode=require"
-    elif "sslmode=" not in db_url:
-        # Has query parameters but no sslmode - append it
-        return f"{db_url}&sslmode=require"
-    # else: sslmode is already present, don't override user's explicit setting
+    logger.warning(
+        "ensure_sslmode() is DEPRECATED. "
+        "asyncpg does NOT support sslmode parameter. "
+        "Use ssl.create_default_context() in connect_args instead."
+    )
+    # Return URL unchanged - do not add sslmode for asyncpg compatibility
     return db_url
 
 

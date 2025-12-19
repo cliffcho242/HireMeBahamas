@@ -20,10 +20,10 @@ This legacy module will be removed in a future version.
 """
 import os
 import logging
+import ssl
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 from sqlalchemy.exc import ArgumentError
-from .db_url_utils import ensure_sslmode
 
 # Global engine (reused across invocations)
 _engine = None
@@ -60,8 +60,14 @@ def get_database_url():
     Note: SQLAlchemy's create_async_engine() automatically handles URL decoding for
     special characters in username/password. No manual decoding is needed.
     
+    CRITICAL: sslmode parameter is NOT supported by asyncpg driver.
+    SSL is configured via ssl context in connect_args instead.
+    
     Returns:
         str | None: Database URL if valid, None if invalid (with warnings logged)
+        
+    Raises:
+        RuntimeError: If sslmode is detected in DATABASE_URL with asyncpg driver
     """
     db_url = os.getenv("DATABASE_URL", "")
     
@@ -79,8 +85,14 @@ def get_database_url():
     elif db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     
-    # Ensure SSL mode is set for Vercel Postgres (Neon) and other cloud databases
-    db_url = ensure_sslmode(db_url)
+    # CRITICAL SAFETY CHECK: Block sslmode in asyncpg URLs
+    # asyncpg does NOT support sslmode - this prevents the error forever
+    if "asyncpg" in db_url and "sslmode=" in db_url:
+        raise RuntimeError(
+            "FATAL: sslmode detected in DATABASE_URL. "
+            "asyncpg does not support sslmode. "
+            "Remove sslmode from DATABASE_URL - SSL is configured via context in code."
+        )
     
     return db_url
 
@@ -127,9 +139,13 @@ def get_engine():
             max_overflow = int(os.getenv("DB_POOL_MAX_OVERFLOW", "10"))  # Burst safely
             pool_recycle = int(os.getenv("DB_POOL_RECYCLE", "1800"))  # Recycle every 30 min
             
-            # CRITICAL: Production-safe engine configuration for Neon pooled connections
-            # NO startup DB options (statement_timeout, sslmode, or options in connect_args)
-            # Neon pooled connections (PgBouncer) do NOT support startup parameters
+            # Create SSL context for secure connections
+            # This is the CORRECT way to configure SSL with asyncpg
+            ssl_context = ssl.create_default_context()
+            
+            # CRITICAL: Production-safe engine configuration for async PostgreSQL
+            # SSL is configured via context in connect_args (NOT via sslmode parameter)
+            # asyncpg does NOT support sslmode parameter
             _engine = create_async_engine(
                 db_url,
                 # Enterprise hardening for Render + Neon
@@ -137,17 +153,16 @@ def get_engine():
                 pool_recycle=pool_recycle,     # recycle every 30 min
                 pool_size=pool_size,           # keep small on Render
                 max_overflow=max_overflow,     # burst safely
-                # CRITICAL: Minimal connect_args for Neon compatibility
-                # NO sslmode (must be in URL query string)
-                # NO statement_timeout (not supported by PgBouncer)
-                # NO server_settings with startup options
+                # CRITICAL: SSL configured via context (NOT sslmode)
+                # This works with asyncpg, Neon, Render, and all cloud databases
                 connect_args={
-                    "timeout": connect_timeout,  # Connection timeout (5s default for asyncpg)
-                    "command_timeout": command_timeout,  # Query timeout (30s default)
+                    "ssl": ssl_context,                    # SSL context for secure connections
+                    "timeout": connect_timeout,            # Connection timeout (5s default)
+                    "command_timeout": command_timeout,    # Query timeout (30s default)
                 },
                 echo=False,                    # Disable SQL logging in production
             )
-            logger.info("✅ Database engine initialized successfully (Neon-safe, no startup options)")
+            logger.info("✅ Database engine initialized successfully (SSL context configured, asyncpg compatible)")
         except ArgumentError as e:
             # Catch SQLAlchemy ArgumentError specifically (URL parsing errors)
             logger.warning(

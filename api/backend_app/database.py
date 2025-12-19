@@ -1,43 +1,35 @@
 # =============================================================================
-# DATABASE ENGINE CONFIGURATION - NEON SAFE MODE (Dec 2025)
+# DATABASE ENGINE CONFIGURATION - ASYNCPG SSL CONTEXT (Dec 2025)
 # =============================================================================
 #
-# ✅ NEON POOLER COMPATIBILITY - ZERO EXTRA FLAGS
+# ✅ ASYNCPG COMPATIBILITY - SSL CONTEXT INSTEAD OF SSLMODE
 #
-# CRITICAL RULES FOR NEON POOLED CONNECTIONS:
-# 1. DATABASE_URL format: postgresql+asyncpg://USER:PASSWORD@HOST:5432/DATABASE
-#    - ❌ NO sslmode in URL (Neon pooler manages SSL automatically)
-#    - ❌ NO statement_timeout
-#    - ❌ NO pooler params
-# 2. SQLAlchemy Engine: create_async_engine with ONLY pool_pre_ping=True
-#    - ❌ NO connect_args with sslmode
-#    - ❌ NO server_settings
-#    - ❌ NO startup options
+# CRITICAL: asyncpg does NOT support sslmode parameter
+# - ❌ NO sslmode in DATABASE_URL (causes "unexpected keyword argument" error)
+# - ❌ NO sslmode in connect_args
+# - ✅ SSL configured via ssl.create_default_context() in connect_args
 #
-# ⚠️  SPECIAL CASE: This configuration is ONLY for Neon Pooled connections.
-# For standard PostgreSQL (Render), use: ?sslmode=require in DATABASE_URL
+# This configuration works with:
+# - Neon Serverless Postgres
+# - Render PostgreSQL
+# - AWS RDS PostgreSQL
+# - All asyncpg-based connections
 #
-# This configuration is specifically designed for Neon Serverless Postgres
-# and works with PgBouncer connection pooling where SSL is managed by the pooler.
-#
-# ENV VARS (for Neon Pooled deployment):
-# DATABASE_URL=postgresql+asyncpg://user:pass@ep-xxx.pooler.neon.tech:5432/db
-# DB_POOL_RECYCLE=300
-#
-# ENV VARS (for Render - standard PostgreSQL):
-# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
+# ENV VARS (for ANY PostgreSQL deployment):
+# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
 # DB_POOL_RECYCLE=300
 #
 # Key improvements:
 # 1. pool_pre_ping=True - validates connections before use
 # 2. pool_recycle=300 - prevents stale connections (serverless-friendly)
-# 3. Minimal connect_args - Neon pooler compatible
+# 3. SSL context in connect_args - asyncpg compatible
 # =============================================================================
 
 import os
 import logging
 import threading
 import errno
+import ssl
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -59,8 +51,11 @@ DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@invalid.local
 # 1. DATABASE_URL (Standard PostgreSQL connection - REQUIRED)
 # 2. Local development default (only for development, not production)
 #
-# NEON DATABASE FORMAT (NO SSLMODE):
-# DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@ep-xxxxx.REGION.aws.neon.tech:5432/DB_NAME
+# ASYNCPG DATABASE FORMAT (NO SSLMODE):
+# DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST:5432/DB_NAME
+#
+# CRITICAL: asyncpg does NOT support sslmode parameter
+# SSL is configured via ssl context in connect_args instead
 # =============================================================================
 
 # Check if we're in production mode
@@ -98,6 +93,15 @@ elif not DATABASE_URL:
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
+
+# CRITICAL SAFETY CHECK: Block sslmode in asyncpg URLs at startup
+# asyncpg does NOT support sslmode - this prevents the error forever
+if "asyncpg" in DATABASE_URL and "sslmode=" in DATABASE_URL:
+    raise RuntimeError(
+        "FATAL: sslmode detected in DATABASE_URL. "
+        "asyncpg does not support sslmode. "
+        "Remove sslmode from DATABASE_URL - SSL is configured via context in code."
+    )
 
 # No auto-fix for missing ports - DATABASE_URL must include explicit port
 
@@ -154,28 +158,28 @@ COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
 STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
 
 # =============================================================================
-# SSL CONFIGURATION - NEON SAFE MODE
+# SSL CONFIGURATION - ASYNCPG SSL CONTEXT
 # =============================================================================
-# ❌ NO sslmode in URL (Neon pooler does NOT support it)
-# ❌ NO SSL configuration in connect_args
-# Neon manages SSL automatically through its connection pooler
+# asyncpg does NOT support sslmode parameter
+# SSL is configured via ssl.create_default_context() in connect_args
+# This works with Neon, Render, AWS RDS, and all cloud PostgreSQL providers
 # =============================================================================
 
 # =============================================================================
-# CREATE ASYNC ENGINE - NEON SAFE MODE (Serverless/Pooled Compatible)
+# CREATE ASYNC ENGINE - ASYNCPG SSL CONTEXT (Universal Pattern)
 # =============================================================================
-# ✅ NEON POOLER COMPATIBLE PATTERN:
-# - Uses ONLY pool_pre_ping=True
-# - NO sslmode in URL or connect_args
-# - NO statement_timeout
-# - NO server_settings
-# - NO startup DB options
+# ✅ ASYNCPG COMPATIBLE PATTERN:
+# - Uses SSL context in connect_args (NOT sslmode)
+# - pool_pre_ping=True validates connections before use
+# - pool_recycle=300 recycles connections (serverless-friendly)
 #
-# This pattern works with Neon Serverless Postgres and PgBouncer:
-# 1. pool_pre_ping=True - validates connections before use
-# 2. pool_recycle=300 - recycles connections (serverless-friendly)
+# This pattern works with ALL asyncpg-based PostgreSQL connections:
+# 1. Neon Serverless Postgres
+# 2. Render PostgreSQL
+# 3. AWS RDS PostgreSQL
+# 4. Any cloud PostgreSQL provider
 #
-# COPY-PASTE ENV VARS FOR NEON/RENDER:
+# COPY-PASTE ENV VARS FOR ANY DEPLOYMENT:
 # DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
 # DB_POOL_RECYCLE=300
 # =============================================================================
@@ -216,12 +220,13 @@ def get_engine():
                     return None
                 
                 try:
-                    # Create engine for Neon pooler compatibility
-                    # Neon pooled connections (PgBouncer) do NOT support:
-                    # - sslmode in URL or connect_args
-                    # - statement_timeout
-                    # - server_settings
-                    # - startup options
+                    # Create SSL context for secure connections
+                    # This is the CORRECT way to configure SSL with asyncpg
+                    ssl_context = ssl.create_default_context()
+                    
+                    # Create engine with SSL context
+                    # asyncpg does NOT support sslmode parameter
+                    # SSL is configured via context in connect_args
                     _engine = create_async_engine(
                         DATABASE_URL,
                         # Enterprise hardening for Render + Neon
@@ -231,10 +236,18 @@ def get_engine():
                         max_overflow=MAX_OVERFLOW,    # burst safely
                         pool_timeout=POOL_TIMEOUT,    # Wait max 30s for connection from pool
                         
+                        # CRITICAL: SSL configured via context (NOT sslmode)
+                        # This works with asyncpg, Neon, Render, and all cloud databases
+                        connect_args={
+                            "ssl": ssl_context,                    # SSL context for secure connections
+                            "timeout": CONNECT_TIMEOUT,            # Connection timeout
+                            "command_timeout": COMMAND_TIMEOUT,    # Query timeout
+                        },
+                        
                         # Echo SQL for debugging (disabled in production)
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
                     )
-                    logger.info("✅ Database engine initialized successfully (Neon-safe, no startup options)")
+                    logger.info("✅ Database engine initialized successfully (SSL context configured, asyncpg compatible)")
                     logger.info(
                         f"Database engine created (lazy): pool_size={POOL_SIZE}, max_overflow={MAX_OVERFLOW}, "
                         f"connect_timeout={CONNECT_TIMEOUT}s, pool_recycle={POOL_RECYCLE}s"

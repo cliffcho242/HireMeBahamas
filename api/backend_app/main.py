@@ -620,7 +620,9 @@ async def lazy_import_heavy_stuff():
     # ==========================================================================
     try:
         from backend_app.core.db_guards import validate_database_config
-        validate_database_config(strict=False)  # Warn but don't fail startup
+        # Use strict=False to warn but not fail startup for non-asyncpg drivers
+        # The guard will automatically skip check for psycopg2/psycopg3
+        validate_database_config(strict=False)
     except Exception as e:
         logger.warning(f"Database configuration validation skipped: {e}")
     

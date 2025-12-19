@@ -28,11 +28,44 @@ logger = logging.getLogger(__name__)
 DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@invalid.local:5432/placeholder"
 
 
+# =============================================================================
+# DATABASE CONNECTION GUARDS - PERMANENT SSLMODE ERROR PREVENTION
+# =============================================================================
+#
+# This module provides runtime guards to prevent the `connect() got an 
+# unexpected keyword argument 'sslmode'` error from ever happening again.
+#
+# ENFORCEMENT RULES FOR ASYNCPG:
+# 1. sslmode MUST NOT exist in DATABASE_URL when using asyncpg
+# 2. SSL is configured via ssl.create_default_context() in connect_args
+# 3. This guard raises RuntimeError at startup if sslmode is detected
+#
+# Usage:
+#     from backend_app.core.db_guards import validate_database_config
+#     validate_database_config()  # Call once at startup
+#
+# =============================================================================
+
+import os
+import sys
+import logging
+from typing import Optional, Tuple
+from urllib.parse import urlparse, parse_qs
+
+logger = logging.getLogger(__name__)
+
+# Placeholder URL constant (should match database.py)
+DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@invalid.local:5432/placeholder"
+
+
 def check_sslmode_in_database_url() -> Tuple[bool, Optional[str]]:
-    """Verify that sslmode is configured in DATABASE_URL.
+    """Verify that sslmode is NOT in DATABASE_URL when using asyncpg.
     
-    This is the ONLY valid place for sslmode configuration. Any other
-    location will cause connection errors.
+    CRITICAL: asyncpg does NOT support sslmode parameter. If sslmode is present
+    in DATABASE_URL, the connection will fail with:
+        connect() got an unexpected keyword argument 'sslmode'
+    
+    SSL must be configured via ssl.create_default_context() in connect_args instead.
     
     Returns:
         Tuple of (valid: bool, error_message: Optional[str])
@@ -54,6 +87,11 @@ def check_sslmode_in_database_url() -> Tuple[bool, Optional[str]]:
         logger.info("⚠️  Placeholder database URL detected, skipping sslmode check")
         return True, None
     
+    # Skip check for non-asyncpg drivers (psycopg2, psycopg3 support sslmode)
+    if "asyncpg" not in database_url:
+        logger.info("⚠️  Non-asyncpg driver detected, skipping sslmode check (psycopg2/psycopg3 support sslmode)")
+        return True, None
+    
     # Check for sslmode in URL using proper URL parsing
     try:
         parsed = urlparse(database_url)
@@ -63,16 +101,17 @@ def check_sslmode_in_database_url() -> Tuple[bool, Optional[str]]:
         logger.warning(f"Failed to parse DATABASE_URL: {e}")
         return True, None  # Skip check if URL can't be parsed
     
-    if not has_sslmode:
+    if has_sslmode:
         error_msg = (
-            "DATABASE_URL is missing sslmode parameter. "
-            "For cloud deployments, DATABASE_URL must include sslmode. "
-            "Example: postgresql://user:pass@host:5432/db?sslmode=require"
+            "FATAL: sslmode detected in DATABASE_URL. "
+            "asyncpg does NOT support sslmode parameter. "
+            "This will cause: connect() got an unexpected keyword argument 'sslmode'. "
+            "Remove sslmode from DATABASE_URL. SSL is configured via ssl context in code."
         )
-        logger.warning(f"⚠️  {error_msg}")
+        logger.error(f"❌ {error_msg}")
         return False, error_msg
     
-    logger.info("✅ DATABASE_URL contains sslmode parameter")
+    logger.info("✅ DATABASE_URL does not contain sslmode parameter (correct for asyncpg)")
     return True, None
 
 
@@ -114,12 +153,12 @@ def validate_database_config(strict: bool = False) -> bool:
     """Validate database configuration to prevent sslmode errors.
     
     This function enforces the rules:
-    1. sslmode must be in DATABASE_URL (the ONLY allowed place)
-    2. Direct database driver connections are forbidden
+    1. sslmode must NOT be in DATABASE_URL when using asyncpg
+    2. SSL is configured via ssl context in connect_args instead
     
     Args:
         strict: If True, raises RuntimeError on validation failure.
-                If False, only logs warnings.
+                If False, only logs warnings. Default is False.
     
     Returns:
         bool: True if validation passes, False otherwise
@@ -128,13 +167,13 @@ def validate_database_config(strict: bool = False) -> bool:
         RuntimeError: If strict=True and validation fails
     """
     logger.info("=" * 80)
-    logger.info("🔒 DATABASE CONFIGURATION VALIDATION")
+    logger.info("🔒 DATABASE CONFIGURATION VALIDATION (ASYNCPG)")
     logger.info("=" * 80)
     
     all_valid = True
     errors = []
     
-    # Check 1: sslmode in DATABASE_URL
+    # Check 1: No sslmode in DATABASE_URL (for asyncpg)
     sslmode_valid, sslmode_error = check_sslmode_in_database_url()
     if not sslmode_valid:
         all_valid = False
@@ -149,7 +188,8 @@ def validate_database_config(strict: bool = False) -> bool:
     # Log results
     if all_valid:
         logger.info("✅ Database configuration validation PASSED")
-        logger.info("   - sslmode configured in DATABASE_URL")
+        logger.info("   - No sslmode in DATABASE_URL (correct for asyncpg)")
+        logger.info("   - SSL configured via ssl context in code")
         logger.info("   - Database driver usage patterns checked")
     else:
         logger.error("❌ Database configuration validation FAILED")
