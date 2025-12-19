@@ -31,6 +31,7 @@ import os
 import logging
 import threading
 import errno
+import asyncio
 from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
@@ -519,9 +520,6 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     # Tables should be created via Alembic migrations
     for attempt in range(max_retries):
         try:
-            # Calculate exponential backoff delay for this attempt
-            backoff_delay = retry_delay * (2 ** attempt)
-            
             success, error_msg = await test_db_connection()
             if success:
                 _db_initialized = True
@@ -542,7 +540,6 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
         
         # Apply exponential backoff between retries
         if attempt < max_retries - 1:
-            import asyncio
             backoff_delay = retry_delay * (2 ** attempt)
             logger.info(f"   Retrying in {backoff_delay:.1f} seconds...")
             await asyncio.sleep(backoff_delay)
@@ -608,7 +605,6 @@ async def test_db_connection() -> tuple[bool, Optional[str]]:
     """
     try:
         from sqlalchemy import text
-        import asyncio
         
         # Apply timeout to prevent hanging indefinitely
         # Use 10 second timeout for connection test
