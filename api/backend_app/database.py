@@ -94,17 +94,14 @@ if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     logger.info("Converted DATABASE_URL to asyncpg driver format")
 
-# CRITICAL: Remove any sslmode parameter from URL
-# asyncpg does NOT support sslmode - SSL is configured via context
-if "?" in DATABASE_URL and "sslmode=" in DATABASE_URL:
-    # Strip sslmode parameter from query string
-    base_url, query_string = DATABASE_URL.split("?", 1)
-    params = [p for p in query_string.split("&") if not p.startswith("sslmode=")]
-    if params:
-        DATABASE_URL = f"{base_url}?{'&'.join(params)}"
-    else:
-        DATABASE_URL = base_url
-    logger.info("Removed sslmode parameter from DATABASE_URL (asyncpg uses SSL context)")
+# CRITICAL SAFETY CHECK: Block sslmode in asyncpg URLs at startup
+# asyncpg does NOT support sslmode - this prevents the error forever
+if "asyncpg" in DATABASE_URL and "sslmode=" in DATABASE_URL:
+    raise RuntimeError(
+        "FATAL: sslmode detected in DATABASE_URL. "
+        "asyncpg does not support sslmode. "
+        "Remove sslmode from DATABASE_URL - SSL is configured via context in code."
+    )
 
 # No auto-fix for missing ports - DATABASE_URL must include explicit port
 

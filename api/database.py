@@ -65,6 +65,9 @@ def get_database_url():
     
     Returns:
         str | None: Database URL if valid, None if invalid (with warnings logged)
+        
+    Raises:
+        RuntimeError: If sslmode is detected in DATABASE_URL with asyncpg driver
     """
     db_url = os.getenv("DATABASE_URL", "")
     
@@ -82,17 +85,14 @@ def get_database_url():
     elif db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     
-    # CRITICAL: Remove any sslmode parameter from URL
-    # asyncpg does NOT support sslmode - SSL is configured via context
-    if "?" in db_url and "sslmode=" in db_url:
-        # Strip sslmode parameter from query string
-        base_url, query_string = db_url.split("?", 1)
-        params = [p for p in query_string.split("&") if not p.startswith("sslmode=")]
-        if params:
-            db_url = f"{base_url}?{'&'.join(params)}"
-        else:
-            db_url = base_url
-        logger.info("Removed sslmode parameter from DATABASE_URL (asyncpg uses SSL context)")
+    # CRITICAL SAFETY CHECK: Block sslmode in asyncpg URLs
+    # asyncpg does NOT support sslmode - this prevents the error forever
+    if "asyncpg" in db_url and "sslmode=" in db_url:
+        raise RuntimeError(
+            "FATAL: sslmode detected in DATABASE_URL. "
+            "asyncpg does not support sslmode. "
+            "Remove sslmode from DATABASE_URL - SSL is configured via context in code."
+        )
     
     return db_url
 

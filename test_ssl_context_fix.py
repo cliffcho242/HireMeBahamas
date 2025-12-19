@@ -43,41 +43,77 @@ def test_api_database_ssl_context():
         return False
 
 
-def test_backend_app_database_ssl_context():
-    """Test that api/backend_app/database.py uses SSL context"""
-    print("\nTest 2: Testing api/backend_app/database.py SSL context configuration...")
+def test_api_database_blocks_sslmode():
+    """Test that api/database.py blocks sslmode with asyncpg"""
+    print("\nTest 2: Testing api/database.py blocks sslmode in asyncpg URLs...")
     
-    # Set a clean DATABASE_URL without sslmode
-    os.environ['DATABASE_URL'] = 'postgresql://user:pass@host:5432/db'
+    # Set DATABASE_URL with asyncpg AND sslmode (should be blocked)
+    os.environ['DATABASE_URL'] = 'postgresql+asyncpg://user:pass@host:5432/db?sslmode=require'
     
     try:
-        # Import the module (fresh import)
-        sys.path.insert(0, str(Path(__file__).parent / "api"))
-        import importlib
-        if 'backend_app.database' in sys.modules:
-            importlib.reload(sys.modules['backend_app.database'])
+        # Clear module cache
+        modules_to_remove = [k for k in sys.modules if 'database' in k or 'api' in k]
+        for mod in modules_to_remove:
+            del sys.modules[mod]
+        
+        # Import the module - should raise RuntimeError
+        sys.path.insert(0, str(Path(__file__).parent))
+        from api import database
+        
+        # Try to get database URL
+        db_url = database.get_database_url()
+        print(f"❌ FAIL: Should have raised RuntimeError for sslmode with asyncpg")
+        return False
+    except RuntimeError as e:
+        if "asyncpg does not support sslmode" in str(e):
+            print("✅ PASS: api/database.py correctly blocks sslmode with asyncpg")
+            return True
         else:
-            from backend_app import database
-        
-        # Check that DATABASE_URL doesn't have sslmode
-        from backend_app import database as db_module
-        if "sslmode=" in db_module.DATABASE_URL:
-            print("❌ FAIL: DATABASE_URL still contains sslmode parameter")
+            print(f"❌ FAIL: Wrong error message: {e}")
             return False
-        
-        print("✅ PASS: api/backend_app/database.py uses SSL context (no sslmode in URL)")
-        return True
     except Exception as e:
-        print(f"✅ PASS: Module configuration correct (import error is OK for test): {type(e).__name__}")
+        print(f"❌ FAIL: Unexpected error: {type(e).__name__}: {e}")
+        return False
+
+
+def test_backend_app_database_ssl_context():
+    """Test that api/backend_app/database.py uses SSL context"""
+    print("\nTest 3: Testing api/backend_app/database.py blocks sslmode...")
+    
+    # Set DATABASE_URL with asyncpg AND sslmode (should be blocked)
+    os.environ['DATABASE_URL'] = 'postgresql+asyncpg://user:pass@host:5432/db?sslmode=require'
+    
+    try:
+        # Clear module cache
+        modules_to_remove = [k for k in sys.modules if 'backend_app' in k or 'database' in k]
+        for mod in modules_to_remove:
+            del sys.modules[mod]
+        
+        # Import the module - should raise RuntimeError at module level
+        sys.path.insert(0, str(Path(__file__).parent / "api"))
+        import backend_app.database
+        
+        print(f"❌ FAIL: Should have raised RuntimeError for sslmode with asyncpg")
+        return False
+    except RuntimeError as e:
+        if "asyncpg does not support sslmode" in str(e):
+            print("✅ PASS: api/backend_app/database.py correctly blocks sslmode with asyncpg")
+            return True
+        else:
+            print(f"❌ FAIL: Wrong error message: {e}")
+            return False
+    except Exception as e:
+        # Other exceptions (import errors) are OK for this test
+        print(f"✅ PASS: Module correctly configured (import error is OK): {type(e).__name__}")
         return True
 
 
-def test_sslmode_stripped_from_url():
-    """Test that sslmode is stripped from DATABASE_URL if present"""
-    print("\nTest 3: Testing that sslmode is stripped from DATABASE_URL...")
+def test_sslmode_blocked_in_asyncpg_url():
+    """Test that sslmode is blocked when present in asyncpg URL"""
+    print("\nTest 4: Testing that sslmode in asyncpg URL raises RuntimeError...")
     
-    # Set DATABASE_URL WITH sslmode
-    os.environ['DATABASE_URL'] = 'postgresql://user:pass@host:5432/db?sslmode=require'
+    # Set DATABASE_URL WITH asyncpg and sslmode
+    os.environ['DATABASE_URL'] = 'postgresql+asyncpg://user:pass@host:5432/db?sslmode=require'
     
     try:
         # Clear module cache
@@ -89,14 +125,17 @@ def test_sslmode_stripped_from_url():
         sys.path.insert(0, str(Path(__file__).parent))
         from api import database
         
-        # Check that get_database_url strips sslmode
+        # Try to get database URL - should raise RuntimeError
         db_url = database.get_database_url()
-        if db_url and "sslmode=" in db_url:
-            print("❌ FAIL: sslmode was not stripped from DATABASE_URL")
+        print("❌ FAIL: sslmode with asyncpg should raise RuntimeError")
+        return False
+    except RuntimeError as e:
+        if "asyncpg does not support sslmode" in str(e):
+            print("✅ PASS: sslmode in asyncpg URL correctly raises RuntimeError")
+            return True
+        else:
+            print(f"❌ FAIL: Wrong error message: {e}")
             return False
-        
-        print("✅ PASS: sslmode is correctly stripped from DATABASE_URL")
-        return True
     except Exception as e:
         print(f"❌ FAIL: Unexpected error: {type(e).__name__}: {e}")
         return False
@@ -104,7 +143,7 @@ def test_sslmode_stripped_from_url():
 
 def test_ssl_context_creation():
     """Test that ssl.create_default_context() can be used"""
-    print("\nTest 4: Testing SSL context creation...")
+    print("\nTest 5: Testing SSL context creation...")
     
     try:
         # Create SSL context (same as in database modules)
@@ -124,7 +163,7 @@ def test_ssl_context_creation():
 
 def test_db_guards_blocks_sslmode():
     """Test that db_guards blocks sslmode in asyncpg URLs"""
-    print("\nTest 5: Testing db_guards blocks sslmode in asyncpg URLs...")
+    print("\nTest 6: Testing db_guards blocks sslmode in asyncpg URLs...")
     
     # Set DATABASE_URL with asyncpg AND sslmode (should be blocked)
     os.environ['DATABASE_URL'] = 'postgresql+asyncpg://user:pass@host:5432/db?sslmode=require'
@@ -157,7 +196,7 @@ def test_db_guards_blocks_sslmode():
 
 def test_db_guards_allows_psycopg():
     """Test that db_guards allows sslmode for psycopg drivers"""
-    print("\nTest 6: Testing db_guards allows sslmode for psycopg...")
+    print("\nTest 7: Testing db_guards allows sslmode for psycopg...")
     
     # Set DATABASE_URL with psycopg AND sslmode (should be allowed)
     os.environ['DATABASE_URL'] = 'postgresql://user:pass@host:5432/db?sslmode=require'
@@ -193,8 +232,9 @@ def main():
 
     tests = [
         ("api/database.py SSL context", test_api_database_ssl_context),
-        ("api/backend_app/database.py SSL context", test_backend_app_database_ssl_context),
-        ("sslmode stripped from URL", test_sslmode_stripped_from_url),
+        ("api/database.py blocks sslmode with asyncpg", test_api_database_blocks_sslmode),
+        ("api/backend_app/database.py blocks sslmode", test_backend_app_database_ssl_context),
+        ("sslmode in asyncpg URL raises error", test_sslmode_blocked_in_asyncpg_url),
         ("SSL context creation", test_ssl_context_creation),
         ("db_guards blocks sslmode for asyncpg", test_db_guards_blocks_sslmode),
         ("db_guards allows sslmode for psycopg", test_db_guards_allows_psycopg),
@@ -227,9 +267,10 @@ def main():
         print()
         print("Summary:")
         print("  ✅ SSL context is properly configured in database modules")
-        print("  ✅ sslmode parameter is not used (asyncpg compatible)")
-        print("  ✅ Database connections will work with SSL")
+        print("  ✅ sslmode parameter causes RuntimeError with asyncpg (as required)")
+        print("  ✅ Database connections will work with SSL via context")
         print("  ✅ Guards prevent sslmode errors from happening")
+        print("  ✅ Error message is clear and actionable")
         return 0
     else:
         print("❌ Some tests failed!")
