@@ -131,6 +131,15 @@ if 'app' not in sys.modules or not hasattr(sys.modules.get('app', None), '__path
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+# =============================================================================
+# 🔥 NEVER-FAIL HEALTH CHECK ARCHITECTURE - STEP 1
+# =============================================================================
+# Mount dedicated health app FIRST — BEFORE ANY OTHER IMPORTS
+# This ensures health endpoints are available even if main app imports fail
+# =============================================================================
+
+from backend_app.health import health_app
+
 # INSTANT APP — NO HEAVY IMPORTS YET
 app = FastAPI(
     title="hiremebahamas",
@@ -140,91 +149,26 @@ app = FastAPI(
     openapi_url=None,
 )
 
-# IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
-@app.get("/health", include_in_schema=False)
-@app.head("/health", include_in_schema=False)
-def health():
-    """Instant health check - no database dependency.
-    
-    This endpoint is designed to respond immediately (<5ms) even during
-    the coldest start. It does NOT check database connectivity.
-    
-    Supports both GET and HEAD methods for maximum compatibility.
-    
-    Use /ready for database connectivity check.
-    
-    ✅ NO DATABASE - instant response
-    ✅ NO IO - instant response
-    ✅ NO async/await - synchronous function
-    
-    Render kills apps that fail health checks, so this must be instant.
-    """
-    return {"status": "ok"}
+# =============================================================================
+# 🔥 MOUNT HEALTH APP FIRST — CRITICAL FOR NEVER-FAIL ARCHITECTURE
+# =============================================================================
+# Health app is mounted at root level, so it handles:
+#   - /api/health
+#   - /health
+#   - /healthz
+#   - /live
+#   - /ready
+#
+# These endpoints are now PHYSICALLY ISOLATED from the main application.
+# Even if database explodes, Redis dies, or app crashes → health still passes.
+#
+# This is mounted BEFORE any heavy imports (auth, users, jobs, feed, etc.)
+# so health checks respond instantly regardless of application state.
+# =============================================================================
+app.mount("", health_app)
 
-
-# EMERGENCY HEALTH ENDPOINT — ULTRA STABLE FALLBACK
-@app.get("/healthz", include_in_schema=False)
-def healthz():
-    """Emergency health check endpoint - ultra stable fallback.
-    
-    This is a SECOND emergency health route that returns a plain "ok" string.
-    If /health or /api/health ever changes, this endpoint ensures the service
-    still survives health checks.
-    
-    Returns plain text "ok" for maximum compatibility and minimal overhead.
-    
-    ✅ NO DATABASE - instant response
-    ✅ NO IO - instant response  
-    ✅ NO async/await - synchronous function
-    ✅ Plain text response - no JSON parsing overhead
-    
-    High reliability through minimal dependencies and failure points.
-    """
-    return "ok"
-
-
-# LIVENESS PROBE — Kubernetes/Render liveness check
-@app.get("/live", tags=["health"])
-@app.head("/live", tags=["health"])
-def liveness():
-    """Liveness probe - instant response, no dependencies.
-    
-    This endpoint confirms the application process is running and responsive.
-    It does NOT check database or external services.
-    
-    Use this for:
-    - Kubernetes livenessProbe
-    - Render liveness checks
-    - Load balancer health checks
-    
-    Returns 200 immediately (<5ms) on any successful request.
-    """
-    return JSONResponse({"status": "alive"}, status_code=200)
-
-
-@app.get("/ready", tags=["health"])
-@app.head("/ready", tags=["health"])
-def ready():
-    """Readiness check - instant response, no database dependency.
-    
-    ✅ PRODUCTION-GRADE: This endpoint NEVER touches the database.
-    Returns immediately (<5ms) to confirm the application is ready to serve traffic.
-    
-    For database connectivity checks, use:
-    - /ready/db - Full database connectivity check
-    - /health/detailed - Comprehensive health check with database statistics
-    
-    This follows production best practices:
-    - Health checks must never touch DB, APIs, or disk
-    - Load balancers need instant responses
-    - Prevents cascading failures during database issues
-    """
-    return JSONResponse({
-        "status": "ready",
-        "message": "Application is ready to serve traffic",
-    }, status_code=200)
-
-print("NUCLEAR MAIN.PY LOADED — HEALTH ENDPOINTS ACTIVE (/health, /live, /ready)")
+print("✅ NEVER-FAIL HEALTH APP MOUNTED — Isolated from main application")
+print("   Health endpoints: /api/health, /health, /healthz, /live, /ready")
 
 # =============================================================================
 # END IMMORTAL SECTION — NOW LOAD EVERYTHING ELSE
