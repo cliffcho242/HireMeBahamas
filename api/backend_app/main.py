@@ -167,9 +167,6 @@ app = FastAPI(
 # =============================================================================
 app.mount("", health_app)
 
-print("✅ NEVER-FAIL HEALTH APP MOUNTED — Isolated from main application")
-print("   Health endpoints: /api/health, /health, /healthz, /live, /ready")
-
 # =============================================================================
 # END IMMORTAL SECTION — NOW LOAD EVERYTHING ELSE
 # =============================================================================
@@ -229,6 +226,18 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Log that never-fail health app is active
+logger.info("=" * 80)
+logger.info("✅ NEVER-FAIL HEALTH APP ACTIVE")
+logger.info("=" * 80)
+logger.info("Health endpoints (isolated from main app):")
+logger.info("  - /api/health   (Render health check)")
+logger.info("  - /health       (Alternative)")
+logger.info("  - /healthz      (Emergency fallback)")
+logger.info("  - /live         (Liveness probe)")
+logger.info("  - /ready        (Readiness probe)")
+logger.info("=" * 80)
 
 # GraphQL support (optional - gracefully degrades if strawberry not available)
 # Import after logger is configured
@@ -849,25 +858,8 @@ async def cache_health():
     return await redis_cache.health_check()
 
 
-# API health check endpoint (simple status check)
-@app.get("/api/health")
-@app.head("/api/health")
-def api_health():
-    """Instant API health check - no database dependency.
-    
-    Supports both GET and HEAD methods for health check compatibility.
-    
-    ✅ NO DATABASE - instant response
-    ✅ NO IO - instant response
-    ✅ NO async/await - synchronous function
-    
-    Render kills apps that fail health checks, so this must be instant.
-    """
-    return {
-        "status": "ok",
-        "service": "hiremebahamas-backend",
-        "uptime": "healthy"
-    }
+# NOTE: /api/health endpoint is now handled by the mounted health_app (see top of file)
+# This provides NEVER-FAIL architecture - health checks respond even if main app crashes
 
 
 # Detailed health check endpoint for monitoring
