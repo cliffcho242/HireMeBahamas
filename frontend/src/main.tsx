@@ -148,12 +148,9 @@ if (typeof window !== 'undefined') {
         signal: controller.signal,
       })
         .then(response => {
-          if (response.ok) {
-            return response.text();
+          if (!response.ok) {
+            throw new Error(`Backend returned ${response.status}`);
           }
-          throw new Error(`Backend returned ${response.status}`);
-        })
-        .then(() => {
           console.log('✅ Backend connectivity verified');
         })
         .catch(error => {
