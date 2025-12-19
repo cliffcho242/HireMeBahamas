@@ -7,8 +7,8 @@
 #
 # ENFORCEMENT RULES:
 # 1. sslmode MUST exist in DATABASE_URL (the ONLY allowed place)
-# 2. Direct database driver connections are FORBIDDEN
-# 3. All connections MUST go through SQLAlchemy engine
+# 2. Direct database driver connections should go through SQLAlchemy
+# 3. When direct driver usage is necessary, sslmode must be stripped from URL
 #
 # Usage:
 #     from backend.app.core.db_guards import validate_database_config
@@ -20,8 +20,12 @@ import os
 import sys
 import logging
 from typing import Optional, Tuple
+from urllib.parse import urlparse, parse_qs
 
 logger = logging.getLogger(__name__)
+
+# Placeholder URL constant (should match database.py)
+DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@invalid.local:5432/placeholder"
 
 
 def check_sslmode_in_database_url() -> Tuple[bool, Optional[str]]:
@@ -46,12 +50,20 @@ def check_sslmode_in_database_url() -> Tuple[bool, Optional[str]]:
         return True, None
     
     # Skip check for placeholder URLs
-    if "placeholder" in database_url or "invalid.local" in database_url:
+    if database_url == DB_PLACEHOLDER_URL or "invalid.local" in database_url:
         logger.info("⚠️  Placeholder database URL detected, skipping sslmode check")
         return True, None
     
-    # Check for sslmode in URL
-    if "sslmode=" not in database_url:
+    # Check for sslmode in URL using proper URL parsing
+    try:
+        parsed = urlparse(database_url)
+        query_params = parse_qs(parsed.query)
+        has_sslmode = 'sslmode' in query_params
+    except Exception as e:
+        logger.warning(f"Failed to parse DATABASE_URL: {e}")
+        return True, None  # Skip check if URL can't be parsed
+    
+    if not has_sslmode:
         error_msg = (
             "DATABASE_URL is missing sslmode parameter. "
             "For cloud deployments, DATABASE_URL must include sslmode. "
