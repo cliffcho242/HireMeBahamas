@@ -56,7 +56,8 @@ Sentry.init({
 
 // 🧹 RAILWAY PURGE: Clear caches ONCE to remove old Railway URLs
 // This migration runs only once per browser to avoid impacting performance
-const MIGRATION_KEY = 'hiremebahamas_railway_migration_v1';
+// v2: Force all users to clear caches again to ensure Railway URLs are completely removed
+const MIGRATION_KEY = 'hiremebahamas_railway_migration_v2';
 
 if (typeof window !== 'undefined') {
   const migrationDone = localStorage.getItem(MIGRATION_KEY);
@@ -116,6 +117,51 @@ if (typeof window !== 'undefined') {
       console.error('Failed to mark migration as complete:', err);
     }
   }
+}
+
+// 🔍 BACKEND CONNECTION VERIFICATION
+// Verify on startup that we're connecting to the correct Render backend
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    // Import the API utility to get the backend URL
+    import('./lib/api').then(({ getApiBase }) => {
+      const backendUrl = getApiBase();
+      
+      // Log the backend URL for debugging
+      console.log('🔗 Backend URL:', backendUrl);
+      
+      // Verify it's the Render backend
+      if (backendUrl === 'https://hiremebahamas.onrender.com') {
+        console.log('✅ Connected to Render backend (correct)');
+      } else if (backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1')) {
+        console.log('🔧 Using local development backend');
+      } else {
+        console.warn('⚠️ Unexpected backend URL:', backendUrl);
+      }
+      
+      // Test backend connectivity with a lightweight health check
+      fetch(`${backendUrl}/health/ping`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000), // 5 second timeout
+      })
+        .then(response => {
+          if (response.ok) {
+            return response.text();
+          }
+          throw new Error(`Backend returned ${response.status}`);
+        })
+        .then(() => {
+          console.log('✅ Backend connectivity verified');
+        })
+        .catch(error => {
+          console.error('❌ Backend connection failed:', error.message);
+          console.error('   This may indicate the backend is starting up or unreachable');
+          console.error('   Backend URL:', backendUrl);
+        });
+    }).catch(err => {
+      console.error('Failed to load API utility:', err);
+    });
+  });
 }
 
 // Register Service Worker for PWA (fresh registration after cleanup)
