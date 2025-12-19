@@ -518,29 +518,31 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     
     # Test database connectivity instead of creating tables
     # Tables should be created via Alembic migrations
-    for attempt in range(max_retries):
+    for attempt in range(1, max_retries + 1):
         try:
             success, error_msg = await test_db_connection()
             if success:
                 _db_initialized = True
                 _db_init_error = None
-                logger.info(f"✅ Database connection verified on attempt {attempt + 1}/{max_retries}")
+                logger.info(f"✅ Database connection verified on attempt {attempt}/{max_retries}")
                 logger.info("ℹ️  Tables managed by Alembic. Run migrations: alembic upgrade head")
                 return True
             else:
                 _db_init_error = error_msg
                 logger.warning(
-                    f"⚠️  Database connection attempt {attempt + 1}/{max_retries} failed: {error_msg}"
+                    f"⚠️  Database connection attempt {attempt}/{max_retries} failed: {error_msg}"
                 )
         except Exception as e:
             _db_init_error = str(e)
             logger.warning(
-                f"⚠️  Database initialization attempt {attempt + 1}/{max_retries} failed: {type(e).__name__}: {e}"
+                f"⚠️  Database initialization attempt {attempt}/{max_retries} failed: {type(e).__name__}: {e}"
             )
         
-        # Apply exponential backoff between retries
-        if attempt < max_retries - 1:
-            backoff_delay = retry_delay * (2 ** attempt)
+        # Apply exponential backoff between retries (2s, 4s, 8s, 16s, 32s, ...)
+        if attempt < max_retries:
+            backoff_delay = retry_delay * (2 ** (attempt - 1))
+            # Cap maximum delay at 60 seconds to avoid excessive waiting
+            backoff_delay = min(backoff_delay, 60.0)
             logger.info(f"   Retrying in {backoff_delay:.1f} seconds...")
             await asyncio.sleep(backoff_delay)
     
