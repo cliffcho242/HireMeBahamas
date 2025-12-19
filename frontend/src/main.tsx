@@ -54,7 +54,48 @@ Sentry.init({
   },
 })
 
-// Register Service Worker for PWA
+// 🧹 RAILWAY PURGE: Clear ALL caches to remove old Railway URLs
+// This runs ONCE on app load to force users to forget Railway backend
+if (typeof window !== 'undefined') {
+  // Clear service workers that might cache old API URLs
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(reg => {
+        reg.unregister();
+        console.log('🧹 Unregistered service worker:', reg.scope);
+      });
+    }).catch(err => {
+      console.error('Failed to unregister service workers:', err);
+    });
+  }
+  
+  // Clear all storage to remove cached Railway URLs
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+    console.log('🧹 Cleared localStorage and sessionStorage');
+  } catch (err) {
+    console.error('Failed to clear storage:', err);
+  }
+  
+  // Clear IndexedDB if present
+  if ('indexedDB' in window) {
+    try {
+      indexedDB.databases?.().then(dbs => {
+        dbs.forEach(db => {
+          if (db.name) {
+            indexedDB.deleteDatabase(db.name);
+            console.log('🧹 Deleted IndexedDB:', db.name);
+          }
+        });
+      });
+    } catch (err) {
+      console.error('Failed to clear IndexedDB:', err);
+    }
+  }
+}
+
+// Register Service Worker for PWA (fresh registration after cleanup)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker

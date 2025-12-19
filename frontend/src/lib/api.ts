@@ -27,48 +27,28 @@ import { isValidUrl, isSecureUrl } from './safeUrl';
 
 /**
  * Validate and get the base API URL from environment
- * @throws Error if VITE_API_URL is invalid (when provided)
+ * RENDER-ONLY: Hard-coded to use Render backend exclusively
+ * 🚨 NO Railway URLs allowed
+ * 🚨 NO environment variable fallback
  */
 function validateAndGetBaseUrl(): string {
-  const base = import.meta.env.VITE_API_URL as string | undefined;
-
-  // If no explicit API URL is set, use same-origin
-  // This is the RECOMMENDED approach for Vercel deployments with proxy rewrites
-  // vercel.json rewrites /api/* to the backend, so same-origin works perfectly
-  if (!base) {
-    // Check if we're in a browser environment
-    if (typeof window !== 'undefined') {
-      // Use same-origin - Vercel will proxy /api/* requests to the backend
-      return window.location.origin;
-    }
-    
-    // Server-side rendering or build-time: use empty string
-    // Relative URLs will work fine during build
-    return '';
-  }
-
-  // If VITE_API_URL is explicitly set, validate it
-  // This is only needed for local development or separate backend deployments
+  // 🔥 PRODUCTION LOCK: Hard-code Render backend URL
+  const RENDER_BACKEND_URL = "https://hiremebahamas.onrender.com";
   
-  // Use our safe URL validator instead of manual checks
-  if (!isValidUrl(base)) {
-    throw new Error(
-      `VITE_API_URL is invalid: "${base}". ` +
-      "URL must start with 'http://' or 'https://'. " +
-      "Example: VITE_API_URL=https://your-backend.com"
-    );
+  // Check if we're in development mode (localhost)
+  if (typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' || 
+    window.location.hostname === '127.0.0.1'
+  )) {
+    // Allow local development override
+    const devUrl = import.meta.env.VITE_API_URL as string | undefined;
+    if (devUrl && devUrl.startsWith('http://localhost')) {
+      return devUrl;
+    }
   }
-
-  // Validate HTTPS in production (only when explicitly set)
-  if (!isSecureUrl(base)) {
-    throw new Error(
-      `VITE_API_URL must use HTTPS in production: "${base}". ` +
-      "HTTP is only allowed for localhost in development. " +
-      "Change to: VITE_API_URL=https://your-domain.com"
-    );
-  }
-
-  return base;
+  
+  // 🚨 RENDER ONLY: Return hard-coded Render URL for all production traffic
+  return RENDER_BACKEND_URL;
 }
 
 /**
