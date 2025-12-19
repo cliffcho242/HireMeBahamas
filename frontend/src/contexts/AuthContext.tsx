@@ -310,7 +310,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       console.log('AuthContext: Starting login for:', email);
       
-      // Use retry logic with user-friendly cold start handling
+      // Use retry logic with user-friendly error handling
       const response = await loginWithRetry(
         { email, password },
         (credentials) => authAPI.login(credentials),
@@ -373,7 +373,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const register = async (userData: RegisterData) => {
     try {
-      // Use retry logic with user-friendly cold start handling
+      // Use retry logic with user-friendly error handling
       const response = await registerWithRetry(
         userData,
         (data) => authAPI.register(data),

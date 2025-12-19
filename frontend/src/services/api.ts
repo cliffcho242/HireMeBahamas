@@ -111,7 +111,7 @@ const api = axios.create({
 // Retry configuration - optimized to prevent excessive timing
 const MAX_RETRIES = 3; // Reduced from 5 to prevent excessive waiting
 const RETRY_DELAY = 2000; // 2 seconds base delay for retries (reduced from 3s)
-const BACKEND_WAKE_TIME = 60000; // 60 seconds (1 minute) for cold starts (reduced from 2 minutes)
+const BACKEND_TIMEOUT = 10000; // 10 seconds timeout (backend is always on)
 const MAX_WAKE_RETRIES = 3; // Reduced from 4 to prevent excessive waiting
 const INITIAL_WAIT_MS = 3000; // 3 seconds initial wait before first retry (reduced from 5s)
 const BASE_BACKOFF_MS = 5000; // Base for exponential backoff (reduced from 10s)
@@ -170,7 +170,7 @@ const isBackendSleeping = (error: ApiErrorType): boolean => {
   // 405 can indicate backend is down or misconfigured
   if (error.response?.status === 405) return true;
   
-  // Long timeout suggests cold start
+  // Check for timeout errors
   if (error.code === 'ECONNABORTED' && (error.config?.timeout ?? 0) > 15000) return true;
   
   // Connection refused during wake-up
@@ -325,7 +325,7 @@ api.interceptors.response.use(
         
         if (isFirstAttempt) {
           console.log('Backend appears to be sleeping or starting up...');
-          console.log('This may take up to 1 minute on first request (cold start).');
+          console.log('Checking backend connection...');
           console.log('Status:', error.response?.status || 'No response');
         } else {
           console.log(`Backend still waking up... Attempt ${attemptNumber}/${MAX_WAKE_RETRIES}`);
@@ -435,7 +435,7 @@ export const authAPI = {
         // Use extended timeout for login as backend may need to wake up
         // and password verification can take time
         const response = await api.post('/api/auth/login', credentials, {
-          timeout: BACKEND_WAKE_TIME, // 1 minute for cold start + password verification
+          timeout: BACKEND_TIMEOUT, // 10 seconds for password verification
         });
         return response.data;
       },
@@ -460,7 +460,7 @@ export const authAPI = {
         // Use extended timeout for registration as backend may need to wake up
         // and password hashing can take time
         const response = await api.post('/api/auth/register', userData, {
-          timeout: BACKEND_WAKE_TIME, // 1 minute for cold start + password hashing
+          timeout: BACKEND_TIMEOUT, // 10 seconds for password hashing
         });
         return response.data;
       },

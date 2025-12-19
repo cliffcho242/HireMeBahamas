@@ -86,9 +86,9 @@ const Login = () => {
       } else {
         setConnectionStatus('disconnected');
         
-        // Use user-friendly message for cold start scenarios
+        // Use user-friendly message
         const helpMessage = result.message.includes('timeout') 
-          ? 'Backend is starting up (cold start). This can take 30-60 seconds. Please wait and try logging in.'
+          ? 'Connection timeout. Please check your internet connection and try again.'
           : result.message;
         
         setConnectionMessage(helpMessage);
@@ -262,7 +262,7 @@ const Login = () => {
 
       {/* Connection Status Banner */}
       {connectionStatus && connectionStatus !== 'connected' && (() => {
-        const isColdStart = connectionMessage.includes('cold start');
+        const isTimeout = connectionMessage.includes('timeout');
         return (
           <motion.div
             initial={{ opacity: 0, y: -20 }}

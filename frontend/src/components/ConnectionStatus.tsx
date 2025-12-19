@@ -8,10 +8,10 @@ interface ConnectionStatusProps {
 }
 
 /**
- * Maximum expected cold start duration in milliseconds.
- * Render.com free tier can take up to 60 seconds to wake up from sleep.
+ * Maximum expected connection timeout in milliseconds.
+ * Backend is always on, so this covers network delays only.
  */
-const COLD_START_DURATION_MS = 60000;
+const CONNECTION_TIMEOUT_MS = 10000;
 
 /**
  * Tips to show while the server is waking up
@@ -224,7 +224,7 @@ const BannerContent = ({
 
 /**
  * ConnectionStatus component displays a banner when the backend is slow or unavailable.
- * This helps users understand that the app is still working during cold starts
+ * This helps users understand that the app is still working during connection attempts
  * (common with Render.com free tier) or network issues.
  */
 const ConnectionStatus = ({ show = true }: ConnectionStatusProps) => {

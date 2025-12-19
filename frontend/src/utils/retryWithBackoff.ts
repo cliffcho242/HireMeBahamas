@@ -1,8 +1,8 @@
 /**
- * Retry Utility with Cold Start Support
+ * Retry Utility with Network Error Handling
  * 
  * Provides intelligent retry logic with user-friendly messaging for operations
- * that may fail due to backend cold starts or temporary network issues.
+ * that may fail due to temporary network issues or server connectivity problems.
  * 
  * Note: This retry logic is at the application layer (login/register operations)
  * and works in conjunction with the axios interceptor retry logic in api.ts.
@@ -39,35 +39,35 @@ function isApiError(error: unknown): error is ApiErrorType {
 }
 
 /**
- * Check if an error indicates a cold start or temporary server unavailability
+ * Check if an error indicates a temporary server unavailability or network issue
  */
-function isColdStartError(error: unknown): boolean {
+function isTemporaryError(error: unknown): boolean {
   if (!isApiError(error)) {
     return false;
   }
   
-  // Check for common cold start indicators
-  const isColdStart = 
+  // Check for common temporary error indicators
+  const isTemporary = 
     // Server unavailable
     error.response?.status === 503 ||
-    // Bad gateway (server starting)
+    // Bad gateway
     error.response?.status === 502 ||
-    // Gateway timeout (server taking too long to start)
+    // Gateway timeout
     error.response?.status === 504 ||
     // Connection refused
     error.code === 'ECONNREFUSED' ||
-    // Timeout during startup
+    // Timeout
     (error.code === 'ECONNABORTED' && error.message?.includes('timeout')) ||
-    // Network error during cold start
+    // Network error
     error.code === 'ERR_NETWORK';
     
-  return isColdStart;
+  return isTemporary;
 }
 
 /**
- * Check if error message or response indicates cold start
+ * Check if error message or response indicates a temporary connection issue
  */
-function hasColdStartMessage(error: unknown): boolean {
+function hasTemporaryErrorMessage(error: unknown): boolean {
   if (!isApiError(error)) {
     return false;
   }
@@ -86,17 +86,17 @@ function hasColdStartMessage(error: unknown): boolean {
   }
   
   return (
-    message.includes('cold start') ||
-    message.includes('starting up') ||
-    message.includes('waking up') ||
-    responseMessage.includes('cold start') ||
-    responseMessage.includes('starting up') ||
-    responseMessage.includes('waking up')
+    message.includes('timeout') ||
+    message.includes('connection') ||
+    message.includes('network') ||
+    responseMessage.includes('timeout') ||
+    responseMessage.includes('connection') ||
+    responseMessage.includes('network')
   );
 }
 
 /**
- * Retry a promise-based operation with exponential backoff and cold start handling
+ * Retry a promise-based operation with exponential backoff
  * 
  * @param operation - The async operation to retry
  * @param options - Retry configuration options
@@ -121,9 +121,9 @@ export async function retryWithBackoff<T>(
 ): Promise<T> {
   const {
     maxRetries = 3,
-    baseDelay = 20000, // 20 seconds for cold starts
-    maxDelay = 60000,  // 60 seconds maximum
-    backoffIncrement = 10000, // 10 seconds increment per retry
+    baseDelay = 3000,      // 3 seconds base delay (backend is always on)
+    maxDelay = 10000,      // 10 seconds maximum
+    backoffIncrement = 2000, // 2 seconds increment per retry
     onRetry,
     shouldRetry,
   } = options;
@@ -146,16 +146,16 @@ export async function retryWithBackoff<T>(
       }
 
       // Determine if we should retry this error
-      const isColdStart = isColdStartError(error) || hasColdStartMessage(error);
+      const isTemporary = isTemporaryError(error) || hasTemporaryErrorMessage(error);
       const customShouldRetry = shouldRetry ? shouldRetry(error) : true;
       
-      if (!isColdStart && !customShouldRetry) {
-        // Not a cold start and custom logic says don't retry
+      if (!isTemporary && !customShouldRetry) {
+        // Not a temporary error and custom logic says don't retry
         throw error;
       }
 
       // Calculate delay with linear backoff (avoids compounding with axios retries)
-      // For cold starts: 20s, 30s, 40s, 50s (capped at maxDelay)
+      // For temporary errors: 3s, 5s, 7s, 9s (capped at maxDelay)
       const delay = Math.min(baseDelay + (attempt * backoffIncrement), maxDelay);
       
       // Notify about retry
@@ -201,19 +201,15 @@ export async function loginWithRetry<T>(
     () => loginFn(credentials),
     {
       maxRetries: 3,
-      baseDelay: 20000, // 20 seconds for cold starts
+      baseDelay: 3000, // 3 seconds base delay
       onRetry: (attempt, error) => {
-        const isColdStart = isColdStartError(error) || hasColdStartMessage(error);
+        const isTemporary = isTemporaryError(error) || hasTemporaryErrorMessage(error);
         
         let message: string;
-        if (isColdStart) {
-          if (attempt === 1) {
-            message = 'Backend is starting up (cold start). This can take 30-60 seconds. Please wait...';
-          } else {
-            message = `Still waking up the backend... Attempt ${attempt + 1}. Almost there!`;
-          }
-        } else {
+        if (isTemporary) {
           message = `Connection issue detected. Retrying (attempt ${attempt + 1})...`;
+        } else {
+          message = `Request failed. Retrying (attempt ${attempt + 1})...`;
         }
         
         if (onProgress) {
@@ -243,7 +239,7 @@ export async function loginWithRetry<T>(
           return false;
         }
         
-        // Retry everything else (cold starts, network errors, server errors)
+        // Retry everything else (network errors, server errors)
         return true;
       }
     }
@@ -267,13 +263,13 @@ export async function registerWithRetry<T, D = unknown>(
     () => registerFn(userData),
     {
       maxRetries: 3,
-      baseDelay: 20000,
+      baseDelay: 3000, // 3 seconds base delay
       onRetry: (attempt, error) => {
-        const isColdStart = isColdStartError(error) || hasColdStartMessage(error);
+        const isTemporary = isTemporaryError(error) || hasTemporaryErrorMessage(error);
         
         let message: string;
-        if (isColdStart) {
-          message = `Backend is waking up... Attempt ${attempt + 1}. Please wait...`;
+        if (isTemporary) {
+          message = `Connection issue detected. Retrying (attempt ${attempt + 1})...`;
         } else {
           message = `Retrying registration... Attempt ${attempt + 1}`;
         }
@@ -302,7 +298,7 @@ export async function registerWithRetry<T, D = unknown>(
           return false;
         }
         
-        // Retry cold starts and network errors
+        // Retry network errors and temporary server issues
         return true;
       }
     }

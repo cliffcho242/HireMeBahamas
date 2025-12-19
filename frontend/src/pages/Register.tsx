@@ -90,18 +90,18 @@ const Register = () => {
       if (isNetworkError) {
         // Provide more helpful message during slow connections
         if (apiError?.message?.includes('timed out') || apiError?.code === 'ECONNABORTED') {
-          message = 'The server is taking longer than expected to respond. This often happens during cold starts. Please wait a moment and try again.';
+          message = 'The server is taking longer than expected to respond. Please check your internet connection and try again.';
         } else {
-          message = 'Connection to server failed. Please check your internet connection and try again. The server may be starting up (this can take up to 60 seconds).';
+          message = 'Connection to server failed. Please check your internet connection and try again.';
         }
       } else if (apiError?.response?.status === 503) {
-        message = 'Server is starting up. Please wait 30-60 seconds and try again.';
+        message = 'Server is temporarily unavailable. Please try again in a moment.';
       } else if (apiError?.response?.status === 504) {
         message = 'Server request timed out. The server may be under heavy load. Please try again in a moment.';
       } else if (apiError?.response?.status === 429) {
         message = 'Too many registration attempts. Please wait a minute and try again.';
       } else if (apiError?.response?.status === 502) {
-        message = 'Server is temporarily unavailable. This usually resolves within a minute. Please try again.';
+        message = 'Server is temporarily unavailable. Please try again in a moment.';
       } else {
         message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Registration failed. Please try again.';
       }

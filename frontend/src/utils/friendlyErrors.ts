@@ -58,11 +58,11 @@ export function makeErrorFriendly(error: unknown): FriendlyError {
   if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
     return {
       title: 'Server Taking Too Long',
-      message: 'The server is taking longer than expected to respond. This often happens during cold starts or when the server is under heavy load.',
+      message: 'The server is taking longer than expected to respond. This may be due to network congestion or high server load.',
       actions: [
+        'Check your internet connection',
         'Wait a moment and try again',
-        'The first login after inactivity takes longer (30-60 seconds)',
-        'Subsequent logins will be faster',
+        'Try refreshing the page',
         'If this happens frequently, contact support'
       ],
       severity: 'warning',
@@ -196,7 +196,7 @@ export function makeErrorFriendly(error: unknown): FriendlyError {
         title: 'Server Temporarily Unavailable',
         message: 'The server is temporarily unavailable. It\'s probably just starting up.',
         actions: [
-          'Wait 30-60 seconds for the server to start',
+          'Wait a moment and try again',
           'Then try logging in again',
           'This is normal after periods of inactivity',
           'Contact support if it persists for more than 5 minutes'
@@ -209,13 +209,13 @@ export function makeErrorFriendly(error: unknown): FriendlyError {
     
     if (status === 503) {
       return {
-        title: 'Server Starting Up',
-        message: 'The server is waking up. This takes 30-60 seconds after periods of inactivity.',
+        title: 'Server Temporarily Unavailable',
+        message: 'The server is temporarily unavailable. Please try again in a moment.',
         actions: [
-          'Wait a minute and try again',
-          'This is normal and only happens once',
-          'Subsequent requests will be fast',
-          'Contact support if it takes longer than 2 minutes'
+          'Wait a moment and try again',
+          'Check your internet connection',
+          'Try refreshing the page',
+          'Contact support if it persists'
         ],
         severity: 'info',
         icon: 'ℹ️',
@@ -326,10 +326,10 @@ If you're having trouble connecting:
    - Try opening another website to verify
    - Restart your router if needed
 
-2. Wait for Cold Start
-   - Free tier servers sleep after inactivity
-   - First connection takes 30-60 seconds
-   - This is normal - just wait a bit!
+2. Check Your Connection
+   - Ensure you have a stable internet connection
+   - Try refreshing the page
+   - Close other apps using bandwidth
 
 3. Clear Browser Cache
    - Press Ctrl+Shift+Delete (or Cmd+Shift+Delete on Mac)
