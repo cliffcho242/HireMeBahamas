@@ -616,6 +616,15 @@ async def lazy_import_heavy_stuff():
     logger.info("=" * 80)
     
     # ==========================================================================
+    # STEP 0: Validate database configuration (SSLMODE ERROR PREVENTION)
+    # ==========================================================================
+    try:
+        from backend_app.core.db_guards import validate_database_config
+        validate_database_config(strict=False)  # Warn but don't fail startup
+    except Exception as e:
+        logger.warning(f"Database configuration validation skipped: {e}")
+    
+    # ==========================================================================
     # STEP 1: Pre-warm bcrypt (non-blocking, no database)
     # ==========================================================================
     try:

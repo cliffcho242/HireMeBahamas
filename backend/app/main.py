@@ -728,6 +728,13 @@ async def startup():
     logger.info("   Health: INSTANT (no DB dependency)")
     logger.info("   DB: Lazy (connects on first request)")
     
+    # Validate database configuration (SSLMODE ERROR PREVENTION)
+    try:
+        from backend.app.core.db_guards import validate_database_config
+        validate_database_config(strict=False)  # Warn but don't fail startup
+    except Exception as e:
+        logger.warning(f"Database configuration validation skipped: {e}")
+    
     # Create background task for bootstrap (non-blocking)
     task = asyncio.create_task(background_bootstrap())
     _background_tasks.add(task)
