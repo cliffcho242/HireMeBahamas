@@ -228,16 +228,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Log that never-fail health app is active
-logger.info("=" * 80)
+LOG_SEPARATOR = "=" * 80
+logger.info(LOG_SEPARATOR)
 logger.info("✅ NEVER-FAIL HEALTH APP ACTIVE")
-logger.info("=" * 80)
+logger.info(LOG_SEPARATOR)
 logger.info("Health endpoints (isolated from main app):")
 logger.info("  - /api/health   (Render health check)")
 logger.info("  - /health       (Alternative)")
 logger.info("  - /healthz      (Emergency fallback)")
 logger.info("  - /live         (Liveness probe)")
 logger.info("  - /ready        (Readiness probe)")
-logger.info("=" * 80)
+logger.info(LOG_SEPARATOR)
 
 # GraphQL support (optional - gracefully degrades if strawberry not available)
 # Import after logger is configured
