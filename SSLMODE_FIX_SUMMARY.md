@@ -10,7 +10,7 @@ Database connection test failed: connect() got an unexpected keyword argument 's
 **Impact:**
 - Production database connections failing
 - Application unable to connect to Neon/Vercel Postgres
-- Affecting Railway and Render deployments
+- Affecting cloud deployments (Render, Vercel)
 
 ## Root Cause Analysis
 

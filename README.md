@@ -164,9 +164,10 @@ python validate_render_service_type.py
 
 **Quick links:**
 - 📖 [RENDER_TO_VERCEL_MIGRATION.md](./RENDER_TO_VERCEL_MIGRATION.md) - Migrate to Vercel ($0/month)
-- 📖 [RENDER_TO_RAILWAY_MIGRATION.md](./RENDER_TO_RAILWAY_MIGRATION.md) - Migrate to Render ($5-7/month)
 - 🔧 [Database Backup Script](./scripts/backup_database.py) - Automated backup tool
 - ✅ [Test Your Migration](./scripts/test_deployment.py) - Verify everything works
+
+**🔒 Production Backend:** https://hiremebahamas.onrender.com (Render-only, no Railway)
 
 ---
 
@@ -246,14 +247,11 @@ The server must be started under an unprivileged user ID to prevent
 possible system security compromise.
 ```
 
-**➡️ READ THIS IMMEDIATELY: [RAILWAY_POSTGRES_ROOT_ERROR_FIX.md](./RAILWAY_POSTGRES_ROOT_ERROR_FIX.md)**
-
 **Quick Summary:**
 - ❌ You're trying to deploy PostgreSQL as a container on Render (WRONG!)
 - ✅ Use Render's **managed PostgreSQL database service** instead
-- 📖 Complete fix guide: [RAILWAY_POSTGRES_ROOT_ERROR_FIX.md](./RAILWAY_POSTGRES_ROOT_ERROR_FIX.md)
+- 📖 Use Neon or Render managed PostgreSQL (recommended)
 - 🔧 Validation tool: Run `python3 validate_render_postgres_config.py` before deploying
-- 📋 Setup reference: [RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)
 
 **Why this happens:** Render provides managed PostgreSQL databases. You should NEVER deploy PostgreSQL as a container/application. See the guide above for the correct setup.
 
@@ -266,7 +264,7 @@ possible system security compromise.
 Render's managed PostgreSQL database may log normal informational messages (like "database system is ready to accept connections") with "error" level in their log aggregation system. **This is expected behavior and does NOT indicate actual errors.**
 
 **Quick Fix:**
-- 📖 **Explanation**: [RAILWAY_POSTGRES_LOG_LEVEL_FIX.md](./RAILWAY_POSTGRES_LOG_LEVEL_FIX.md)
+- 📖 This is normal behavior with managed PostgreSQL databases
 - 🔧 **Filter Tool**: `python filter_postgres_logs.py` (automatically corrects log levels)
 - 📋 **Quick Reference**: [POSTGRES_LOG_FILTER_QUICK_REF.md](./POSTGRES_LOG_FILTER_QUICK_REF.md)
 
@@ -406,11 +404,11 @@ python diagnostic/check_vercel_connection.py --url https://your-app.vercel.app
 
 **If users cannot sign in**, your deployment configuration is likely incomplete.
 
-### ⚠️ **Still Using Render PostgreSQL?**
+### ✅ **Using Render Backend**
 
-🔄 **[MIGRATE NOW: Render to Render PostgreSQL](./RENDER_TO_RAILWAY_MIGRATION.md)** - Complete migration guide (30 minutes)
+Production backend is deployed on Render at: https://hiremebahamas.onrender.com
 
-If your database is still connected to Render, this may prevent users from signing in. Render PostgreSQL is now the recommended database provider with better performance and compatibility.
+Ensure your frontend is configured to use this URL (hard-coded in production).
 
 ### 🔧 Quick Fix (5 minutes):
 
@@ -486,13 +484,10 @@ Choose your deployment platform and follow the step-by-step guide:
 - 🌟 **[VERCEL_SERVERLESS_SETUP.md](./VERCEL_SERVERLESS_SETUP.md)** - **RECOMMENDED**: Complete guide for Vercel serverless deployment with same-origin API routing (/api/*), no CORS issues, 1-3s cold starts, automatic keep-warm
 - 📚 **[VERCEL_POSTGRES_SETUP.md](./VERCEL_POSTGRES_SETUP.md)** - Detailed Vercel Postgres database setup
 
-#### **Option B: Separate Backend (Render/Render)**
-- 🌟 **[DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Complete guide with direct links and instructions for Vercel, Render, and Render
+#### **Option B: Separate Backend (Render - Production)**
+- 🌟 **[DEPLOYMENT_CONNECTION_GUIDE.md](./DEPLOYMENT_CONNECTION_GUIDE.md)** - Complete guide with direct links and instructions
 - ⚡ **[QUICK_DEPLOYMENT_REFERENCE.md](./QUICK_DEPLOYMENT_REFERENCE.md)** - One-page quick reference with all commands and URLs
-- 🚂 **[RAILWAY_DATABASE_SETUP.md](./RAILWAY_DATABASE_SETUP.md)** - Render database configuration
-- 🔧 **[RAILWAY_DATABASE_VARIABLES_GUIDE.md](./RAILWAY_DATABASE_VARIABLES_GUIDE.md)** - **Exact configuration for Render database (DATABASE_URL only)**
-- 🔴 **[RAILWAY_SETUP_REQUIRED.md](./RAILWAY_SETUP_REQUIRED.md)** - **CRITICAL FIX**: PostgreSQL "root execution not permitted" error
-- ⚠️ **[RAILWAY_POSTGRESQL_SETUP.md](./RAILWAY_POSTGRESQL_SETUP.md)** - **How to correctly set up PostgreSQL on Render (use managed database service!)**
+- 🔒 **Production Backend**: https://hiremebahamas.onrender.com (Render-only)
 
 ### Quick Deploy to Vercel
 

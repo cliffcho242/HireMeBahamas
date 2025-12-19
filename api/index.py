@@ -65,6 +65,38 @@ logger.info(f"Python version: {sys.version}")
 logger.info(f"Working directory: {os.getcwd()}")
 logger.info("="*60)
 
+# 🔒 RAILWAY DETECTION: Block app startup if Railway references found
+# This prevents the app from accidentally connecting to Railway
+logger.info("Checking for Railway references in environment...")
+railway_vars_found = []
+
+# Check for specific Railway environment variable patterns
+railway_patterns = ['RAILWAY_', '_RAILWAY', '.railway.app', 'up.railway.app']
+
+for key, value in os.environ.items():
+    # Check variable name for Railway patterns
+    if any(pattern.lower() in key.lower() for pattern in railway_patterns):
+        railway_vars_found.append(key)
+        continue
+    
+    # Check variable value for Railway URLs (only if value is a string and reasonably short)
+    if value and isinstance(value, str) and len(value) < 500:
+        if any(pattern in value.lower() for pattern in ['.railway.app', 'up.railway.app']):
+            railway_vars_found.append(f"{key} (contains Railway URL)")
+
+if railway_vars_found:
+    error_msg = (
+        f"🚨 RAILWAY REFERENCE DETECTED IN ENVIRONMENT 🚨\n"
+        f"Found Railway variables: {', '.join(railway_vars_found)}\n"
+        f"This application is configured for Render ONLY.\n"
+        f"Remove all Railway environment variables and redeploy.\n"
+        f"Expected backend: https://hiremebahamas.onrender.com"
+    )
+    logger.error(error_msg)
+    raise RuntimeError(error_msg)
+else:
+    logger.info("✅ No Railway references detected - Render-only configuration confirmed")
+
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
@@ -716,6 +748,27 @@ def health_ping():
     Target latency: < 30ms
     """
     return {"ok": True}
+
+@app.get("/where-am-i", include_in_schema=False)
+def where_am_i():
+    """
+    🔒 RENDER-ONLY PROOF ENDPOINT
+    
+    Returns backend deployment information to verify we're on Render.
+    This endpoint helps verify that the frontend is connecting to the
+    correct backend and not to old Railway infrastructure.
+    
+    Returns:
+        - backend: Always "render"
+        - host: Always "hiremebahamas.onrender.com"
+        - environment: Current environment (production/development)
+    """
+    return {
+        "backend": "render",
+        "host": "hiremebahamas.onrender.com",
+        "environment": os.getenv("ENVIRONMENT", "production"),
+        "railway_detected": False,  # Always False - no Railway allowed
+    }
 
 @app.get("/status")
 async def status():

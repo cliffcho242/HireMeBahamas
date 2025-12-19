@@ -54,7 +54,71 @@ Sentry.init({
   },
 })
 
-// Register Service Worker for PWA
+// 🧹 RAILWAY PURGE: Clear caches ONCE to remove old Railway URLs
+// This migration runs only once per browser to avoid impacting performance
+const MIGRATION_KEY = 'hiremebahamas_railway_migration_v1';
+
+if (typeof window !== 'undefined') {
+  const migrationDone = localStorage.getItem(MIGRATION_KEY);
+  
+  if (!migrationDone) {
+    console.log('🧹 Running Railway to Render migration (one-time cleanup)...');
+    
+    // Clear service workers that might cache old Railway API URLs
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(reg => {
+          reg.unregister();
+          console.log('🧹 Unregistered service worker:', reg.scope);
+        });
+      }).catch(err => {
+        console.error('Failed to unregister service workers:', err);
+      });
+    }
+    
+    // Selectively clear Railway-related storage keys
+    try {
+      // Remove API URL caches that might contain Railway URLs
+      const keysToRemove = ['api_cache', 'backend_url', 'cached_api_url'];
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      });
+      console.log('🧹 Cleared Railway-related cache keys');
+    } catch (err) {
+      console.error('Failed to clear storage:', err);
+    }
+    
+    // Clear IndexedDB caches if present (compatible with all browsers)
+    if ('indexedDB' in window) {
+      try {
+        // Modern browsers with databases() method
+        if (typeof indexedDB.databases === 'function') {
+          indexedDB.databases().then(dbs => {
+            dbs.forEach(db => {
+              if (db.name && db.name.includes('cache')) {
+                indexedDB.deleteDatabase(db.name);
+                console.log('🧹 Deleted IndexedDB cache:', db.name);
+              }
+            });
+          });
+        }
+      } catch (err) {
+        console.error('Failed to clear IndexedDB:', err);
+      }
+    }
+    
+    // Mark migration as complete
+    try {
+      localStorage.setItem(MIGRATION_KEY, 'true');
+      console.log('✅ Railway migration complete');
+    } catch (err) {
+      console.error('Failed to mark migration as complete:', err);
+    }
+  }
+}
+
+// Register Service Worker for PWA (fresh registration after cleanup)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
