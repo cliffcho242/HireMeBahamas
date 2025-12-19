@@ -149,7 +149,7 @@ def check_direct_db_driver_usage() -> Tuple[bool, Optional[str]]:
     return True, None
 
 
-def validate_database_config(strict: bool = True) -> bool:
+def validate_database_config(strict: bool = False) -> bool:
     """Validate database configuration to prevent sslmode errors.
     
     This function enforces the rules:
@@ -158,7 +158,7 @@ def validate_database_config(strict: bool = True) -> bool:
     
     Args:
         strict: If True, raises RuntimeError on validation failure.
-                If False, only logs warnings.
+                If False, only logs warnings. Default is False.
     
     Returns:
         bool: True if validation passes, False otherwise

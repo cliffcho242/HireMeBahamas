@@ -18,6 +18,24 @@ from pathlib import Path
 logging.basicConfig(level=logging.WARNING)
 
 
+def clear_test_modules(*patterns):
+    """Clear modules from cache that match any of the given patterns.
+    
+    Args:
+        *patterns: Module name patterns to match (e.g., 'database', 'api')
+    """
+    modules_to_remove = []
+    for k in sys.modules:
+        # Check if module name contains any of the patterns
+        if any(pattern in k for pattern in patterns):
+            # Be more specific to avoid clearing unrelated modules
+            if k.startswith('api.') or k == 'api' or k.startswith('backend_app.'):
+                modules_to_remove.append(k)
+    
+    for mod in modules_to_remove:
+        del sys.modules[mod]
+
+
 def test_api_database_ssl_context():
     """Test that api/database.py uses SSL context instead of sslmode"""
     print("Test 1: Testing api/database.py SSL context configuration...")
@@ -51,10 +69,8 @@ def test_api_database_blocks_sslmode():
     os.environ['DATABASE_URL'] = 'postgresql+asyncpg://user:pass@host:5432/db?sslmode=require'
     
     try:
-        # Clear module cache
-        modules_to_remove = [k for k in sys.modules if 'database' in k or 'api' in k]
-        for mod in modules_to_remove:
-            del sys.modules[mod]
+        # Clear module cache using helper function
+        clear_test_modules('database', 'api')
         
         # Import the module - should raise RuntimeError
         sys.path.insert(0, str(Path(__file__).parent))
@@ -84,10 +100,8 @@ def test_backend_app_database_ssl_context():
     os.environ['DATABASE_URL'] = 'postgresql+asyncpg://user:pass@host:5432/db?sslmode=require'
     
     try:
-        # Clear module cache
-        modules_to_remove = [k for k in sys.modules if 'backend_app' in k or 'database' in k]
-        for mod in modules_to_remove:
-            del sys.modules[mod]
+        # Clear module cache using helper function
+        clear_test_modules('backend_app', 'database')
         
         # Import the module - should raise RuntimeError at module level
         sys.path.insert(0, str(Path(__file__).parent / "api"))
@@ -116,10 +130,8 @@ def test_sslmode_blocked_in_asyncpg_url():
     os.environ['DATABASE_URL'] = 'postgresql+asyncpg://user:pass@host:5432/db?sslmode=require'
     
     try:
-        # Clear module cache
-        modules_to_remove = [k for k in sys.modules if 'database' in k or 'api' in k]
-        for mod in modules_to_remove:
-            del sys.modules[mod]
+        # Clear module cache using helper function
+        clear_test_modules('database', 'api')
         
         # Re-import to get fresh DATABASE_URL processing
         sys.path.insert(0, str(Path(__file__).parent))
@@ -169,10 +181,8 @@ def test_db_guards_blocks_sslmode():
     os.environ['DATABASE_URL'] = 'postgresql+asyncpg://user:pass@host:5432/db?sslmode=require'
     
     try:
-        # Clear module cache
-        modules_to_remove = [k for k in sys.modules if 'db_guard' in k or 'backend_app' in k]
-        for mod in modules_to_remove:
-            del sys.modules[mod]
+        # Clear module cache using helper function
+        clear_test_modules('db_guard', 'backend_app')
         
         sys.path.insert(0, str(Path(__file__).parent / "api"))
         from backend_app.core.db_guards import check_sslmode_in_database_url
@@ -202,10 +212,8 @@ def test_db_guards_allows_psycopg():
     os.environ['DATABASE_URL'] = 'postgresql://user:pass@host:5432/db?sslmode=require'
     
     try:
-        # Clear module cache
-        modules_to_remove = [k for k in sys.modules if 'db_guard' in k or 'backend_app' in k]
-        for mod in modules_to_remove:
-            del sys.modules[mod]
+        # Clear module cache using helper function
+        clear_test_modules('db_guard', 'backend_app')
         
         sys.path.insert(0, str(Path(__file__).parent / "api"))
         from backend_app.core.db_guards import check_sslmode_in_database_url
