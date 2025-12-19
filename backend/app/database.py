@@ -31,6 +31,7 @@ import os
 import logging
 import threading
 import errno
+import asyncio
 from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
@@ -234,7 +235,8 @@ POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (
 # CONNECTION TIMEOUT CONFIGURATION - CRITICAL FOR RENDER
 # =============================================================================
 # These timeouts prevent the dreaded "Connection timed out" error
-CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))  # 5s for Render cold starts
+# Increased for Render cold starts which can take longer to establish connections
+CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "30"))  # 30s for Render cold starts
 COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
 STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
 
@@ -480,7 +482,8 @@ async def get_async_session():
 # =============================================================================
 
 # Retry configuration constants
-DB_INIT_MAX_RETRIES = int(os.getenv("DB_INIT_MAX_RETRIES", "3"))
+# Increased for Render cold starts which can take longer
+DB_INIT_MAX_RETRIES = int(os.getenv("DB_INIT_MAX_RETRIES", "10"))
 DB_INIT_RETRY_DELAY = float(os.getenv("DB_INIT_RETRY_DELAY", "2.0"))
 
 async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
@@ -515,31 +518,36 @@ async def init_db(max_retries: int = None, retry_delay: float = None) -> bool:
     
     # Test database connectivity instead of creating tables
     # Tables should be created via Alembic migrations
-    for attempt in range(max_retries):
+    for attempt in range(1, max_retries + 1):
         try:
             success, error_msg = await test_db_connection()
             if success:
                 _db_initialized = True
                 _db_init_error = None
-                logger.info("✅ Database connection verified (tables managed by Alembic)")
-                logger.info("ℹ️  Run migrations: alembic upgrade head")
+                logger.info(f"✅ Database connection verified on attempt {attempt}/{max_retries}")
+                logger.info("ℹ️  Tables managed by Alembic. Run migrations: alembic upgrade head")
                 return True
             else:
                 _db_init_error = error_msg
                 logger.warning(
-                    f"Database connection attempt {attempt + 1}/{max_retries} failed: {error_msg}"
+                    f"⚠️  Database connection attempt {attempt}/{max_retries} failed: {error_msg}"
                 )
         except Exception as e:
             _db_init_error = str(e)
             logger.warning(
-                f"Database initialization attempt {attempt + 1}/{max_retries} failed: {e}"
+                f"⚠️  Database initialization attempt {attempt}/{max_retries} failed: {type(e).__name__}: {e}"
             )
         
-        if attempt < max_retries - 1:
-            import asyncio
-            await asyncio.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+        # Apply exponential backoff between retries (2s, 4s, 8s, 16s, 32s, ...)
+        if attempt < max_retries:
+            backoff_delay = retry_delay * (2 ** (attempt - 1))
+            # Cap maximum delay at 60 seconds to avoid excessive waiting
+            backoff_delay = min(backoff_delay, 60.0)
+            logger.info(f"   Retrying in {backoff_delay:.1f} seconds...")
+            await asyncio.sleep(backoff_delay)
     
-    logger.warning(f"DB init skipped: Database connection failed after {max_retries} attempts")
+    logger.error(f"❌ Database connection failed after {max_retries} attempts")
+    logger.error(f"   Last error: {_db_init_error}")
     return False
 
 
@@ -589,24 +597,34 @@ async def close_db():
 
 
 async def test_db_connection() -> tuple[bool, Optional[str]]:
-    """Test database connectivity.
+    """Test database connectivity with timeout.
     
     Used by /ready endpoint to verify database is accessible.
+    Includes timeout protection to prevent hanging during connection issues.
     
     Returns:
         Tuple of (success: bool, error_message: Optional[str])
     """
     try:
         from sqlalchemy import text
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
+        
+        # Apply timeout to prevent hanging indefinitely
+        # Use 10 second timeout for connection test
+        async with asyncio.timeout(10):
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+        
         return True, None
+    except asyncio.TimeoutError:
+        error_msg = "Database connection test timed out after 10 seconds"
+        logger.error(error_msg)
+        return False, error_msg
     except Exception as e:
         error_msg = str(e)
         # Truncate long error messages for logging
         if len(error_msg) > 200:
             error_msg = error_msg[:200] + "..."
-        logger.error(f"Database connection test failed: {error_msg}")
+        logger.error(f"Database connection test failed: {type(e).__name__}: {error_msg}")
         return False, error_msg
 
 

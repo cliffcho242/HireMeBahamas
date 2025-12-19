@@ -233,39 +233,56 @@ SHUTDOWN_TASK_TIMEOUT = 5.0  # 5 seconds - timeout for background tasks during s
 # BACKGROUND BOOTSTRAP UTILITIES
 # =============================================================================
 
-async def wait_for_db(max_retries: int = 5, retry_delay: float = 2.0) -> bool:
-    """Wait for database to become available.
+async def wait_for_db(max_retries: int = 10, retry_delay: float = 2.0) -> bool:
+    """Wait for database to become available with exponential backoff.
     
-    Retries database connection with exponential backoff.
+    Retries database connection with exponential backoff strategy to handle:
+    - Render cold starts (can take 30+ seconds)
+    - Transient network issues
+    - Database server startup delays
+    
     Safe to call from background tasks.
     
     Args:
-        max_retries: Maximum number of connection attempts
-        retry_delay: Initial delay between retries (seconds)
+        max_retries: Maximum number of connection attempts (default: 10)
+        retry_delay: Base delay between retries in seconds (default: 2.0)
         
     Returns:
         bool: True if database is available, False otherwise
     """
+    logger.info(f"🔄 Attempting to connect to database (max {max_retries} attempts)...")
+    
     for attempt in range(1, max_retries + 1):
         try:
             if test_db_connection is not None:
                 success, error = await test_db_connection()
                 if success:
-                    logger.info(f"✅ Database connection successful (attempt {attempt}/{max_retries})")
+                    logger.info(f"✅ Database connected successfully on attempt {attempt}/{max_retries}")
                     return True
                 else:
-                    logger.warning(f"Database connection failed (attempt {attempt}/{max_retries}): {error}")
+                    # Truncate error message if too long
+                    error_display = error[:200] + "..." if error and len(error) > 200 else error
+                    logger.warning(
+                        f"⚠️  Database connection attempt {attempt}/{max_retries} failed: {error_display}"
+                    )
             else:
-                logger.warning("test_db_connection function not available")
+                logger.error("❌ test_db_connection function not available")
                 return False
         except Exception as e:
-            logger.warning(f"Database connection attempt {attempt}/{max_retries} failed: {e}")
+            logger.warning(
+                f"⚠️  Database connection attempt {attempt}/{max_retries} failed: {type(e).__name__}: {str(e)[:200]}"
+            )
         
+        # Apply exponential backoff between retries (2s, 4s, 8s, 16s, 32s, ...)
         if attempt < max_retries:
-            await asyncio.sleep(retry_delay)
-            retry_delay *= 1.5  # Exponential backoff
+            backoff_delay = retry_delay * (2 ** (attempt - 1))
+            # Cap maximum delay at 60 seconds to avoid excessive waiting
+            backoff_delay = min(backoff_delay, 60.0)
+            logger.info(f"   Retrying in {backoff_delay:.1f} seconds...")
+            await asyncio.sleep(backoff_delay)
     
     logger.error(f"❌ Database connection failed after {max_retries} attempts")
+    logger.error("   Check DATABASE_URL configuration and network connectivity")
     return False
 
 
