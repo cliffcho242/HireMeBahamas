@@ -443,6 +443,19 @@ async def create_indexes():
         for index_def in INDEXES:
             table, index_name, columns, is_unique, where_clause, description = index_def
             
+            # Check if table exists first
+            table_exists = await conn.fetchval("""
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_name = $1
+                )
+            """, table)
+            
+            if not table_exists:
+                logger.info(f"  SKIP: {index_name} (table '{table}' does not exist)")
+                skipped_count += 1
+                continue
+            
             # Check if index already exists
             exists = await conn.fetchval("""
                 SELECT EXISTS (
