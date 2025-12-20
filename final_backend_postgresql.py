@@ -2097,9 +2097,10 @@ def _create_direct_postgresql_connection(use_fallback_ssl: bool = False):
         psycopg2.Error: If connection fails
         
     Note:
-        The global DATABASE_URL is already normalized at module startup (line 872-887),
-        but we normalize again here for safety. This function-level normalization
-        ensures correct behavior even if called before module-level normalization.
+        The global DATABASE_URL is already normalized at module startup,
+        but we normalize again here for defensive programming. This ensures
+        correct behavior even if called before module-level normalization runs.
+        Since normalization is idempotent, this double-normalization is safe.
     """
     # Normalize DATABASE_URL for sync connection (removes +asyncpg suffix if present)
     # This is defensive - DATABASE_URL is already normalized at module startup
