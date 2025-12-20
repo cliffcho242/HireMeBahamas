@@ -32,8 +32,9 @@ import logging
 import threading
 import errno
 import asyncio
+import ssl
 from typing import Optional
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -145,6 +146,25 @@ try:
 except Exception as e:
     # Don't log exception details to avoid exposing sensitive URL information
     logger.warning("Could not parse DATABASE_URL for port validation")
+
+# Strip sslmode from DATABASE_URL to prevent asyncpg keyword errors
+# SSL will be configured via an explicit SSL context in connect_args
+try:
+    parsed = urlparse(DATABASE_URL)
+    query_params = parse_qs(parsed.query)
+    if 'sslmode' in query_params:
+        del query_params['sslmode']
+        DATABASE_URL = urlunparse((
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            urlencode(query_params, doseq=True),
+            parsed.fragment
+        ))
+        logger.info("Removed sslmode from DATABASE_URL for asyncpg compatibility")
+except Exception:
+    logger.warning("Could not sanitize DATABASE_URL sslmode parameter")
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
@@ -324,6 +344,7 @@ def get_engine():
                     # - statement_timeout
                     # - server_settings
                     # - startup options
+                    ssl_context = ssl.create_default_context()
                     _engine = create_async_engine(
                         DATABASE_URL,
                         # Pool configuration - optimized for serverless
@@ -332,6 +353,9 @@ def get_engine():
                         pool_pre_ping=True,  # Validate connections before use (ONLY pool option needed)
                         pool_recycle=POOL_RECYCLE,  # Recycle every 5 min (serverless-friendly)
                         pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
+                        connect_args={
+                            "ssl": ssl_context,
+                        },
                         
                         # Echo SQL for debugging (disabled in production)
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",

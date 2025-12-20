@@ -29,27 +29,33 @@
 /**
  * Validate and get the base API URL from environment
  * RENDER-ONLY: Hard-coded to use Render backend exclusively
- * 🚨 NO Railway URLs allowed
- * 🚨 Environment variables only allowed for localhost development
+ * 🚨 NO Railway or non-Render URLs allowed
+ * 🚨 Only localhost overrides are allowed in development
  */
 function validateAndGetBaseUrl(): string {
-  // 🔥 PRODUCTION LOCK: Hard-code Render backend URL
   const RENDER_BACKEND_URL = "https://hiremebahamas.onrender.com";
-  
-  // Check if we're in development mode (localhost)
-  // Only localhost development can override the URL via VITE_API_URL
-  if (typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' || 
-    window.location.hostname === '127.0.0.1'
-  )) {
-    // Allow local development override only for localhost URLs
-    const devUrl = import.meta.env.VITE_API_URL as string | undefined;
-    if (devUrl && devUrl.startsWith('http://localhost')) {
-      return devUrl;
+  const configured = (import.meta.env.VITE_API_URL || "").trim();
+
+  const isLocal = (url: string) =>
+    url.startsWith("http://localhost") ||
+    url.startsWith("http://127.0.0.1") ||
+    url.startsWith("https://localhost");
+
+  if (configured) {
+    if (isLocal(configured)) {
+      return configured;
     }
+
+    if (!configured.includes("onrender.com")) {
+      throw new Error("INVALID BACKEND TARGET");
+    }
+    return configured;
   }
-  
-  // 🚨 RENDER ONLY: Return hard-coded Render URL for all production traffic
+
+  if (!RENDER_BACKEND_URL.includes("onrender.com")) {
+    throw new Error("INVALID BACKEND TARGET");
+  }
+
   return RENDER_BACKEND_URL;
 }
 
