@@ -39,7 +39,8 @@ function validateAndGetBaseUrl(): string {
   const isLocal = (url: string) =>
     url.startsWith("http://localhost") ||
     url.startsWith("http://127.0.0.1") ||
-    url.startsWith("https://localhost");
+    url.startsWith("https://localhost") ||
+    url.startsWith("https://127.0.0.1");
 
   if (configured) {
     if (isLocal(configured)) {
@@ -47,13 +48,9 @@ function validateAndGetBaseUrl(): string {
     }
 
     if (!configured.includes("onrender.com")) {
-      throw new Error("INVALID BACKEND TARGET");
+      throw new Error("Backend URL must be Render (*.onrender.com) or localhost for development");
     }
     return configured;
-  }
-
-  if (!RENDER_BACKEND_URL.includes("onrender.com")) {
-    throw new Error("INVALID BACKEND TARGET");
   }
 
   return RENDER_BACKEND_URL;

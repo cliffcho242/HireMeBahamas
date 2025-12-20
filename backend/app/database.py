@@ -152,8 +152,8 @@ except Exception as e:
 try:
     parsed = urlparse(DATABASE_URL)
     query_params = parse_qs(parsed.query)
-    if 'sslmode' in query_params:
-        del query_params['sslmode']
+    removed_sslmode = query_params.pop('sslmode', None)
+    if removed_sslmode is not None:
         DATABASE_URL = urlunparse((
             parsed.scheme,
             parsed.netloc,
@@ -340,11 +340,24 @@ def get_engine():
                     
                     # CRITICAL: Create engine for Neon pooler compatibility
                     # Neon pooled connections (PgBouncer) do NOT support:
-                    # - sslmode in URL or connect_args
+                    # - sslmode in URL (handled via SSL context instead)
                     # - statement_timeout
                     # - server_settings
                     # - startup options
-                    ssl_context = ssl.create_default_context()
+                    ssl_context = None
+                    try:
+                        is_local_host = urlparse(DATABASE_URL).hostname in ("localhost", "127.0.0.1")
+                    except Exception:
+                        is_local_host = False
+
+                    if not is_local_host:
+                        ssl_context = ssl.create_default_context()
+                        ssl_context.check_hostname = True
+                        ssl_context.verify_mode = ssl.CERT_REQUIRED
+
+                    connect_kwargs = {}
+                    if ssl_context:
+                        connect_kwargs["ssl"] = ssl_context
                     _engine = create_async_engine(
                         DATABASE_URL,
                         # Pool configuration - optimized for serverless
@@ -353,9 +366,8 @@ def get_engine():
                         pool_pre_ping=True,  # Validate connections before use (ONLY pool option needed)
                         pool_recycle=POOL_RECYCLE,  # Recycle every 5 min (serverless-friendly)
                         pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
-                        connect_args={
-                            "ssl": ssl_context,
-                        },
+                        # asyncpg accepts an SSL context (not sslmode) for secure connections
+                        connect_args=connect_kwargs,
                         
                         # Echo SQL for debugging (disabled in production)
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
