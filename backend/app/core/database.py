@@ -2,8 +2,8 @@
 # DATABASE ENGINE CONFIGURATION - PRODUCTION-SAFE (Dec 2025)
 # =============================================================================
 #
-# ✅ CRITICAL RULE: sslmode MUST be in DATABASE_URL, NOT in connect_args
-# ❌ DO NOT pass sslmode as a kwarg to create_engine()
+# ✅ CRITICAL RULE: asyncpg does NOT support sslmode parameter in the URL
+# ❌ DO NOT pass sslmode as a kwarg to create_engine() for asyncpg
 #
 # This configuration works on:
 # - Render
@@ -13,10 +13,10 @@
 # - SQLAlchemy 1.4 / 2.0
 #
 # DATABASE_URL FORMAT (copy-paste):
-# postgresql+asyncpg://user:password@host:5432/database?sslmode=require
+# postgresql+asyncpg://user:password@host:5432/database
 #
 # ENV VARS (for Render/Vercel deployment):
-# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
+# DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
 # DB_POOL_RECYCLE=300
 #
 # Key configuration:
@@ -31,7 +31,7 @@ import logging
 import threading
 import errno
 from typing import Optional
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -53,9 +53,24 @@ if not DATABASE_URL:
 else:
     logger.info("Database URL configured from settings")
 
-# Database URL is used as-is
-# sslmode should be included in the DATABASE_URL query string if needed
-# Example: postgresql+asyncpg://user:pass@host:5432/db?sslmode=require
+# Strip unsupported sslmode parameter for asyncpg driver
+if "asyncpg" in DATABASE_URL and "sslmode=" in DATABASE_URL:
+    parsed_url = urlparse(DATABASE_URL)
+    query_params = parse_qs(parsed_url.query, keep_blank_values=True)
+    if "sslmode" in query_params:
+        query_params.pop("sslmode", None)
+        sanitized_query = urlencode(query_params, doseq=True)
+        DATABASE_URL = urlunparse(
+            (
+                parsed_url.scheme,
+                parsed_url.netloc,
+                parsed_url.path,
+                parsed_url.params,
+                sanitized_query,
+                parsed_url.fragment,
+            )
+        )
+        logger.info("Removed sslmode parameter from asyncpg DATABASE_URL (asyncpg handles SSL automatically)")
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
@@ -104,9 +119,8 @@ if settings.ENVIRONMENT == "production" and ('/var/run/' in DATABASE_URL or 'uni
         "Example: postgresql://user:pass@hostname:5432/dbname?sslmode=require"
     )
 
-# Note: sslmode parameter check removed as redundant
-# SSL mode is configured via the DATABASE_URL query string (?sslmode=require)
-# and is added automatically by the ensure_sslmode() function if needed
+# Note: sslmode parameter is intentionally stripped for asyncpg connections.
+# asyncpg negotiates TLS automatically; use SSL contexts if explicit configuration is required.
 
 # Log which database URL we're using (mask password for security)
 def _mask_database_url(url: str) -> str:
@@ -155,9 +169,8 @@ STATEMENT_TIMEOUT_MS = settings.DB_STATEMENT_TIMEOUT_MS
 # =============================================================================
 # SSL CONFIGURATION
 # =============================================================================
-# ✅ SSL must be in DATABASE_URL query string: ?sslmode=require
-# ❌ DO NOT pass sslmode as a kwarg in connect_args
-# This is the production-safe pattern for SQLAlchemy + asyncpg.
+# ✅ asyncpg handles TLS negotiation automatically; sslmode query param is stripped.
+# ❌ Do not pass sslmode in connect_args for asyncpg.
 # =============================================================================
 
 # =============================================================================
@@ -167,11 +180,11 @@ STATEMENT_TIMEOUT_MS = settings.DB_STATEMENT_TIMEOUT_MS
 # - Lazy connection initialization (defers until first request)
 # - pool_pre_ping=True validates connections before use
 # - pool_recycle=300 prevents stale connections (serverless-friendly)
-# - NO connect_args with SSL (SSL must be in DATABASE_URL)
+# - NO sslmode in URL for asyncpg (driver negotiates TLS automatically)
 #
 # ✅ CORRECT ENGINE CONFIGURATION:
 # engine = create_engine(
-#     DATABASE_URL,  # includes ?sslmode=require
+#     DATABASE_URL,
 #     pool_pre_ping=True,
 #     pool_size=5,
 #     max_overflow=10,

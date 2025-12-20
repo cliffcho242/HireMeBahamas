@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Crown, TrendingUp, Zap } from 'lucide-react';
 import axios from 'axios';
+import { getApiBase } from '../lib/api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = getApiBase();
 
 interface Subscription {
   id: number;
