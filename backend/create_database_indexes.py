@@ -550,6 +550,7 @@ async def analyze_tables():
         
         analyzed_count = 0
         skipped_count = 0
+        failed_count = 0
         
         for table in tables:
             # Check if table exists first (in public schema)
@@ -576,8 +577,12 @@ async def analyze_tables():
                 analyzed_count += 1
             except Exception as e:
                 logger.warning(f"  FAILED to analyze {table}: {e}")
+                failed_count += 1
         
-        logger.info(f"\nAnalyze complete: {analyzed_count} analyzed, {skipped_count} skipped")
+        logger.info(f"\nAnalyze complete:")
+        logger.info(f"  Analyzed: {analyzed_count}")
+        logger.info(f"  Skipped: {skipped_count}")
+        logger.info(f"  Failed: {failed_count}")
         await conn.close()
     except Exception as e:
         logger.error(f"Failed to run ANALYZE: {e}")
