@@ -1,27 +1,13 @@
 {
-  "version": 2,
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "cd frontend && npm ci",
+  "installCommand": "cd frontend && npm install",
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "https://hiremebahamas.onrender.com/api/$1"
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "headers": {
-        "Cache-Control": "no-store"
-      }
-    }
-  ],
-  "functions": {
-    "api/*.py": {
-      "runtime": "python3.9"
-    }
-  },
   "headers": [
     {
       "source": "/assets/(.*)",
