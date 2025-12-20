@@ -305,8 +305,8 @@ api.interceptors.response.use(
     // Add endpoint path to error for better debugging and error handling
     // This allows friendlyErrors.ts to provide context-specific messages
     if (error.config?.url && !error.config.url.includes('undefined')) {
-      const enhancedError = error as typeof error & { endpoint?: string };
-      enhancedError.endpoint = error.config.url;
+      // Modify the error object directly to add endpoint
+      (error as typeof error & { endpoint?: string }).endpoint = error.config.url;
     }
     
     // Check total elapsed time to prevent excessive waiting

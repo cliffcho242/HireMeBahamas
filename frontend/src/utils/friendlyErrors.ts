@@ -5,6 +5,10 @@
  * NO GENERIC ERRORS. Every error gets a clear explanation and next steps.
  */
 
+// Pattern for detecting resource endpoints (users, jobs, posts, etc.)
+// This can be easily extended to support new resource types
+const RESOURCE_ENDPOINT_PATTERN = /\/api\/(users|jobs|posts|messages|reviews)\/\d+/;
+
 export interface FriendlyError {
   title: string;
   message: string;
@@ -182,8 +186,8 @@ export function makeErrorFriendly(error: unknown): FriendlyError {
       };
     }
     
-    // Check if it's a resource endpoint (user, job, post)
-    if (url.match(/\/api\/(users|jobs|posts)\/\d+/)) {
+    // Check if it's a resource endpoint (user, job, post, etc.)
+    if (RESOURCE_ENDPOINT_PATTERN.test(url)) {
       return {
         title: 'Item Not Found',
         message: 'The requested item could not be found. It may have been deleted or moved.',
