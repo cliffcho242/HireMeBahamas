@@ -24,7 +24,7 @@
 # 2. pool_recycle=300 - prevents stale connections (serverless-friendly)
 # 3. pool_size=5 - adequate for production load
 # 4. max_overflow=5 - hard limit to prevent resource exhaustion
-# 5. SSL via DATABASE_URL only (?sslmode=require)
+# 5. SSL handled automatically by asyncpg (no sslmode parameter required)
 # =============================================================================
 
 import logging
@@ -41,6 +41,37 @@ from .config import settings
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
 
+
+def strip_sslmode_from_url(url: str) -> str:
+    """Remove sslmode query parameter from asyncpg URLs.
+    
+    Args:
+        url: Database URL
+    
+    Returns:
+        Sanitized URL without sslmode when using asyncpg driver, or the original
+        URL unchanged when sslmode is not present or a different driver is used.
+    """
+    parsed = urlparse(url)
+    scheme = parsed.scheme.lower()
+    if "asyncpg" not in scheme:
+        return url
+    query_params = parse_qs(parsed.query, keep_blank_values=True)
+    if "sslmode" not in query_params:
+        return url
+    query_params.pop("sslmode", None)
+    sanitized_query = urlencode(query_params, doseq=True)
+    return urlunparse(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            sanitized_query,
+            parsed.fragment,
+        )
+    )
+
 # =============================================================================
 # DATABASE URL CONFIGURATION
 # =============================================================================
@@ -54,27 +85,15 @@ else:
     logger.info("Database URL configured from settings")
 
 # Strip unsupported sslmode parameter for asyncpg driver
-if "asyncpg" in DATABASE_URL and "sslmode=" in DATABASE_URL:
-    parsed_url = urlparse(DATABASE_URL)
-    query_params = parse_qs(parsed_url.query, keep_blank_values=True)
-    if "sslmode" in query_params:
-        query_params.pop("sslmode", None)
-        sanitized_query = urlencode(query_params, doseq=True)
-        DATABASE_URL = urlunparse(
-            (
-                parsed_url.scheme,
-                parsed_url.netloc,
-                parsed_url.path,
-                parsed_url.params,
-                sanitized_query,
-                parsed_url.fragment,
-            )
-        )
-        logger.info("Removed sslmode parameter from asyncpg DATABASE_URL (asyncpg handles SSL automatically)")
+sanitized_url = strip_sslmode_from_url(DATABASE_URL)
+if sanitized_url != DATABASE_URL:
+    logger.info("Removed sslmode parameter from asyncpg DATABASE_URL (asyncpg handles SSL automatically)")
+DATABASE_URL = sanitized_url
+parsed_url = urlparse(DATABASE_URL)
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
-parsed = urlparse(DATABASE_URL)
+parsed = parsed_url
 missing_fields = []
 if not parsed.username:
     missing_fields.append("username")

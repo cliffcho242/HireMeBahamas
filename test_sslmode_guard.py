@@ -222,7 +222,7 @@ import logging
 logging.basicConfig(level=logging.CRITICAL)
 
 # Set DATABASE_URL WITHOUT sslmode
-os.environ['DATABASE_URL'] = 'postgresql://user:pass@host:5432/db'
+os.environ['DATABASE_URL'] = 'postgresql://user:pass@db.example.com:5432/db'
 
 try:
     # This should NOT raise RuntimeError
