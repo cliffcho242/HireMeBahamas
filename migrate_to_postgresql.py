@@ -16,16 +16,21 @@ try:
     HAS_NORMALIZER = True
 except ImportError:
     # Fallback if normalizer not available
+    # This script only uses sync connections, so we only need for_async=False support
     HAS_NORMALIZER = False
     def normalize_database_url(url, for_async=False):
         """Fallback normalizer - removes +asyncpg suffix for sync connections"""
         if not url:
             return url
-        if not for_async:
-            # Remove driver suffixes for sync connections
-            url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
-            url = url.replace("postgresql+psycopg2://", "postgresql://", 1)
-            url = url.replace("postgres://", "postgresql://", 1)
+        if for_async:
+            # This fallback doesn't support async conversion
+            # The script only uses sync connections, so this branch shouldn't be reached
+            return url
+        # Remove driver suffixes for sync connections
+        url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+        url = url.replace("postgresql+psycopg2://", "postgresql://", 1)
+        url = url.replace("postgresql+psycopg://", "postgresql://", 1)
+        url = url.replace("postgres://", "postgresql://", 1)
         return url
 
 
