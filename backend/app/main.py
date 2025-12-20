@@ -141,6 +141,7 @@ import time
 import uuid
 import json
 import threading
+import traceback
 
 from fastapi import Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -185,11 +186,18 @@ except Exception as e:
     auth_routes = hireme_router = jobs_router = messages_router = notifications_router = None
     feed_routes = profile_pictures_router = reviews_router = upload_router = users_routes = health_router = monetization_router = None
 
+# Global variable to store database import error details for later logging
+_db_import_error = None
+_db_import_traceback = None
+
 try:
     from .database import init_db, close_db, get_db, get_pool_status, engine, test_db_connection, get_db_status
     print("✅ Database functions imported successfully")
 except Exception as e:
-    print(f"DB import failed: {e}")
+    # Store error details for later logging (logger not yet configured)
+    _db_import_error = e
+    _db_import_traceback = traceback.format_exc()
+    print(f"DB import failed: {type(e).__name__}: {e}")
     init_db = close_db = get_db = get_pool_status = engine = test_db_connection = get_db_status = None
 
 try:
@@ -267,6 +275,16 @@ async def wait_for_db(max_retries: int = 10, retry_delay: float = 2.0) -> bool:
                     )
             else:
                 logger.error("❌ test_db_connection function not available")
+                logger.error("")
+                logger.error("This usually means the database module failed to import at startup.")
+                logger.error("Check the logs above for 'DB import failed' or 'DATABASE MODULE IMPORT FAILED'")
+                logger.error("for details about the root cause.")
+                logger.error("")
+                logger.error("Common causes:")
+                logger.error("  - Missing or invalid DATABASE_URL environment variable")
+                logger.error("  - Invalid database connection string format")
+                logger.error("  - Missing asyncpg package (pip install asyncpg)")
+                logger.error("  - SQLAlchemy configuration error")
                 return False
         except Exception as e:
             logger.warning(
@@ -395,6 +413,31 @@ logging.basicConfig(
     handlers=log_handlers
 )
 logger = logging.getLogger(__name__)
+
+# =============================================================================
+# STARTUP DIAGNOSTIC: Check if database import failed
+# =============================================================================
+if _db_import_error is not None:
+    logger.error("=" * 80)
+    logger.error("❌ DATABASE MODULE IMPORT FAILED AT STARTUP")
+    logger.error("=" * 80)
+    logger.error(f"Exception Type: {type(_db_import_error).__name__}")
+    logger.error(f"Exception Message: {_db_import_error}")
+    logger.error("")
+    logger.error("Partial Traceback (first 500 characters):")
+    logger.error(_db_import_traceback[:500] if _db_import_traceback else "No traceback available")
+    logger.error("")
+    logger.error("Common Causes:")
+    logger.error("  1. DATABASE_URL environment variable is missing or invalid")
+    logger.error("  2. Database connection string has incorrect format")
+    logger.error("  3. Required package 'asyncpg' is not installed")
+    logger.error("  4. SQLAlchemy configuration error")
+    logger.error("")
+    logger.error("To fix:")
+    logger.error("  - Check that DATABASE_URL is set correctly")
+    logger.error("  - Verify connection string format: postgresql+asyncpg://user:pass@host:5432/db")
+    logger.error("  - Ensure all database dependencies are installed: pip install asyncpg sqlalchemy")
+    logger.error("=" * 80)
 
 
 # =============================================================================
