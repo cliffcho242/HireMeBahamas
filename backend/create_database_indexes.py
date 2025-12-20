@@ -444,6 +444,8 @@ async def create_indexes():
             table, index_name, columns, is_unique, where_clause, description = index_def
             
             # Check if table exists first (in public schema)
+            # Note: table names come from INDEXES constant (hardcoded, safe values)
+            # so parameterization is not strictly necessary but used for defense-in-depth
             table_exists = await conn.fetchval("""
                 SELECT EXISTS (
                     SELECT 1 FROM information_schema.tables 
@@ -545,12 +547,37 @@ async def analyze_tables():
     
     try:
         conn = await asyncpg.connect(DATABASE_URL)
+        
+        analyzed_count = 0
+        skipped_count = 0
+        
         for table in tables:
+            # Check if table exists first (in public schema)
+            # Note: table names come from INDEXES constant (hardcoded, safe values)
             try:
+                table_exists = await conn.fetchval("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.tables 
+                        WHERE table_name = $1 
+                        AND table_schema = 'public'
+                    )
+                """, table)
+                
+                if not table_exists:
+                    logger.info(f"  SKIP: {table} (table does not exist)")
+                    skipped_count += 1
+                    continue
+                
+                # Table exists, run ANALYZE
+                # Note: asyncpg doesn't support parameterized table names in DDL,
+                # but table name comes from INDEXES constant so it's safe
                 await conn.execute(f"ANALYZE {table};")
                 logger.info(f"  ANALYZED: {table}")
+                analyzed_count += 1
             except Exception as e:
                 logger.warning(f"  FAILED to analyze {table}: {e}")
+        
+        logger.info(f"\nAnalyze complete: {analyzed_count} analyzed, {skipped_count} skipped")
         await conn.close()
     except Exception as e:
         logger.error(f"Failed to run ANALYZE: {e}")
