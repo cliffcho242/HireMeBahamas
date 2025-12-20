@@ -29,10 +29,15 @@ DB_PLACEHOLDER_URL = "postgresql+asyncpg://placeholder:placeholder@invalid.local
 
 
 def check_sslmode_in_database_url() -> Tuple[bool, Optional[str]]:
-    """Verify that sslmode is configured in DATABASE_URL.
+    """Verify that sslmode is configured in DATABASE_URL when required.
     
     This is the ONLY valid place for sslmode configuration. Any other
     location will cause connection errors.
+    
+    However, sslmode is NOT required for:
+    - Neon pooled connections (SSL handled automatically by pooler)
+    - asyncpg driver (SSL configured via connect_args, not URL)
+    - Local development URLs
     
     Returns:
         Tuple of (valid: bool, error_message: Optional[str])
@@ -52,6 +57,16 @@ def check_sslmode_in_database_url() -> Tuple[bool, Optional[str]]:
     # Skip check for placeholder URLs
     if database_url == DB_PLACEHOLDER_URL or "invalid.local" in database_url:
         logger.info("⚠️  Placeholder database URL detected, skipping sslmode check")
+        return True, None
+    
+    # Skip check for Neon pooled connections - SSL is handled automatically
+    if "neon.tech" in database_url and "-pooler" in database_url:
+        logger.info("✅ Neon pooled connection detected - SSL handled automatically by pooler")
+        return True, None
+    
+    # Skip check for asyncpg driver - SSL configured via connect_args, not URL
+    if "asyncpg" in database_url:
+        logger.info("✅ asyncpg driver detected - SSL configured via connect_args")
         return True, None
     
     # Check for sslmode in URL using proper URL parsing
