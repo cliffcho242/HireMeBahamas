@@ -387,6 +387,28 @@ INDEXES = [
 ]
 
 
+async def table_exists_in_public_schema(conn, table: str) -> bool:
+    """Check if a table exists in the public schema.
+    
+    Args:
+        conn: asyncpg connection
+        table: Table name to check (from INDEXES constant - safe, hardcoded values)
+        
+    Returns:
+        True if table exists in public schema, False otherwise
+        
+    Note: Table names come from INDEXES constant (hardcoded, safe values),
+    so parameterization is not strictly necessary but used for defense-in-depth.
+    """
+    return await conn.fetchval("""
+        SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables 
+            WHERE table_name = $1 
+            AND table_schema = 'public'
+        )
+    """, table)
+
+
 async def create_indexes():
     """Create all performance indexes."""
     import asyncpg
@@ -443,16 +465,8 @@ async def create_indexes():
         for index_def in INDEXES:
             table, index_name, columns, is_unique, where_clause, description = index_def
             
-            # Check if table exists first (in public schema)
-            # Note: table names come from INDEXES constant (hardcoded, safe values)
-            # so parameterization is not strictly necessary but used for defense-in-depth
-            table_exists = await conn.fetchval("""
-                SELECT EXISTS (
-                    SELECT 1 FROM information_schema.tables 
-                    WHERE table_name = $1 
-                    AND table_schema = 'public'
-                )
-            """, table)
+            # Check if table exists first using helper function
+            table_exists = await table_exists_in_public_schema(conn, table)
             
             if not table_exists:
                 logger.info(f"  SKIP: {index_name} (table '{table}' does not exist)")
@@ -553,16 +567,9 @@ async def analyze_tables():
         failed_count = 0
         
         for table in tables:
-            # Check if table exists first (in public schema)
-            # Note: table names come from INDEXES constant (hardcoded, safe values)
+            # Check if table exists first using helper function
             try:
-                table_exists = await conn.fetchval("""
-                    SELECT EXISTS (
-                        SELECT 1 FROM information_schema.tables 
-                        WHERE table_name = $1 
-                        AND table_schema = 'public'
-                    )
-                """, table)
+                table_exists = await table_exists_in_public_schema(conn, table)
                 
                 if not table_exists:
                     logger.info(f"  SKIP: {table} (table does not exist)")
