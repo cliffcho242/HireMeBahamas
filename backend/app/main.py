@@ -7,9 +7,13 @@
 import os
 import importlib
 import tracemalloc
+import logging
 from typing import Optional, List, Dict, Union, Any
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+
+from .database import get_engine
 
 # Enable tracemalloc to track memory allocations for debugging
 # This prevents RuntimeWarning: Enable tracemalloc to get the object allocation traceback
@@ -47,10 +51,6 @@ app = FastAPI(
 async def health():
     """Health check that validates database connectivity."""
     try:
-        # Lazy import to avoid heavy dependencies before needed
-        from sqlalchemy import text  # type: ignore
-        from .database import get_engine
-
         engine = get_engine()
         if engine is None:
             raise RuntimeError("Database engine not initialized")
@@ -64,7 +64,6 @@ async def health():
             "platform": "render"
         }
     except Exception as e:
-        import logging
         logging.getLogger(__name__).warning("Health check degraded: %s", e)
         return {
             "status": "degraded",
@@ -822,9 +821,6 @@ async def startup():
 
 async def warmup():
     """Warm up database connection to prevent cold-start delays."""
-    from sqlalchemy import text  # type: ignore
-    from .database import get_engine
-
     for attempt in range(2):
         try:
             engine = get_engine()
