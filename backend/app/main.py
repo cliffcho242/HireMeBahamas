@@ -822,19 +822,24 @@ async def startup():
 
 async def warmup():
     """Warm up database connection to prevent cold-start delays."""
-    try:
-        from sqlalchemy import text  # type: ignore
-        from .database import get_engine
+    from sqlalchemy import text  # type: ignore
+    from .database import get_engine
 
-        engine = get_engine()
-        if engine is None:
-            raise RuntimeError("Database engine not initialized")
+    for attempt in range(2):
+        try:
+            engine = get_engine()
+            if engine is None:
+                raise RuntimeError("Database engine not initialized")
 
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-        logger.info("✅ Database warm-up completed")
-    except Exception as e:
-        logger.warning(f"Database warm-up skipped: {e}")
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            logger.info("✅ Database warm-up completed")
+            return
+        except Exception as e:
+            logger.warning(f"Database warm-up attempt {attempt + 1} failed: {e}")
+            if attempt == 0:
+                await asyncio.sleep(1)
+    logger.error("Database warm-up failed after retries")
 
 
 @app.on_event("shutdown")

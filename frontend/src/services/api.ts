@@ -86,10 +86,14 @@ export const fetchWithRetry = async (
 ): Promise<Response> => {
   try {
     const res = await fetch(url, options);
-    if (!res.ok) throw new Error(`Request failed: ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      const error = new Error(`Request failed: ${res.status} ${res.statusText}`) as Error & { retryable?: boolean };
+      error.retryable = res.status >= 500;
+      throw error;
+    }
     return res;
-  } catch (err) {
-    if (retries <= 0) throw err;
+  } catch (err: any) {
+    if (retries <= 0 || err?.retryable === false) throw err;
     await new Promise(r => setTimeout(r, FETCH_RETRY_DELAY_MS));
     return fetchWithRetry(url, options, retries - 1);
   }
