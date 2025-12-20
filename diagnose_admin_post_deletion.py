@@ -20,6 +20,31 @@ import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# Import database URL normalizer for sync connections
+try:
+    # Try to import from the api directory structure
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'api'))
+    from backend_app.core.db_url_normalizer import normalize_database_url
+    HAS_NORMALIZER = True
+except ImportError:
+    # Fallback if normalizer not available
+    # This script only uses sync connections, so we only need for_async=False support
+    HAS_NORMALIZER = False
+    def normalize_database_url(url, for_async=False):
+        """Fallback normalizer - removes +asyncpg suffix for sync connections"""
+        if not url:
+            return url
+        if for_async:
+            # This fallback doesn't support async conversion
+            # The script only uses sync connections, so this branch shouldn't be reached
+            return url
+        # Remove driver suffixes for sync connections
+        url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+        url = url.replace("postgresql+psycopg2://", "postgresql://", 1)
+        url = url.replace("postgresql+psycopg://", "postgresql://", 1)
+        url = url.replace("postgres://", "postgresql://", 1)
+        return url
+
 
 def check_database_connection():
     """Check if database exists and is accessible"""
@@ -52,8 +77,11 @@ def connect_db(db_type, db_path_or_url):
         try:
             import psycopg2
             
-            # ✅ Use DATABASE_URL only (SSL is already in the URL)
-            conn = psycopg2.connect(db_path_or_url)
+            # Normalize DATABASE_URL for sync connection
+            sync_url = normalize_database_url(db_path_or_url, for_async=False)
+            
+            # ✅ Use normalized URL for psycopg2 (sync driver)
+            conn = psycopg2.connect(sync_url)
             return conn
         except ImportError:
             print("Error: psycopg2 not installed. Run: pip install psycopg2-binary")
