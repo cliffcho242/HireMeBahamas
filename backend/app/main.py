@@ -7,9 +7,13 @@
 import os
 import importlib
 import tracemalloc
+import logging
 from typing import Optional, List, Dict, Union, Any
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+
+from .database import get_engine
 
 # Enable tracemalloc to track memory allocations for debugging
 # This prevents RuntimeWarning: Enable tracemalloc to get the object allocation traceback
@@ -44,27 +48,27 @@ app = FastAPI(
 # IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
 @app.get("/health", include_in_schema=False)
 @app.head("/health", include_in_schema=False)
-def health():
-    """Instant health check - no database dependency.
-    
-    This endpoint is designed to respond immediately (<5ms) even during
-    the coldest start. It does NOT check database connectivity.
-    
-    Supports both GET and HEAD methods for maximum compatibility.
-    
-    Use /ready for database connectivity check.
-    
-    ✅ NO DATABASE - instant response
-    ✅ NO IO - instant response
-    ✅ NO async/await - synchronous function
-    
-    Render kills apps that fail health checks, so this must be instant.
-    """
-    return {
-        "status": "ok",
-        "service": "hiremebahamas-backend",
-        "uptime": "healthy"
-    }
+async def health():
+    """Health check that validates database connectivity."""
+    try:
+        engine = get_engine()
+        if engine is None:
+            raise RuntimeError("Database engine not initialized")
+
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+
+        return {
+            "status": "ok",
+            "database": "connected",
+            "platform": "render"
+        }
+    except Exception as e:
+        logging.getLogger(__name__).warning("Health check degraded: %s", e)
+        return {
+            "status": "degraded",
+            "error": "unavailable"
+        }
 
 
 # EMERGENCY HEALTH ENDPOINT — ULTRA STABLE FALLBACK
@@ -770,14 +774,12 @@ async def startup():
     ✅ PRODUCTION FASTAPI PATTERN (DO NOT EVER DO list compliant):
     - ❌ NO Multiple Gunicorn workers (using 1 worker)
     - ❌ NO Blocking DB calls at import
-    - ❌ NO Health check touching DB
     - ❌ NO --reload flag
     - ❌ NO Heavy startup logic (all in background task)
     - ✅ Single platform deployment (Render only)
     
-    App responds IMMEDIATELY. Health check passes INSTANTLY.
-    ALL heavy operations moved to background task.
-    Database connects on first actual request only.
+    App responds immediately while still warming up the database connection
+    to prevent cold-start latency.
     
     ✅ No blocking
     ✅ No destroyed tasks
@@ -785,8 +787,8 @@ async def startup():
     """
     logger.info("🚀 Starting HireMeBahamas API (Production Mode)")
     logger.info("   Workers: 1 (predictable memory)")
-    logger.info("   Health: INSTANT (no DB dependency)")
-    logger.info("   DB: Lazy (connects on first request)")
+    logger.info("   Health: DB-backed readiness")
+    logger.info("   DB: Lazy (connects on first request, warm-up enabled)")
     
     # Validate database configuration (SSLMODE ERROR PREVENTION)
     try:
@@ -801,14 +803,39 @@ async def startup():
     # Remove task from set when it completes
     task.add_done_callback(_background_tasks.discard)
     
+    # Proactively warm up a database connection to avoid cold starts
+    try:
+        await warmup()
+    except Exception as e:
+        logger.warning(f"Warm-up during startup skipped: {e}")
+    
     logger.info("✅ Application startup complete (instant)")
     logger.info("   Background bootstrap running in async task")
     
     # Production configuration (see PRODUCTION_CONFIG_COMPLIANCE.md):
     # - Workers: 1 (predictable memory)
-    # - Health: Instant (no DB)
+    # - Health: Validates DB connectivity
     # - DB: Lazy (connects on first request)
     # - Startup: Async (non-blocking)
+
+
+async def warmup():
+    """Warm up database connection to prevent cold-start delays."""
+    for attempt in range(2):
+        try:
+            engine = get_engine()
+            if engine is None:
+                raise RuntimeError("Database engine not initialized")
+
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            logger.info("✅ Database warm-up completed")
+            return
+        except Exception as e:
+            logger.warning(f"Database warm-up attempt {attempt + 1} failed: {e}")
+            if attempt == 0:
+                await asyncio.sleep(1)
+    logger.error("Database warm-up failed after retries")
 
 
 @app.on_event("shutdown")

@@ -77,6 +77,28 @@ const API_BASE_URL = getApiBase();
 // Export API constant for use in fetch calls (for backward compatibility)
 export const API = API_BASE_URL;
 
+const FETCH_RETRY_DELAY_MS = 1200;
+
+export const fetchWithRetry = async (
+  url: string,
+  options: RequestInit = {},
+  retries = 3
+): Promise<Response> => {
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const error = new Error(`Request failed: ${res.status} ${res.statusText}`) as Error & { retryable?: boolean };
+      error.retryable = res.status >= 500;
+      throw error;
+    }
+    return res;
+  } catch (err: any) {
+    if (retries <= 0 || err?.retryable === false) throw err;
+    await new Promise(r => setTimeout(r, FETCH_RETRY_DELAY_MS));
+    return fetchWithRetry(url, options, retries - 1);
+  }
+};
+
 // 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
 if (import.meta.env.DEV) {
   console.log("API URL:", import.meta.env.VITE_API_URL || '(not set - using same-origin)');

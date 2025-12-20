@@ -224,10 +224,10 @@ logger.info(f"Database URL: {_masked_url}")
 # =============================================================================
 # CRITICAL: pool_recycle=300 prevents connection issues by recycling connections
 # before they become stale. This is serverless-friendly and prevents SSL EOF errors.
-# MAX_OVERFLOW=5 (hard limit) prevents Neon exhaustion, Render OOM, and DB overload during traffic spikes
+# MAX_OVERFLOW=10 (hard limit) prevents Neon exhaustion, Render OOM, and DB overload during traffic spikes
 # =============================================================================
 POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))  # Minimum connections (5 = production-ready)
-MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "5"))  # Hard limit: prevents Neon exhaustion & Render OOM
+MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "10"))  # Hard limit: prevents Neon exhaustion & Render OOM
 POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))  # Wait max 30s for connection
 POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (serverless-friendly)
 
