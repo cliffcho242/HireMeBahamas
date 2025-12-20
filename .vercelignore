@@ -1,4 +1,17 @@
-# Vercel ignore file - Keep api/ directory but exclude unnecessary files
+# Vercel ignore file - Exclude all Python and backend files
+
+# Python-related files (causes Vercel to try installing Python dependencies)
+pyproject.toml
+requirements.txt
+requirements-*.txt
+poetry.lock
+runtime.txt
+Pipfile
+Pipfile.lock
+setup.py
+setup.cfg
+*.py
+!frontend/**/*.py
 
 # Python cache
 __pycache__/
@@ -16,11 +29,19 @@ env/
 ENV/
 .venv
 
+# Backend directories (backend is deployed on Render, not Vercel)
+backend/
+api/
+app/
+alembic/
+migrations/
+
 # Database files (local only)
 *.db
 *.sqlite
 *.sqlite3
 *.db-journal
+alembic.ini
 
 # Development files
 .env.local
@@ -38,21 +59,21 @@ test_*.py
 *_test.py
 pytest.ini
 .pytest_cache/
+tests/
 
 # Legacy deployment configs (not needed for Vercel)
 nixpacks.toml
 railway.json
 Procfile
 Dockerfile
-docker-compose.yml
+docker-compose*.yml
 render.yaml
+gunicorn.conf.py
 
 # Scripts and automation (keep minimal)
 *.ps1
 *.bat
-
-# Backend source directory (we use api/backend_app copy)
-backend/
+*.sh
 
 # Examples and admin panel
 admin_panel/
