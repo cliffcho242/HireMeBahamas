@@ -402,9 +402,10 @@ async def table_exists_in_public_schema(conn, table: str) -> bool:
     """
     return await conn.fetchval("""
         SELECT EXISTS (
-            SELECT 1 FROM information_schema.tables 
-            WHERE table_name = $1 
-            AND table_schema = 'public'
+            SELECT 1
+            FROM   information_schema.tables 
+            WHERE  table_name   = $1 
+            AND    table_schema = 'public'
         )
     """, table)
 
@@ -578,8 +579,9 @@ async def analyze_tables():
                 
                 # Table exists, run ANALYZE
                 # Note: asyncpg doesn't support parameterized table names in DDL,
-                # but table name comes from INDEXES constant so it's safe
-                await conn.execute(f"ANALYZE {table};")
+                # but table name comes from INDEXES constant so it's safe.
+                # Use double quotes for identifier quoting as defense-in-depth.
+                await conn.execute(f'ANALYZE "{table}";')
                 logger.info(f"  ANALYZED: {table}")
                 analyzed_count += 1
             except Exception as e:
