@@ -67,6 +67,9 @@ def check_sslmode_in_database_url() -> Tuple[bool, Optional[str]]:
     
     SSL must be configured via ssl.create_default_context() in connect_args instead.
     
+    NOTE: Neon pooled connections handle SSL automatically and should NOT have
+    sslmode in the URL. The pooler manages SSL connections transparently.
+    
     Returns:
         Tuple of (valid: bool, error_message: Optional[str])
     """
@@ -85,6 +88,11 @@ def check_sslmode_in_database_url() -> Tuple[bool, Optional[str]]:
     # Skip check for placeholder URLs
     if database_url == DB_PLACEHOLDER_URL or "invalid.local" in database_url:
         logger.info("⚠️  Placeholder database URL detected, skipping sslmode check")
+        return True, None
+    
+    # Skip check for Neon pooled connections - SSL is handled automatically by pooler
+    if "neon.tech" in database_url and "-pooler" in database_url:
+        logger.info("✅ Neon pooled connection detected - SSL handled automatically by pooler (no sslmode needed)")
         return True, None
     
     # Skip check for non-asyncpg drivers (psycopg2, psycopg3 support sslmode)
