@@ -77,6 +77,8 @@ const API_BASE_URL = getApiBase();
 // Export API constant for use in fetch calls (for backward compatibility)
 export const API = API_BASE_URL;
 
+const FETCH_RETRY_DELAY_MS = 1200;
+
 export const fetchWithRetry = async (
   url: string,
   options: RequestInit = {},
@@ -84,11 +86,11 @@ export const fetchWithRetry = async (
 ): Promise<Response> => {
   try {
     const res = await fetch(url, options);
-    if (!res.ok) throw new Error('Bad response');
+    if (!res.ok) throw new Error(`Request failed: ${res.status} ${res.statusText}`);
     return res;
   } catch (err) {
     if (retries <= 0) throw err;
-    await new Promise(r => setTimeout(r, 1200));
+    await new Promise(r => setTimeout(r, FETCH_RETRY_DELAY_MS));
     return fetchWithRetry(url, options, retries - 1);
   }
 };

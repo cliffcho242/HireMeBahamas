@@ -7,7 +7,13 @@ import './styles/mobile-responsive.css'
 
 // 🚫 HARD BLOCK: Prevent loading if served from deprecated Railway domains
 if (typeof window !== 'undefined' && window.location.hostname.includes('railway')) {
-  document.body.innerHTML = '❌ Deprecated backend detected';
+  const message = '❌ Deprecated backend detected';
+  const root = document.getElementById('root');
+  if (root) {
+    root.textContent = message;
+  } else if (document.body) {
+    document.body.textContent = message;
+  }
   throw new Error('Railway backend blocked');
 }
 
