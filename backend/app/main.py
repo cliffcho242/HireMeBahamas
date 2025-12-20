@@ -773,14 +773,12 @@ async def startup():
     ✅ PRODUCTION FASTAPI PATTERN (DO NOT EVER DO list compliant):
     - ❌ NO Multiple Gunicorn workers (using 1 worker)
     - ❌ NO Blocking DB calls at import
-    - ❌ NO Health check touching DB
     - ❌ NO --reload flag
     - ❌ NO Heavy startup logic (all in background task)
     - ✅ Single platform deployment (Render only)
     
-    App responds IMMEDIATELY. Health check passes INSTANTLY.
-    ALL heavy operations moved to background task.
-    Database connects on first actual request only.
+    App responds immediately while still warming up the database connection
+    to prevent cold-start latency.
     
     ✅ No blocking
     ✅ No destroyed tasks
@@ -788,8 +786,8 @@ async def startup():
     """
     logger.info("🚀 Starting HireMeBahamas API (Production Mode)")
     logger.info("   Workers: 1 (predictable memory)")
-    logger.info("   Health: INSTANT (no DB dependency)")
-    logger.info("   DB: Lazy (connects on first request)")
+    logger.info("   Health: DB-backed readiness")
+    logger.info("   DB: Lazy (connects on first request, warm-up enabled)")
     
     # Validate database configuration (SSLMODE ERROR PREVENTION)
     try:
@@ -804,6 +802,12 @@ async def startup():
     # Remove task from set when it completes
     task.add_done_callback(_background_tasks.discard)
     
+    # Proactively warm up a database connection to avoid cold starts
+    try:
+        await warmup()
+    except Exception as e:
+        logger.warning(f"Warm-up during startup skipped: {e}")
+    
     logger.info("✅ Application startup complete (instant)")
     logger.info("   Background bootstrap running in async task")
     
@@ -814,7 +818,6 @@ async def startup():
     # - Startup: Async (non-blocking)
 
 
-@app.on_event("startup")
 async def warmup():
     """Warm up database connection to prevent cold-start delays."""
     try:
