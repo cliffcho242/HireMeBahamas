@@ -164,9 +164,54 @@ except Exception as e:
     return True
 
 
+def test_sslmode_guard_backend_core_database():
+    """Test that backend/app/core/database.py strips sslmode for asyncpg"""
+    print("\nTest 4: Testing backend/app/core/database.py sslmode stripping...")
+    
+    test_code = """
+import os
+import sys
+import logging
+import importlib
+
+logging.basicConfig(level=logging.CRITICAL)
+
+# Set DATABASE_URL with sslmode for asyncpg
+os.environ['DATABASE_URL'] = 'postgresql+asyncpg://user:pass@host:5432/db?sslmode=require&connect_timeout=10'
+
+try:
+    sys.path.insert(0, '.')
+    module = importlib.import_module('backend.app.core.database')
+    if 'sslmode=' in module.DATABASE_URL:
+        print("FAIL: sslmode parameter still present in DATABASE_URL")
+        sys.exit(1)
+    print("PASS: sslmode stripped from asyncpg DATABASE_URL")
+    sys.exit(0)
+except Exception as e:
+    print(f"FAIL: Unexpected error: {type(e).__name__}: {e}")
+    sys.exit(1)
+"""
+    
+    result = subprocess.run(
+        [sys.executable, "-c", test_code],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        cwd=Path(__file__).parent,
+    )
+    
+    if result.returncode != 0:
+        print(f"❌ FAIL: backend/app/core/database.py - {result.stdout}")
+        print(f"stderr: {result.stderr}")
+        return False
+    
+    print(f"✅ PASS: backend/app/core/database.py - {result.stdout.strip()}")
+    return True
+
+
 def test_sslmode_guard_allows_urls_without_sslmode():
     """Test that URLs without sslmode are allowed"""
-    print("\nTest 4: Testing that URLs without sslmode are allowed...")
+    print("\nTest 5: Testing that URLs without sslmode are allowed...")
     
     test_code = """
 import os
@@ -177,7 +222,7 @@ import logging
 logging.basicConfig(level=logging.CRITICAL)
 
 # Set DATABASE_URL WITHOUT sslmode
-os.environ['DATABASE_URL'] = 'postgresql://user:pass@host:5432/db'
+os.environ['DATABASE_URL'] = 'postgresql://user:pass@db.example.com:5432/db'
 
 try:
     # This should NOT raise RuntimeError
@@ -219,7 +264,7 @@ except Exception as e:
 
 def test_sslmode_guard_variations():
     """Test that sslmode is detected in various URL formats"""
-    print("\nTest 5: Testing sslmode detection in various URL formats...")
+    print("\nTest 6: Testing sslmode detection in various URL formats...")
     
     test_cases = [
         "postgresql://user:pass@host:5432/db?sslmode=require",
@@ -285,6 +330,7 @@ def main():
         ("api/database.py sslmode guard", test_sslmode_guard_api_database),
         ("api/backend_app/database.py sslmode guard", test_sslmode_guard_backend_app_database),
         ("app/database.py sslmode guard", test_sslmode_guard_app_database),
+        ("backend/app/core/database.py sslmode stripping", test_sslmode_guard_backend_core_database),
         ("URLs without sslmode allowed", test_sslmode_guard_allows_urls_without_sslmode),
         ("sslmode detection variations", test_sslmode_guard_variations),
     ]

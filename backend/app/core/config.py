@@ -35,7 +35,7 @@ class Settings:
     DB_STATEMENT_TIMEOUT_MS: int = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))
     
     # Database SSL Configuration
-    # ✅ SSL must be configured in DATABASE_URL query string: ?sslmode=require
+    # ✅ asyncpg negotiates TLS automatically; sslmode in the URL is stripped for compatibility
     # ❌ DO NOT pass sslmode as a kwarg in connect_args
     # These settings are deprecated and should not be used
     

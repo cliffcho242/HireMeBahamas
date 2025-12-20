@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { X, Zap, Star, Award, TrendingUp } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { getApiBase } from '../lib/api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = getApiBase();
 
 interface BoostOption {
   type: 'local' | 'national' | 'featured';
