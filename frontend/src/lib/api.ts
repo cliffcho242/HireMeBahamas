@@ -47,7 +47,12 @@ function validateAndGetBaseUrl(): string {
       return configured;
     }
 
-    if (!configured.includes("onrender.com")) {
+    try {
+      const parsed = new URL(configured);
+      if (!parsed.hostname.endsWith(".onrender.com")) {
+        throw new Error("Backend URL must be Render (*.onrender.com) or localhost for development");
+      }
+    } catch {
       throw new Error("Backend URL must be Render (*.onrender.com) or localhost for development");
     }
     return configured;
