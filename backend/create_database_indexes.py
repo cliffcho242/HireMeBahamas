@@ -443,11 +443,12 @@ async def create_indexes():
         for index_def in INDEXES:
             table, index_name, columns, is_unique, where_clause, description = index_def
             
-            # Check if table exists first
+            # Check if table exists first (in public schema)
             table_exists = await conn.fetchval("""
                 SELECT EXISTS (
                     SELECT 1 FROM information_schema.tables 
-                    WHERE table_name = $1
+                    WHERE table_name = $1 
+                    AND table_schema = 'public'
                 )
             """, table)
             
