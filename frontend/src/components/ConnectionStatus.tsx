@@ -7,11 +7,8 @@ interface ConnectionStatusProps {
   show?: boolean;
 }
 
-/**
- * Maximum expected connection timeout in milliseconds.
- * Backend is always on, so this covers network delays only.
- */
-const CONNECTION_TIMEOUT_MS = 10000;
+// Maximum expected connection timeout removed - not currently used
+// Backend health checking handles timeouts internally
 
 /**
  * Expected cold start duration in milliseconds.

@@ -23,7 +23,8 @@
  * ```
  */
 
-import { isValidUrl, isSecureUrl } from './safeUrl';
+// URL validation imports removed - validation happens in safeUrl module
+// Import only when needed to avoid unused imports
 
 /**
  * Validate and get the base API URL from environment
