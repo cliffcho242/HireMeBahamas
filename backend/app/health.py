@@ -8,9 +8,10 @@ import os
 import logging
 from fastapi import Depends, APIRouter
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db, get_pool_status
+from app.database import get_db, get_pool_status, get_engine
 
 logger = logging.getLogger(__name__)
 
@@ -19,21 +20,26 @@ router = APIRouter()
 
 @router.get("/health", include_in_schema=False)
 @router.head("/health", include_in_schema=False)
-def health():
-    """Instant health check - no database dependency.
-    
-    This endpoint is designed to respond immediately (<5ms) even during
-    the coldest start. It does NOT check database connectivity.
-    
-    Use /ready for database connectivity check.
-    
-    ✅ CRITICAL: Does NOT touch the database to ensure instant response.
-    """
-    return {
-        "status": "ok",
-        "service": "hiremebahamas-backend",
-        "uptime": "healthy"
-    }
+async def health():
+    """Full health check that validates database connectivity."""
+    try:
+        engine = get_engine()
+        if engine is None:
+            raise RuntimeError("Database engine not initialized")
+
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+
+        return {
+            "status": "ok",
+            "database": "connected",
+            "platform": "render"
+        }
+    except Exception as e:
+        return {
+            "status": "degraded",
+            "error": str(e)
+        }
 
 
 @router.get("/live", tags=["health"])

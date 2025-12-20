@@ -77,6 +77,22 @@ const API_BASE_URL = getApiBase();
 // Export API constant for use in fetch calls (for backward compatibility)
 export const API = API_BASE_URL;
 
+export const fetchWithRetry = async (
+  url: string,
+  options: RequestInit = {},
+  retries = 3
+): Promise<Response> => {
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok) throw new Error('Bad response');
+    return res;
+  } catch (err) {
+    if (retries <= 0) throw err;
+    await new Promise(r => setTimeout(r, 1200));
+    return fetchWithRetry(url, options, retries - 1);
+  }
+};
+
 // 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
 if (import.meta.env.DEV) {
   console.log("API URL:", import.meta.env.VITE_API_URL || '(not set - using same-origin)');

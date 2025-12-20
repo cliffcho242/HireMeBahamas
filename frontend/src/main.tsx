@@ -5,6 +5,12 @@ import App from './App'
 import './index.css'
 import './styles/mobile-responsive.css'
 
+// 🚫 HARD BLOCK: Prevent loading if served from deprecated Railway domains
+if (typeof window !== 'undefined' && window.location.hostname.includes('railway')) {
+  document.body.innerHTML = '❌ Deprecated backend detected';
+  throw new Error('Railway backend blocked');
+}
+
 // 🔒 FOREVER FIX: Validate environment variables at startup
 // This catches configuration errors early before they cause runtime issues
 import './config/envValidator'

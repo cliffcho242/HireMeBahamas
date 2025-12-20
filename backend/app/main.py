@@ -44,27 +44,30 @@ app = FastAPI(
 # IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
 @app.get("/health", include_in_schema=False)
 @app.head("/health", include_in_schema=False)
-def health():
-    """Instant health check - no database dependency.
-    
-    This endpoint is designed to respond immediately (<5ms) even during
-    the coldest start. It does NOT check database connectivity.
-    
-    Supports both GET and HEAD methods for maximum compatibility.
-    
-    Use /ready for database connectivity check.
-    
-    ✅ NO DATABASE - instant response
-    ✅ NO IO - instant response
-    ✅ NO async/await - synchronous function
-    
-    Render kills apps that fail health checks, so this must be instant.
-    """
-    return {
-        "status": "ok",
-        "service": "hiremebahamas-backend",
-        "uptime": "healthy"
-    }
+async def health():
+    """Health check that validates database connectivity."""
+    try:
+        # Lazy import to avoid heavy dependencies before needed
+        from sqlalchemy import text  # type: ignore
+        from .database import get_engine
+
+        engine = get_engine()
+        if engine is None:
+            raise RuntimeError("Database engine not initialized")
+
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+
+        return {
+            "status": "ok",
+            "database": "connected",
+            "platform": "render"
+        }
+    except Exception as e:
+        return {
+            "status": "degraded",
+            "error": str(e)
+        }
 
 
 # EMERGENCY HEALTH ENDPOINT — ULTRA STABLE FALLBACK
@@ -806,9 +809,27 @@ async def startup():
     
     # Production configuration (see PRODUCTION_CONFIG_COMPLIANCE.md):
     # - Workers: 1 (predictable memory)
-    # - Health: Instant (no DB)
+    # - Health: Validates DB connectivity
     # - DB: Lazy (connects on first request)
     # - Startup: Async (non-blocking)
+
+
+@app.on_event("startup")
+async def warmup():
+    """Warm up database connection to prevent cold-start delays."""
+    try:
+        from sqlalchemy import text  # type: ignore
+        from .database import get_engine
+
+        engine = get_engine()
+        if engine is None:
+            raise RuntimeError("Database engine not initialized")
+
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        logger.info("✅ Database warm-up completed")
+    except Exception as e:
+        logger.warning(f"Database warm-up skipped: {e}")
 
 
 @app.on_event("shutdown")
