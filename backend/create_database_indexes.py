@@ -387,6 +387,29 @@ INDEXES = [
 ]
 
 
+async def table_exists_in_public_schema(conn, table: str) -> bool:
+    """Check if a table exists in the public schema.
+    
+    Args:
+        conn: asyncpg connection
+        table: Table name to check (from INDEXES constant - safe, hardcoded values)
+        
+    Returns:
+        True if table exists in public schema, False otherwise
+        
+    Note: Table names come from INDEXES constant (hardcoded, safe values),
+    so parameterization is not strictly necessary but used for defense-in-depth.
+    """
+    return await conn.fetchval("""
+        SELECT EXISTS (
+            SELECT 1
+            FROM   information_schema.tables 
+            WHERE  table_name   = $1 
+            AND    table_schema = 'public'
+        )
+    """, table)
+
+
 async def create_indexes():
     """Create all performance indexes."""
     import asyncpg
@@ -442,6 +465,14 @@ async def create_indexes():
         
         for index_def in INDEXES:
             table, index_name, columns, is_unique, where_clause, description = index_def
+            
+            # Check if table exists first using helper function
+            table_exists = await table_exists_in_public_schema(conn, table)
+            
+            if not table_exists:
+                logger.info(f"  SKIP: {index_name} (table '{table}' does not exist)")
+                skipped_count += 1
+                continue
             
             # Check if index already exists
             exists = await conn.fetchval("""
@@ -531,12 +562,36 @@ async def analyze_tables():
     
     try:
         conn = await asyncpg.connect(DATABASE_URL)
+        
+        analyzed_count = 0
+        skipped_count = 0
+        failed_count = 0
+        
         for table in tables:
+            # Check if table exists first using helper function
             try:
-                await conn.execute(f"ANALYZE {table};")
+                table_exists = await table_exists_in_public_schema(conn, table)
+                
+                if not table_exists:
+                    logger.info(f"  SKIP: {table} (table does not exist)")
+                    skipped_count += 1
+                    continue
+                
+                # Table exists, run ANALYZE
+                # Note: asyncpg doesn't support parameterized table names in DDL,
+                # but table name comes from INDEXES constant so it's safe.
+                # Use double quotes for identifier quoting as defense-in-depth.
+                await conn.execute(f'ANALYZE "{table}";')
                 logger.info(f"  ANALYZED: {table}")
+                analyzed_count += 1
             except Exception as e:
                 logger.warning(f"  FAILED to analyze {table}: {e}")
+                failed_count += 1
+        
+        logger.info(f"\nAnalyze complete:")
+        logger.info(f"  Analyzed: {analyzed_count}")
+        logger.info(f"  Skipped: {skipped_count}")
+        logger.info(f"  Failed: {failed_count}")
         await conn.close()
     except Exception as e:
         logger.error(f"Failed to run ANALYZE: {e}")
