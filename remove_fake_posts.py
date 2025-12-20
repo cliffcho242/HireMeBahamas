@@ -23,6 +23,26 @@ import os
 import sqlite3
 import sys
 
+# Import database URL normalizer for sync connections
+try:
+    # Try to import from the api directory structure
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'api'))
+    from backend_app.core.db_url_normalizer import normalize_database_url
+    HAS_NORMALIZER = True
+except ImportError:
+    # Fallback if normalizer not available
+    HAS_NORMALIZER = False
+    def normalize_database_url(url, for_async=False):
+        """Fallback normalizer - removes +asyncpg suffix for sync connections"""
+        if not url:
+            return url
+        if not for_async:
+            # Remove driver suffixes for sync connections
+            url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+            url = url.replace("postgresql+psycopg2://", "postgresql://", 1)
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
+
 
 def is_sqlite_db():
     """Check if using SQLite database"""
@@ -40,9 +60,18 @@ def connect_db():
         try:
             import psycopg2
 
-            # ✅ Use DATABASE_URL only (SSL is already in the URL)
+            # Get DATABASE_URL and normalize for sync connection
             db_url = os.environ.get("DATABASE_URL")
-            conn = psycopg2.connect(db_url)
+            
+            # Normalize URL for psycopg2 (removes +asyncpg suffix if present)
+            sync_url = normalize_database_url(db_url, for_async=False)
+            
+            # Log if normalization occurred
+            if sync_url != db_url and HAS_NORMALIZER:
+                print(f"ℹ️  Normalized DATABASE_URL for sync connection (removed driver suffix)")
+            
+            # ✅ Use normalized URL for psycopg2 (sync driver)
+            conn = psycopg2.connect(sync_url)
             return conn
         except ImportError:
             print("Error: psycopg2 not installed. Run: pip install psycopg2-binary")

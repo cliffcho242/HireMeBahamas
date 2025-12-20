@@ -29,6 +29,29 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
+# Import database URL normalizer for sync connections
+# Add api directory to path if needed
+api_dir = os.path.join(os.path.dirname(__file__), 'api')
+if os.path.exists(api_dir) and api_dir not in sys.path:
+    sys.path.insert(0, api_dir)
+
+try:
+    from backend_app.core.db_url_normalizer import normalize_database_url
+    HAS_NORMALIZER = True
+except ImportError:
+    # Fallback if normalizer not available
+    HAS_NORMALIZER = False
+    def normalize_database_url(url, for_async=False):
+        """Fallback normalizer - removes +asyncpg suffix for sync connections"""
+        if not url:
+            return url
+        if not for_async:
+            # Remove driver suffixes for sync connections
+            url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+            url = url.replace("postgresql+psycopg2://", "postgresql://", 1)
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
+
 # Track application startup time for cold start monitoring
 # This helps diagnose HTTP 502 errors that occur when container cold starts take too long
 _APP_START_TIME = time.time()
@@ -849,9 +872,17 @@ if DATABASE_URL:
 # Normalize DATABASE_URL for psycopg2 compatibility
 # If the URL uses postgresql+asyncpg:// scheme (for SQLAlchemy/asyncpg), convert it
 # to postgresql:// for psycopg2 (sync driver) compatibility
-if DATABASE_URL and DATABASE_URL.startswith("postgresql+asyncpg://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
-    print("🔄 Normalized DATABASE_URL: converted postgresql+asyncpg:// to postgresql://")
+if DATABASE_URL:
+    original_url = DATABASE_URL
+    DATABASE_URL = normalize_database_url(DATABASE_URL, for_async=False)
+    
+    # Log if normalization occurred
+    if DATABASE_URL != original_url:
+        print("🔄 Normalized DATABASE_URL for sync connection (psycopg2)")
+        if "+asyncpg" in original_url:
+            print("   ℹ️  Removed +asyncpg driver suffix (asyncpg → psycopg2)")
+        if "postgres://" in original_url and "postgresql://" in DATABASE_URL:
+            print("   ℹ️  Normalized postgres:// to postgresql://")
 
 USE_POSTGRESQL = DATABASE_URL is not None
 
@@ -2060,9 +2091,9 @@ def _create_direct_postgresql_connection(use_fallback_ssl: bool = False):
     Raises:
         psycopg2.Error: If connection fails
     """
-    # ✅ CORRECT: Use DATABASE_URL directly (includes sslmode in query string)
-    # ❌ DO NOT pass sslmode as a kwarg - it must be in the DATABASE_URL
-    connection_url = DATABASE_URL
+    # Normalize DATABASE_URL for sync connection (removes +asyncpg suffix if present)
+    connection_url = normalize_database_url(DATABASE_URL, for_async=False)
+    
     if use_fallback_ssl and "sslmode=" in connection_url:
         # Replace sslmode=require with sslmode=prefer for fallback retry
         connection_url = connection_url.replace("sslmode=require", "sslmode=prefer")

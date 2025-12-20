@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import sys
 import threading
 import time
 from datetime import datetime, timedelta, timezone
@@ -16,6 +17,29 @@ from flask_caching import Cache
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+
+# Import database URL normalizer for sync connections
+# Add api directory to path if needed
+api_dir = os.path.join(os.path.dirname(__file__), 'api')
+if os.path.exists(api_dir) and api_dir not in sys.path:
+    sys.path.insert(0, api_dir)
+
+try:
+    from backend_app.core.db_url_normalizer import normalize_database_url
+    HAS_NORMALIZER = True
+except ImportError:
+    # Fallback if normalizer not available
+    HAS_NORMALIZER = False
+    def normalize_database_url(url, for_async=False):
+        """Fallback normalizer - removes +asyncpg suffix for sync connections"""
+        if not url:
+            return url
+        if not for_async:
+            # Remove driver suffixes for sync connections
+            url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+            url = url.replace("postgresql+psycopg2://", "postgresql://", 1)
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
 
 # Load environment variables from .env file
 load_dotenv()
@@ -136,7 +160,16 @@ if not USE_POSTGRESQL:
 
 if USE_POSTGRESQL:
     print(f"✅ PostgreSQL URL detected: {DATABASE_URL[:30]}...")
-
+    
+    # Log URL format information for debugging
+    if "+asyncpg" in DATABASE_URL:
+        print(f"ℹ️  Database URL format: async (postgresql+asyncpg://)")
+        print(f"ℹ️  Will normalize to sync format (postgresql://) for psycopg2 connections")
+    elif "postgresql://" in DATABASE_URL:
+        print(f"ℹ️  Database URL format: sync (postgresql://)")
+    elif "postgres://" in DATABASE_URL:
+        print(f"ℹ️  Database URL format: sync (postgres:// - will normalize to postgresql://)")
+    
     # Parse DATABASE_URL
     parsed = urlparse(DATABASE_URL)
     
@@ -175,9 +208,16 @@ else:
 def get_db_connection():
     """Get database connection (PostgreSQL on Render, SQLite locally)"""
     if USE_POSTGRESQL:
-        # ✅ Use DATABASE_URL only (SSL is already in the URL)
+        # Normalize DATABASE_URL for sync connection (removes +asyncpg suffix if present)
+        sync_url = normalize_database_url(DATABASE_URL, for_async=False)
+        
+        # Log the URL format being used (without exposing credentials)
+        if "+asyncpg" in DATABASE_URL:
+            print("ℹ️  Normalized DATABASE_URL for sync connection (removed +asyncpg suffix)")
+        
+        # ✅ Use normalized URL for psycopg2 (sync driver)
         conn = psycopg2.connect(
-            DATABASE_URL, cursor_factory=RealDictCursor
+            sync_url, cursor_factory=RealDictCursor
         )
         return conn
     else:
