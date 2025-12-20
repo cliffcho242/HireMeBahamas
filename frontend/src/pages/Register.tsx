@@ -9,6 +9,7 @@ import AppleSignin from 'react-apple-signin-auth';
 import { getOAuthConfig } from '../utils/oauthConfig';
 import { ApiError, GoogleCredentialResponse, AppleSignInResponse } from '../types';
 import { useLoadingMessages, DEFAULT_REGISTER_MESSAGES } from '../hooks/useLoadingMessages';
+import { showFriendlyError } from '../utils/friendlyErrors';
 
 interface RegisterForm {
   firstName: string;
@@ -106,7 +107,8 @@ const Register = () => {
         message = apiError?.response?.data?.detail || apiError?.response?.data?.message || apiError?.message || 'Registration failed. Please try again.';
       }
       
-      toast.error(message);
+      // Use friendly error handler for better UX
+      showFriendlyError(error, toast);
     } finally {
       stopLoading();
       setSubmitting(false);
@@ -121,10 +123,9 @@ const Register = () => {
         navigate('/');
       }
     } catch (error: unknown) {
-      const apiError = error as ApiError;
       console.error('Google registration error:', error);
-      const errorMessage = apiError?.response?.data?.detail || apiError?.message || 'Google sign-up failed';
-      toast.error(errorMessage);
+      // Use friendly error handler for better UX
+      showFriendlyError(error, toast);
     }
   };
 
@@ -140,10 +141,9 @@ const Register = () => {
         navigate('/');
       }
     } catch (error: unknown) {
-      const apiError = error as ApiError;
       console.error('Apple registration error:', error);
-      const errorMessage = apiError?.response?.data?.detail || apiError?.message || 'Apple sign-up failed';
-      toast.error(errorMessage);
+      // Use friendly error handler for better UX
+      showFriendlyError(error, toast);
     }
   };
 

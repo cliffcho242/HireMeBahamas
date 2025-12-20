@@ -64,6 +64,21 @@ export async function testConnection(baseUrl: string): Promise<ConnectionTestRes
           timestamp,
         },
       };
+    } else if (response.status === 404) {
+      console.error('[ConnectionTest] ❌ Backend endpoint not found (404)');
+      
+      return {
+        success: false,
+        apiUrl: baseUrl,
+        message: 'Cannot connect to the server. The server may be unreachable or the URL may be incorrect.',
+        details: {
+          healthCheck: false,
+          healthStatus: response.status,
+          errorType: 'ENDPOINT_NOT_FOUND',
+          errorMessage: 'Health check endpoint returned 404. This usually means the backend is unreachable or misconfigured.',
+          timestamp,
+        },
+      };
     } else {
       console.error(`[ConnectionTest] ❌ Health check failed with status: ${response.status}`);
       
