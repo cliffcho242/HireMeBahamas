@@ -302,6 +302,13 @@ api.interceptors.response.use(
       });
     }
     
+    // Add endpoint path to error for better debugging and error handling
+    // This allows friendlyErrors.ts to provide context-specific messages
+    if (error.config?.url && !error.config.url.includes('undefined')) {
+      const enhancedError = error as typeof error & { endpoint?: string };
+      enhancedError.endpoint = error.config.url;
+    }
+    
     // Check total elapsed time to prevent excessive waiting
     const requestStartTime = config?._requestStartTime;
     const elapsedTime = typeof requestStartTime === 'number' ? Date.now() - requestStartTime : 0;

@@ -22,7 +22,9 @@ export function makeErrorFriendly(error: unknown): FriendlyError {
   const isErrorLike = (err: unknown): err is { 
     code?: string; 
     message?: string; 
-    response?: { status?: number; data?: unknown } 
+    response?: { status?: number; data?: unknown };
+    config?: { url?: string };
+    endpoint?: string;
   } => {
     return typeof err === 'object' && err !== null;
   };
@@ -149,6 +151,84 @@ export function makeErrorFriendly(error: unknown): FriendlyError {
       severity: 'warning',
       icon: '⚠️',
       helpLink: '/help/rate-limit'
+    };
+  }
+  
+  // Not Found (404)
+  if (error.response?.status === 404) {
+    // Extract the URL/endpoint from the error if available
+    // Try endpoint first (added by api.ts interceptor), then config.url
+    const url = error.endpoint || error.config?.url || '';
+    
+    // Log for development debugging
+    if (import.meta.env.DEV) {
+      console.log('[FriendlyError] 404 for URL:', url);
+    }
+    
+    // Check if it's an authentication endpoint
+    if (url.includes('/api/auth/')) {
+      return {
+        title: 'Unable to Connect to Server',
+        message: 'We couldn\'t reach the authentication service. This might be a temporary connection issue.',
+        actions: [
+          'Check your internet connection',
+          'Try refreshing the page',
+          'Wait a moment and try again',
+          'Contact support if this persists'
+        ],
+        severity: 'error',
+        icon: '❌',
+        helpLink: '/help/connection-issues'
+      };
+    }
+    
+    // Check if it's a resource endpoint (user, job, post)
+    if (url.match(/\/api\/(users|jobs|posts)\/\d+/)) {
+      return {
+        title: 'Item Not Found',
+        message: 'The requested item could not be found. It may have been deleted or moved.',
+        actions: [
+          'Go back to the previous page',
+          'Check if the link is correct',
+          'Try searching for similar items',
+          'Contact support if you think this is an error'
+        ],
+        severity: 'warning',
+        icon: '⚠️',
+        helpLink: '/help/not-found'
+      };
+    }
+    
+    // Check if it's a health check endpoint (backend might be unreachable)
+    if (url.includes('/api/health')) {
+      return {
+        title: 'Cannot Connect to Server',
+        message: 'The server is not responding. This usually happens when your internet connection is unstable or the server is starting up.',
+        actions: [
+          'Check your internet connection',
+          'Wait 30 seconds and try again',
+          'The server may be waking up (this can take up to 60 seconds)',
+          'If the problem persists, contact support'
+        ],
+        severity: 'error',
+        icon: '❌',
+        helpLink: '/help/connection-issues'
+      };
+    }
+    
+    // Generic 404 - endpoint doesn't exist
+    return {
+      title: 'Page or Resource Not Found',
+      message: 'The requested page or resource could not be found. The link you followed may be broken or outdated.',
+      actions: [
+        'Check the URL for typos',
+        'Go back to the homepage',
+        'Use the navigation menu to find what you need',
+        'Contact support if you believe this is an error'
+      ],
+      severity: 'warning',
+      icon: '⚠️',
+      helpLink: '/help/not-found'
     };
   }
   
