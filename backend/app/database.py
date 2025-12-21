@@ -120,11 +120,14 @@ def _strip_sslmode_from_asyncpg(url: str) -> str:
     """
 
     try:
-         parsed = urlparse(url)
-         if "asyncpg" not in parsed.scheme:
-             return url
+        parsed = urlparse(url)
+        if "asyncpg" not in parsed.scheme:
+            return url
 
         original_query = parse_qs(parsed.query, keep_blank_values=True)
+        if not original_query:
+            return url
+
         # Normalize keys to catch values like " sslmode" with leading/trailing spaces
         normalized_query = {}
         for key, values in original_query.items():
@@ -132,18 +135,21 @@ def _strip_sslmode_from_asyncpg(url: str) -> str:
             if normalized_key == "sslmode":
                 continue
             normalized_query.setdefault(normalized_key, []).extend(values)
-        if original_query and "sslmode" not in {k.strip() for k in original_query}:
+
+        # If no sslmode-like key was found, return original URL unchanged
+        if "sslmode" not in {k.strip().lower() for k in original_query}:
             return url
+
         sanitized = urlunparse(
             (
                 parsed.scheme,
                 parsed.netloc,
                 parsed.path,
-                 parsed.params,
-                 urlencode(normalized_query, doseq=True),
-                 parsed.fragment,
-             )
-         )
+                parsed.params,
+                urlencode(normalized_query, doseq=True),
+                parsed.fragment,
+            )
+        )
         logger.warning("Removed unsupported sslmode parameter from DATABASE_URL for asyncpg compatibility")
         return sanitized
     except Exception as exc:
