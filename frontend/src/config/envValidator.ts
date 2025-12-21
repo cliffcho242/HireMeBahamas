@@ -113,6 +113,7 @@ export function validateEnvironmentVariables(): ValidationResult {
 
   const apiUrl = apiEnv.url;
   const apiVarName = apiEnv.name;
+  const apiVarOptions = 'VITE_API_BASE_URL or VITE_API_URL';
 
   // Check for required variables
   // API URL is optional (can use same-origin for Vercel serverless)
@@ -120,9 +121,9 @@ export function validateEnvironmentVariables(): ValidationResult {
   if (import.meta.env.VITE_REQUIRE_BACKEND_URL === 'true') {
     if (!apiUrl) {
       result.errors.push(
-        `❌ MISSING REQUIRED VARIABLE: ${apiVarName}\n` +
+        `❌ MISSING REQUIRED VARIABLE: ${apiVarOptions}\n` +
         `   VITE_REQUIRE_BACKEND_URL is set to 'true', but no API URL is configured.\n` +
-        `   Either set ${apiVarName} or set VITE_REQUIRE_BACKEND_URL to 'false'.`
+        `   Either set ${apiVarOptions} or set VITE_REQUIRE_BACKEND_URL to 'false'.`
       );
       result.valid = false;
     }

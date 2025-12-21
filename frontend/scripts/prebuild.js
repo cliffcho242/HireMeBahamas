@@ -106,15 +106,16 @@ function validateEnvironment() {
   
   const apiUrl = process.env.VITE_API_BASE_URL || process.env.VITE_API_URL;
   const apiVarName = process.env.VITE_API_BASE_URL ? 'VITE_API_BASE_URL' : 'VITE_API_URL';
+  const apiVarOptions = 'VITE_API_BASE_URL or VITE_API_URL';
 
   // Check for required variables
   if (process.env.VITE_REQUIRE_BACKEND_URL === 'true') {
     if (!apiUrl) {
       hasErrors = true;
       errors.push(
-        `❌ MISSING REQUIRED VARIABLE: ${apiVarName}\n` +
-        `   VITE_REQUIRE_BACKEND_URL is set to 'true', but ${apiVarName} is not set.\n` +
-        `   Either set ${apiVarName} or set VITE_REQUIRE_BACKEND_URL to 'false'.`
+        `❌ MISSING REQUIRED VARIABLE: ${apiVarOptions}\n` +
+        `   VITE_REQUIRE_BACKEND_URL is set to 'true', but no API URL is set.\n` +
+        `   Either set ${apiVarOptions} or set VITE_REQUIRE_BACKEND_URL to 'false'.`
       );
     }
   }
