@@ -5,7 +5,7 @@ Includes: Auth, Jobs, Users, Lazy DB, Health check
 import logging
 import os
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,14 +13,16 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 logger = logging.getLogger(__name__)
 
 # -----------------------------
 # CONFIGURATION
 # -----------------------------
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecretkey")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY not set in environment")
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
@@ -28,6 +30,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 # PASSWORD HASHING
 # -----------------------------
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+DUMMY_PASSWORD_HASH: str = pwd_context.hash("placeholder-password")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -100,7 +103,7 @@ def health():
 # -----------------------------
 def create_access_token(data: dict, expires_delta: int = ACCESS_TOKEN_EXPIRE_MINUTES) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=expires_delta)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=expires_delta)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
@@ -119,13 +122,6 @@ async def register(request: Request):
 
     try:
         with engine.connect() as conn:
-            result = conn.execute(
-                text("SELECT id FROM users WHERE username=:username"),
-                {"username": username},
-            )
-            if result.fetchone():
-                raise HTTPException(status_code=400, detail="Username already exists")
-
             conn.execute(
                 text(
                     "INSERT INTO users (username, password) VALUES (:username, :password)"
@@ -134,6 +130,8 @@ async def register(request: Request):
             )
             conn.commit()
             return {"status": "success", "message": "User registered"}
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="Username already exists")
     except HTTPException:
         raise
     except SQLAlchemyError:
@@ -157,8 +155,12 @@ async def login(request: Request):
                 text("SELECT id, password FROM users WHERE username=:username"),
                 {"username": username},
             )
-            user = result.fetchone()
-            if not user or not verify_password(password, user[1]):
+            user = result.mappings().first()
+            if not user:
+                verify_password(password, DUMMY_PASSWORD_HASH)
+                raise HTTPException(status_code=401, detail="Invalid credentials")
+
+            if not verify_password(password, user["password"]):
                 raise HTTPException(status_code=401, detail="Invalid credentials")
 
             access_token = create_access_token({"sub": username})
@@ -239,5 +241,5 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.exception("Unhandled exception in request")
     return JSONResponse(
         status_code=500,
-        content={"detail": str(exc)},
+        content={"detail": "Internal server error"},
     )
