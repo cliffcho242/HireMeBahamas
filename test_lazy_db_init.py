@@ -75,13 +75,13 @@ def test_lazy_initialization():
     print("\n4. Testing api/index.py lazy initialization...")
     try:
         # This is tricky because index.py has many dependencies
-        # We'll check that it has get_db_engine function
+        # We'll check that it has get_engine function
         with open(os.path.join(project_root, 'api', 'index.py'), 'r') as f:
             content = f.read()
             
-        # Check that get_db_engine function is defined
-        assert 'def get_db_engine():' in content, "api/index.py missing get_db_engine() function"
-        print("   ✅ api/index.py has get_db_engine() function")
+        # Check that get_engine function is defined
+        assert 'def get_engine():' in content, "api/index.py missing get_engine() function"
+        print("   ✅ api/index.py has get_engine() function")
         
         # Check that it's not creating engine at module level
         # Look for patterns like: db_engine = create_async_engine(
@@ -100,13 +100,13 @@ def test_lazy_initialization():
                 if current_indent <= function_indent:
                     in_function = False
             
-            # Check for engine creation outside any function
-            if 'create_async_engine(' in line and not line.strip().startswith('#'):
-                if not in_function:
-                    # Found engine creation at module level (outside any function)!
-                    print(f"   ❌ Found engine creation at module level (line {i+1}): {line.strip()}")
-                    raise AssertionError(f"Engine created at module level in api/index.py line {i+1}")
-                # If inside a function, it's OK (that's the lazy pattern)
+        # Check for engine creation outside any function
+        if ('create_async_engine(' in line or 'create_engine(' in line) and not line.strip().startswith('#'):
+            if not in_function:
+                # Found engine creation at module level (outside any function)!
+                print(f"   ❌ Found engine creation at module level (line {i+1}): {line.strip()}")
+                raise AssertionError(f"Engine created at module level in api/index.py line {i+1}")
+            # If inside a function, it's OK (that's the lazy pattern)
         
         print("   ✅ api/index.py does not create engine at module level (GOOD)")
         
