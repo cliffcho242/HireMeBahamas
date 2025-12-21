@@ -34,7 +34,7 @@
  */
 function validateAndGetBaseUrl(): string {
   // 🔥 PRODUCTION LOCK: Hard-code Render backend URL
-  const RENDER_BACKEND_URL = "https://hiremebahamas.onrender.com";
+  const RENDER_BACKEND_URL = "https://hiremebahamas-backend.onrender.com";
   
   // Check if we're in development mode (localhost)
   // Only localhost development can override the URL via VITE_API_URL

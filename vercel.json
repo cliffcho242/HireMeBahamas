@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://hiremebahamas.onrender.com/api/$1"
+      "destination": "https://hiremebahamas-backend.onrender.com/api/$1"
     }
   ],
   "headers": [

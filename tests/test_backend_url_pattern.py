@@ -192,7 +192,7 @@ class TestBackendURLValidation(unittest.TestCase):
             "http://127.0.0.1:8000",
             "https://hiremebahamas.vercel.app",
             "https://hiremebahamas-backend.railway.app",
-            "https://hiremebahamas.onrender.com",
+            "https://hiremebahamas-backend.onrender.com",
         ]
         
         for valid_url in valid_urls:
