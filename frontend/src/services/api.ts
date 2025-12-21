@@ -71,8 +71,8 @@ if (import.meta.env.DEV) {
 
 // Use safe URL builder to get validated API base URL
 // getApiBase() returns normalized URL without trailing slash
-// In production (Vercel), this will use same-origin, and Vercel will proxy /api/* to backend
-const API_BASE_URL = getApiBase();
+// Fallback to Render backend when VITE_API_BASE_URL is not set or empty
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || 'https://hiremebahamas-backend.onrender.com';
 
 // Export API constant for use in fetch calls (for backward compatibility)
 export const API = API_BASE_URL;
@@ -101,17 +101,17 @@ export const fetchWithRetry = async (
 
 // 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
 if (import.meta.env.DEV) {
-  console.log("API URL:", import.meta.env.VITE_API_URL || '(not set - using same-origin)');
+  console.log("API URL:", import.meta.env.VITE_API_BASE_URL || '(not set - using Render fallback)');
 }
 
 // Log API configuration on startup (development only)
 if (typeof window !== 'undefined' && import.meta.env.DEV) {
   console.log('=== API CONFIGURATION ===');
   console.log('API Base URL:', API_BASE_URL);
-  console.log('VITE_API_URL:', import.meta.env.VITE_API_URL || '(not set)');
+  console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL || '(not set - using Render fallback)');
   console.log('ENV_API:', ENV_API || 'not set');
   console.log('Window Origin:', window.location.origin);
-  console.log('Using same-origin:', !import.meta.env.VITE_API_URL);
+  console.log('Using Render fallback:', !import.meta.env.VITE_API_BASE_URL);
   console.log('========================');
 }
 
@@ -248,9 +248,9 @@ api.interceptors.request.use((config) => {
       throw new Error(
         `API URL configuration error: ${urlResult.error}\n\n` +
         `Possible solutions:\n` +
-        `1. Set VITE_API_URL=https://api.yourdomain.com for production\n` +
-        `2. Set VITE_API_URL=http://localhost:8000 for local dev\n` +
-        `3. Leave VITE_API_URL unset for Vercel serverless (same-origin)`
+        `1. Set VITE_API_BASE_URL=https://api.yourdomain.com for production\n` +
+        `2. Set VITE_API_BASE_URL=http://localhost:8000 for local dev\n` +
+        `3. Leave VITE_API_BASE_URL unset to use Render backend (https://hiremebahamas-backend.onrender.com)`
       );
     }
   }

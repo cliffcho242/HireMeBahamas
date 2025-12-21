@@ -35,7 +35,8 @@ export interface SocketMessageData {
 
 // Vite import.meta environment
 export interface ImportMetaEnv {
-  VITE_API_URL?: string;
+  VITE_API_BASE_URL?: string;
+  VITE_API_URL?: string; // Deprecated, use VITE_API_BASE_URL instead
   VITE_SOCKET_URL?: string;
   VITE_GOOGLE_CLIENT_ID?: string;
   VITE_APPLE_CLIENT_ID?: string;

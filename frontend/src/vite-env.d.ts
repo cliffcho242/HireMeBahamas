@@ -3,7 +3,8 @@
 /// <reference types="react-dom" />
 
 interface ImportMetaEnv {
-  readonly VITE_API_URL?: string
+  readonly VITE_API_BASE_URL?: string
+  readonly VITE_API_URL?: string // Deprecated, use VITE_API_BASE_URL instead
   readonly VITE_REQUIRE_BACKEND_URL?: string
   readonly VITE_SOCKET_URL?: string
   readonly VITE_CLOUDINARY_CLOUD_NAME?: string

@@ -8,7 +8,7 @@ import { getApiBase, apiUrl } from '../lib/api';
 
 // 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
 if (import.meta.env.DEV) {
-  console.log("API URL:", import.meta.env.VITE_API_URL);
+  console.log("API URL:", import.meta.env.VITE_API_BASE_URL || '(not set - using Render fallback)');
 }
 
 // ✅ CORRECT: Use safe URL builder to get validated backend URL
@@ -21,7 +21,7 @@ const BACKEND_ENDPOINTS = (() => {
   const primary = getBackendUrl();
   const endpoints = [primary];
   
-  // Note: No localhost fallbacks - use VITE_API_URL env var for local development
+  // Note: No localhost fallbacks - use VITE_API_BASE_URL env var for local development
   // This prevents production deployments from trying to connect to localhost
   
   return endpoints;
@@ -31,7 +31,7 @@ const BACKEND_ENDPOINTS = (() => {
 const selectBestEndpoint = async () => {
   // Since we're using the safe URL builder which validates the configured endpoint,
   // we check the health of the current configured endpoint
-  // Note: Multiple endpoints are managed through VITE_API_URL configuration
+  // Note: Multiple endpoints are managed through VITE_API_BASE_URL configuration
   const currentEndpoint = BACKEND_ENDPOINTS[0];
   try {
     const healthUrl = apiUrl('/health');

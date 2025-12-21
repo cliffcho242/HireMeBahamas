@@ -5,12 +5,16 @@
  * and never fails silently. It validates the base URL and constructs
  * full URLs for API endpoints.
  * 
+ * Uses VITE_API_BASE_URL environment variable or falls back to
+ * Render backend (https://hiremebahamas-backend.onrender.com) when unset.
+ * 
  * Benefits:
  * - Prevents pattern errors in URL construction
  * - Validates environment configuration at runtime
  * - Provides clear error messages for misconfiguration
  * - Normalizes trailing slashes automatically
  * - Works with both Vite and other build systems
+ * - Defaults to Render backend when env var is missing
  * 
  * @example
  * ```typescript
@@ -28,44 +32,19 @@
 
 /**
  * Validate and get the base API URL from environment
- * RENDER-ONLY: Hard-coded to use Render backend exclusively
- * 🚨 NO Railway URLs allowed
- * 🚨 Environment variables only allowed for localhost development
+ * Uses VITE_API_BASE_URL or falls back to Render backend
  */
 function validateAndGetBaseUrl(): string {
-  // 🔥 PRODUCTION LOCK: Hard-code Render backend URL
-  const RENDER_BACKEND_URL = "https://hiremebahamas.onrender.com";
+  // Get environment variable, trim it, and use Render as fallback
+  const envUrl = import.meta.env.VITE_API_BASE_URL?.trim();
   
-  // Check if we're in development mode (localhost)
-  // Only localhost development can override the URL via VITE_API_URL
-  if (typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' || 
-    window.location.hostname === '127.0.0.1'
-  )) {
-    // Allow local development override only for localhost URLs
-    const devUrl = import.meta.env.VITE_API_URL as string | undefined;
-    if (devUrl && devUrl.startsWith('http://localhost')) {
-      return devUrl;
-    }
+  // If VITE_API_BASE_URL is set and not empty, use it
+  if (envUrl) {
+    return envUrl;
   }
   
-  // 🚨 RENDER ONLY: Return hard-coded Render URL for all production traffic
-  const base = RENDER_BACKEND_URL;
-
-  const parsedHost = (() => {
-    try {
-      return new URL(base).hostname.toLowerCase();
-    } catch {
-      return '';
-    }
-  })();
-  const isLocal = parsedHost === 'localhost' || parsedHost === '127.0.0.1';
-  const isRenderHost = parsedHost === 'onrender.com' || parsedHost.endsWith('.onrender.com');
-  if (!isRenderHost && !isLocal) {
-    throw new Error('INVALID BACKEND TARGET: use your Render URL (e.g., https://your-backend.onrender.com) or localhost for development.');
-  }
-
-  return base;
+  // Otherwise, use Render backend as hardcoded fallback
+  return 'https://hiremebahamas-backend.onrender.com';
 }
 
 /**
