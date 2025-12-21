@@ -104,36 +104,37 @@ function validateEnvironment() {
     }
   });
   
+  const apiUrl = process.env.VITE_API_BASE_URL || process.env.VITE_API_URL;
+  const apiVarName = process.env.VITE_API_BASE_URL ? 'VITE_API_BASE_URL' : 'VITE_API_URL';
+
   // Check for required variables
   if (process.env.VITE_REQUIRE_BACKEND_URL === 'true') {
-    if (!process.env.VITE_API_URL) {
+    if (!apiUrl) {
       hasErrors = true;
       errors.push(
-        `❌ MISSING REQUIRED VARIABLE: VITE_API_URL\n` +
-        `   VITE_REQUIRE_BACKEND_URL is set to 'true', but VITE_API_URL is not set.\n` +
-        `   Either set VITE_API_URL or set VITE_REQUIRE_BACKEND_URL to 'false'.`
+        `❌ MISSING REQUIRED VARIABLE: ${apiVarName}\n` +
+        `   VITE_REQUIRE_BACKEND_URL is set to 'true', but ${apiVarName} is not set.\n` +
+        `   Either set ${apiVarName} or set VITE_REQUIRE_BACKEND_URL to 'false'.`
       );
     }
   }
   
   // Validate API URL format if set
-  if (process.env.VITE_API_URL) {
-    const apiUrl = process.env.VITE_API_URL;
-    
+  if (apiUrl) {
     if (!isValidUrl(apiUrl)) {
       hasErrors = true;
       errors.push(
-        `❌ INVALID URL FORMAT: VITE_API_URL="${apiUrl}"\n` +
+        `❌ INVALID URL FORMAT: ${apiVarName}="${apiUrl}"\n` +
         `   URL must start with http:// or https://\n` +
-        `   Example: VITE_API_URL=https://api.yourdomain.com`
+        `   Example: ${apiVarName}=https://api.yourdomain.com`
       );
     } else if (!isSecureUrl(apiUrl) && process.env.NODE_ENV === 'production') {
       hasErrors = true;
       errors.push(
-        `❌ INSECURE URL IN PRODUCTION: VITE_API_URL="${apiUrl}"\n` +
+        `❌ INSECURE URL IN PRODUCTION: ${apiVarName}="${apiUrl}"\n` +
         `   Production builds must use HTTPS.\n` +
         `   HTTP is only allowed for localhost in development.\n` +
-        `   Change to: VITE_API_URL=https://your-domain.com`
+        `   Change to: ${apiVarName}=https://your-domain.com`
       );
     }
   }

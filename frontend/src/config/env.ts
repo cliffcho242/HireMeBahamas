@@ -11,7 +11,7 @@
  * This is the base URL for all API requests.
  * 
  * - For Vercel serverless: Leave VITE_API_URL unset, will use same-origin
- * - For separate backend (Render): Set VITE_API_URL in environment
+ * - For separate backend (Render): Set VITE_API_BASE_URL in environment
  * - For local development: Set VITE_API_URL=http://localhost:8000
  * 
  * @example
@@ -26,7 +26,8 @@
  * // Local development
  * ENV_API = "http://localhost:8000"
  */
-export const ENV_API = import.meta.env.VITE_API_URL as string | undefined;
+export const ENV_API = (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
+  (import.meta.env.VITE_API_URL as string | undefined);
 
 /**
  * Socket URL for real-time connections
