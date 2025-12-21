@@ -8,6 +8,39 @@ import os
 from typing import List
 
 
+def _normalize_production_origins(origins: List[str]) -> List[str]:
+    """Ensure required production domains are always allowed with HTTPS."""
+    required = [
+        "https://hiremebahamas.com",
+        "https://www.hiremebahamas.com",
+    ]
+    
+    # Preserve wildcard handling separately (should never mix with credentials)
+    if any(origin.strip() == "*" for origin in origins):
+        return ["*"]
+    
+    normalized: List[str] = []
+    
+    for origin in origins:
+        candidate = origin.strip()
+        if not candidate:
+            continue
+        
+        # Force HTTPS for production origins to avoid mixed-content issues
+        if candidate.startswith("http://"):
+            candidate = "https://" + candidate[len("http://"):]
+        
+        if candidate not in normalized:
+            normalized.append(candidate)
+    
+    # Always include both primary domains for Safari/iOS compatibility
+    for domain in required:
+        if domain not in normalized:
+            normalized.append(domain)
+    
+    return normalized
+
+
 def is_production() -> bool:
     """Check if the application is running in production mode.
     
@@ -67,6 +100,9 @@ def get_cors_origins() -> List[str]:
                 "https://hiremebahamas.vercel.app",  # Vercel production deployment
                 "https://hire-me-bahamas.vercel.app",  # Canonical Vercel domain
             ]
+        
+        # Normalize and ensure required domains are always included
+        origins = _normalize_production_origins(origins)
         
         # Note: For additional Vercel preview deployments, add them to
         # ALLOWED_ORIGINS environment variable as comma-separated list.
