@@ -3,6 +3,7 @@ MASTER RENDER/NEON BACKEND — IMMORTAL DEPLOY 2025
 Includes: Auth, Jobs, Users, Lazy DB, Health check
 """
 
+import logging
 import os
 
 from fastapi import FastAPI, HTTPException, Request
@@ -15,6 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 # LAZY DATABASE ENGINE
 # -----------------------------
 engine = None
+logger = logging.getLogger(__name__)
 
 
 def get_engine():
@@ -40,9 +42,24 @@ app = FastAPI(title="HireMeBahamas Backend")
 # -----------------------------
 # CORS
 # -----------------------------
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
+if not allowed_origins_env:
+    cors_origins = [
+        "https://hiremebahamas.com",
+        "https://www.hiremebahamas.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+elif allowed_origins_env == "*":
+    cors_origins = ["*"]
+else:
+    cors_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # replace with frontend URL in production
+    allow_origins=cors_origins,  # replace with frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,33 +79,47 @@ def health():
 # AUTH ROUTES
 # -----------------------------
 @app.post("/api/auth/login")
-def login(request: Request):
+async def login(request: Request):
     """
     Example login route
     """
+    payload = await request.json()
+    email = payload.get("email")
+    password = payload.get("password")
+
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
     engine = get_engine()
     try:
         with engine.connect() as conn:
             # Replace with real auth logic
             result = conn.execute(text("SELECT 1"))
             _ = result.fetchone()
-            return {"status": "success", "message": "Login simulated"}
+            return {"status": "success", "message": "Login simulated", "email": email}
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/auth/register")
-def register(request: Request):
+async def register(request: Request):
     """
     Example register route
     """
+    payload = await request.json()
+    email = payload.get("email")
+    password = payload.get("password")
+
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
     engine = get_engine()
     try:
         with engine.connect() as conn:
             # Replace with real registration logic
             result = conn.execute(text("SELECT 1"))
             _ = result.fetchone()
-            return {"status": "success", "message": "Register simulated"}
+            return {"status": "success", "message": "Register simulated", "email": email}
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -109,7 +140,7 @@ def get_jobs():
 
 
 @app.post("/api/jobs")
-def create_job(request: Request):
+def create_job():
     engine = get_engine()
     try:
         with engine.connect() as conn:
@@ -136,7 +167,7 @@ def get_users():
 
 
 @app.post("/api/users")
-def create_user(request: Request):
+def create_user():
     engine = get_engine()
     try:
         with engine.connect() as conn:
@@ -153,7 +184,8 @@ def create_user(request: Request):
 # -----------------------------
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception in request", exc_info=exc)
     return JSONResponse(
         status_code=500,
-        content={"detail": str(exc)},
+        content={"detail": "Internal server error"},
     )

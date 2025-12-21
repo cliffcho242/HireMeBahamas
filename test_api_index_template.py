@@ -6,6 +6,7 @@ import importlib
 import os
 import sys
 
+import pytest
 from fastapi.testclient import TestClient
 
 # Ensure the api directory is on the path for importing index.py
@@ -13,6 +14,11 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 API_DIR = os.path.join(PROJECT_ROOT, "api")
 if API_DIR not in sys.path:
     sys.path.insert(0, API_DIR)
+
+
+@pytest.fixture(autouse=True)
+def set_sqlite_db_url(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///:memory:")
 
 
 def reload_index():
@@ -23,7 +29,6 @@ def reload_index():
 
 
 def test_health_returns_ok_plain_text():
-    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
     index = reload_index()
     client = TestClient(index.app)
 
@@ -36,14 +41,15 @@ def test_health_returns_ok_plain_text():
 
 
 def test_routes_lazy_load_engine():
-    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
     index = reload_index()
-    index.engine = None
     client = TestClient(index.app)
 
     # Engine should be created on first route call
     assert index.engine is None
-    login_response = client.post("/api/auth/login")
+    login_response = client.post(
+        "/api/auth/login",
+        json={"email": "test@example.com", "password": "secret"},
+    )
     assert login_response.status_code == 200
     assert login_response.json()["status"] == "success"
     assert index.engine is not None
@@ -55,9 +61,7 @@ def test_routes_lazy_load_engine():
 
 
 def test_get_db_engine_alias():
-    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
     index = reload_index()
-    index.engine = None
 
     # Alias should delegate to get_engine
     engine = index.get_db_engine()
