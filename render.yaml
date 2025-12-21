@@ -82,8 +82,8 @@ services:
     # ==========================================================================
     # ✅ Single worker for fastest cold start and health checks
     # ✅ UvicornWorker for async FastAPI handling
-    # ✅ Preload for stability (safe with lazy DB init)
-    startCommand: gunicorn api.index:app --bind 0.0.0.0:$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --preload
+    # ✅ Explicit api.index:app entrypoint (do not use gunicorn app:app)
+    startCommand: gunicorn api.index:app --bind 0.0.0.0:$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --log-level info
     
     envVars:
       - key: ENVIRONMENT

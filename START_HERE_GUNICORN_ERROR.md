@@ -24,7 +24,7 @@ You (or someone) copy-pasted a multi-line command with backslashes from document
 4. Scroll to **"Start Command"**
 5. Replace the command with this **single line** (copy everything):
    ```
-   cd backend && gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --preload --log-level info
+   gunicorn api.index:app --bind 0.0.0.0:$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --log-level info
    ```
 6. Click **"Save Changes"**
 7. Click **"Manual Deploy"** → **"Deploy latest commit"**
@@ -39,7 +39,7 @@ You (or someone) copy-pasted a multi-line command with backslashes from document
 5. Look for **"Start Command"** or check if you have a `render.toml` file
 6. If using Start Command, replace with this **single line**:
    ```
-   uvicorn app.main:app --host 0.0.0.0 --port $PORT
+   gunicorn api.index:app --bind 0.0.0.0:$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --log-level info
    ```
 7. Or better yet, delete the manual command and let Render use `render.toml` (already configured correctly)
 8. Redeploy
@@ -48,7 +48,7 @@ You (or someone) copy-pasted a multi-line command with backslashes from document
 
 1. Update your `Procfile` in the repository with this line:
    ```
-   web: gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --log-level info
+   web: gunicorn api.index:app --bind 0.0.0.0:$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --log-level info
    ```
 2. Commit and push:
    ```bash
