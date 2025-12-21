@@ -11,8 +11,8 @@
  * This is the base URL for all API requests.
  * 
  * - For Vercel serverless: Leave VITE_API_URL unset, will use same-origin
- * - For separate backend (Render): Set VITE_API_BASE_URL in environment
- * - For local development: Set VITE_API_URL=http://localhost:8000
+ * - For Render or any external backend: Prefer VITE_API_BASE_URL in environment
+ * - For local development override: Set VITE_API_URL=http://localhost:8000 (localhost only)
  * 
  * @example
  * // Vercel serverless (same-origin)
@@ -20,7 +20,7 @@
  * 
  * @example
  * // Render deployment
- * ENV_API = "https://your-app.onrender.com"
+ * ENV_API = "https://your-app.onrender.com" (via VITE_API_BASE_URL)
  * 
  * @example
  * // Local development
