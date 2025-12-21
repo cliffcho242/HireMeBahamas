@@ -51,18 +51,8 @@ HEALTH_PATHS = {"/health"}
 @app.get("/health", include_in_schema=False)
 @app.head("/health", include_in_schema=False)
 async def health():
-    """Health check with database connectivity awareness."""
-    engine = get_engine()
-    if engine is None:
-        return {"status": "degraded"}
-
-    try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-        return {"status": "ok"}
-    except Exception as exc:
-        logging.getLogger(__name__).warning("Health check degraded: %s", exc)
-        return {"status": "degraded"}
+    """Instant health check - NO database dependency."""
+    return {"status": "healthy"}
 
 
 # EMERGENCY HEALTH ENDPOINT — ULTRA STABLE FALLBACK
