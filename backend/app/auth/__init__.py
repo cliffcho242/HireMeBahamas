@@ -1,6 +1,15 @@
 """
 Authentication module for HireMeBahamas API.
 
-This module provides JWT-based authentication with login, token refresh,
-and user authentication dependencies.
+Provides JWT-based authentication with secure token handling.
 """
+
+from app.auth.dependencies import get_current_user, get_current_user_optional
+from app.auth.jwt import create_access_token, decode_access_token
+
+__all__ = [
+    "get_current_user",
+    "get_current_user_optional",
+    "create_access_token",
+    "decode_access_token",
+]
