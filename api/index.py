@@ -724,6 +724,7 @@ async def get_user_from_db(user_id: int):
 # Note: Vercel's rewrite rule routes /api/* to /api/index.py
 # So FastAPI only sees the path AFTER /api/, meaning /api/health becomes /health
 @app.get("/health", include_in_schema=False)
+@app.head("/health", include_in_schema=False)
 def health():
     """Instant health check - responds in <5ms
     
@@ -736,7 +737,7 @@ def health():
     
     Render kills apps that fail health checks, so this must be instant.
     """
-    return {"ok": True}
+    return "ok"
 
 @app.get("/health/ping", include_in_schema=False)
 def health_ping():

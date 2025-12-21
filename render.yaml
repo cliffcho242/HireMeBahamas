@@ -78,12 +78,12 @@ services:
     buildCommand: pip install poetry && poetry install --only=main
     
     # ==========================================================================
-    # START COMMAND - ZERO-DOWNTIME GUNICORN (UVICORN WORKER)
+    # START COMMAND - RENDER-OPTIMIZED FASTAPI (SINGLE WORKER)
     # ==========================================================================
-    # ✅ Dual workers with recycling + jitter for graceful restarts
+    # ✅ Single worker for fastest cold start and health checks
     # ✅ UvicornWorker for async FastAPI handling
-    # ✅ Threaded I/O for predictable CPU usage
-    startCommand: cd backend && poetry run gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100
+    # ✅ Preload for stability (safe with lazy DB init)
+    startCommand: gunicorn api.index:app --bind 0.0.0.0:$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --preload
     
     envVars:
       - key: ENVIRONMENT
@@ -148,12 +148,12 @@ services:
       # CRITICAL: Render does NOT like many workers on small instances
       # 
       # Configuration:
-      # - Workers: 2 (zero-downtime rolling restarts)
+      # - Workers: 1 (fast cold starts + health checks)
       # - Threads: 2 (minimal threading overhead)
       # - Timeout: 120s (prevents worker SIGTERM during slow startup)
       # - Async event loop handles 100+ concurrent connections
       - key: WEB_CONCURRENCY
-        value: "2"
+        value: "1"
       - key: WEB_THREADS
         value: "2"
       - key: GUNICORN_TIMEOUT
