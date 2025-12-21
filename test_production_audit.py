@@ -8,6 +8,8 @@ import os
 import re
 from pathlib import Path
 
+BACKEND_URL = "https://hiremebahamas-backend.onrender.com"
+
 
 def test_vercel_json_backend_url():
     """Verify vercel.json has correct backend URL without trailing slash."""
@@ -27,7 +29,7 @@ def test_vercel_json_backend_url():
     destination = api_rewrite["destination"]
     
     # Must be hiremebahamas-backend.onrender.com
-    assert "hiremebahamas-backend.onrender.com" in destination, \
+    assert BACKEND_URL in destination, \
         f"Wrong backend URL: {destination}"
     
     # Must not have trailing slash
@@ -47,7 +49,7 @@ def test_env_production_example():
         content = f.read()
     
     # Check for correct URL
-    assert "hiremebahamas-backend.onrender.com" in content, \
+    assert BACKEND_URL in content, \
         "VITE_API_BASE_URL not set to hiremebahamas-backend.onrender.com"
 
     # Check for VITE_API_BASE_URL line

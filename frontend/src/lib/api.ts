@@ -26,6 +26,8 @@
 // URL validation imports removed - validation happens in safeUrl module
 // Import only when needed to avoid unused imports
 
+const DEFAULT_RENDER_BACKEND_URL = "https://hiremebahamas-backend.onrender.com";
+
 /**
  * Validate and get the base API URL from environment
  * RENDER-ONLY: Hard-coded to use Render backend exclusively
@@ -34,7 +36,7 @@
  */
 function validateAndGetBaseUrl(): string {
   // 🔥 PRODUCTION LOCK: Render backend URL (overridable via env)
-  const RENDER_BACKEND_URL = import.meta.env.VITE_API_BASE_URL || "https://hiremebahamas-backend.onrender.com";
+  const RENDER_BACKEND_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_RENDER_BACKEND_URL;
   
   // Check if we're in development mode (localhost)
   // Only localhost development can override the URL via VITE_API_URL
