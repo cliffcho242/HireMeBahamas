@@ -30,6 +30,7 @@
 import logging
 import threading
 import errno
+import ssl
 from typing import Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
@@ -191,6 +192,7 @@ STATEMENT_TIMEOUT_MS = settings.DB_STATEMENT_TIMEOUT_MS
 # ✅ asyncpg handles TLS negotiation automatically; sslmode query param is stripped.
 # ❌ Do not pass sslmode in connect_args for asyncpg.
 # =============================================================================
+SSL_CONTEXT = ssl.create_default_context()
 
 # =============================================================================
 # CREATE ASYNC ENGINE - LAZY INITIALIZATION FOR SERVERLESS (Vercel/Render)
@@ -246,6 +248,11 @@ def get_engine():
                     pool_pre_ping=True,  # Validate connections before use (detects stale connections)
                     pool_recycle=POOL_RECYCLE,  # Recycle connections (default: 300s for serverless)
                     pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
+                    connect_args={
+                        "ssl": SSL_CONTEXT,
+                        "timeout": CONNECT_TIMEOUT,
+                        "command_timeout": COMMAND_TIMEOUT,
+                    },
                     
                     # Echo SQL for debugging (disabled in production)
                     echo=settings.DB_ECHO,

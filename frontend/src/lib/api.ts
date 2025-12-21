@@ -50,7 +50,22 @@ function validateAndGetBaseUrl(): string {
   }
   
   // 🚨 RENDER ONLY: Return hard-coded Render URL for all production traffic
-  return RENDER_BACKEND_URL;
+  const base = RENDER_BACKEND_URL;
+
+  const parsedHost = (() => {
+    try {
+      return new URL(base).hostname.toLowerCase();
+    } catch {
+      return '';
+    }
+  })();
+  const isLocal = parsedHost === 'localhost' || parsedHost === '127.0.0.1';
+  const isRenderHost = parsedHost === 'onrender.com' || parsedHost.endsWith('.onrender.com');
+  if (!isRenderHost && !isLocal) {
+    throw new Error('INVALID BACKEND TARGET: use your Render URL (e.g., https://your-backend.onrender.com) or localhost for development.');
+  }
+
+  return base;
 }
 
 /**

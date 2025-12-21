@@ -28,12 +28,13 @@
 # =============================================================================
 
 import os
+import ssl
 import logging
 import threading
 import errno
 import asyncio
 from typing import Optional
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -102,6 +103,49 @@ DATABASE_URL = DATABASE_URL.strip()
 if not DATABASE_URL:
     DATABASE_URL = _get_fallback_database_url("is empty (whitespace-only)")
 
+
+def _strip_sslmode_from_asyncpg(url: str) -> str:
+    """Remove unsupported sslmode parameter for asyncpg connections.
+
+    asyncpg does not accept sslmode as a keyword argument; leaving it in the
+    query string causes SQLAlchemy to forward it to asyncpg.connect(), which
+    triggers `TypeError: connect() got an unexpected keyword argument 'sslmode'`.
+
+    Args:
+        url: Database connection URL which may contain sslmode in the query.
+
+    Returns:
+        Sanitized URL with sslmode removed when the asyncpg driver is used,
+        otherwise the original URL unchanged.
+    """
+
+    try:
+        parsed = urlparse(url)
+        if "asyncpg" not in parsed.scheme:
+            return url
+
+        query = parse_qs(parsed.query, keep_blank_values=True)
+        if "sslmode" not in query:
+            return url
+
+        query.pop("sslmode", None)
+        sanitized = urlunparse(
+            (
+                parsed.scheme,
+                parsed.netloc,
+                parsed.path,
+                parsed.params,
+                urlencode(query, doseq=True),
+                parsed.fragment,
+            )
+        )
+        logger.warning("Removed unsupported sslmode parameter from DATABASE_URL for asyncpg compatibility")
+        return sanitized
+    except Exception as exc:
+        logger.warning("Failed to strip sslmode from DATABASE_URL: %s", exc)
+        return url
+
+
 # Fix common typos in DATABASE_URL (e.g., "ostgresql" -> "postgresql")
 # This handles cases where the 'p' is missing from "postgresql"
 if "ostgresql" in DATABASE_URL and "postgresql" not in DATABASE_URL:
@@ -142,9 +186,12 @@ try:
             parsed.fragment
         ))
         logger.info("Added explicit port :5432 to DATABASE_URL")
-except Exception as e:
-    # Don't log exception details to avoid exposing sensitive URL information
-    logger.warning("Could not parse DATABASE_URL for port validation")
+    except Exception as e:
+        # Don't log exception details to avoid exposing sensitive URL information
+        logger.warning("Could not parse DATABASE_URL for port validation")
+
+# Strip unsupported sslmode parameter for asyncpg connections to prevent runtime errors
+DATABASE_URL = _strip_sslmode_from_asyncpg(DATABASE_URL)
 
 # Validate DATABASE_URL format - ensure all required fields are present
 # Parse and validate required fields using production-safe validation
@@ -239,6 +286,7 @@ POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (
 CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "30"))  # 30s for Render cold starts
 COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
 STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
+SSL_CONTEXT = ssl.create_default_context()
 
 # =============================================================================
 # SSL CONFIGURATION - NEON SAFE MODE
@@ -332,6 +380,11 @@ def get_engine():
                         pool_pre_ping=True,  # Validate connections before use (ONLY pool option needed)
                         pool_recycle=POOL_RECYCLE,  # Recycle every 5 min (serverless-friendly)
                         pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
+                        connect_args={
+                            "ssl": SSL_CONTEXT,
+                            "timeout": CONNECT_TIMEOUT,
+                            "command_timeout": COMMAND_TIMEOUT,
+                        },
                         
                         # Echo SQL for debugging (disabled in production)
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
