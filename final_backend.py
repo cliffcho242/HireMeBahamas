@@ -68,6 +68,24 @@ SECURE_COOKIES = os.getenv("SECURE_COOKIES", "true").lower() == "true"
 COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "None")  # Required for cross-origin
 COOKIE_MAX_AGE = int(os.getenv("COOKIE_MAX_AGE", str(60 * 60 * 24 * 7)))  # Default 7 days
 
+# Validate cookie configuration: SameSite=None requires Secure=true
+if COOKIE_SAMESITE == "None" and not SECURE_COOKIES:
+    print("⚠️" * 50)
+    print("⚠️  WARNING: Invalid cookie configuration!")
+    print("⚠️  SameSite=None requires Secure=true (browsers will reject the cookie)")
+    print("⚠️")
+    print("⚠️  Current settings:")
+    print(f"⚠️  - COOKIE_SAMESITE: {COOKIE_SAMESITE}")
+    print(f"⚠️  - SECURE_COOKIES: {SECURE_COOKIES}")
+    print("⚠️")
+    print("⚠️  To fix this, either:")
+    print("⚠️  1. Set SECURE_COOKIES=true (recommended for production)")
+    print("⚠️  2. Change COOKIE_SAMESITE to 'Lax' or 'Strict' (breaks cross-origin auth)")
+    print("⚠️")
+    print("⚠️  Forcing SECURE_COOKIES=true to prevent cookie rejection...")
+    print("⚠️" * 50)
+    SECURE_COOKIES = True  # Force secure cookies when SameSite=None
+
 # Rate limiting configuration
 limiter = Limiter(
     app=app,
@@ -87,7 +105,11 @@ cache = Cache(
 
 # Enhanced CORS configuration with credentials support
 # Get allowed origins from environment or use production defaults
-ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "https://hiremebahamas.com,https://www.hiremebahamas.com,https://hiremebahamas.vercel.app").split(",")
+ALLOWED_ORIGINS = [
+    origin.strip() 
+    for origin in os.getenv("CORS_ORIGINS", "https://hiremebahamas.com,https://www.hiremebahamas.com,https://hiremebahamas.vercel.app").split(",")
+    if origin.strip()
+]
 # Add localhost for development if not in production
 if not IS_PRODUCTION:
     ALLOWED_ORIGINS.extend(["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"])
