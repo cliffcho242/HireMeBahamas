@@ -186,9 +186,9 @@ try:
             parsed.fragment
         ))
         logger.info("Added explicit port :5432 to DATABASE_URL")
-    except Exception as e:
-        # Don't log exception details to avoid exposing sensitive URL information
-        logger.warning("Could not parse DATABASE_URL for port validation")
+except Exception as e:
+    # Don't log exception details to avoid exposing sensitive URL information
+    logger.warning("Could not parse DATABASE_URL for port validation")
 
 # Strip unsupported sslmode parameter for asyncpg connections to prevent runtime errors
 DATABASE_URL = _strip_sslmode_from_asyncpg(DATABASE_URL)
