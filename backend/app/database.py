@@ -124,18 +124,34 @@ def _strip_sslmode_from_asyncpg(url: str) -> str:
         if "asyncpg" not in parsed.scheme:
             return url
 
-        query = parse_qs(parsed.query, keep_blank_values=True)
-        if "sslmode" not in query:
+        original_query = parse_qs(parsed.query, keep_blank_values=True)
+        if not original_query:
             return url
 
-        query.pop("sslmode", None)
+        # Normalize keys to catch values like " sslmode" with leading/trailing spaces
+        normalized_query = {}
+        found_sslmode = False
+        for key, values in original_query.items():
+            normalized_key = key.strip()
+            normalized_key_lower = normalized_key.lower()
+            if normalized_key_lower == "sslmode":
+                found_sslmode = True
+                continue
+            if normalized_key != key:
+                logger.warning("Normalized query parameter key whitespace: '%s' -> '%s'", key, normalized_key)
+            normalized_query.setdefault(normalized_key, []).extend(values)
+
+        # If no sslmode-like key was found, return original URL unchanged
+        if not found_sslmode:
+            return url
+
         sanitized = urlunparse(
             (
                 parsed.scheme,
                 parsed.netloc,
                 parsed.path,
                 parsed.params,
-                urlencode(query, doseq=True),
+                urlencode(normalized_query, doseq=True),
                 parsed.fragment,
             )
         )
