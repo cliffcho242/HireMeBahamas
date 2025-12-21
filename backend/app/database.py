@@ -451,6 +451,15 @@ class LazyEngine:
                 f"Original error: {type(e).__name__}: {e}"
             ) from e
         
+        # CRITICAL: Handle case where get_engine() returns None
+        if actual_engine is None:
+            raise RuntimeError(
+                f"LazyEngine: Database engine is not initialized (get_engine() returned None). "
+                f"Cannot access attribute '{name}'. "
+                f"This usually means DATABASE_URL is missing, invalid, or using a placeholder value. "
+                f"Check your DATABASE_URL environment variable configuration."
+            )
+        
         try:
             return getattr(actual_engine, name)
         except AttributeError as e:
