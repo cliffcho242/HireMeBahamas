@@ -30,7 +30,6 @@
 import logging
 import threading
 import errno
-import ssl
 from typing import Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
@@ -38,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from .config import settings
+from app.database import SSL_CONTEXT
 
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
@@ -239,7 +239,6 @@ def get_engine():
         with _engine_lock:
             # Check again inside the lock in case another thread created it
             if _engine is None:
-                ssl_context = ssl.create_default_context()
                 _engine = create_async_engine(
                     DATABASE_URL,
                     # Pool configuration - optimized for production
@@ -249,7 +248,7 @@ def get_engine():
                     pool_recycle=POOL_RECYCLE,  # Recycle connections (default: 300s for serverless)
                     pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
                     connect_args={
-                        "ssl": ssl_context,
+                        "ssl": SSL_CONTEXT,
                         "timeout": CONNECT_TIMEOUT,
                         "command_timeout": COMMAND_TIMEOUT,
                     },

@@ -114,6 +114,7 @@ def _strip_sslmode_from_asyncpg(url: str) -> str:
     Returns the sanitized URL with sslmode removed when the asyncpg driver is
     used, otherwise returns the original URL unchanged.
     """
+
     try:
         parsed = urlparse(url)
         if "asyncpg" not in parsed.scheme:
