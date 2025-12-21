@@ -41,7 +41,8 @@
 #
 # Single worker with UvicornWorker (async event loop) handles health checks instantly on cold start.
 # This is the correct production pattern for FastAPI on Render/Railway when the app lives in api/index.py.
-web: gunicorn api.index:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000} --workers 1 --timeout 120 --graceful-timeout 30 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100
+# Scale horizontally via platform instances; adjust WEB_CONCURRENCY if you need more headroom than a single worker.
+web: poetry run gunicorn api.index:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000} --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh

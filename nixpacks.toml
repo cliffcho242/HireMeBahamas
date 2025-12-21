@@ -108,10 +108,11 @@ cmds = [
 [start]
 # NEON SAFE GUNICORN CONFIGURATION (Render)
 # ✅ Correct command for FastAPI with Neon Postgres:
-# - api.index:app - FastAPI application entry point  
+# - api.index:app - FastAPI application entry point (exports `app`)
 # - -k uvicorn.workers.UvicornWorker - ASGI worker for async FastAPI
 # - --bind 0.0.0.0:$PORT - Bind to all interfaces (Render provides PORT)
 # - --workers 1 - Single worker for fastest startup
 # - --timeout 120 - Prevents premature worker termination
 # ❌ NO extra flags (no sslmode, no statement_timeout)
-cmd = "gunicorn api.index:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000} --workers 1 --timeout 120 --graceful-timeout 30 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100"
+# Assumes working directory is repo root where api/index.py is located.
+cmd = "poetry run gunicorn api.index:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000} --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100"
