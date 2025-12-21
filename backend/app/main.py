@@ -9,12 +9,8 @@ import importlib
 import tracemalloc
 import logging
 from typing import Optional, List, Dict, Union, Any
-from types import MappingProxyType
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
-
-from .database import get_engine
 
 # Enable tracemalloc to track memory allocations for debugging
 # This prevents RuntimeWarning: Enable tracemalloc to get the object allocation traceback
@@ -46,14 +42,26 @@ app = FastAPI(
     openapi_url=None,
 )
 
-HEALTH_PAYLOAD = MappingProxyType({"status": "ok"})  # Minimal payload for instant Render health checks
 HEALTH_PATHS = {"/health"}
 
 # IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
-@app.api_route("/health", methods=["GET", "HEAD"], include_in_schema=False)
-def health():
-    """Database-free health check for Render."""
-    return HEALTH_PAYLOAD
+@app.get("/health", include_in_schema=False)
+@app.head("/health", include_in_schema=False)
+async def health():
+    """Health check with database connectivity awareness."""
+    from sqlalchemy import text
+    from .database import get_engine
+
+    engine = get_engine()
+    if engine is None:
+        return {"status": "degraded"}
+
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
+        return {"status": "ok"}
+    except Exception:
+        return {"status": "degraded"}
 
 
 # EMERGENCY HEALTH ENDPOINT — ULTRA STABLE FALLBACK
@@ -389,7 +397,7 @@ if os.path.exists(runtime_log_dir):
     try:
         file_handler = logging.FileHandler(runtime_log_file, mode='a')
         file_handler.setFormatter(
-            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         )
         log_handlers.append(file_handler)
         print(f"Runtime logs will be written to: {runtime_log_file}")
@@ -398,7 +406,7 @@ if os.path.exists(runtime_log_dir):
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='%(asctime)s %(levelname)s %(message)s',
     handlers=log_handlers
 )
 logger = logging.getLogger(__name__)
@@ -507,12 +515,14 @@ except ImportError:
         _allowed_origins = [
             "https://hiremebahamas.com",
             "https://www.hiremebahamas.com",
+            "https://hire-me-bahamas.vercel.app",
         ]
     else:
         # Development: includes localhost and production domains for testing
         _allowed_origins = [
             "https://hiremebahamas.com",
             "https://www.hiremebahamas.com",
+            "https://hire-me-bahamas.vercel.app",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
             "http://localhost:5173",  # Vite default
@@ -534,12 +544,13 @@ app.add_middleware(
 CACHE_CONTROL_RULES = {
     # Read-only list endpoints can be cached briefly
     "/api/jobs": {"GET": "public, max-age=60, stale-while-revalidate=120"},
-    "/api/posts": {"GET": "private, max-age=30, stale-while-revalidate=60"},
+    "/api/posts": {"GET": "public, max-age=60, stale-while-revalidate=120"},
     "/api/jobs/stats": {"GET": "public, max-age=300, stale-while-revalidate=600"},
-    # Health endpoints - ping is ultra-fast, no caching needed
-    "/health/ping": {"GET": "no-cache"},
-    "/health": {"GET": "public, max-age=10"},
+    # Health endpoints - cache briefly while keeping freshness
+    "/health/ping": {"GET": "public, max-age=60"},
+    "/health": {"GET": "public, max-age=60"},
 }
+DEFAULT_CACHE_CONTROL = "public, max-age=60"
 
 
 # Add cache control middleware
@@ -552,13 +563,19 @@ async def add_cache_headers(request: Request, call_next):
     if request.method == "GET" and 200 <= response.status_code < 300:
         path = request.url.path
         
+        cache_value = None
         # Check if this path matches any cache rules
         for pattern, methods in CACHE_CONTROL_RULES.items():
             if path.startswith(pattern) and request.method in methods:
-                # Don't override if already set
-                if "cache-control" not in response.headers:
-                    response.headers["Cache-Control"] = methods[request.method]
+                cache_value = methods[request.method]
                 break
+
+        if cache_value is None:
+            cache_value = DEFAULT_CACHE_CONTROL
+
+        # Don't override if already set
+        if cache_value and "cache-control" not in response.headers:
+            response.headers["Cache-Control"] = cache_value
     
     return response
 

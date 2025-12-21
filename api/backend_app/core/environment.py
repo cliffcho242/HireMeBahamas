@@ -65,6 +65,7 @@ def get_cors_origins() -> List[str]:
                 "https://hiremebahamas.com",
                 "https://www.hiremebahamas.com",
                 "https://hiremebahamas.vercel.app",  # Vercel production deployment
+                "https://hire-me-bahamas.vercel.app",
             ]
         
         # Note: For additional Vercel preview deployments, add them to
@@ -78,6 +79,7 @@ def get_cors_origins() -> List[str]:
             "https://hiremebahamas.com",
             "https://www.hiremebahamas.com",
             "https://hiremebahamas.vercel.app",
+            "https://hire-me-bahamas.vercel.app",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
             "http://localhost:5173",  # Vite default
