@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 # -----------------------------
 def _normalize_allowed_origins(origins):
     """Ensure canonical domains are always allowed and HTTPS enforced."""
-    required = {
+    required = [
         "https://hiremebahamas.com",
         "https://www.hiremebahamas.com",
-    }
+    ]
     
     # Preserve wildcard behavior exactly
     if any(origin.strip() == "*" for origin in origins):
