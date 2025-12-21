@@ -107,9 +107,10 @@ export function validateEnvironmentVariables(): ValidationResult {
     }
   });
 
-  const apiEnv = import.meta.env.VITE_API_BASE_URL
-    ? { url: import.meta.env.VITE_API_BASE_URL, name: 'VITE_API_BASE_URL' }
-    : { url: import.meta.env.VITE_API_URL, name: 'VITE_API_URL' };
+  const apiEnv = {
+    url: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL,
+    name: import.meta.env.VITE_API_BASE_URL ? 'VITE_API_BASE_URL' : 'VITE_API_URL',
+  };
 
   const apiUrl = apiEnv.url;
   const apiVarName = apiEnv.name;

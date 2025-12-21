@@ -104,8 +104,12 @@ function validateEnvironment() {
     }
   });
   
-  const apiUrl = process.env.VITE_API_BASE_URL || process.env.VITE_API_URL;
-  const apiVarName = process.env.VITE_API_BASE_URL ? 'VITE_API_BASE_URL' : 'VITE_API_URL';
+  const apiEnv = {
+    url: process.env.VITE_API_BASE_URL || process.env.VITE_API_URL,
+    name: process.env.VITE_API_BASE_URL ? 'VITE_API_BASE_URL' : 'VITE_API_URL',
+  };
+  const apiUrl = apiEnv.url;
+  const apiVarName = apiEnv.name;
   const apiVarOptions = 'VITE_API_BASE_URL or VITE_API_URL';
 
   // Check for required variables
