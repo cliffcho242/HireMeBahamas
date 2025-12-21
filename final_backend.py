@@ -49,6 +49,10 @@ except ImportError:
 # Load environment variables from .env file
 load_dotenv()
 
+# Check if this is a production environment (needed for CORS configuration)
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+IS_PRODUCTION = ENVIRONMENT in ["production", "prod"]
+
 print("Initializing Flask app with PostgreSQL support...")
 app = Flask(__name__)
 
@@ -58,6 +62,29 @@ app.config["SECRET_KEY"] = os.getenv(
 )
 app.config["JSON_SORT_KEYS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB max file size
+
+# Cookie configuration for secure authentication
+SECURE_COOKIES = os.getenv("SECURE_COOKIES", "true").lower() == "true"
+COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "None")  # Required for cross-origin
+COOKIE_MAX_AGE = int(os.getenv("COOKIE_MAX_AGE", str(60 * 60 * 24 * 7)))  # Default 7 days
+
+# Validate cookie configuration: SameSite=None requires Secure=true
+if COOKIE_SAMESITE == "None" and not SECURE_COOKIES:
+    print("⚠️" * 50)
+    print("⚠️  WARNING: Invalid cookie configuration!")
+    print("⚠️  SameSite=None requires Secure=true (browsers will reject the cookie)")
+    print("⚠️")
+    print("⚠️  Current settings:")
+    print(f"⚠️  - COOKIE_SAMESITE: {COOKIE_SAMESITE}")
+    print(f"⚠️  - SECURE_COOKIES: {SECURE_COOKIES}")
+    print("⚠️")
+    print("⚠️  To fix this, either:")
+    print("⚠️  1. Set SECURE_COOKIES=true (recommended for production)")
+    print("⚠️  2. Change COOKIE_SAMESITE to 'Lax' or 'Strict' (breaks cross-origin auth)")
+    print("⚠️")
+    print("⚠️  Forcing SECURE_COOKIES=true to prevent cookie rejection...")
+    print("⚠️" * 50)
+    SECURE_COOKIES = True  # Force secure cookies when SameSite=None
 
 # Rate limiting configuration
 limiter = Limiter(
@@ -76,11 +103,21 @@ cache = Cache(
     },
 )
 
-# Enhanced CORS configuration
+# Enhanced CORS configuration with credentials support
+# Get allowed origins from environment or use production defaults
+ALLOWED_ORIGINS = [
+    origin.strip() 
+    for origin in os.getenv("CORS_ORIGINS", "https://hiremebahamas.com,https://www.hiremebahamas.com,https://hiremebahamas.vercel.app").split(",")
+    if origin.strip()
+]
+# Add localhost for development if not in production
+if not IS_PRODUCTION:
+    ALLOWED_ORIGINS.extend(["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"])
+
 CORS(
     app,
-    resources={r"/*": {"origins": "*"}},
-    supports_credentials=False,
+    resources={r"/*": {"origins": ALLOWED_ORIGINS}},
+    supports_credentials=True,  # Required for cookies
     max_age=3600,
     allow_headers=[
         "Content-Type",
@@ -126,10 +163,6 @@ def uploaded_file(filename):
 # We prefer DATABASE_PRIVATE_URL > DATABASE_URL to minimize costs.
 DATABASE_URL = os.getenv("DATABASE_PRIVATE_URL") or os.getenv("DATABASE_URL")
 USE_POSTGRESQL = DATABASE_URL is not None
-
-# Check if this is a production environment
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
-IS_PRODUCTION = ENVIRONMENT in ["production", "prod"]
 
 # For production, PostgreSQL is REQUIRED
 if IS_PRODUCTION and not USE_POSTGRESQL:
@@ -193,7 +226,7 @@ if USE_POSTGRESQL:
     if missing_fields:
         # Production-safe: log warning instead of raising exception
         # This allows the app to start for health checks and diagnostics
-        logger.warning(f"Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
+        print(f"⚠️  Warning: Invalid DATABASE_URL: missing {', '.join(missing_fields)}")
     
     DB_CONFIG = {
         "host": parsed.hostname,
@@ -856,9 +889,17 @@ def register():
 
 @app.route("/api/auth/login", methods=["POST", "OPTIONS"])
 def login():
-    """Login user"""
+    """Login user with secure cookie support"""
     if request.method == "OPTIONS":
-        return "", 200
+        # Handle preflight request with proper CORS headers
+        response = jsonify({"status": "ok"})
+        origin = request.headers.get("Origin")
+        if origin and origin in ALLOWED_ORIGINS:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        return response, 200
 
     try:
         data = request.get_json()
@@ -928,29 +969,40 @@ def login():
 
         token = jwt.encode(token_payload, app.config["SECRET_KEY"], algorithm="HS256")
 
-        return (
-            jsonify(
-                {
-                    "success": True,
-                    "message": "Login successful",
-                    "access_token": token,
-                    "token_type": "bearer",
-                    "user": {
-                        "id": user["id"],
-                        "email": user["email"],
-                        "first_name": user["first_name"] or "",
-                        "last_name": user["last_name"] or "",
-                        "user_type": user["user_type"] or "user",
-                        "location": user["location"] or "",
-                        "phone": user["phone"] or "",
-                        "bio": user["bio"] or "",
-                        "avatar_url": user["avatar_url"] or "",
-                        "is_available_for_hire": bool(user["is_available_for_hire"]),
-                    },
-                }
-            ),
-            200,
+        # Create JSON response (backward compatible)
+        response_data = {
+            "success": True,
+            "message": "Login successful",
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "id": user["id"],
+                "email": user["email"],
+                "first_name": user["first_name"] or "",
+                "last_name": user["last_name"] or "",
+                "user_type": user["user_type"] or "user",
+                "location": user["location"] or "",
+                "phone": user["phone"] or "",
+                "bio": user["bio"] or "",
+                "avatar_url": user["avatar_url"] or "",
+                "is_available_for_hire": bool(user["is_available_for_hire"]),
+            },
+        }
+        
+        response = jsonify(response_data)
+        
+        # Set secure auth_token cookie
+        response.set_cookie(
+            "auth_token",
+            token,
+            max_age=COOKIE_MAX_AGE,
+            secure=SECURE_COOKIES,  # Configurable via environment
+            httponly=True,  # XSS protection
+            samesite=COOKIE_SAMESITE,  # Cross-origin support
+            path="/",  # Available site-wide
         )
+        
+        return response, 200
 
     except Exception as e:
         print(f"Login error: {str(e)}")
