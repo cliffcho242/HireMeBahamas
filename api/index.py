@@ -728,7 +728,7 @@ async def get_user_from_db(user_id: int):
 def health():
     """Instant health check - responds in <5ms
     
-    This endpoint always returns {"ok": True} as required by Render.
+    This endpoint always returns a plain "ok" string as required by Render.
     This endpoint does NOT check database connectivity.
     
     ✅ NO DATABASE - instant response
