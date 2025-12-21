@@ -134,7 +134,6 @@ export function validateEnvironmentVariables(): ValidationResult {
         `   Example: VITE_API_URL=https://api.yourdomain.com`
       );
     } else {
-      const lowerApiUrl = apiUrl.toLowerCase();
       const hostname = new URL(apiUrl).hostname.toLowerCase();
       if (hostname.includes('railway.app')) {
         result.valid = false;
@@ -143,8 +142,9 @@ export function validateEnvironmentVariables(): ValidationResult {
           `   Render backend is required. Update to: https://your-backend.onrender.com`
         );
       }
+      const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+      const isRenderHost = hostname.endsWith('onrender.com');
       // 🚫 VERCEL ENV LOCK: No localhost in production
-      const isLocalhost = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
       if (isLocalhost && import.meta.env.PROD) {
         result.valid = false;
         result.errors.push(
@@ -162,7 +162,7 @@ export function validateEnvironmentVariables(): ValidationResult {
           `   HTTP is only allowed for localhost in development.\n` +
           `   Change to: VITE_API_URL=https://your-domain.com`
         );
-      } else if (import.meta.env.PROD && !lowerApiUrl.includes('onrender.com')) {
+      } else if (import.meta.env.PROD && !isRenderHost) {
         result.valid = false;
         result.errors.push(
           `❌ INVALID BACKEND TARGET: VITE_API_URL="${apiUrl}"\n` +
