@@ -113,7 +113,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
     def test_url_validation_empty_env_var(self):
         """Test that empty RENDER_EXTERNAL_URL falls back to default."""
         # This test verifies the fix for MissingSchema error
-        DEFAULT_URL = "https://hiremebahamas.onrender.com"
+        DEFAULT_URL = "https://hiremebahamas-backend.onrender.com"
         
         # Test with empty string
         with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": ""}):
@@ -124,7 +124,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
 
     def test_url_validation_whitespace_env_var(self):
         """Test that whitespace-only RENDER_EXTERNAL_URL falls back to default."""
-        DEFAULT_URL = "https://hiremebahamas.onrender.com"
+        DEFAULT_URL = "https://hiremebahamas-backend.onrender.com"
         
         with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "   "}):
             _base_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
@@ -134,7 +134,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
 
     def test_url_validation_relative_path(self):
         """Test that relative path RENDER_EXTERNAL_URL falls back to default."""
-        DEFAULT_URL = "https://hiremebahamas.onrender.com"
+        DEFAULT_URL = "https://hiremebahamas-backend.onrender.com"
         
         # This was the original bug: /health without scheme
         with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "/health"}):
@@ -147,7 +147,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
         """Test that valid HTTPS URL is used."""
         with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "https://custom-app.render.com"}):
             _base_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
-            DEFAULT_URL = "https://hiremebahamas.onrender.com"
+            DEFAULT_URL = "https://hiremebahamas-backend.onrender.com"
             if not _base_url or not _base_url.startswith(("http://", "https://")):
                 _base_url = DEFAULT_URL
             self.assertEqual(_base_url, "https://custom-app.render.com")
@@ -156,7 +156,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
         """Test that valid HTTP URL is used for local development."""
         with patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "http://localhost:8000"}):
             _base_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
-            DEFAULT_URL = "https://hiremebahamas.onrender.com"
+            DEFAULT_URL = "https://hiremebahamas-backend.onrender.com"
             if not _base_url or not _base_url.startswith(("http://", "https://")):
                 _base_url = DEFAULT_URL
             self.assertEqual(_base_url, "http://localhost:8000")
@@ -170,14 +170,14 @@ class TestKeepAliveBehavior(unittest.TestCase):
 
         # Simulate the ping with tuple timeout
         response = requests.get(
-            "https://hiremebahamas.onrender.com/health",
+            "https://hiremebahamas-backend.onrender.com/health",
             timeout=(6, 30),
             headers={"User-Agent": "ImmortalKeepAlive/2025"}
         )
 
         # Verify the request was made correctly
         mock_get.assert_called_once_with(
-            "https://hiremebahamas.onrender.com/health",
+            "https://hiremebahamas-backend.onrender.com/health",
             timeout=(6, 30),
             headers={"User-Agent": "ImmortalKeepAlive/2025"}
         )
@@ -190,7 +190,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
 
         try:
             requests.get(
-                "https://hiremebahamas.onrender.com/health",
+            "https://hiremebahamas-backend.onrender.com/health",
                 timeout=(6, 30)
             )
         except Exception:
@@ -207,7 +207,7 @@ class TestKeepAliveBehavior(unittest.TestCase):
 
         try:
             requests.get(
-                "https://hiremebahamas.onrender.com/health",
+                "https://hiremebahamas-backend.onrender.com/health",
                 timeout=(6, 30)
             )
         except Exception:

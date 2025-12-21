@@ -143,7 +143,7 @@ if (typeof window !== 'undefined') {
       console.log('🔗 Backend URL:', backendUrl);
       
       // Verify it's the Render backend
-      if (backendUrl === 'https://hiremebahamas.onrender.com') {
+      if (backendUrl === 'https://hiremebahamas-backend.onrender.com') {
         console.log('✅ Connected to Render backend (correct)');
       } else if (backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1')) {
         console.log('🔧 Using local development backend');
