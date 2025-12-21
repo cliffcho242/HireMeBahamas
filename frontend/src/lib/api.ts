@@ -60,7 +60,7 @@ function validateAndGetBaseUrl(): string {
     }
   })();
   const isLocal = parsedHost === 'localhost' || parsedHost === '127.0.0.1';
-  const isRenderHost = parsedHost.endsWith('onrender.com');
+  const isRenderHost = parsedHost === 'onrender.com' || parsedHost.endsWith('.onrender.com');
   if (!isRenderHost && !isLocal) {
     throw new Error('INVALID BACKEND TARGET: use your Render URL (e.g., https://your-backend.onrender.com) or localhost for development.');
   }

@@ -143,7 +143,7 @@ export function validateEnvironmentVariables(): ValidationResult {
         );
       }
       const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-      const isRenderHost = hostname.endsWith('onrender.com');
+      const isRenderHost = hostname === 'onrender.com' || hostname.endsWith('.onrender.com');
       // 🚫 VERCEL ENV LOCK: No localhost in production
       if (isLocalhost && import.meta.env.PROD) {
         result.valid = false;
