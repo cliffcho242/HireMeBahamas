@@ -9,6 +9,7 @@ import importlib
 import tracemalloc
 import logging
 from typing import Optional, List, Dict, Union, Any
+from types import MappingProxyType
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
@@ -45,30 +46,14 @@ app = FastAPI(
     openapi_url=None,
 )
 
+HEALTH_PAYLOAD = MappingProxyType({"status": "ok"})  # Minimal payload for instant Render health checks
+HEALTH_PATHS = {"/health"}
+
 # IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
-@app.get("/health", include_in_schema=False)
-@app.head("/health", include_in_schema=False)
-async def health():
-    """Health check that validates database connectivity."""
-    try:
-        engine = get_engine()
-        if engine is None:
-            raise RuntimeError("Database engine not initialized")
-
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-
-        return {
-            "status": "ok",
-            "database": "connected",
-            "platform": "render"
-        }
-    except Exception as e:
-        logging.getLogger(__name__).warning("Health check degraded: %s", e)
-        return {
-            "status": "degraded",
-            "error": "unavailable"
-        }
+@app.api_route("/health", methods=["GET", "HEAD"], include_in_schema=False)
+def health():
+    """Database-free health check for Render."""
+    return HEALTH_PAYLOAD
 
 
 # EMERGENCY HEALTH ENDPOINT — ULTRA STABLE FALLBACK
@@ -619,6 +604,8 @@ async def log_requests(request: Request, call_next):
     
     ENHANCED: Special logging for /api/auth/* to diagnose login issues.
     """
+    if request.url.path in HEALTH_PATHS:
+        return await call_next(request)
     request_id = str(uuid.uuid4())[:8]
     start_time = time.time()
     
@@ -787,55 +774,9 @@ async def startup():
     """
     logger.info("🚀 Starting HireMeBahamas API (Production Mode)")
     logger.info("   Workers: 1 (predictable memory)")
-    logger.info("   Health: DB-backed readiness")
-    logger.info("   DB: Lazy (connects on first request, warm-up enabled)")
-    
-    # Validate database configuration (SSLMODE ERROR PREVENTION)
-    try:
-        from backend.app.core.db_guards import validate_database_config
-        validate_database_config(strict=False)  # Warn but don't fail startup
-    except Exception as e:
-        logger.warning(f"Database configuration validation skipped: {e}")
-    
-    # Create background task for bootstrap (non-blocking)
-    task = asyncio.create_task(background_bootstrap())
-    _background_tasks.add(task)
-    # Remove task from set when it completes
-    task.add_done_callback(_background_tasks.discard)
-    
-    # Proactively warm up a database connection to avoid cold starts
-    try:
-        await warmup()
-    except Exception as e:
-        logger.warning(f"Warm-up during startup skipped: {e}")
-    
-    logger.info("✅ Application startup complete (instant)")
-    logger.info("   Background bootstrap running in async task")
-    
-    # Production configuration (see PRODUCTION_CONFIG_COMPLIANCE.md):
-    # - Workers: 1 (predictable memory)
-    # - Health: Validates DB connectivity
-    # - DB: Lazy (connects on first request)
-    # - Startup: Async (non-blocking)
-
-
-async def warmup():
-    """Warm up database connection to prevent cold-start delays."""
-    for attempt in range(2):
-        try:
-            engine = get_engine()
-            if engine is None:
-                raise RuntimeError("Database engine not initialized")
-
-            async with engine.connect() as conn:
-                await conn.execute(text("SELECT 1"))
-            logger.info("✅ Database warm-up completed")
-            return
-        except Exception as e:
-            logger.warning(f"Database warm-up attempt {attempt + 1} failed: {e}")
-            if attempt == 0:
-                await asyncio.sleep(1)
-    logger.error("Database warm-up failed after retries")
+    logger.info("   Health: /health bypass with zero database access")
+    logger.info("   DB: Lazy (initializes on first real request)")
+    logger.info("✅ Application startup complete (instant, no DB work)")
 
 
 @app.on_event("shutdown")
