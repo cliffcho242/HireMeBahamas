@@ -457,8 +457,7 @@ class LazyEngine:
                 f"LazyEngine: Database engine is not initialized (get_engine() returned None). "
                 f"Cannot access attribute '{name}'. "
                 f"This usually means DATABASE_URL is missing, invalid, or using a placeholder value. "
-                f"Check your DATABASE_URL environment variable configuration. "
-                f"Required format: postgresql://user:password@host:5432/database"
+                f"Check your DATABASE_URL environment variable configuration."
             )
         
         try:

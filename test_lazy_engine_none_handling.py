@@ -48,8 +48,7 @@ def test_lazy_engine_none_handling():
             required_phrases = [
                 "get_engine() returned None",
                 "Cannot access attribute 'connect'",
-                "DATABASE_URL",
-                "postgresql://user:password@host:5432/database"
+                "DATABASE_URL"
             ]
             
             missing_phrases = []
