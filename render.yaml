@@ -78,34 +78,12 @@ services:
     buildCommand: pip install poetry && poetry install --only=main
     
     # ==========================================================================
-    # START COMMAND - PRODUCTION FASTAPI CONFIGURATION
+    # START COMMAND - RENDER-SAFE HEALTH BOOTSTRAP (ZERO DEPENDENCIES)
     # ==========================================================================
-    # ✅ FINAL "DO NOT EVER DO" LIST COMPLIANT:
-    # ✅ Single Gunicorn worker (workers=1)
-    # ✅ No blocking DB calls at import
-    # ✅ Health check never touches DB
-    # ✅ No --reload flag
-    # ✅ No heavy startup logic (all async)
-    # ✅ Single platform deployment (Render only)
-    #
-    # EXPECTED LOGS:
-    #   ✅ Booting worker with pid ...
-    #   ✅ Application startup complete
-    #
-    # YOU SHOULD NOT SEE:
-    #   ❌ Worker was sent SIGTERM
-    #
-    # WHY THIS FIX IS PERMANENT:
-    #   • Render kills slow starters → We start instantly
-    #   • Gunicorn defaults unsafe → We use workers=1
-    #   • One worker = predictable memory
-    #   • Async startup = instant health
-    #   • DB warms after app is alive
-    #
-    # This is how production FastAPI apps actually run.
-    #
-    # Working directory: Changes to backend/ where app/main.py and gunicorn.conf.py are located
-    startCommand: cd backend && poetry run gunicorn app.main:app --config gunicorn.conf.py
+    # ✅ Single worker, no DB, no middleware, instant startup
+    # ✅ Uses backend/health_app.py to serve /api/health only
+    # ✅ Matches Render dashboard start command requirement
+    startCommand: gunicorn health_app:app --bind 0.0.0.0:$PORT --workers 1
     
     envVars:
       - key: ENVIRONMENT
@@ -212,11 +190,8 @@ services:
     # With Standard plan (Always On), health checks are instant
     # No cold starts, no warm-up needed
     #
-    # AVAILABLE ENDPOINTS:
-    #   /health      - Instant health check (no prefix)
-    #   /api/health  - Instant health check (with /api prefix) ✅ RECOMMENDED
-    #   /ready       - Readiness check with DB connectivity
-    #   /live        - Liveness probe
+    # AVAILABLE ENDPOINTS (BOOTSTRAP APP):
+    #   /api/health  - Instant health check (no DB, no middleware)
     #
     # ⚠️  CRITICAL: RENDER DASHBOARD CONFIGURATION
     # ==========================================================================
