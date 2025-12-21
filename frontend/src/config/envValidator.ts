@@ -107,38 +107,45 @@ export function validateEnvironmentVariables(): ValidationResult {
     }
   });
 
+  const apiEnv = {
+    url: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL,
+    name: import.meta.env.VITE_API_BASE_URL ? 'VITE_API_BASE_URL' : 'VITE_API_URL',
+  };
+
+  const apiUrl = apiEnv.url;
+  const apiVarName = apiEnv.name;
+  const apiVarOptions = 'VITE_API_BASE_URL or VITE_API_URL';
+
   // Check for required variables
   // API URL is optional (can use same-origin for Vercel serverless)
   // But if VITE_REQUIRE_BACKEND_URL is true, then it's required
   if (import.meta.env.VITE_REQUIRE_BACKEND_URL === 'true') {
-    if (!import.meta.env.VITE_API_URL) {
+    if (!apiUrl) {
       result.errors.push(
-        `❌ MISSING REQUIRED VARIABLE: VITE_API_URL\n` +
-        `   VITE_REQUIRE_BACKEND_URL is set to 'true', but VITE_API_URL is not set.\n` +
-        `   Either set VITE_API_URL or set VITE_REQUIRE_BACKEND_URL to 'false'.`
+        `❌ MISSING REQUIRED VARIABLE: ${apiVarOptions}\n` +
+        `   VITE_REQUIRE_BACKEND_URL is set to 'true', but no API URL is configured.\n` +
+        `   Either set ${apiVarOptions} or set VITE_REQUIRE_BACKEND_URL to 'false'.`
       );
       result.valid = false;
     }
   }
 
   // Validate API URL format if set
-  if (import.meta.env.VITE_API_URL) {
-    const apiUrl = import.meta.env.VITE_API_URL;
-    
+  if (apiUrl) {
     // Check if it's a valid URL
     if (!isValidUrl(apiUrl)) {
       result.valid = false;
       result.errors.push(
-        `❌ INVALID URL FORMAT: VITE_API_URL="${apiUrl}"\n` +
+        `❌ INVALID URL FORMAT: ${apiVarName}=\"${apiUrl}\"\n` +
         `   URL must start with http:// or https://\n` +
-        `   Example: VITE_API_URL=https://api.yourdomain.com`
+        `   Example: ${apiVarName}=https://api.yourdomain.com`
       );
     } else {
       const hostname = new URL(apiUrl).hostname.toLowerCase();
       if (hostname.includes('railway.app')) {
         result.valid = false;
         result.errors.push(
-          `❌ INVALID BACKEND TARGET: VITE_API_URL points to Railway ("${apiUrl}")\n` +
+          `❌ INVALID BACKEND TARGET: ${apiVarName} points to Railway (\"${apiUrl}\")\n` +
           `   Render backend is required. Update to: https://your-backend.onrender.com`
         );
       }
@@ -148,24 +155,24 @@ export function validateEnvironmentVariables(): ValidationResult {
       if (isLocalhost && import.meta.env.PROD) {
         result.valid = false;
         result.errors.push(
-          `❌ LOCALHOST URL IN PRODUCTION: VITE_API_URL="${apiUrl}"\n` +
+          `❌ LOCALHOST URL IN PRODUCTION: ${apiVarName}=\"${apiUrl}\"\n` +
           `   🚫 VERCEL ENV LOCK VIOLATION: No localhost URLs in production\n` +
           `   Production users cannot access your local development server.\n` +
-          `   Change to: VITE_API_URL=https://your-backend.onrender.com`
+          `   Change to: ${apiVarName}=https://your-backend.onrender.com`
         );
       } else if (!isSecureUrl(apiUrl)) {
         // Check if using HTTPS in production
         result.valid = false;
         result.errors.push(
-          `❌ INSECURE URL IN PRODUCTION: VITE_API_URL="${apiUrl}"\n` +
+          `❌ INSECURE URL IN PRODUCTION: ${apiVarName}=\"${apiUrl}\"\n` +
           `   Production deployments must use HTTPS.\n` +
           `   HTTP is only allowed for localhost in development.\n` +
-          `   Change to: VITE_API_URL=https://your-domain.com`
+          `   Change to: ${apiVarName}=https://your-domain.com`
         );
       } else if (import.meta.env.PROD && !isRenderHost) {
         result.valid = false;
         result.errors.push(
-          `❌ INVALID BACKEND TARGET: VITE_API_URL="${apiUrl}"\n` +
+          `❌ INVALID BACKEND TARGET: ${apiVarName}=\"${apiUrl}\"\n` +
           `   Frontend is locked to Render backend. Set to your Render URL (e.g., https://your-backend.onrender.com).`
         );
       }

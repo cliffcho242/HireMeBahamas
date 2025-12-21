@@ -8,6 +8,8 @@ import os
 import re
 from pathlib import Path
 
+BACKEND_URL = "https://hiremebahamas-backend.onrender.com"
+
 
 def test_vercel_json_backend_url():
     """Verify vercel.json has correct backend URL without trailing slash."""
@@ -26,11 +28,9 @@ def test_vercel_json_backend_url():
     
     destination = api_rewrite["destination"]
     
-    # Must be hiremebahamas.onrender.com (no hyphens)
-    assert "hiremebahamas.onrender.com" in destination, \
+    # Must be hiremebahamas-backend.onrender.com
+    assert BACKEND_URL in destination, \
         f"Wrong backend URL: {destination}"
-    assert "hire-me-bahamas" not in destination, \
-        "Backend URL has incorrect format (should be hiremebahamas, not hire-me-bahamas)"
     
     # Must not have trailing slash
     url_match = re.search(r'https://[^/]+', destination)
@@ -49,28 +49,26 @@ def test_env_production_example():
         content = f.read()
     
     # Check for correct URL
-    assert "hiremebahamas.onrender.com" in content, \
-        "VITE_API_URL not set to hiremebahamas.onrender.com"
-    assert "hire-me-bahamas" not in content, \
-        "Found incorrect URL format (hire-me-bahamas)"
-    
-    # Check for VITE_API_URL line
-    lines = [line.strip() for line in content.split('\n') if 'VITE_API_URL=' in line and not line.startswith('#')]
-    assert len(lines) > 0, "No VITE_API_URL found in .env.production.example"
-    
-    vite_api_url_line = lines[0]
-    
+    assert BACKEND_URL in content, \
+        "VITE_API_BASE_URL not set to hiremebahamas-backend.onrender.com"
+
+    # Check for VITE_API_BASE_URL line
+    lines = [line.strip() for line in content.split('\n') if line.startswith('VITE_API_BASE_URL=')]
+    assert len(lines) > 0, "No VITE_API_BASE_URL found in .env.production.example"
+
+    vite_api_base_line = lines[0]
+
     # Must not have trailing slash
-    assert not vite_api_url_line.rstrip().endswith('/'), \
-        f"VITE_API_URL has trailing slash: {vite_api_url_line}"
-    
+    assert not vite_api_base_line.rstrip().endswith('/'), \
+        f"VITE_API_BASE_URL has trailing slash: {vite_api_base_line}"
+
     # Must not have quotes
     # Extract the URL part after the =
-    url_part = vite_api_url_line.split('=', 1)[1]
+    url_part = vite_api_base_line.split('=', 1)[1]
     assert not url_part.startswith('"') and not url_part.startswith("'"), \
-        f"VITE_API_URL has quotes: {vite_api_url_line}"
+        f"VITE_API_BASE_URL has quotes: {vite_api_base_line}"
     assert not url_part.rstrip().endswith('"') and not url_part.rstrip().endswith("'"), \
-        f"VITE_API_URL has quotes: {vite_api_url_line}"
+        f"VITE_API_BASE_URL has quotes: {vite_api_base_line}"
     
     print("✅ .env.production.example format is correct")
 

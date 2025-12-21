@@ -182,7 +182,7 @@ def test_frontend_env_var_setup():
     with open("frontend/.env.production.example", "r") as f:
         content = f.read()
     
-    assert "VITE_API_URL" in content, "❌ VITE_API_URL not in .env.production.example"
+    assert "VITE_API_BASE_URL" in content, "❌ VITE_API_BASE_URL not in .env.production.example"
     assert "render.com" in content, "❌ Backend URL should point to Render"
     
     print("   ✅ Frontend env var example configured")
