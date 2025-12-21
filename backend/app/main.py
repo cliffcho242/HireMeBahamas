@@ -11,6 +11,9 @@ import logging
 from typing import Optional, List, Dict, Union, Any
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+
+from .database import get_engine
 
 # Enable tracemalloc to track memory allocations for debugging
 # This prevents RuntimeWarning: Enable tracemalloc to get the object allocation traceback
@@ -49,18 +52,16 @@ HEALTH_PATHS = {"/health"}
 @app.head("/health", include_in_schema=False)
 async def health():
     """Health check with database connectivity awareness."""
-    from sqlalchemy import text
-    from .database import get_engine
-
     engine = get_engine()
     if engine is None:
         return {"status": "degraded"}
 
     try:
-        async with engine.begin() as conn:
+        async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
         return {"status": "ok"}
-    except Exception:
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Health check degraded: %s", exc)
         return {"status": "degraded"}
 
 
@@ -546,8 +547,8 @@ CACHE_CONTROL_RULES = {
     "/api/jobs": {"GET": "public, max-age=60, stale-while-revalidate=120"},
     "/api/posts": {"GET": "public, max-age=60, stale-while-revalidate=120"},
     "/api/jobs/stats": {"GET": "public, max-age=300, stale-while-revalidate=600"},
-    # Health endpoints - cache briefly while keeping freshness
-    "/health/ping": {"GET": "public, max-age=60"},
+    # Health endpoints - keep ping real-time, allow short cache for /health
+    "/health/ping": {"GET": "no-cache"},
     "/health": {"GET": "public, max-age=60"},
 }
 DEFAULT_CACHE_CONTROL = "public, max-age=60"
@@ -570,7 +571,7 @@ async def add_cache_headers(request: Request, call_next):
                 cache_value = methods[request.method]
                 break
 
-        if cache_value is None:
+        if cache_value is None and path.startswith("/api"):
             cache_value = DEFAULT_CACHE_CONTROL
 
         # Don't override if already set
