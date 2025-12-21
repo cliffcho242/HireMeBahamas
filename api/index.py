@@ -115,7 +115,13 @@ app.add_middleware(
     allow_origins=allowed_origins,  # replace with frontend URL in production
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Requested-With",
+        "Accept",
+        "Accept-Language",
+    ],
 )
 
 
