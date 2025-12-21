@@ -5,14 +5,40 @@ Includes: Auth, Jobs, Users, Lazy DB, Health check
 import logging
 import os
 import threading
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
+from jose import jwt
+from passlib.context import CryptContext
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 logger = logging.getLogger(__name__)
+
+# -----------------------------
+# CONFIGURATION
+# -----------------------------
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY not set in environment")
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+# -----------------------------
+# PASSWORD HASHING
+# -----------------------------
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+DUMMY_PASSWORD_HASH: str = pwd_context.hash("placeholder-password")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
 
 # -----------------------------
 # LAZY DATABASE ENGINE
@@ -75,33 +101,74 @@ def health():
 # -----------------------------
 # AUTH ROUTES
 # -----------------------------
-@app.post("/api/auth/login")
-def login(request: Request):
-    """Example login route (placeholder; replace with real authentication)."""
-    engine = get_engine()
-    try:
-        with engine.connect() as conn:
-            # Replace with real auth logic
-            result = conn.execute(text("SELECT 1"))
-            _ = result.fetchone()
-            return {"status": "success", "message": "Login simulated"}
-    except SQLAlchemyError:
-        logger.exception("Database error during login")
-        raise HTTPException(status_code=500, detail="Database error")
+def create_access_token(data: dict, expires_delta: int = ACCESS_TOKEN_EXPIRE_MINUTES) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=expires_delta)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 
 @app.post("/api/auth/register")
-def register(request: Request):
-    """Example register route (placeholder; replace with real registration logic)."""
+async def register(request: Request):
+    """Register a new user with hashed password."""
     engine = get_engine()
+    data = await request.json()
+    username = data.get("username")
+    password = data.get("password")
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password required")
+
+    hashed_password = get_password_hash(password)
+
     try:
         with engine.connect() as conn:
-            # Replace with real registration logic
-            result = conn.execute(text("SELECT 1"))
-            _ = result.fetchone()
-            return {"status": "success", "message": "Register simulated"}
+            conn.execute(
+                text(
+                    "INSERT INTO users (username, password) VALUES (:username, :password)"
+                ),
+                {"username": username, "password": hashed_password},
+            )
+            conn.commit()
+            return {"status": "success", "message": "User registered"}
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    except HTTPException:
+        raise
     except SQLAlchemyError:
         logger.exception("Database error during registration")
+        raise HTTPException(status_code=500, detail="Database error")
+
+
+@app.post("/api/auth/login")
+async def login(request: Request):
+    """Authenticate user and return JWT access token."""
+    engine = get_engine()
+    data = await request.json()
+    username = data.get("username")
+    password = data.get("password")
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password required")
+
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT id, password FROM users WHERE username=:username"),
+                {"username": username},
+            )
+            user = result.mappings().first()
+            if not user:
+                verify_password(password, DUMMY_PASSWORD_HASH)
+                raise HTTPException(status_code=401, detail="Invalid credentials")
+
+            if not verify_password(password, user["password"]):
+                raise HTTPException(status_code=401, detail="Invalid credentials")
+
+            access_token = create_access_token({"sub": username})
+            return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException:
+        raise
+    except SQLAlchemyError:
+        logger.exception("Database error during login")
         raise HTTPException(status_code=500, detail="Database error")
 
 
