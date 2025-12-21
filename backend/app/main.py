@@ -52,7 +52,7 @@ HEALTH_PATHS = {"/health"}
 @app.head("/health", include_in_schema=False)
 async def health():
     """Instant health check - NO database dependency."""
-    return {"status": "healthy"}
+    return {"status": "ok"}
 
 
 # EMERGENCY HEALTH ENDPOINT — ULTRA STABLE FALLBACK
