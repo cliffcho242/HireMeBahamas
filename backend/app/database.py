@@ -139,7 +139,10 @@ def _strip_sslmode_from_asyncpg(url: str) -> str:
                 continue
             if normalized_key in normalized_query and normalized_key != key:
                 logger.warning("Normalized duplicate query parameter detected: '%s' (original: '%s')", normalized_key, key)
-            normalized_query.setdefault(normalized_key, []).extend(values)
+            if normalized_key in normalized_query:
+                normalized_query[normalized_key].extend(values)
+            else:
+                normalized_query[normalized_key] = list(values)
 
         # If no sslmode-like key was found, return original URL unchanged
         if not found_sslmode:
