@@ -130,17 +130,20 @@ def _strip_sslmode_from_asyncpg(url: str) -> str:
 
         # Normalize keys to catch values like " sslmode" with leading/trailing spaces
         normalized_query = {}
+        found_sslmode = False
         for key, values in original_query.items():
             normalized_key = key.strip()
             normalized_key_lower = normalized_key.lower()
             if normalized_key_lower == "sslmode":
+                found_sslmode = True
                 continue
             if normalized_key in normalized_query and normalized_key != key:
                 logger.warning("Normalized duplicate query parameter detected: '%s' (original: '%s')", normalized_key, key)
+                continue
             normalized_query.setdefault(normalized_key, []).extend(values)
 
         # If no sslmode-like key was found, return original URL unchanged
-        if all(k.strip().lower() != "sslmode" for k in original_query):
+        if not found_sslmode:
             return url
 
         sanitized = urlunparse(
