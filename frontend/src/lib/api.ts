@@ -52,10 +52,8 @@ function validateAndGetBaseUrl(): string {
   // 🚨 RENDER ONLY: Return hard-coded Render URL for all production traffic
   const base = RENDER_BACKEND_URL;
 
-  if (
-    !base.includes('onrender.com') &&
-    !(base.startsWith('http://localhost') || base.startsWith('https://localhost') || base.includes('127.0.0.1'))
-  ) {
+  const isLocal = base.includes('localhost') || base.includes('127.0.0.1');
+  if (!base.includes('onrender.com') && !isLocal) {
     throw new Error('INVALID BACKEND TARGET');
   }
 

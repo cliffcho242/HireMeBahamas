@@ -105,10 +105,18 @@ if not DATABASE_URL:
 
 
 def _strip_sslmode_from_asyncpg(url: str) -> str:
-    """Remove unsupported sslmode parameter for asyncpg connections."""
+    """Remove unsupported sslmode parameter for asyncpg connections.
+
+    asyncpg does not accept sslmode as a keyword argument; leaving it in the
+    query string causes SQLAlchemy to forward it to asyncpg.connect(), which
+    triggers `TypeError: connect() got an unexpected keyword argument 'sslmode'`.
+
+    Returns the sanitized URL with sslmode removed when the asyncpg driver is
+    used, otherwise returns the original URL unchanged.
+    """
     try:
         parsed = urlparse(url)
-        if "asyncpg" not in parsed.scheme or "sslmode=" not in (parsed.query or ""):
+        if "asyncpg" not in parsed.scheme:
             return url
 
         query = parse_qs(parsed.query, keep_blank_values=True)
