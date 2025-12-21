@@ -100,13 +100,14 @@ def test_lazy_initialization():
                 if current_indent <= function_indent:
                     in_function = False
             
-        # Check for engine creation outside any function
-        if ('create_async_engine(' in line or 'create_engine(' in line) and not line.strip().startswith('#'):
-            if not in_function:
-                # Found engine creation at module level (outside any function)!
-                print(f"   ❌ Found engine creation at module level (line {i+1}): {line.strip()}")
-                raise AssertionError(f"Engine created at module level in api/index.py line {i+1}")
-            # If inside a function, it's OK (that's the lazy pattern)
+            # Check for engine creation outside any function
+            normalized_line = line.replace(" ", "")
+            if ('create_async_engine(' in normalized_line or 'create_engine(' in normalized_line) and not line.strip().startswith('#'):
+                if not in_function:
+                    # Found engine creation at module level (outside any function)!
+                    print(f"   ❌ Found engine creation at module level (line {i+1}): {line.strip()}")
+                    raise AssertionError(f"Engine created at module level in api/index.py line {i+1}")
+                # If inside a function, it's OK (that's the lazy pattern)
         
         print("   ✅ api/index.py does not create engine at module level (GOOD)")
         

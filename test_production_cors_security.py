@@ -133,7 +133,7 @@ def test_main_app_configuration():
 
 
 def test_vercel_handler_configuration():
-    """Test that api/index.py configures CORS middleware"""
+    """Test that api/index.py (Render handler) configures CORS middleware"""
     print("\n4. Testing api/index.py (Render handler) configuration...")
     print("-" * 60)
     

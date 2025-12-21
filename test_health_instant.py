@@ -125,7 +125,7 @@ def test_backend_main_health_endpoint():
     print("✅ PASS: Health endpoint is synchronous (not async)")
     
     # Check 2: Has correct decorator
-    if '@app.get("/health", include_in_schema=False)' not in content:
+    if '@app.get("/health"' not in content:
         print("⚠️  WARNING: Health endpoint missing expected decorator")
         return True
     
