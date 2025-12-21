@@ -18,6 +18,36 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 logger = logging.getLogger(__name__)
 
 # -----------------------------
+# CORS NORMALIZATION
+# -----------------------------
+def _normalize_allowed_origins(origins):
+    """Ensure canonical domains are always allowed and HTTPS enforced."""
+    required = {
+        "https://hiremebahamas.com",
+        "https://www.hiremebahamas.com",
+    }
+    
+    # Preserve wildcard behavior exactly
+    if any(origin.strip() == "*" for origin in origins):
+        return ["*"]
+    
+    normalized = []
+    for origin in origins:
+        candidate = origin.strip()
+        if not candidate:
+            continue
+        if candidate.startswith("http://"):
+            candidate = "https://" + candidate[len("http://"):]
+        if candidate not in normalized:
+            normalized.append(candidate)
+    
+    for domain in required:
+        if domain not in normalized:
+            normalized.append(domain)
+    
+    return normalized
+
+# -----------------------------
 # CONFIGURATION
 # -----------------------------
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
@@ -79,6 +109,7 @@ allowed_origins = (
     if _origins_env
     else _default_origins
 )
+allowed_origins = _normalize_allowed_origins(allowed_origins)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,  # replace with frontend URL in production

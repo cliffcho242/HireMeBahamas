@@ -60,7 +60,8 @@ def test_production_cors_origins():
         expected_origins = {
             "https://hiremebahamas.com",
             "https://www.hiremebahamas.com",
-            "https://hiremebahamas.vercel.app"
+            "https://hiremebahamas.vercel.app",
+            "https://hire-me-bahamas.vercel.app",
         }
         assert set(backend_origins) == expected_origins, f"❌ FAIL: Unexpected origins. Expected {expected_origins}, got {set(backend_origins)}"
         print(f"   ✅ {len(backend_origins)} specific origins configured")
@@ -133,9 +134,12 @@ def test_custom_origins():
         origins = get_cors_origins()
         print(f"Custom origins: {origins}")
         
-        expected = ["https://custom1.com", "https://custom2.com"]
-        assert origins == expected, f"❌ FAIL: Expected {expected}, got {origins}"
-        print("✅ Custom origins from environment variable work correctly")
+        required_domains = {"https://hiremebahamas.com", "https://www.hiremebahamas.com"}
+        expected_custom = {"https://custom1.com", "https://custom2.com"}
+        origins_set = set(origins)
+        assert expected_custom.issubset(origins_set), f"❌ FAIL: Expected custom origins {expected_custom}, got {origins_set}"
+        assert required_domains.issubset(origins_set), "❌ FAIL: Primary domains must always be allowed for Safari/iOS"
+        print("✅ Custom origins from environment variable work correctly with required domains included")
         print()
         
     finally:
@@ -144,6 +148,42 @@ def test_custom_origins():
             del os.environ["ENVIRONMENT"]
         if "ALLOWED_ORIGINS" in os.environ:
             del os.environ["ALLOWED_ORIGINS"]
+    
+    return True
+
+
+def test_primary_domains_always_present():
+    """Ensure primary domains are added even when ALLOWED_ORIGINS is incomplete."""
+    print("=" * 70)
+    print("PRIMARY DOMAIN COMPLETENESS TEST")
+    print("=" * 70)
+    print()
+    
+    os.environ["ENVIRONMENT"] = "production"
+    os.environ["VERCEL_ENV"] = "production"
+    os.environ["ALLOWED_ORIGINS"] = "https://hiremebahamas.com"
+    
+    try:
+        import importlib
+        import app.core.environment
+        import backend_app.core.environment
+        
+        importlib.reload(app.core.environment)
+        importlib.reload(backend_app.core.environment)
+        
+        required = {"https://hiremebahamas.com", "https://www.hiremebahamas.com"}
+        
+        backend_origins = set(app.core.environment.get_cors_origins())
+        api_origins = set(backend_app.core.environment.get_cors_origins())
+        
+        assert required.issubset(backend_origins), f"❌ FAIL: Backend origins missing required domains: {backend_origins}"
+        assert required.issubset(api_origins), f"❌ FAIL: API origins missing required domains: {api_origins}"
+        print("✅ Primary domains automatically included when ALLOWED_ORIGINS lacks www variant")
+        print()
+    finally:
+        for key in ("ENVIRONMENT", "VERCEL_ENV", "ALLOWED_ORIGINS"):
+            if key in os.environ:
+                del os.environ[key]
     
     return True
 
@@ -173,7 +213,8 @@ def test_wildcard_rejection():
         expected = [
             "https://hiremebahamas.com",
             "https://www.hiremebahamas.com",
-            "https://hiremebahamas.vercel.app"
+            "https://hiremebahamas.vercel.app",
+            "https://hire-me-bahamas.vercel.app",
         ]
         assert origins == expected, f"❌ FAIL: Wildcard not rejected. Expected {expected}, got {origins}"
         print("✅ Wildcard in ALLOWED_ORIGINS correctly rejected")
@@ -194,6 +235,7 @@ def main():
     try:
         test_production_cors_origins()
         test_custom_origins()
+        test_primary_domains_always_present()
         test_wildcard_rejection()
         
         print()
