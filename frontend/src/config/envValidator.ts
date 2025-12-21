@@ -134,6 +134,14 @@ export function validateEnvironmentVariables(): ValidationResult {
         `   Example: VITE_API_URL=https://api.yourdomain.com`
       );
     } else {
+      const lowerApiUrl = apiUrl.toLowerCase();
+      if (lowerApiUrl.includes('railway')) {
+        result.valid = false;
+        result.errors.push(
+          `❌ INVALID BACKEND TARGET: VITE_API_URL points to Railway ("${apiUrl}")\n` +
+          `   Render backend is required. Update to: https://your-backend.onrender.com`
+        );
+      }
       // 🚫 VERCEL ENV LOCK: No localhost in production
       const isLocalhost = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
       if (isLocalhost && import.meta.env.PROD) {
@@ -152,6 +160,12 @@ export function validateEnvironmentVariables(): ValidationResult {
           `   Production deployments must use HTTPS.\n` +
           `   HTTP is only allowed for localhost in development.\n` +
           `   Change to: VITE_API_URL=https://your-domain.com`
+        );
+      } else if (import.meta.env.PROD && !lowerApiUrl.includes('onrender.com')) {
+        result.valid = false;
+        result.errors.push(
+          `❌ INVALID BACKEND TARGET: VITE_API_URL="${apiUrl}"\n` +
+          `   Frontend is locked to Render backend. Set to your Render URL (e.g., https://your-backend.onrender.com).`
         );
       }
     }

@@ -50,7 +50,16 @@ function validateAndGetBaseUrl(): string {
   }
   
   // 🚨 RENDER ONLY: Return hard-coded Render URL for all production traffic
-  return RENDER_BACKEND_URL;
+  const base = RENDER_BACKEND_URL;
+
+  if (
+    !base.includes('onrender.com') &&
+    !(base.startsWith('http://localhost') || base.startsWith('https://localhost') || base.includes('127.0.0.1'))
+  ) {
+    throw new Error('INVALID BACKEND TARGET');
+  }
+
+  return base;
 }
 
 /**
