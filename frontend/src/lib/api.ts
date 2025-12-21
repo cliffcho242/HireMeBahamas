@@ -54,7 +54,7 @@ function validateAndGetBaseUrl(): string {
 
   const isLocal = base.includes('localhost') || base.includes('127.0.0.1');
   if (!base.includes('onrender.com') && !isLocal) {
-    throw new Error('INVALID BACKEND TARGET');
+    throw new Error('INVALID BACKEND TARGET: use your Render URL (e.g., https://your-backend.onrender.com) or localhost for development.');
   }
 
   return base;

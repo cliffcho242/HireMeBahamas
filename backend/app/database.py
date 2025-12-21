@@ -111,8 +111,12 @@ def _strip_sslmode_from_asyncpg(url: str) -> str:
     query string causes SQLAlchemy to forward it to asyncpg.connect(), which
     triggers `TypeError: connect() got an unexpected keyword argument 'sslmode'`.
 
-    Returns the sanitized URL with sslmode removed when the asyncpg driver is
-    used, otherwise returns the original URL unchanged.
+    Args:
+        url: Database connection URL which may contain sslmode in the query.
+
+    Returns:
+        Sanitized URL with sslmode removed when the asyncpg driver is used,
+        otherwise the original URL unchanged.
     """
 
     try:

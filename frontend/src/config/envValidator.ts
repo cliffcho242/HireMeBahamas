@@ -135,7 +135,8 @@ export function validateEnvironmentVariables(): ValidationResult {
       );
     } else {
       const lowerApiUrl = apiUrl.toLowerCase();
-      if (lowerApiUrl.includes('railway.app')) {
+      const hostname = new URL(apiUrl).hostname.toLowerCase();
+      if (hostname.includes('railway.app')) {
         result.valid = false;
         result.errors.push(
           `❌ INVALID BACKEND TARGET: VITE_API_URL points to Railway ("${apiUrl}")\n` +

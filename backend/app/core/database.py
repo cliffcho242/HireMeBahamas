@@ -30,6 +30,7 @@
 import logging
 import threading
 import errno
+import ssl
 from typing import Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
@@ -37,7 +38,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from .config import settings
-from app.database import SSL_CONTEXT
 
 # Configure logging for database connection debugging
 logger = logging.getLogger(__name__)
@@ -192,6 +192,7 @@ STATEMENT_TIMEOUT_MS = settings.DB_STATEMENT_TIMEOUT_MS
 # ✅ asyncpg handles TLS negotiation automatically; sslmode query param is stripped.
 # ❌ Do not pass sslmode in connect_args for asyncpg.
 # =============================================================================
+SSL_CONTEXT = ssl.create_default_context()
 
 # =============================================================================
 # CREATE ASYNC ENGINE - LAZY INITIALIZATION FOR SERVERLESS (Vercel/Render)
