@@ -6,7 +6,6 @@
 # ✅ Single Gunicorn worker (workers=1)
 # ✅ No blocking DB calls at import
 # ✅ Health check never touches DB
-# ✅ No --reload flag
 # ✅ No heavy startup logic (all async)
 # ✅ Single platform deployment (Render)
 #
@@ -36,9 +35,7 @@
 # - --workers 2 - Two workers for production
 # - --timeout 120 - Prevents premature SIGTERM during startup
 # 
-# ❌ NO extra flags (no --reload, no --preload, no SSL flags)
-# ❌ NO sslmode configuration here
-#
+# ❌ NO extra flags (no preload or SSL flags)
 # Single worker with UvicornWorker (async event loop) handles 100+ concurrent connections efficiently.
 # This is the correct production pattern for FastAPI on Render/Railway.
 web: cd backend && poetry run gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000} --workers 2 --timeout 120

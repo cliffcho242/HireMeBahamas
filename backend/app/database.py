@@ -28,7 +28,6 @@
 # =============================================================================
 
 import os
-import ssl
 import logging
 import threading
 import errno
@@ -286,7 +285,6 @@ POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))  # Recycle every 5 min (
 CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "30"))  # 30s for Render cold starts
 COMMAND_TIMEOUT = int(os.getenv("DB_COMMAND_TIMEOUT", "30"))  # 30s per query
 STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))  # 30s in milliseconds
-SSL_CONTEXT = ssl.create_default_context()
 
 # =============================================================================
 # SSL CONFIGURATION - NEON SAFE MODE
@@ -380,11 +378,6 @@ def get_engine():
                         pool_pre_ping=True,  # Validate connections before use (ONLY pool option needed)
                         pool_recycle=POOL_RECYCLE,  # Recycle every 5 min (serverless-friendly)
                         pool_timeout=POOL_TIMEOUT,  # Wait max 30s for connection from pool
-                        connect_args={
-                            "ssl": SSL_CONTEXT,
-                            "timeout": CONNECT_TIMEOUT,
-                            "command_timeout": COMMAND_TIMEOUT,
-                        },
                         
                         # Echo SQL for debugging (disabled in production)
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",

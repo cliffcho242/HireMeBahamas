@@ -29,7 +29,6 @@ import os
 import logging
 import threading
 import errno
-import ssl
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -220,13 +219,6 @@ def get_engine():
                     return None
                 
                 try:
-                    # Create SSL context for secure connections
-                    # This is the CORRECT way to configure SSL with asyncpg
-                    ssl_context = ssl.create_default_context()
-                    
-                    # Create engine with SSL context
-                    # asyncpg does NOT support sslmode parameter
-                    # SSL is configured via context in connect_args
                     _engine = create_async_engine(
                         DATABASE_URL,
                         # Enterprise hardening for Render + Neon
@@ -235,15 +227,7 @@ def get_engine():
                         pool_size=POOL_SIZE,          # keep small on Render
                         max_overflow=MAX_OVERFLOW,    # burst safely
                         pool_timeout=POOL_TIMEOUT,    # Wait max 30s for connection from pool
-                        
-                        # CRITICAL: SSL configured via context (NOT sslmode)
-                        # This works with asyncpg, Neon, Render, and all cloud databases
-                        connect_args={
-                            "ssl": ssl_context,                    # SSL context for secure connections
-                            "timeout": CONNECT_TIMEOUT,            # Connection timeout
-                            "command_timeout": COMMAND_TIMEOUT,    # Query timeout
-                        },
-                        
+
                         # Echo SQL for debugging (disabled in production)
                         echo=os.getenv("DB_ECHO", "false").lower() == "true",
                     )

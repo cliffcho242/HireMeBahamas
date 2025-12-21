@@ -6,7 +6,7 @@ import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
 import { ENV_API } from '../config/env';
 import { refreshToken } from './auth';
 import { safeParseUrl } from '../lib/safeUrl';
-import { apiUrl, getApiBase } from '../lib/api';
+import { apiUrl } from '../lib/api';
 import { guardMutation, logDemoModeStatus } from '../config/demo';
 
 // Note: Backend URL validation happens automatically when backendRouter is imported
@@ -69,10 +69,7 @@ if (import.meta.env.DEV) {
   logBackendConfiguration();
 }
 
-// Use safe URL builder to get validated API base URL
-// getApiBase() returns normalized URL without trailing slash
-// In production (Vercel), this will use same-origin, and Vercel will proxy /api/* to backend
-const API_BASE_URL = getApiBase();
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Export API constant for use in fetch calls (for backward compatibility)
 export const API = API_BASE_URL;
@@ -123,7 +120,7 @@ if (typeof window !== 'undefined') {
 // Create axios instance with retry logic
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000, // 60 seconds default timeout
+  timeout: 15000, // 15 seconds default timeout
   headers: {
     'Content-Type': 'application/json',
   },

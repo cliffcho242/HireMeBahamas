@@ -149,6 +149,10 @@ app = FastAPI(
     openapi_url=None,
 )
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 # =============================================================================
 # 🔥 MOUNT HEALTH APP FIRST — CRITICAL FOR NEVER-FAIL ARCHITECTURE
 # =============================================================================

@@ -50,7 +50,8 @@ HEALTH_PAYLOAD = MappingProxyType({"status": "ok"})  # Minimal payload for insta
 HEALTH_PATHS = {"/health"}
 
 # IMMORTAL HEALTH ENDPOINT — RESPONDS IN <5 MS EVEN ON COLDEST START
-@app.api_route("/health", methods=["GET", "HEAD"], include_in_schema=False)
+@app.get("/health")
+@app.head("/health")
 def health():
     """Database-free health check for Render."""
     return HEALTH_PAYLOAD

@@ -31,7 +31,7 @@ app = FastAPI(
 
 @app.get("/health", include_in_schema=False)
 def health():
-    return {"ok": True}
+    return {"status": "ok"}
 
 async def background_init():
     """Initialize database in background (non-blocking).
