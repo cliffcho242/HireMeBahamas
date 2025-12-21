@@ -6,7 +6,7 @@ import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
 import { ENV_API } from '../config/env';
 import { refreshToken } from './auth';
 import { safeParseUrl } from '../lib/safeUrl';
-import { apiUrl, getApiBase } from '../lib/api';
+import { apiUrl } from '../lib/api';
 import { guardMutation, logDemoModeStatus } from '../config/demo';
 
 // Note: Backend URL validation happens automatically when backendRouter is imported
@@ -72,7 +72,7 @@ if (import.meta.env.DEV) {
 // Use safe URL builder to get validated API base URL
 // getApiBase() returns normalized URL without trailing slash
 // Fallback to Render backend when VITE_API_BASE_URL is not set or empty
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || 'https://hiremebahamas-backend.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || 'https://hiremebahamas.onrender.com';
 
 // Export API constant for use in fetch calls (for backward compatibility)
 export const API = API_BASE_URL;
@@ -250,7 +250,7 @@ api.interceptors.request.use((config) => {
         `Possible solutions:\n` +
         `1. Set VITE_API_BASE_URL=https://api.yourdomain.com for production\n` +
         `2. Set VITE_API_BASE_URL=http://localhost:8000 for local dev\n` +
-        `3. Leave VITE_API_BASE_URL unset to use Render backend (https://hiremebahamas-backend.onrender.com)`
+        `3. Leave VITE_API_BASE_URL unset to use Render backend (https://hiremebahamas.onrender.com)`
       );
     }
   }

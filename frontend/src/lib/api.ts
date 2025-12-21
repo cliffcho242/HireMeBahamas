@@ -6,7 +6,7 @@
  * full URLs for API endpoints.
  * 
  * Uses VITE_API_BASE_URL environment variable or falls back to
- * Render backend (https://hiremebahamas-backend.onrender.com) when unset.
+ * Render backend (https://hiremebahamas.onrender.com) when unset.
  * 
  * Benefits:
  * - Prevents pattern errors in URL construction
@@ -44,7 +44,7 @@ function validateAndGetBaseUrl(): string {
   }
   
   // Otherwise, use Render backend as hardcoded fallback
-  return 'https://hiremebahamas-backend.onrender.com';
+  return 'https://hiremebahamas.onrender.com';
 }
 
 /**
@@ -52,7 +52,7 @@ function validateAndGetBaseUrl(): string {
  * 
  * @param path - The API path (e.g., "/api/auth/me")
  * @returns The complete URL with base URL prepended
- * @throws Error if VITE_API_URL is missing or invalid
+ * @throws Error if VITE_API_BASE_URL is invalid
  * 
  * @example
  * ```typescript
@@ -89,7 +89,7 @@ export function isApiConfigured(): boolean {
  * Get the base API URL
  * 
  * @returns The base API URL
- * @throws Error if VITE_API_URL is missing or invalid
+ * @throws Error if VITE_API_BASE_URL is invalid
  */
 export function getApiBase(): string {
   const base = validateAndGetBaseUrl();
