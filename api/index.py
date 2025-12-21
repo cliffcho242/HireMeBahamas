@@ -1,1221 +1,139 @@
 """
-MASTERMIND VERCEL SERVERLESS HANDLER — IMMORTAL DEPLOY 2025
-Zero 404/500 errors, instant cold starts, bulletproof Postgres
+MASTER RENDER/NEON BACKEND — IMMORTAL DEPLOY 2025
+FastAPI + Lazy Postgres + Health check
 """
-from fastapi import FastAPI, Header, HTTPException, Response, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from mangum import Mangum
-import os
-import sys
-import time
+import asyncio
 import logging
-import traceback
-from urllib.parse import urlparse
-from typing import Optional, List, Dict, Union, Any
-from db_url_utils import ensure_sslmode
+import os
+import threading
 
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, PlainTextResponse
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 
-def inject_typing_exports(module):
-    """Inject typing module exports into a module's namespace.
-    
-    This is required for Pydantic to properly evaluate forward references
-    when modules are aliased. When Pydantic evaluates forward references,
-    it looks in the module's __dict__ for type names like Optional, List, etc.
-    
-    Args:
-        module: The module object to inject typing exports into
-    """
-    module.__dict__['Optional'] = Optional
-    module.__dict__['List'] = List
-    module.__dict__['Dict'] = Dict
-    module.__dict__['Union'] = Union
-    module.__dict__['Any'] = Any
-
-
-# Configure logging with more detail for debugging
-# Check if runtime logs directory exists (e.g., in CI/test environment)
-runtime_log_dir = os.getenv('RUNTIME_LOG_DIR', '/tmp/runtime-logs')
-log_handlers = [logging.StreamHandler()]
-
-if os.path.exists(runtime_log_dir):
-    # Add file handler for runtime logs when directory exists
-    runtime_log_file = os.path.join(runtime_log_dir, 'api-runtime.log')
-    try:
-        file_handler = logging.FileHandler(runtime_log_file, mode='a')
-        file_handler.setFormatter(
-            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        )
-        log_handlers.append(file_handler)
-        print(f"Runtime logs will be written to: {runtime_log_file}")
-    except Exception as e:
-        print(f"Warning: Could not create runtime log file: {e}")
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=log_handlers
-)
 logger = logging.getLogger(__name__)
 
-# Log startup information
-logger.info("="*60)
-logger.info("VERCEL SERVERLESS API STARTING")
-logger.info(f"Python version: {sys.version}")
-logger.info(f"Working directory: {os.getcwd()}")
-logger.info("="*60)
-
-# 🔒 RAILWAY DETECTION: Block app startup if Railway references found
-# This prevents the app from accidentally connecting to Railway
-logger.info("Checking for Railway references in environment...")
-railway_vars_found = []
-
-# Check for specific Railway environment variable patterns
-railway_patterns = ['RAILWAY_', '_RAILWAY', '.railway.app', 'up.railway.app']
-
-for key, value in os.environ.items():
-    # Check variable name for Railway patterns
-    if any(pattern.lower() in key.lower() for pattern in railway_patterns):
-        railway_vars_found.append(key)
-        continue
-    
-    # Check variable value for Railway URLs (only if value is a string and reasonably short)
-    if value and isinstance(value, str) and len(value) < 500:
-        if any(pattern in value.lower() for pattern in ['.railway.app', 'up.railway.app']):
-            railway_vars_found.append(f"{key} (contains Railway URL)")
-
-if railway_vars_found:
-    error_msg = (
-        f"🚨 RAILWAY REFERENCE DETECTED IN ENVIRONMENT 🚨\n"
-        f"Found Railway variables: {', '.join(railway_vars_found)}\n"
-        f"This application is configured for Render ONLY.\n"
-        f"Remove all Railway environment variables and redeploy.\n"
-        f"Expected backend: https://hiremebahamas.onrender.com"
-    )
-    logger.error(error_msg)
-    raise RuntimeError(error_msg)
-else:
-    logger.info("✅ No Railway references detected - Render-only configuration confirmed")
-
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-def is_debug_mode() -> bool:
-    """Check if debug mode is enabled.
-    
-    Debug mode shows detailed error messages and diagnostics.
-    Only enabled in development or when explicitly set with DEBUG=true.
-    Preview environments require explicit DEBUG=true to enable.
-    """
-    env = os.getenv("ENVIRONMENT", "").lower()
-    debug_flag = os.getenv("DEBUG", "").lower() == "true"
-    vercel_env = os.getenv("VERCEL_ENV", "").lower()
-    
-    # Development environment always has debug mode
-    if env == "development":
-        return True
-    
-    # Explicit DEBUG=true enables debug mode in any environment
-    if debug_flag:
-        return True
-    
-    # Otherwise, no debug mode
-    return False
+# -----------------------------
+# LAZY DATABASE ENGINE SETUP
+# -----------------------------
+engine = None
+_engine_lock = threading.Lock()
+DEBUG = os.getenv("DEBUG", "").lower() == "true"  # Used for safe error responses
 
 
-def is_production_mode() -> bool:
-    """Check if running in production mode.
-    
-    Production mode hides detailed errors and sensitive information.
-    Preview environments are treated as production unless DEBUG=true is set.
-    """
-    env = os.getenv("ENVIRONMENT", "").lower()
-    vercel_env = os.getenv("VERCEL_ENV", "").lower()
-    
-    # Explicit production environment
-    if env == "production" or vercel_env == "production":
-        return True
-    
-    # Preview environments are production-like unless debug is enabled
-    if vercel_env == "preview" and not is_debug_mode():
-        return True
-    
-    return False
-
-# JWT imports with fallback
-try:
-    from jose import jwt, JWTError, ExpiredSignatureError
-    HAS_JOSE = True
-except ImportError:
+def _get_int_env(name: str, default: int) -> int:
+    """Safely parse integer environment variables with fallback defaults."""
+    value = os.getenv(name)
+    if value is None:
+        return default
     try:
-        import jwt as jwt_lib
-        JWTError = jwt_lib.PyJWTError
-        ExpiredSignatureError = jwt_lib.ExpiredSignatureError
-        
-        class jwt:
-            @staticmethod
-            def decode(token, secret, algorithms):
-                return jwt_lib.decode(token, secret, algorithms=algorithms)
-        HAS_JOSE = True
-    except ImportError:
-        HAS_JOSE = False
-        logger.error("Neither python-jose nor PyJWT is available")
+        return int(value)
+    except ValueError:
+        logger.warning("Invalid value for %s; using default %s", name, default)
+        return default
 
-# Database imports with graceful fallback
-try:
-    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-    from sqlalchemy.orm import sessionmaker
-    from sqlalchemy import text
-    HAS_DB = True
-except ImportError:
-    HAS_DB = False
-    logger.warning("Database drivers not available")
 
-# Backend imports with graceful fallback
-HAS_BACKEND = False
-BACKEND_ERROR = None
-BACKEND_ERROR_SAFE = None  # Sanitized error message for public exposure
-try:
-    api_dir = os.path.dirname(os.path.abspath(__file__))
-    sys.path.insert(0, api_dir)
-    
-    # Create comprehensive module alias for backend_app BEFORE importing
-    # This allows imports like "from app.core.security import ..." to work
-    import backend_app as app_module
-    sys.modules['app'] = app_module
-    inject_typing_exports(app_module)
-    
-    # CRITICAL FIX: Also alias all submodules so "from app.core.X" works
-    # When we do sys.modules['app'] = backend_app, Python doesn't automatically
-    # resolve app.core to backend_app.core, so we must explicitly alias each submodule
-    import backend_app.core
-    sys.modules['app.core'] = backend_app.core
-    inject_typing_exports(backend_app.core)
-    
-    # Dynamically alias all core submodules to handle all "from app.core.X" imports
-    # This ensures any module under backend_app.core can be accessed as app.core.X
-    _core_modules = ['security', 'upload', 'concurrent', 'metrics', 'redis_cache', 
-                     'socket_manager', 'cache', 'db_health', 'timeout_middleware', 'rate_limiter']
-    for _module_name in _core_modules:
-        try:
-            _module = __import__(f'backend_app.core.{_module_name}', fromlist=[''])
-            sys.modules[f'app.core.{_module_name}'] = _module
-            inject_typing_exports(_module)
-        except ImportError:
-            # Skip modules that might not be available (graceful degradation)
-            pass
-    
-    # CRITICAL FIX: Alias schemas submodules to fix Pydantic forward reference resolution
-    # When Pydantic evaluates forward references like "Optional[str]", it looks for
-    # these types in the module's __dict__. Without this, aliased schema modules
-    # (app.schemas.*) won't have typing exports available, causing PydanticUndefinedAnnotation errors.
-    import backend_app.schemas
-    sys.modules['app.schemas'] = backend_app.schemas
-    inject_typing_exports(backend_app.schemas)
-    
-    # Dynamically alias all schema submodules to handle all "from app.schemas.X" imports
-    _schema_modules = ['auth', 'job', 'message', 'post', 'review']
-    for _module_name in _schema_modules:
-        try:
-            _module = __import__(f'backend_app.schemas.{_module_name}', fromlist=[''])
-            sys.modules[f'app.schemas.{_module_name}'] = _module
-            inject_typing_exports(_module)
-        except ImportError:
-            # Skip modules that might not be available (graceful degradation)
-            pass
-    
-    # Also ensure backend_app is in sys.path
-    backend_app_path = os.path.join(api_dir, 'backend_app')
-    if backend_app_path not in sys.path:
-        sys.path.insert(0, backend_app_path)
-    
-    from backend_app.api.auth import router as auth_router
-    from backend_app.api.posts import router as posts_router
-    from backend_app.api.jobs import router as jobs_router
-    from backend_app.api.users import router as users_router
-    from backend_app.api.messages import router as messages_router
-    from backend_app.api.notifications import router as notifications_router
-    HAS_BACKEND = True
-    logger.info("✅ Backend modules imported successfully")
-except Exception as e:
-    BACKEND_ERROR = str(e)
-    # Create sanitized error message for public exposure (no file paths or internal structure)
-    error_type = type(e).__name__
-    BACKEND_ERROR_SAFE = f"{error_type}: Backend modules unavailable"
-    
-    logger.warning(f"⚠️  Backend modules not available: {e}")
-    # Only log full traceback in debug mode to avoid exposing internal structure
-    if is_debug_mode():
-        logger.warning(f"⚠️  Full traceback: {traceback.format_exc()}")
-    logger.info("Running in FALLBACK MODE with limited API functionality")
-
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-# Support both HIREME_ prefix and regular env vars
-JWT_SECRET = (
-    os.getenv("HIREME_SECRET_KEY") or 
-    os.getenv("SECRET_KEY") or 
-    os.getenv("HIREME_JWT_SECRET_KEY") or
-    os.getenv("JWT_SECRET_KEY") or
-    "dev-secret-key-change-in-production"
-)
-JWT_ALGORITHM = "HS256"
-
-# Database URL with HIREME_ prefix support
-DATABASE_URL = (
-    os.getenv("HIREME_DATABASE_URL") or
-    os.getenv("DATABASE_URL") or
-    os.getenv("HIREME_POSTGRES_URL") or
-    os.getenv("POSTGRES_URL")
-)
-
-# CORS origins - Production-safe configuration
-# 🚫 SECURITY: No wildcard (*) allowed in production
-# Production must use specific domains via ALLOWED_ORIGINS environment variable
-ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "")
-
-# Determine if running in production
-_is_production = is_production_mode()
-
-if _is_production:
-    # Production mode: strict domain whitelist only
-    if ALLOWED_ORIGINS_ENV and ALLOWED_ORIGINS_ENV != "*":
-        # Use specific origins from environment
-        ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
-        ALLOW_CREDENTIALS = True
-        logger.info(f"CORS: Production mode with specific origins: {ALLOWED_ORIGINS}")
-    else:
-        # Default production origins (no wildcard allowed)
-        ALLOWED_ORIGINS = [
-            "https://hiremebahamas.com",
-            "https://www.hiremebahamas.com",
-        ]
-        ALLOW_CREDENTIALS = True
-        logger.info(f"CORS: Production mode with default origins: {ALLOWED_ORIGINS}")
-else:
-    # Development/preview mode: include localhost and preview URLs
-    if ALLOWED_ORIGINS_ENV == "*":
-        # Allow wildcard only in development
-        ALLOWED_ORIGINS = ["*"]
-        ALLOW_CREDENTIALS = False
-        logger.info("CORS: Development mode with wildcard origins (credentials disabled)")
-    elif ALLOWED_ORIGINS_ENV:
-        # Use custom origins if provided
-        ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
-        ALLOW_CREDENTIALS = True
-        logger.info(f"CORS: Development mode with custom origins: {ALLOWED_ORIGINS}")
-    else:
-        # Default development origins
-        ALLOWED_ORIGINS = [
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "https://hiremebahamas.com",
-            "https://www.hiremebahamas.com",
-        ]
-        ALLOW_CREDENTIALS = True
-        logger.info(f"CORS: Development mode with default origins: {ALLOWED_ORIGINS}")
-
-# Mock user data for fallback
-MOCK_USERS = {
-    "1": {
-        "id": 1,
-        "email": "admin@hiremebahamas.com",
-        "first_name": "Admin",
-        "last_name": "User",
-        "role": "admin",
-        "user_type": "admin",
-        "is_active": True,
-        "profile_picture": None,
-        "location": None,
-        "phone": None,
-    }
-}
-
-# ============================================================================
-# DATABASE CONNECTION - LAZY INITIALIZATION
-# ============================================================================
-# ✅ GOOD PATTERN: Lazy connection initialization
-# - Defers connection until first request (not at module import)
-# - Reuses backend engine if available to avoid duplicate connections
-# - This prevents resource exhaustion in serverless environments
-# ============================================================================
-
-# Global variables for lazy initialization
-_db_engine = None
-_async_session_maker = None
-_engine_lock = None  # Will be initialized on first use to avoid import-time overhead
-
-def get_db_engine():
-    """Get or create database engine (lazy initialization for serverless).
-    
-    ✅ GOOD PATTERN: Defers connection until first request.
-    This prevents connection issues in Vercel serverless where connections
-    at module import time can cause failures.
-    
-    Thread-safe: Uses a lock to ensure only one engine is created even
-    when accessed from multiple threads simultaneously.
-    
-    Returns:
-        Tuple[AsyncEngine | None, sessionmaker | None]: Database engine and session maker,
-        or (None, None) if database is not available or initialization failed.
+def get_engine():
     """
-    global _db_engine, _async_session_maker, _engine_lock
-    
-    # Initialize lock on first use (not at import time)
-    if _engine_lock is None:
-        import threading
-        _engine_lock = threading.Lock()
-    
-    # Double-checked locking pattern for thread safety
-    if _db_engine is None:
+    Lazy initialization of the database engine.
+    Connects only when called in a request handler.
+    """
+    global engine
+    if engine is None:
         with _engine_lock:
-            # Check again inside the lock in case another thread created it
-            if _db_engine is None:
-                # Use backend's database engine if available
-                if HAS_BACKEND and HAS_DB:
-                    try:
-                        # Import backend database engine (already lazily initialized)
-                        from backend_app.database import engine as backend_engine
-                        from backend_app.database import AsyncSessionLocal as backend_session_maker
-                        
-                        _db_engine = backend_engine
-                        _async_session_maker = backend_session_maker
-                        logger.info("✅ Using backend's database engine (avoiding duplicate connections)")
-                        return _db_engine, _async_session_maker
-                    except Exception as e:
-                        logger.warning(f"⚠️  Could not import backend database modules: {e}")
-                        # Fall through to fallback creation
-                
-                # NO FALLBACK: Only use backend's database engine
-                # This prevents the "dual database path" issue where two separate
-                # engines with potentially different configurations were created
-                logger.warning(
-                    "⚠️  Backend database modules not available. "
-                    "Database functionality will be unavailable. "
-                    "This is expected in serverless environments where backend modules fail to load."
+            if engine is None:
+                database_url = os.getenv("DATABASE_URL")
+                if not database_url:
+                    raise RuntimeError(
+                        "DATABASE_URL environment variable must be set (Render/Neon connection string required)"
+                    )
+                pool_size = _get_int_env("DB_POOL_SIZE", 5)
+                max_overflow = _get_int_env("DB_MAX_OVERFLOW", 10)
+                pool_recycle = _get_int_env("DB_POOL_RECYCLE", 1800)
+                pool_timeout = _get_int_env("DB_POOL_TIMEOUT", 30)
+                engine = create_engine(
+                    database_url,
+                    pool_pre_ping=True,
+                    pool_size=pool_size,
+                    max_overflow=max_overflow,
+                    pool_recycle=pool_recycle,
+                    pool_timeout=pool_timeout,
                 )
-    
-    return _db_engine, _async_session_maker
+    return engine
 
-# Log database configuration status (without exposing credentials)
-if DATABASE_URL:
-    # Mask sensitive parts of URL for logging
-    try:
-        parsed = urlparse(DATABASE_URL)
-        # Show only scheme and redacted location
-        masked_url = f"{parsed.scheme}://***:***@{parsed.hostname if parsed.hostname else '***'}:{parsed.port if parsed.port else '***'}/***"
-        logger.info(f"Database URL configured: {masked_url}")
-    except Exception:
-        logger.info("Database URL configured (unable to parse for logging)")
+
+# -----------------------------
+# FASTAPI APP
+# -----------------------------
+app = FastAPI(title="HireMeBahamas Backend")
+
+# -----------------------------
+# CORS (optional)
+# -----------------------------
+_allowed_origins = os.getenv("ALLOWED_ORIGINS")
+if _allowed_origins:
+    allowed_origins = [
+        origin.strip() for origin in _allowed_origins.split(",") if origin.strip()
+    ]
 else:
-    logger.warning("⚠️  DATABASE_URL not configured - API will have limited functionality")
+    allowed_origins = ["https://hiremebahamas.com", "https://www.hiremebahamas.com"]
+allow_credentials = allowed_origins != ["*"]
 
-# For backward compatibility: provide module-level access to engine getter
-# This allows existing code to still work, but engine is created lazily on first access
-# NOTE: These variables remain None and are NOT reassigned. They exist only for
-# backward compatibility with code that checks `if db_engine:`. Always use get_db_engine()
-# to get the actual engine instance.
-db_engine = None  # Placeholder for backward compatibility - use get_db_engine() instead
-async_session_maker = None  # Placeholder for backward compatibility - use get_db_engine() instead
-
-# Check if database module is available
-if not HAS_DB:
-    logger.warning("⚠️  Database drivers not available (sqlalchemy, asyncpg)")
-if not DATABASE_URL:
-    logger.warning("⚠️  DATABASE_URL not set in environment")
-
-# ============================================================================
-# CREATE FASTAPI APP
-# ============================================================================
-app = FastAPI(
-    title="HireMeBahamas API",
-    version="2.0.0",
-    description="Job platform API for the Bahamas - Vercel Serverless",
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None,
-)
-
-# ============================================================================
-# GLOBAL EXCEPTION HANDLER
-# ============================================================================
-@app.exception_handler(Exception)
-async def panic_handler(request: Request, exc: Exception):
-    """
-    Panic Shield - Global exception handler for graceful failure.
-    
-    This catches all unhandled exceptions and returns a calm, user-friendly
-    message while logging the full error details for debugging.
-    """
-    # Get request ID if available (from request logging middleware)
-    request_id = getattr(request.state, 'id', 'unknown')
-    
-    # Log the panic with request ID for debugging
-    logger.error(f"PANIC {request_id}: {exc}")
-    
-    # Return a calm, user-friendly error response
-    return JSONResponse(
-        status_code=500,
-        content={"error": "Temporary issue. Try again."}
-    )
-
-# ============================================================================
-# CORS MIDDLEWARE
-# ============================================================================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=ALLOW_CREDENTIALS,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_origins=allowed_origins,  # configured via ALLOWED_ORIGINS env (defaults to production domains)
+    allow_credentials=allow_credentials,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# ============================================================================
-# RATE LIMITING MIDDLEWARE (NO REDIS NEEDED)
-# ============================================================================
-# In-memory rate limiting: 100 requests per 60 seconds per IP
-# ✔ Protects DB
-# ✔ Protects auth
-# ✔ Facebook-safe
-# Structure: {ip_address: [timestamp1, timestamp2, ...]}
-RATE_LIMIT: Dict[str, List[float]] = {}
 
-@app.middleware("http")
-async def rate_limit(request: Request, call_next):
-    """Rate limiting middleware - 100 requests per 60 seconds per IP.
-    
-    Protects against abuse and DDoS attacks using in-memory storage.
-    No Redis required - works in serverless environments.
+# -----------------------------
+# HEALTH CHECK ENDPOINT
+# -----------------------------
+@app.get("/health")
+@app.head("/health")
+async def health():
     """
-    # Extract client IP from headers (for serverless/proxy environments)
-    ip = (
-        request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or
-        request.headers.get("X-Real-IP", "").strip() or
-        (request.client.host if request.client else "unknown")
-    )
-    now = time.time()
-    
-    # Skip rate limiting for health check endpoints
-    if request.url.path in ["/health", "/health/ping", "/ready", "/status"]:
-        return await call_next(request)
-    
-    # Initialize rate limit tracking for this IP
-    RATE_LIMIT.setdefault(ip, [])
-    
-    # Remove timestamps older than 60 seconds
-    RATE_LIMIT[ip] = [t for t in RATE_LIMIT[ip] if now - t < 60]
-    
-    # Check if rate limit exceeded (100 requests per 60 seconds)
-    if len(RATE_LIMIT[ip]) >= 100:
-        # Log rate limit violation without exposing full IP for privacy
-        logger.warning(f"Rate limit exceeded for IP: {ip[:8]}***")
-        return Response(
-            content="Too Many Requests",
-            status_code=429,
-            headers={"Retry-After": "60"}
-        )
-    
-    # Add current request timestamp
-    RATE_LIMIT[ip].append(now)
-    
-    # Process request
-    return await call_next(request)
-
-# ============================================================================
-# CACHE CONTROL MIDDLEWARE
-# ============================================================================
-# Cache control configuration for different endpoint patterns
-CACHE_CONTROL_RULES = {
-    # Public endpoints - cacheable for 30 seconds
-    "/health": {"GET": "public, max-age=30"},
-    "/health/ping": {"GET": "public, max-age=30"},
-    "/status": {"GET": "public, max-age=30"},
-    "/ready": {"GET": "public, max-age=30"},
-    "/": {"GET": "public, max-age=30"},
-    # API endpoints with authentication - shorter cache
-    "/auth/me": {"GET": "private, max-age=30"},
-    # Default for other GET endpoints
-    "*": {"GET": "public, max-age=30"},
-}
-
-
-@app.middleware("http")
-async def add_cache_headers(request: Request, call_next):
-    """Add Cache-Control headers to API responses for browser caching.
-    
-    Implements HTTP caching with Cache-Control: public, max-age=30 for public endpoints.
-    This improves performance by allowing browsers and CDNs to cache responses for 30 seconds.
+    Render health check — does NOT touch DB
     """
-    response = await call_next(request)
-    
-    # Only add cache headers to successful GET requests
-    if request.method == "GET" and 200 <= response.status_code < 300:
-        path = request.url.path
-        
-        # Don't override if already set by endpoint
-        if "cache-control" not in response.headers:
-            cache_control = None
-            
-            # Check if this path matches any specific cache rules (excluding wildcard)
-            # Note: Using startswith() for hierarchical path matching is intentional
-            # (e.g., "/health" matches both "/health" and "/health/ping")
-            # Patterns are ordered so more specific patterns should be checked first
-            for pattern, methods in CACHE_CONTROL_RULES.items():
-                if pattern != "*":
-                    # Exact match for root path to avoid matching everything
-                    if pattern == "/" and path == "/" and request.method in methods:
-                        cache_control = methods[request.method]
-                        break
-                    # Hierarchical matching for other paths
-                    elif pattern != "/" and path.startswith(pattern) and request.method in methods:
-                        cache_control = methods[request.method]
-                        break
-            
-            # Apply wildcard default if no specific pattern matched
-            if cache_control is None and "*" in CACHE_CONTROL_RULES:
-                if request.method in CACHE_CONTROL_RULES["*"]:
-                    cache_control = CACHE_CONTROL_RULES["*"][request.method]
-            
-            # Apply the cache control header
-            if cache_control:
-                response.headers["Cache-Control"] = cache_control
-    
-    return response
+    return PlainTextResponse("ok", status_code=200)
 
-# ============================================================================
-# MIDDLEWARE - Request Logging with Enhanced Auth Tracking
-# ============================================================================
-@app.middleware("http")
-async def log_requests(request, call_next):
-    """Log all requests with timing and comprehensive error handling
-    
-    Special handling for /api/auth/* endpoints to ensure login issues are visible.
+
+# -----------------------------
+# EXAMPLE LOGIN ROUTE
+# -----------------------------
+@app.post("/api/auth/login")
+async def login(request: Request):
     """
-    start = time.time()
-    method = request.method
-    path = request.url.path
-    
-    # Get client info for tracking
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "unknown")[:100]
-    
-    # Enhanced logging for auth endpoints
-    is_auth_endpoint = path.startswith("/api/auth/")
-    
-    if is_auth_endpoint:
-        logger.info(
-            f"→ AUTH REQUEST: {method} {path}\n"
-            f"  Client IP: {client_ip}\n"
-            f"  User-Agent: {user_agent}\n"
-            f"  Headers: Authorization={bool(request.headers.get('authorization'))}, "
-            f"Content-Type={request.headers.get('content-type', 'none')}"
-        )
-    else:
-        logger.info(f"→ {method} {path}")
-    
+    Example login-like endpoint using lazy DB connection (placeholder for real auth)
+    """
+    def _check_db():
+        engine = get_engine()
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+
     try:
-        response = await call_next(request)
-        duration_ms = int((time.time() - start) * 1000)
-        status = response.status_code
-        
-        # Enhanced logging for auth endpoints
-        if is_auth_endpoint:
-            if status >= 400:
-                logger.error(
-                    f"← AUTH FAILED: {status} {method} {path} ({duration_ms}ms)\n"
-                    f"  Client IP: {client_ip}\n"
-                    f"  Status: {status} - LOGIN ATTEMPT FAILED"
-                )
-            else:
-                logger.info(
-                    f"← AUTH SUCCESS: {status} {method} {path} ({duration_ms}ms)\n"
-                    f"  Client IP: {client_ip}\n"
-                    f"  Status: {status} - LOGIN SUCCESSFUL"
-                )
-        elif status >= 400:
-            logger.warning(f"← {status} {method} {path} ({duration_ms}ms)")
-        else:
-            logger.info(f"← {status} {method} {path} ({duration_ms}ms)")
-        
-        return response
-    except Exception as e:
-        duration_ms = int((time.time() - start) * 1000)
-        
-        # Enhanced error logging for auth endpoints
-        if is_auth_endpoint:
-            logger.error(
-                f"← AUTH EXCEPTION: {method} {path} ({duration_ms}ms)\n"
-                f"  Client IP: {client_ip}\n"
-                f"  Exception Type: {type(e).__name__}\n"
-                f"  Exception Message: {str(e)}\n"
-                f"  Full Traceback:\n{traceback.format_exc()}"
-            )
-        else:
-            logger.error(
-                f"← ERROR {method} {path} ({duration_ms}ms): {type(e).__name__}: {str(e)}\n"
-                f"Traceback: {traceback.format_exc()}"
-            )
-        
-        # Use helper function for consistent debug mode detection
-        is_dev = is_debug_mode()
-        
-        # Return a proper error response instead of letting it crash silently
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": "INTERNAL_SERVER_ERROR",
-                "message": "An unexpected error occurred",
-                "details": str(e) if is_dev else "Internal server error",
-                "type": type(e).__name__ if is_dev else "ServerError",
-                "path": path,
-                "method": method,
-            }
+        await asyncio.to_thread(_check_db)
+        return {"status": "success"}
+    except SQLAlchemyError:
+        logger.error("Database error during login probe", exc_info=True)
+        raise HTTPException(
+            status_code=503,
+            detail="Authentication service temporarily unavailable",
         )
 
-# ============================================================================
-# HELPER: GET USER FROM DATABASE
-# ============================================================================
-async def get_user_from_db(user_id: int):
-    """Fetch user from database with graceful fallback"""
-    # Initialize engine lazily on first use
-    active_db_engine, active_session_maker = get_db_engine()
-    
-    if not active_session_maker:
-        return None
-    
-    try:
-        async with active_session_maker() as session:
-            result = await session.execute(
-                text("""
-                    SELECT id, email, first_name, last_name, role, user_type, 
-                           is_active, profile_picture, location, phone
-                    FROM users 
-                    WHERE id = :user_id AND is_active = true
-                """),
-                {"user_id": user_id}
-            )
-            row = result.fetchone()
-            
-            if row:
-                return {
-                    "id": row[0],
-                    "email": row[1],
-                    "first_name": row[2],
-                    "last_name": row[3],
-                    "role": row[4],
-                    "user_type": row[5],
-                    "is_active": row[6],
-                    "profile_picture": row[7],
-                    "location": row[8],
-                    "phone": row[9],
-                }
-            return None
-    except Exception as e:
-        logger.error(f"Database query failed: {e}")
-        return None
 
-# ============================================================================
-# HEALTH ENDPOINTS
-# ============================================================================
-# Note: Vercel's rewrite rule routes /api/* to /api/index.py
-# So FastAPI only sees the path AFTER /api/, meaning /api/health becomes /health
-@app.get("/health", include_in_schema=False)
-@app.head("/health", include_in_schema=False)
-def health():
-    """Instant health check - responds in <5ms
-    
-    This endpoint always returns a plain "ok" string as required by Render.
-    This endpoint does NOT check database connectivity.
-    
-    ✅ NO DATABASE - instant response
-    ✅ NO IO - instant response  
-    ✅ NO async/await - synchronous function
-    
-    Render kills apps that fail health checks, so this must be instant.
-    """
-    return "ok"
-
-@app.get("/health/ping", include_in_schema=False)
-def health_ping():
-    """Ultra-fast health ping endpoint
-    
-    ❌ No DB access
-    ❌ No external calls
-    ❌ No disk access
-    Target latency: < 30ms
-    """
-    return {"ok": True}
-
-@app.get("/where-am-i", include_in_schema=False)
-def where_am_i():
-    """
-    🔒 RENDER-ONLY PROOF ENDPOINT
-    
-    Returns backend deployment information to verify we're on Render.
-    This endpoint helps verify that the frontend is connecting to the
-    correct backend and not to old Railway infrastructure.
-    
-    Returns:
-        - backend: Always "render"
-        - host: Always "hiremebahamas.onrender.com"
-        - environment: Current environment (production/development)
-    """
-    return {
-        "backend": "render",
-        "host": "hiremebahamas.onrender.com",
-        "environment": os.getenv("ENVIRONMENT", "production"),
-        "railway_detected": False,  # Always False - no Railway allowed
-    }
-
-@app.get("/status")
-async def status():
-    """
-    Backend status endpoint for frontend health checks.
-    Returns detailed status information about backend availability.
-    
-    Security Note: In production mode, only sanitized error messages are returned.
-    Set DEBUG=true for detailed error information (development only).
-    """
-    # Initialize engine lazily on first use
-    db_engine, _ = get_db_engine()
-    
-    # Check if database is actually configured (not placeholder)
-    # Import placeholder constant to avoid hardcoding
-    try:
-        from database import DB_PLACEHOLDER_URL
-        db_configured = bool(DATABASE_URL) and DATABASE_URL != DB_PLACEHOLDER_URL
-    except ImportError:
-        # Fallback if database module doesn't have the constant
-        db_configured = bool(DATABASE_URL) and DATABASE_URL != "postgresql+asyncpg://placeholder:placeholder@invalid.local:5432/placeholder"
-    
-    # Use sanitized error in production, full error only in debug mode
-    backend_error_to_show = None
-    if not HAS_BACKEND:
-        if is_debug_mode():
-            backend_error_to_show = BACKEND_ERROR
-        else:
-            backend_error_to_show = BACKEND_ERROR_SAFE
-    
-    return {
-        "status": "online",
-        "backend_loaded": HAS_BACKEND,
-        "backend_status": "full" if HAS_BACKEND else "fallback",
-        "backend_error": backend_error_to_show,
-        "database_available": HAS_DB and db_configured,
-        "database_connected": db_configured,
-        "jwt_configured": JWT_SECRET != "dev-secret-key-change-in-production",
-        "timestamp": int(time.time()),
-        "version": "2.0.0",
-        "environment": os.getenv("ENVIRONMENT", "not_set"),
-        "capabilities": {
-            "auth": HAS_BACKEND,
-            "posts": HAS_BACKEND,
-            "jobs": HAS_BACKEND,
-            "users": HAS_BACKEND,
-            "messages": HAS_BACKEND,
-            "notifications": HAS_BACKEND,
-        },
-        "recommendation": "Backend is fully operational" if HAS_BACKEND else "Backend running in limited mode - some features may not work. Check backend_error for details."
-    }
-
-@app.get("/diagnostic")
-async def diagnostic():
-    """Comprehensive diagnostic endpoint for debugging
-    
-    In production, returns limited information to prevent information disclosure.
-    Set DEBUG=true environment variable to enable full diagnostics.
-    """
-    logger.info("Diagnostic check called")
-    
-    # Initialize engine lazily on first use
-    db_engine, _ = get_db_engine()
-    
-    # Use helper functions for consistent environment detection
-    is_debug = is_debug_mode()
-    is_prod = is_production_mode()
-    
-    # In production without debug mode, return limited info
-    if is_prod and not is_debug:
-        return {
-            "status": "operational",
-            "timestamp": int(time.time()),
-            "platform": "vercel-serverless",
-            "message": "Diagnostic details hidden in production. Set DEBUG=true to enable.",
-            "basic_checks": {
-                "backend_available": HAS_BACKEND,
-                "database_available": bool(db_engine),
-            }
-        }
-    
-    # Full diagnostics for development/debug mode
-    # Test database connection
-    db_status = "unavailable"
-    db_error = None
-    if db_engine:
-        try:
-            async with db_engine.begin() as conn:
-                await conn.execute(text("SELECT 1"))
-            db_status = "connected"
-        except Exception as e:
-            db_status = "error"
-            db_error = str(e)[:200]  # Limit error message length
-            logger.error(f"Database test failed: {e}")
-    
-    # Check environment variables (without exposing secrets)
-    env_check = {
-        "DATABASE_URL": "set" if DATABASE_URL else "missing",
-        "SECRET_KEY": "set" if JWT_SECRET != "dev-secret-key-change-in-production" else "using_default",
-        "POSTGRES_URL": "set" if os.getenv("POSTGRES_URL") else "not_set",
-        "VERCEL_ENV": os.getenv("VERCEL_ENV", "not_set"),
-        "ENVIRONMENT": os.getenv("ENVIRONMENT", "not_set"),
-    }
-    
-    return {
-        "status": "operational",
-        "timestamp": int(time.time()),
-        "platform": "vercel-serverless",
-        "debug_mode": is_debug,
-        "checks": {
-            "python_version": sys.version.split()[0],
-            "jose_jwt": HAS_JOSE,
-            "database_drivers": HAS_DB,
-            "backend_modules": HAS_BACKEND,
-            "database_engine": "initialized" if db_engine else "not_initialized",
-            "database_connection": db_status,
-            "database_error": db_error if is_debug else ("error occurred" if db_error else None),
-        },
-        "environment": env_check if is_debug else {
-            "DATABASE_URL": env_check["DATABASE_URL"],
-            "SECRET_KEY": env_check["SECRET_KEY"],
-        },
-    }
-
-@app.get("/ready")
-async def ready():
-    """Lightweight readiness check - no database calls
-    
-    ✅ CRITICAL: Does NOT touch the database to ensure instant response.
-    This endpoint indicates the application is ready to serve traffic.
-    For explicit database health checks, use /diagnostic or /status endpoints.
-    """
-    return {
-        "status": "ready",
-        "message": "Application is ready to serve traffic",
-        "timestamp": int(time.time()),
-    }
-
-# ============================================================================
-# AUTH ME ENDPOINT
-# ============================================================================
-@app.get("/auth/me")
-async def get_current_user(authorization: str = Header(None)):
-    """Get current authenticated user from JWT token.
-    
-    This endpoint ALWAYS returns 200 status to allow frontend to check
-    authentication status without treating lack of authentication as an error.
-    
-    Returns:
-        - authenticated: true, user: {...} when valid token provided
-        - authenticated: false when no token or invalid token
-    """
-    
-    # Check if JWT library is available
-    if not HAS_JOSE:
-        logger.error("JWT library not available")
-        return JSONResponse(
-            status_code=200,
-            content={
-                "authenticated": False,
-                "reason": "jwt_unavailable",
-                "message": "Authentication service temporarily unavailable"
-            }
-        )
-    
-    # Check if authorization header is provided
-    if not authorization or not authorization.startswith("Bearer "):
-        return JSONResponse(
-            status_code=200,
-            content={
-                "authenticated": False,
-                "reason": "no_token",
-                "message": "No authentication token provided"
-            }
-        )
-    
-    token = authorization.replace("Bearer ", "")
-    
-    try:
-        # Decode JWT token
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user_id = payload.get("sub")
-        
-        if not user_id:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "authenticated": False,
-                    "reason": "invalid_token",
-                    "message": "Invalid token payload"
-                }
-            )
-        
-        # Try to get user from database first
-        user = await get_user_from_db(int(user_id))
-        
-        # Fallback to mock data if database unavailable
-        if not user:
-            user = MOCK_USERS.get(str(user_id))
-        
-        if not user:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "authenticated": False,
-                    "reason": "user_not_found",
-                    "message": "User not found"
-                }
-            )
-        
-        # Successfully authenticated
-        return JSONResponse(
-            status_code=200,
-            content={
-                "authenticated": True,
-                "user": user
-            }
-        )
-        
-    except ExpiredSignatureError:
-        return JSONResponse(
-            status_code=200,
-            content={
-                "authenticated": False,
-                "reason": "token_expired",
-                "message": "Token has expired"
-            }
-        )
-    except JWTError as e:
-        logger.warning(f"JWT decode error: {e}")
-        return JSONResponse(
-            status_code=200,
-            content={
-                "authenticated": False,
-                "reason": "invalid_token",
-                "message": "Invalid token"
-            }
-        )
-    except Exception as e:
-        # Log unexpected errors but still return 200 to avoid 500 errors
-        logger.error(f"Unexpected error in /auth/me: {type(e).__name__}: {e}")
-        if is_debug_mode():
-            logger.error(f"Full traceback: {traceback.format_exc()}")
-        
-        return JSONResponse(
-            status_code=200,
-            content={
-                "authenticated": False,
-                "reason": "internal_error",
-                "message": "An unexpected error occurred during authentication"
-            }
-        )
-
-# ============================================================================
-# INCLUDE BACKEND ROUTERS IF AVAILABLE
-# ============================================================================
-# Note: Vercel routes /api/* to this function, so routers should use paths WITHOUT /api prefix
-if HAS_BACKEND:
-    try:
-        logger.info("Registering backend routers...")
-        app.include_router(auth_router, prefix="/auth", tags=["auth"])
-        logger.info("✅ Auth router registered")
-        app.include_router(posts_router, prefix="/posts", tags=["posts"])
-        logger.info("✅ Posts router registered")
-        app.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
-        logger.info("✅ Jobs router registered")
-        app.include_router(users_router, prefix="/users", tags=["users"])
-        logger.info("✅ Users router registered")
-        app.include_router(messages_router, prefix="/messages", tags=["messages"])
-        logger.info("✅ Messages router registered")
-        app.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
-        logger.info("✅ Notifications router registered")
-        logger.info("✅ All backend routers registered successfully")
-    except Exception as e:
-        logger.error(f"Failed to register backend routers: {e}\nTraceback: {traceback.format_exc()}")
-else:
-    logger.warning("⚠️  Backend modules not available - using fallback endpoints only")
-
-# ============================================================================
-# ROOT ENDPOINT
-# ============================================================================
-@app.get("/")
-async def root():
-    """Root endpoint with API information"""
-    # Initialize engine lazily on first use
-    db_engine, _ = get_db_engine()
-    
-    return {
-        "message": "HireMeBahamas API",
-        "name": "HireMeBahamas API",
-        "version": "2.0.0",
-        "status": "operational",
-        "platform": "vercel-serverless",
-        "backend_available": HAS_BACKEND,
-        "database_available": bool(db_engine),
-        "jwt_configured": JWT_SECRET != "dev-secret-key-change-in-production",
-        "endpoints": {
-            "health": "/api/health",
-            "ready": "/api/ready",
-            "auth_me": "/api/auth/me",
-            "docs": "/api/docs",
-        }
-    }
-
-# ============================================================================
-# CUSTOM 404 EXCEPTION HANDLER
-# ============================================================================
-@app.exception_handler(404)
-async def custom_404_handler(request: Request, exc: HTTPException):
-    """
-    Custom handler for 404 errors.
-    Returns a helpful JSON response instead of Vercel's default error page.
-    Logs all 404s to help diagnose routing issues.
-    """
-    path = request.url.path
-    method = request.method
-    headers = dict(request.headers)
-    
-    # Log comprehensive details for debugging
-    logger.warning(
-        f"404 NOT FOUND - {method} {path}\n"
-        f"User-Agent: {headers.get('user-agent', 'unknown')}\n"
-        f"Referer: {headers.get('referer', 'none')}\n"
-        f"Query: {request.url.query}"
-    )
-    
+# -----------------------------
+# GLOBAL ERROR HANDLER
+# -----------------------------
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error("Unhandled exception", exc_info=True)
+    message = str(exc) if DEBUG else "Internal server error"
     return JSONResponse(
-        status_code=404,
-        content={
-            "error": "NOT_FOUND",
-            "message": f"The requested endpoint '{path}' does not exist",
-            "status_code": 404,
-            "method": method,
-            "path": path,
-            "available_endpoints": {
-                "health": "/api/health",
-                "ready": "/api/ready",
-                "auth": "/api/auth/*",
-                "posts": "/api/posts/*",
-                "jobs": "/api/jobs/*",
-                "users": "/api/users/*",
-                "messages": "/api/messages/*",
-                "notifications": "/api/notifications/*",
-                "docs": "/api/docs"
-            },
-            "backend_status": "available" if HAS_BACKEND else "unavailable - limited endpoints active",
-            "help": "Check the docs at /api/docs for all available endpoints"
-        }
+        status_code=500,
+        content={"detail": message},
     )
-
-# ============================================================================
-# CATCH-ALL API ROUTE HANDLER
-# ============================================================================
-@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
-async def catch_all_api_routes(request: Request, path: str):
-    """
-    Catch-all handler for unregistered API routes.
-    This prevents users from getting cryptic Vercel 404 errors.
-    Returns helpful information about what went wrong.
-    
-    Security: In production mode, returns limited information to prevent disclosure.
-    """
-    method = request.method
-    
-    logger.error(
-        f"UNREGISTERED API ROUTE - {method} /{path}\n"
-        f"This endpoint is not implemented. Check if the backend router is loaded."
-    )
-    
-    # Use helper function for consistent environment detection
-    is_debug = is_debug_mode()
-    
-    # Base response
-    response = {
-        "error": "ENDPOINT_NOT_IMPLEMENTED",
-        "message": f"The API endpoint '/{path}' is not implemented",
-        "status_code": 404,
-        "method": method,
-        "path": f"/{path}",
-    }
-    
-    # Add detailed debugging information only in debug mode
-    if is_debug:
-        response.update({
-            "backend_loaded": HAS_BACKEND,
-            "suggestion": "This endpoint may need to be added to the backend router, or the backend modules failed to load.",
-            "available_endpoints": {
-                "auth": "/api/auth/* (login, register, me, refresh, verify)",
-                "posts": "/api/posts/* (list, create, update, delete)",
-                "jobs": "/api/jobs/* (list, create, apply)",
-                "users": "/api/users/* (profile, search, follow)",
-                "messages": "/api/messages/* (send, list, read)",
-                "notifications": "/api/notifications/* (list, mark as read)"
-            }
-        })
-    
-    return JSONResponse(
-        status_code=404,
-        content=response
-    )
-
-# ============================================================================
-# FOREVER FIX INTEGRATION
-# ============================================================================
-# Forever Fix is optional and may not be available in serverless environments
-# where the parent directory is not deployed. This is safe to skip.
-try:
-    # Attempt to import forever_fix from parent directory
-    # This will only work if the file is deployed (e.g., Render, local dev)
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
-    
-    # Try importing - will raise ImportError if not available
-    from forever_fix import ForeverFixMiddleware, get_forever_fix_status
-    
-    # Add Forever Fix middleware to prevent app death
-    app.add_middleware(ForeverFixMiddleware)
-    logger.info("✅ Forever Fix middleware enabled")
-    
-    # Add status endpoint for monitoring
-    # Note: This endpoint is public but doesn't expose sensitive information
-    @app.get("/forever-status")
-    async def forever_status():
-        """
-        Get Forever Fix system status for monitoring.
-        
-        This is a public monitoring endpoint that provides system health information.
-        It does not expose sensitive configuration or credentials.
-        """
-        return get_forever_fix_status()
-    
-except ImportError:
-    # Expected in serverless environments where forever_fix.py is not deployed
-    logger.info("ℹ️  Forever Fix not available (expected in serverless environments like Vercel)")
-except Exception as e:
-    # Log unexpected errors but don't crash - this is optional functionality
-    logger.warning(f"⚠️  Could not load Forever Fix (non-critical): {e}")
-
-# ============================================================================
-# EXPORT HANDLER FOR VERCEL
-# ============================================================================
-handler = Mangum(app, lifespan="off")
-
-# For local testing
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv('PORT', 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
