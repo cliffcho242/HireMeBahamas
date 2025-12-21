@@ -26,7 +26,7 @@
 # - Database: Neon PostgreSQL (managed, scalable)
 # 
 # ABSOLUTE PROHIBITIONS:
-# ❌ Multiple Gunicorn workers (MUST be 1)
+# ✅ Controlled Gunicorn workers (2 for zero-downtime rollout)
 # ❌ DB calls at import time
 # ❌ psycopg.connect(... sslmode=...) with URL
 # ❌ Health endpoint touching DB
@@ -78,12 +78,12 @@ services:
     buildCommand: pip install poetry && poetry install --only=main
     
     # ==========================================================================
-    # START COMMAND - RENDER-SAFE HEALTH BOOTSTRAP (ZERO DEPENDENCIES)
+    # START COMMAND - ZERO-DOWNTIME GUNICORN (UVICORN WORKER)
     # ==========================================================================
-    # ✅ Single worker, no DB, no middleware, instant startup
-    # ✅ Uses backend/health_app.py to serve /api/health only
-    # ✅ Matches Render dashboard start command requirement
-    startCommand: gunicorn health_app:app --bind 0.0.0.0:$PORT --workers 1
+    # ✅ Dual workers with recycling + jitter for graceful restarts
+    # ✅ UvicornWorker for async FastAPI handling
+    # ✅ Threaded I/O for predictable CPU usage
+    startCommand: cd backend && poetry run gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100
     
     envVars:
       - key: ENVIRONMENT
@@ -148,12 +148,12 @@ services:
       # CRITICAL: Render does NOT like many workers on small instances
       # 
       # Configuration:
-      # - Workers: 1 (single worker is faster + safer)
+      # - Workers: 2 (zero-downtime rolling restarts)
       # - Threads: 2 (minimal threading overhead)
       # - Timeout: 120s (prevents worker SIGTERM during slow startup)
-      # - Single worker with async event loop handles 100+ concurrent connections
+      # - Async event loop handles 100+ concurrent connections
       - key: WEB_CONCURRENCY
-        value: "1"
+        value: "2"
       - key: WEB_THREADS
         value: "2"
       - key: GUNICORN_TIMEOUT
@@ -191,14 +191,14 @@ services:
     # No cold starts, no warm-up needed
     #
     # AVAILABLE ENDPOINTS (BOOTSTRAP APP):
-    #   /api/health  - Instant health check (no DB, no middleware)
+    #   /health      - DB-aware health check
     #
     # ⚠️  CRITICAL: RENDER DASHBOARD CONFIGURATION
     # ==========================================================================
     # Go to: Render Dashboard → Your Backend → Settings → Health Check
     # 
     # ✅ REQUIRED CONFIGURATION (Must match exactly, case-sensitive):
-    #    Health Check Path: /api/health
+    #    Health Check Path: /health
     #
     # Additional Settings:
     #   Grace Period: 60 seconds (minimal - Always On service)
@@ -207,15 +207,15 @@ services:
     #
     # ✅ VERIFICATION REQUIRED:
     #    After deployment, open browser to:
-    #    https://hiremebahamas.onrender.com/api/health
+    #    https://hiremebahamas.onrender.com/health
     #    
     #    You MUST see:
     #    - Blank page or
     #    - 200 OK status or
-    #    - {"status": "ok"}
+    #    - {"status": "ok"} or {"status": "degraded"}
     #    
     #    ❌ If you see 404, 401, 405, or timeout → Render will never pass
     #
     # Note: With Always On (Standard plan), no keepalive workers needed!
     # ==========================================================================
-    healthCheckPath: /api/health
+    healthCheckPath: /health
