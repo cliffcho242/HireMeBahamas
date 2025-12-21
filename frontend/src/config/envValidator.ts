@@ -107,8 +107,12 @@ export function validateEnvironmentVariables(): ValidationResult {
     }
   });
 
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
-  const apiVarName = import.meta.env.VITE_API_BASE_URL ? 'VITE_API_BASE_URL' : 'VITE_API_URL';
+  const apiEnv = import.meta.env.VITE_API_BASE_URL
+    ? { url: import.meta.env.VITE_API_BASE_URL, name: 'VITE_API_BASE_URL' }
+    : { url: import.meta.env.VITE_API_URL, name: 'VITE_API_URL' };
+
+  const apiUrl = apiEnv.url;
+  const apiVarName = apiEnv.name;
 
   // Check for required variables
   // API URL is optional (can use same-origin for Vercel serverless)
