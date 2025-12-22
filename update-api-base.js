@@ -1,4 +1,12 @@
-/**
+const fs = require("fs");
+const path = require("path");
+
+const files = [
+  path.join(__dirname, "frontend/src/lib/api.ts"),
+  path.join(__dirname, "admin-panel/src/lib/apiUrl.ts"),
+];
+
+const replacement = `/**
  * Robust API base URL getter
  * Priority:
  * VITE_API_BASE_URL (production)
@@ -9,12 +17,12 @@ export function getApiBaseUrl(): string {
   const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
   const overrideUrl = import.meta.env.VITE_API_URL?.trim();
 
-  const normalize = (url: string) => url.replace(/\/+$/, "");
+  const normalize = (url: string) => url.replace(/\\/+$/, "");
 
   if (baseUrl) {
     if (!baseUrl.startsWith("https://")) {
       console.warn(
-        `[getApiBaseUrl] Warning: VITE_API_BASE_URL must be HTTPS in production: ${baseUrl}`
+        \`[getApiBaseUrl] Warning: VITE_API_BASE_URL must be HTTPS in production: \${baseUrl}\`
       );
     }
     return normalize(baseUrl);
@@ -30,7 +38,7 @@ export function getApiBaseUrl(): string {
 export function buildApiUrl(path: string): string {
   const base = getApiBaseUrl();
   if (!path.startsWith("/")) path = "/" + path;
-  return `${base}${path}`;
+  return \`${"${base}${path}"}\`;
 }
 
 export const apiUrl = buildApiUrl;
@@ -43,3 +51,13 @@ export function isApiConfigured(): boolean {
     base.startsWith("http://localhost")
   );
 }
+`;
+
+files.forEach((file) => {
+  if (fs.existsSync(file)) {
+    fs.writeFileSync(file, replacement, "utf8");
+    console.log(`✅ Updated: ${file}`);
+  } else {
+    console.warn(`⚠️ File not found: ${file}`);
+  }
+});
