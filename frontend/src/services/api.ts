@@ -1297,20 +1297,27 @@ export async function apiFetch<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
-  const res = await fetch(apiUrl(path), {
-    ...options,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers || {})
+  try {
+    const res = await fetch(apiUrl(path), {
+      ...options,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(options?.headers || {})
+      }
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("API error", res.status, text);
+      throw new Error("API request failed");
     }
-  });
 
-  if (!res.ok) {
-    throw new Error(`API error ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("Network/API failure:", err);
+    throw err;
   }
-
-  return res.json();
 }
 
 export default api;
