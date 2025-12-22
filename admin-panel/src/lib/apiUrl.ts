@@ -23,49 +23,59 @@
  * ```
  */
 
-import { isValidUrl, isSecureUrl } from './safeUrl';
+const DEFAULT_RENDER_BACKEND_URL = "https://hiremebahamas-backend.onrender.com";
 
 /**
  * Validate and get the base API URL from environment
- * @throws Error if VITE_API_URL is missing or invalid
+ * Prefers VITE_API_BASE_URL, falls back to VITE_API_URL, then same-origin, then Render default
  */
 function validateAndGetBaseUrl(): string {
-  const base = import.meta.env.VITE_API_URL as string | undefined;
-
-  // If no explicit API URL is set, use same-origin (for Vercel serverless)
-  if (!base) {
-    // Check if we're in a browser environment
-    if (typeof window !== 'undefined') {
-      return window.location.origin;
+  // Step 1: Try VITE_API_BASE_URL first, then VITE_API_URL
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL) as string | undefined;
+  
+  if (envUrl) {
+    const trimmedUrl = envUrl.trim();
+    
+    // Validate scheme: must start with http:// or https://
+    if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+      throw new Error(
+        `Invalid API URL: "${trimmedUrl}". ` +
+        "URL must start with 'http://' or 'https://'. " +
+        "Example: VITE_API_BASE_URL=https://your-backend.com"
+      );
     }
     
-    // If not in browser and no URL is set, throw an error
-    throw new Error(
-      "VITE_API_URL is missing or invalid. " +
-      "Set VITE_API_URL environment variable to your backend URL, " +
-      "or deploy to a serverless environment where same-origin is used."
-    );
+    // Extract hostname for validation
+    let hostname: string;
+    try {
+      hostname = new URL(trimmedUrl).hostname.toLowerCase();
+    } catch {
+      throw new Error(`Failed to parse API URL: "${trimmedUrl}"`);
+    }
+    
+    // Check if localhost
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0';
+    
+    // Enforce HTTPS in production unless localhost
+    if (!isLocalhost && trimmedUrl.startsWith('http://')) {
+      throw new Error(
+        `API URL must use HTTPS in production: "${trimmedUrl}". ` +
+        "HTTP is only allowed for localhost in development. " +
+        "Change to: VITE_API_BASE_URL=https://your-domain.com"
+      );
+    }
+    
+    // Remove trailing slash and return
+    return trimmedUrl.replace(/\/$/, "");
   }
-
-  // Use our safe URL validator instead of manual checks
-  if (!isValidUrl(base)) {
-    throw new Error(
-      `VITE_API_URL is invalid: "${base}". ` +
-      "URL must start with 'http://' or 'https://'. " +
-      "Example: VITE_API_URL=https://your-backend.com"
-    );
+  
+  // Step 2: No env variable set - use same-origin fallback in browser (Vercel proxy)
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
   }
-
-  // Validate HTTPS in production
-  if (!isSecureUrl(base)) {
-    throw new Error(
-      `VITE_API_URL must use HTTPS in production: "${base}". ` +
-      "HTTP is only allowed for localhost in development. " +
-      "Change to: VITE_API_URL=https://your-domain.com"
-    );
-  }
-
-  return base;
+  
+  // Step 3: Final fallback to Render default (server-side rendering or build time)
+  return DEFAULT_RENDER_BACKEND_URL;
 }
 
 /**

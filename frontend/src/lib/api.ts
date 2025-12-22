@@ -30,44 +30,55 @@ const DEFAULT_RENDER_BACKEND_URL = "https://hiremebahamas-backend.onrender.com";
 
 /**
  * Validate and get the base API URL from environment
- * RENDER-ONLY: Hard-coded to use Render backend exclusively
- * 🚨 NO Railway URLs allowed
- * 🚨 Environment variables only allowed for localhost development
+ * Prefers VITE_API_BASE_URL, falls back to VITE_API_URL, then same-origin, then Render default
  */
 function validateAndGetBaseUrl(): string {
-  // 🔥 PRODUCTION LOCK: Render backend URL (overridable via env)
-  const RENDER_BACKEND_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_RENDER_BACKEND_URL;
+  // Step 1: Try VITE_API_BASE_URL first, then VITE_API_URL
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL) as string | undefined;
   
-  // Check if we're in development mode (localhost)
-  // Only localhost development can override the URL via VITE_API_URL
-  if (typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' || 
-    window.location.hostname === '127.0.0.1'
-  )) {
-    // Allow local development override only for localhost URLs
-    const devUrl = import.meta.env.VITE_API_URL as string | undefined;
-    if (devUrl && devUrl.startsWith('http://localhost')) {
-      return devUrl;
+  if (envUrl) {
+    const trimmedUrl = envUrl.trim();
+    
+    // Validate scheme: must start with http:// or https://
+    if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+      throw new Error(
+        `Invalid API URL: "${trimmedUrl}". ` +
+        "URL must start with 'http://' or 'https://'. " +
+        "Example: VITE_API_BASE_URL=https://your-backend.com"
+      );
     }
-  }
-  
-  // 🚨 RENDER ONLY: Return hard-coded Render URL for all production traffic
-  const base = RENDER_BACKEND_URL;
-
-  const parsedHost = (() => {
+    
+    // Extract hostname for validation
+    let hostname: string;
     try {
-      return new URL(base).hostname.toLowerCase();
+      hostname = new URL(trimmedUrl).hostname.toLowerCase();
     } catch {
-      return '';
+      throw new Error(`Failed to parse API URL: "${trimmedUrl}"`);
     }
-  })();
-  const isLocal = parsedHost === 'localhost' || parsedHost === '127.0.0.1';
-  const isRenderHost = parsedHost === 'onrender.com' || parsedHost.endsWith('.onrender.com');
-  if (!isRenderHost && !isLocal) {
-    throw new Error('INVALID BACKEND TARGET: use your Render URL (e.g., https://your-backend.onrender.com) or localhost for development.');
+    
+    // Check if localhost
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0';
+    
+    // Enforce HTTPS in production unless localhost
+    if (!isLocalhost && trimmedUrl.startsWith('http://')) {
+      throw new Error(
+        `API URL must use HTTPS in production: "${trimmedUrl}". ` +
+        "HTTP is only allowed for localhost in development. " +
+        "Change to: VITE_API_BASE_URL=https://your-domain.com"
+      );
+    }
+    
+    // Remove trailing slash and return
+    return trimmedUrl.replace(/\/$/, "");
   }
-
-  return base;
+  
+  // Step 2: No env variable set - use same-origin fallback in browser (Vercel proxy)
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  
+  // Step 3: Final fallback to Render default (server-side rendering or build time)
+  return DEFAULT_RENDER_BACKEND_URL;
 }
 
 /**
