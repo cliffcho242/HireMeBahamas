@@ -12,17 +12,7 @@ export function getApiBaseUrl(): string {
 
   const normalize = (url: string) => url.replace(/\/+$/, ""); // remove trailing slash
 
-  // Dev override for localhost (HTTP allowed)
-  if (
-    overrideUrl &&
-    (overrideUrl.startsWith("http://localhost") ||
-      overrideUrl.startsWith("http://127.0.0.1") ||
-      overrideUrl.startsWith("http://0.0.0.0"))
-  ) {
-    return normalize(overrideUrl);
-  }
-
-  // Production environment variable
+  // Production environment variable has priority
   if (baseUrl) {
     if (!baseUrl.startsWith("https://")) {
       console.warn(
@@ -30,6 +20,11 @@ export function getApiBaseUrl(): string {
       );
     }
     return normalize(baseUrl);
+  }
+
+  // Dev override for localhost (HTTP allowed)
+  if (overrideUrl && overrideUrl.startsWith("http://localhost")) {
+    return normalize(overrideUrl);
   }
 
   // Default fallback: same-origin (Vercel proxy)
@@ -57,8 +52,6 @@ export function isApiConfigured(): boolean {
   if (!base) return true; // same-origin fallback
   return (
     base.startsWith("https://") ||
-    base.startsWith("http://localhost") ||
-    base.startsWith("http://127.0.0.1") ||
-    base.startsWith("http://0.0.0.0")
+    base.startsWith("http://localhost")
   );
 }
