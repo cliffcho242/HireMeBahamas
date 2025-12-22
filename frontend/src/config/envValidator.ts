@@ -87,7 +87,7 @@ export function validateEnvironmentVariables(): ValidationResult {
       result.errors.push(
         `❌ WRONG FRAMEWORK PREFIX: ${wrongVar}\n` +
         `   This is a Next.js variable name. This is a VITE project.\n` +
-        `   Use VITE_API_URL instead of NEXT_PUBLIC_API_URL`
+        `   Use VITE_API_BASE_URL instead of NEXT_PUBLIC_API_URL`
       );
     }
   });
@@ -107,27 +107,15 @@ export function validateEnvironmentVariables(): ValidationResult {
     }
   });
 
-  const apiEnv = {
-    url: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL,
-    name: import.meta.env.VITE_API_BASE_URL ? 'VITE_API_BASE_URL' : 'VITE_API_URL',
-  };
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const apiVarName = 'VITE_API_BASE_URL';
 
-  const apiUrl = apiEnv.url;
-  const apiVarName = apiEnv.name;
-  const apiVarOptions = 'VITE_API_BASE_URL or VITE_API_URL';
-
-  // Check for required variables
-  // API URL is optional (can use same-origin for Vercel serverless)
-  // But if VITE_REQUIRE_BACKEND_URL is true, then it's required
-  if (import.meta.env.VITE_REQUIRE_BACKEND_URL === 'true') {
-    if (!apiUrl) {
-      result.errors.push(
-        `❌ MISSING REQUIRED VARIABLE: ${apiVarOptions}\n` +
-        `   VITE_REQUIRE_BACKEND_URL is set to 'true', but no API URL is configured.\n` +
-        `   Either set ${apiVarOptions} or set VITE_REQUIRE_BACKEND_URL to 'false'.`
-      );
-      result.valid = false;
-    }
+  if (!apiUrl) {
+    result.valid = false;
+    result.errors.push(
+      `❌ MISSING REQUIRED VARIABLE: ${apiVarName}\n` +
+      `   Set ${apiVarName}=https://hiremebahamas-backend.onrender.com`
+    );
   }
 
   // Validate API URL format if set
@@ -136,44 +124,33 @@ export function validateEnvironmentVariables(): ValidationResult {
     if (!isValidUrl(apiUrl)) {
       result.valid = false;
       result.errors.push(
-        `❌ INVALID URL FORMAT: ${apiVarName}=\"${apiUrl}\"\n` +
-        `   URL must start with http:// or https://\n` +
-        `   Example: ${apiVarName}=https://api.yourdomain.com`
+        `❌ INVALID URL FORMAT: ${apiVarName}="${apiUrl}"\n` +
+        `   URL must start with https://\n` +
+        `   Example: ${apiVarName}=https://hiremebahamas-backend.onrender.com`
       );
     } else {
       const hostname = new URL(apiUrl).hostname.toLowerCase();
       if (hostname.includes('railway.app')) {
         result.valid = false;
         result.errors.push(
-          `❌ INVALID BACKEND TARGET: ${apiVarName} points to Railway (\"${apiUrl}\")\n` +
-          `   Render backend is required. Update to: https://your-backend.onrender.com`
+          `❌ INVALID BACKEND TARGET: ${apiVarName} points to Railway ("${apiUrl}")\n` +
+          `   Render backend is required. Update to: https://hiremebahamas-backend.onrender.com`
         );
       }
       const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-      const isRenderHost = hostname === 'onrender.com' || hostname.endsWith('.onrender.com');
-      // 🚫 VERCEL ENV LOCK: No localhost in production
-      if (isLocalhost && import.meta.env.PROD) {
+      if (isLocalhost) {
         result.valid = false;
         result.errors.push(
-          `❌ LOCALHOST URL IN PRODUCTION: ${apiVarName}=\"${apiUrl}\"\n` +
-          `   🚫 VERCEL ENV LOCK VIOLATION: No localhost URLs in production\n` +
+          `❌ LOCALHOST URL IN PRODUCTION: ${apiVarName}="${apiUrl}"\n` +
           `   Production users cannot access your local development server.\n` +
-          `   Change to: ${apiVarName}=https://your-backend.onrender.com`
+          `   Change to: ${apiVarName}=https://hiremebahamas-backend.onrender.com`
         );
       } else if (!isSecureUrl(apiUrl)) {
-        // Check if using HTTPS in production
         result.valid = false;
         result.errors.push(
-          `❌ INSECURE URL IN PRODUCTION: ${apiVarName}=\"${apiUrl}\"\n` +
+          `❌ INSECURE URL: ${apiVarName}="${apiUrl}"\n` +
           `   Production deployments must use HTTPS.\n` +
-          `   HTTP is only allowed for localhost in development.\n` +
-          `   Change to: ${apiVarName}=https://your-domain.com`
-        );
-      } else if (import.meta.env.PROD && !isRenderHost) {
-        result.valid = false;
-        result.errors.push(
-          `❌ INVALID BACKEND TARGET: ${apiVarName}=\"${apiUrl}\"\n` +
-          `   Frontend is locked to Render backend. Set to your Render URL (e.g., https://your-backend.onrender.com).`
+          `   Change to: ${apiVarName}=https://hiremebahamas-backend.onrender.com`
         );
       }
     }

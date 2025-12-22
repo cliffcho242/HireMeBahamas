@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/react'
 import App from './App'
 import './index.css'
 import './styles/mobile-responsive.css'
+import { API_BASE_URL, apiUrl } from './lib/api'
 
 console.log('APP VERSION:', import.meta.env.VITE_APP_VERSION);
 
@@ -137,47 +138,37 @@ if (typeof window !== 'undefined') {
 // Verify on startup that we're connecting to the correct Render backend
 if (typeof window !== 'undefined') {
   window.addEventListener('load', () => {
-    // Import the API utility to get the backend URL
-    import('./lib/api').then(({ getApiBase }) => {
-      const backendUrl = getApiBase();
-      
-      // Log the backend URL for debugging
-      console.log('🔗 Backend URL:', backendUrl);
-      
-      // Verify it's the Render backend
-      if (backendUrl === 'https://hiremebahamas-backend.onrender.com') {
-        console.log('✅ Connected to Render backend (correct)');
-      } else if (backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1')) {
-        console.log('🔧 Using local development backend');
-      } else {
-        console.warn('⚠️ Unexpected backend URL:', backendUrl);
-      }
-      
-      // Test backend connectivity with a lightweight health check
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
-      fetch(`${backendUrl}/health/ping`, {
-        method: 'GET',
-        signal: controller.signal,
+    const backendUrl = API_BASE_URL;
+
+    console.log('🔗 Backend URL:', backendUrl);
+
+    if (backendUrl === 'https://hiremebahamas-backend.onrender.com') {
+      console.log('✅ Connected to Render backend (correct)');
+    } else {
+      console.warn('⚠️ Unexpected backend URL:', backendUrl);
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    fetch(apiUrl('/health/ping'), {
+      method: 'GET',
+      signal: controller.signal,
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Backend returned ${response.status}`);
+        }
+        console.log('✅ Backend connectivity verified');
       })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`Backend returned ${response.status}`);
-          }
-          console.log('✅ Backend connectivity verified');
-        })
-        .catch(error => {
-          console.error('❌ Backend connection failed:', error.message);
-          console.error('   This may indicate the backend is starting up or unreachable');
-          console.error('   Backend URL:', backendUrl);
-        })
-        .finally(() => {
-          clearTimeout(timeoutId);
-        });
-    }).catch(err => {
-      console.error('Failed to load API utility:', err);
-    });
+      .catch(error => {
+        console.error('❌ Backend connection failed:', error.message);
+        console.error('   This may indicate the backend is starting up or unreachable');
+        console.error('   Backend URL:', backendUrl);
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+      });
   });
 }
 

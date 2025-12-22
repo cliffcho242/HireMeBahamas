@@ -10,24 +10,13 @@
  * 
  * This is the base URL for all API requests.
  * 
- * - For Vercel serverless: Leave VITE_API_URL unset, will use same-origin
- * - For Render or any external backend: Prefer VITE_API_BASE_URL in environment
- * - For local development override: Set VITE_API_URL=http://localhost:8000 (localhost only)
- * 
- * @example
- * // Vercel serverless (same-origin)
- * ENV_API = undefined (uses window.location.origin)
+ * - Production uses VITE_API_BASE_URL
  * 
  * @example
  * // Render deployment
  * ENV_API = "https://your-app.onrender.com" (via VITE_API_BASE_URL)
- * 
- * @example
- * // Local development
- * ENV_API = "http://localhost:8000"
  */
-export const ENV_API = (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
-  (import.meta.env.VITE_API_URL as string | undefined);
+export const ENV_API = import.meta.env.VITE_API_BASE_URL as string | undefined;
 
 /**
  * Socket URL for real-time connections
@@ -44,12 +33,6 @@ export const ENV_CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_N
  * Sendbird App ID for messaging
  */
 export const ENV_SENDBIRD_APP_ID = import.meta.env.VITE_SENDBIRD_APP_ID as string | undefined;
-
-/**
- * Whether to require backend URL to be explicitly set
- * Set to 'true' to enforce VITE_API_URL configuration
- */
-export const ENV_REQUIRE_BACKEND_URL = import.meta.env.VITE_REQUIRE_BACKEND_URL === 'true';
 
 /**
  * Google OAuth Client ID

@@ -11,10 +11,10 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { getApiBase } from './api';
+import { API_BASE_URL } from './api';
 
 // Use safe URL builder for WebSocket URL
-const SOCKET_URL = getApiBase();
+const SOCKET_URL = API_BASE_URL;
 const RECONNECT_DELAY_BASE = 1000;
 const MAX_RECONNECT_DELAY = 30000;
 const TYPING_TIMEOUT = 3000; // Show "typing" for 3 seconds after last keystroke

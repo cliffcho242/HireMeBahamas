@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Check, Star, Zap, TrendingUp, Award, Shield } from 'lucide-react';
 import axios from 'axios';
-import { getApiBase } from '../lib/api';
+import { API_BASE_URL, apiUrl } from '../lib/api';
 
-const API_URL = getApiBase();
+const API_URL = API_BASE_URL;
 
 interface PricingTier {
   tier: string;
@@ -51,7 +51,7 @@ const Pricing: React.FC = () => {
 
   const fetchPricingData = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/monetization/pricing`);
+      const response = await axios.get(apiUrl('/api/monetization/pricing'));
       setPricingData(response.data);
     } catch (error) {
       console.error('Error fetching pricing:', error);

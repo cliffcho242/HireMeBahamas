@@ -2,11 +2,8 @@ import axios from 'axios';
 import { User } from '../types/user';
 import { Job } from '../types/job';
 import { debugLog } from '../utils/debugLogger';
-import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
-import { ENV_API } from '../config/env';
 import { refreshToken } from './auth';
-import { safeParseUrl } from '../lib/safeUrl';
-import { apiUrl, getApiBase } from '../lib/api';
+import { apiUrl, API_BASE_URL } from '../lib/api';
 import { guardMutation, logDemoModeStatus } from '../config/demo';
 
 // Note: Backend URL validation happens automatically when backendRouter is imported
@@ -64,16 +61,6 @@ class ConnectionStateManager {
 
 export const connectionState = new ConnectionStateManager();
 
-// Log backend configuration on module load
-if (import.meta.env.DEV) {
-  logBackendConfiguration();
-}
-
-// Use safe URL builder to get validated API base URL
-// getApiBase() returns normalized URL without trailing slash
-// In production (Vercel), this will use same-origin, and Vercel will proxy /api/* to backend
-const API_BASE_URL = getApiBase();
-
 // Export API constant for use in fetch calls (for backward compatibility)
 export const API = API_BASE_URL;
 
@@ -98,22 +85,6 @@ export const fetchWithRetry = async (
     return fetchWithRetry(url, options, retries - 1);
   }
 };
-
-// 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
-if (import.meta.env.DEV) {
-  console.log("API URL:", import.meta.env.VITE_API_URL || '(not set - using same-origin)');
-}
-
-// Log API configuration on startup (development only)
-if (typeof window !== 'undefined' && import.meta.env.DEV) {
-  console.log('=== API CONFIGURATION ===');
-  console.log('API Base URL:', API_BASE_URL);
-  console.log('VITE_API_URL:', import.meta.env.VITE_API_URL || '(not set)');
-  console.log('ENV_API:', ENV_API || 'not set');
-  console.log('Window Origin:', window.location.origin);
-  console.log('Using same-origin:', !import.meta.env.VITE_API_URL);
-  console.log('========================');
-}
 
 // Log demo mode status on startup
 if (typeof window !== 'undefined') {
@@ -225,44 +196,9 @@ api.interceptors.request.use((config) => {
     config._requestStartTime = Date.now();
   }
   
-  // Apply smart backend routing if URL is relative
-  if (config.url && config.url.startsWith('/api/')) {
-    const optimalUrl = getApiUrl(config.url);
-    
-    // Only log routing in development
-    if (import.meta.env.DEV) {
-      console.log('🎯 Smart routing:', config.url, '->', optimalUrl);
-    }
-    
-    // Override the full URL (baseURL + url)
-    // We need to extract just the endpoint part since getApiUrl returns the full URL
-    // 🔒 SAFE URL PARSING: Use safeParseUrl to prevent "pattern mismatch" errors
-    const urlResult = safeParseUrl(optimalUrl, 'API Request');
-    
-    if (urlResult.success && urlResult.url) {
-      const urlObj = urlResult.url;
-      config.baseURL = urlObj.origin;
-      config.url = urlObj.pathname + urlObj.search;
-    } else {
-      // Throw error with clear guidance
-      throw new Error(
-        `API URL configuration error: ${urlResult.error}\n\n` +
-        `Possible solutions:\n` +
-        `1. Set VITE_API_URL=https://api.yourdomain.com for production\n` +
-        `2. Set VITE_API_URL=http://localhost:8000 for local dev\n` +
-        `3. Leave VITE_API_URL unset for Vercel serverless (same-origin)`
-      );
-    }
-  }
-  
-  // Enhanced logging for debugging (development only)
-  if (import.meta.env.DEV) {
-    console.log('🔹 API Request:', {
-      method: config.method?.toUpperCase(),
-      url: config.url,
-      baseURL: config.baseURL,
-      fullURL: `${config.baseURL}${config.url}`,
-    });
+  if (config.url) {
+    config.baseURL = undefined;
+    config.url = apiUrl(config.url);
   }
   
   return config;
@@ -275,14 +211,6 @@ api.interceptors.response.use(
     circuitBreaker.recordSuccess();
     connectionState.setState('connected');
     
-    // Only log in development to avoid exposing response data
-    if (import.meta.env.DEV) {
-      console.log('✅ API Response:', {
-        url: response.config.url,
-        status: response.status,
-        statusText: response.statusText,
-      });
-    }
     return response;
   },
   async (error) => {
@@ -304,25 +232,10 @@ api.interceptors.response.use(
       return Promise.reject(circuitError);
     }
     
-    // Log errors - detailed in dev, minimal in production
-    if (import.meta.env.DEV) {
-      console.error('❌ API Error:', {
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        message: error.message,
-        code: error.code,
-        data: error.response?.data,
-        baseURL: error.config?.baseURL,
-      });
-    } else {
-      // Production: minimal error logging
-      console.error('API Error:', {
-        status: error.response?.status,
-        message: error.message,
-      });
-    }
+    console.error('API Error:', {
+      status: error.response?.status,
+      message: error.message,
+    });
     
     // Add endpoint path to error for better debugging and error handling
     // This allows friendlyErrors.ts to provide context-specific messages

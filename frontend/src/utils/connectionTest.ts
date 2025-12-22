@@ -5,7 +5,7 @@
  * This helps diagnose issues where users can't log in due to connection problems.
  */
 
-import { apiUrl, getApiBase } from '../lib/api';
+import { API_BASE_URL, apiUrl } from '../lib/api';
 
 interface ConnectionTestResult {
   success: boolean;
@@ -27,7 +27,7 @@ interface ConnectionTestResult {
  * @param baseUrl - The API base URL to test (e.g., 'https://api.example.com')
  * @returns Promise with connection test results
  */
-export async function testConnection(baseUrl: string): Promise<ConnectionTestResult> {
+export async function testConnection(baseUrl: string = API_BASE_URL): Promise<ConnectionTestResult> {
   const timestamp = Date.now();
   
   try {
@@ -130,10 +130,10 @@ export async function testConnection(baseUrl: string): Promise<ConnectionTestRes
 
 /**
  * Get the current API URL being used by the application
- * ✅ CORRECT: Use VITE_API_URL environment variable (properly exposed to browser by Vite)
+ * ✅ CORRECT: Uses VITE_API_BASE_URL configured at build time
  */
 export function getCurrentApiUrl(): string {
-  return getApiBase();
+  return API_BASE_URL;
 }
 
 /**
@@ -148,8 +148,6 @@ export async function runConnectionDiagnostic(): Promise<void> {
   console.log('='.repeat(60));
   console.log('Current API URL:', baseUrl);
   console.log('Window Origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
-  console.log('Environment:', import.meta.env.MODE);
-  console.log('VITE_API_URL:', import.meta.env.VITE_API_URL || 'not set');
   console.log('-'.repeat(60));
   
   const result = await testConnection(baseUrl);
@@ -163,7 +161,7 @@ export async function runConnectionDiagnostic(): Promise<void> {
     console.error('⚠️  CONNECTION PROBLEM DETECTED');
     console.error('Possible solutions:');
     console.error('1. Check if backend is running');
-    console.error('2. Verify VITE_API_URL environment variable is correct');
+    console.error('2. Verify production API URL is configured');
     console.error('3. Check if CORS is properly configured on backend');
     console.error('4. Try accessing backend directly:', apiUrl('/api/health'));
   }

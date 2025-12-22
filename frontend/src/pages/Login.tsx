@@ -10,6 +10,7 @@ import { GoogleCredentialResponse, AppleSignInResponse } from '../types';
 import { useLoadingMessages, DEFAULT_AUTH_MESSAGES } from '../hooks/useLoadingMessages';
 import { runConnectionDiagnostic, testConnection, getCurrentApiUrl } from '../utils/connectionTest';
 import { showFriendlyError } from '../utils/friendlyErrors';
+import { API_BASE_URL } from '../lib/api';
 import {
   UserIcon,
   BriefcaseIcon,
@@ -121,7 +122,7 @@ const Login = () => {
       if (import.meta.env.DEV) {
         console.log('=== LOGIN ATTEMPT ===');
         console.log('Email:', email);
-        console.log('API URL:', import.meta.env.VITE_API_URL || 'Same-origin (default)');
+        console.log('API URL:', API_BASE_URL);
         console.log('Window location:', window.location.origin);
       }
       

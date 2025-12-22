@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { X, Zap, Star, Award, TrendingUp } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { getApiBase } from '../lib/api';
+import { API_BASE_URL, apiUrl } from '../lib/api';
 
-const API_URL = getApiBase();
+const API_URL = API_BASE_URL;
 
 interface BoostOption {
   type: 'local' | 'national' | 'featured';
@@ -80,7 +80,7 @@ const BoostPostModal: React.FC<BoostPostModalProps> = ({ postId, isOpen, onClose
       expiresAt.setDate(expiresAt.getDate() + selectedBoost.duration_days);
 
       await axios.post(
-        `${API_URL}/api/monetization/boosted-posts`,
+        apiUrl('/api/monetization/boosted-posts'),
         {
           post_id: postId,
           boost_type: selectedBoost.type,

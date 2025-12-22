@@ -1,59 +1,49 @@
 /**
- * FINAL, LOCKED, PRODUCTION API HANDLER
- * - iOS Safari safe
- * - Chrome safe
- * - No double slashes
- * - No silent failures
+ * PRODUCTION-ONLY API CONFIG
+ * - No fallbacks
+ * - No localhost
+ * - No same-origin
+ * - Fail fast if misconfigured
  */
 
-export function getApiBaseUrl(): string {
-  const prod = import.meta.env.VITE_API_BASE_URL?.trim();
-  const dev = import.meta.env.VITE_API_URL?.trim();
+const RAW_API_BASE = import.meta.env.VITE_API_BASE_URL;
 
-  const normalize = (url: string) => url.replace(/\/+$/, "");
-
-  if (dev && dev.startsWith("http://localhost")) return normalize(dev);
-  if (prod && prod.startsWith("https://")) return normalize(prod);
-
-  return "";
+if (!RAW_API_BASE) {
+  throw new Error(
+    "❌ VITE_API_BASE_URL is missing in PRODUCTION build"
+  );
 }
+
+if (!RAW_API_BASE.startsWith("https://")) {
+  throw new Error(
+    "❌ VITE_API_BASE_URL must be HTTPS in production"
+  );
+}
+
+export const API_BASE_URL = RAW_API_BASE.replace(/\/+$/, "");
 
 export function apiUrl(path: string): string {
   if (!path.startsWith("/")) path = "/" + path;
-  return `${getApiBaseUrl()}${path}`;
-}
-
-// Backward compatibility aliases
-export const getApiBase = getApiBaseUrl;
-export function isApiConfigured(): boolean {
-  return getApiBaseUrl() !== "";
+  return `${API_BASE_URL}${path}`;
 }
 
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = apiUrl(path);
+  const res = await fetch(apiUrl(path), {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
 
-  try {
-    const res = await fetch(url, {
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      },
-      ...options,
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("API ERROR", res.status, text);
-      throw new Error(`API ${res.status}`);
-    }
-
-    return res.json();
-  } catch (err) {
-    console.error("NETWORK FAILURE", err);
-    throw err;
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API ${res.status}: ${body}`);
   }
+
+  return res.json();
 }

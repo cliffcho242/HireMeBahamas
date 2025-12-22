@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Crown, TrendingUp, Zap } from 'lucide-react';
 import axios from 'axios';
-import { getApiBase } from '../lib/api';
+import { API_BASE_URL, apiUrl } from '../lib/api';
 
-const API_URL = getApiBase();
+const API_URL = API_BASE_URL;
 
 interface Subscription {
   id: number;
@@ -53,7 +53,7 @@ const SubscriptionStatus: React.FC = () => {
   const fetchSubscription = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/monetization/subscriptions/me`, {
+      const response = await axios.get(apiUrl('/api/monetization/subscriptions/me'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSubscription(response.data);

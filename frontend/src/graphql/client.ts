@@ -22,10 +22,9 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
 import { onError } from '@apollo/client/link/error';
 import { get, set, del } from 'idb-keyval';
-import { getApiBase } from '../lib/api';
+import { API_BASE_URL } from '../lib/api';
 
 // Use safe URL builder for GraphQL endpoint
-const API_BASE_URL = getApiBase();
 const GRAPHQL_ENDPOINT = `${API_BASE_URL}/api/graphql`;
 const WS_ENDPOINT = GRAPHQL_ENDPOINT.replace(/^http/, 'ws');
 
