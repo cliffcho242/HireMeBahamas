@@ -467,7 +467,11 @@ export const authAPI = {
         const response = await api.post('/api/auth/login', credentials, {
           timeout: BACKEND_TIMEOUT, // 10 seconds for password verification
         });
-        return response.data;
+        const data = response.data;
+        if (!data || !data.access_token) {
+          throw new Error('Invalid auth response');
+        }
+        return data;
       },
       {
         message: 'login',

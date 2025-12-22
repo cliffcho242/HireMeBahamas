@@ -2,7 +2,7 @@
 // Social feed component with dynamic API responses
 import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { API } from '../services/api';
-import { apiUrl } from '../lib/api';
+import { apiFetch, apiUrl } from '../lib/api';
 import LazyImage from './LazyImage';
 import './SocialFeed.css';
 
@@ -22,14 +22,7 @@ const socialAPI = {
     };
 
     // Use safe URL builder for all API requests
-    const url = apiUrl(endpoint);
-    const response = await fetch(url, config);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    return response.json();
+    return apiFetch(endpoint, config);
   },
 
   // User authentication
