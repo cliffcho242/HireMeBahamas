@@ -17,7 +17,7 @@ export function getApiBaseUrl(): string {
   const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
   const overrideUrl = import.meta.env.VITE_API_URL?.trim();
 
-  const normalize = (url: string) => url.replace(/\\/+$/, "");
+  const normalize = (url: string) => url.replace(/\/+$/, "");
 
   if (baseUrl) {
     if (!baseUrl.startsWith("https://")) {
@@ -38,7 +38,7 @@ export function getApiBaseUrl(): string {
 export function buildApiUrl(path: string): string {
   const base = getApiBaseUrl();
   if (!path.startsWith("/")) path = "/" + path;
-  return \`${"${base}${path}"}\`;
+  return \`\${base}\${path}\`;
 }
 
 export const apiUrl = buildApiUrl;
@@ -56,8 +56,8 @@ export function isApiConfigured(): boolean {
 files.forEach((file) => {
   if (fs.existsSync(file)) {
     fs.writeFileSync(file, replacement, "utf8");
-    console.log(`✅ Updated: ${file}`);
+    console.log(\`✅ Updated: \${file}\`);
   } else {
-    console.warn(`⚠️ File not found: ${file}`);
+    console.warn(\`⚠️ File not found: \${file}\`);
   }
 });
