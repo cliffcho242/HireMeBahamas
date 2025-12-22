@@ -458,10 +458,13 @@ async def panic_handler(request: Request, exc: Exception) -> JSONResponse:
     
     # Log the panic with full details
     logger.error(f"PANIC {request_id}: {exc}", exc_info=True)
+
+    is_prod_env = os.getenv("ENVIRONMENT", "").lower() == "production" or os.getenv("VERCEL_ENV", "").lower() == "production"
+    detail = str(exc) if not is_prod_env else "An unexpected error occurred"
     
     return JSONResponse(
         status_code=500,
-        content={"error": "SERVER_ERROR", "detail": str(exc)}
+        content={"error": "SERVER_ERROR", "detail": detail}
     )
 
 # GraphQL support (optional - gracefully degrades if strawberry not available)

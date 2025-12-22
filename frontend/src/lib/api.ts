@@ -6,13 +6,15 @@
  * Fail fast if misconfigured
  */
 export function getApiBase(): string {
-  const raw = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  const localOverride = import.meta.env.VITE_API_URL;
+  const raw = localOverride || import.meta.env.VITE_API_BASE_URL;
 
   if (!raw) {
     throw new Error("❌ VITE_API_BASE_URL is required");
   }
 
-  if (import.meta.env.PROD && !raw.startsWith("https://")) {
+  const requiresHttps = import.meta.env.PROD || !localOverride;
+  if (requiresHttps && !raw.startsWith("https://")) {
     throw new Error("❌ VITE_API_BASE_URL must be HTTPS in production");
   }
 
@@ -21,17 +23,9 @@ export function getApiBase(): string {
 
 export const API_BASE_URL = getApiBase();
 
-export function getApiBaseUrl(): string {
-  return getApiBase();
-}
-
 export function apiUrl(path: string): string {
   if (!path.startsWith("/")) path = "/" + path;
   return `${API_BASE_URL}${path}`;
-}
-
-export function buildApiUrl(path: string): string {
-  return apiUrl(path);
 }
 
 export async function apiFetch<T>(

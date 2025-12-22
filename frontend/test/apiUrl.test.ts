@@ -15,22 +15,22 @@ describe('getApiBaseUrl & buildApiUrl', () => {
     vi.stubEnv('VITE_API_URL', 'http://localhost:8000/');
     vi.stubEnv('VITE_API_BASE_URL', 'https://hiremebahamas-backend.onrender.com');
 
-    const { getApiBaseUrl } = await loadApiModule();
-    expect(getApiBaseUrl()).toBe('http://localhost:8000');
+    const { getApiBase } = await loadApiModule();
+    expect(getApiBase()).toBe('http://localhost:8000');
   });
 
   it('normalizes trailing slash for production base URL', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://hiremebahamas-backend.onrender.com/');
 
-    const { getApiBaseUrl } = await loadApiModule();
-    expect(getApiBaseUrl()).toBe('https://hiremebahamas-backend.onrender.com');
+    const { getApiBase } = await loadApiModule();
+    expect(getApiBase()).toBe('https://hiremebahamas-backend.onrender.com');
   });
 
   it('builds paths without double slashes', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://hiremebahamas-backend.onrender.com/');
 
-    const { buildApiUrl } = await loadApiModule();
-    expect(buildApiUrl('api/auth/login')).toBe(
+    const { apiUrl } = await loadApiModule();
+    expect(apiUrl('api/auth/login')).toBe(
       'https://hiremebahamas-backend.onrender.com/api/auth/login'
     );
   });
