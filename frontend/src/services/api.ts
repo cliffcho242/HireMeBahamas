@@ -1280,6 +1280,53 @@ export const notificationsAPI = {
   },
 };
 
+class ApiResponseError extends Error {
+  status: number;
+
+  constructor(status: number, bodyText?: string) {
+    const baseMessage = `API request failed with status ${status}`;
+    super(bodyText ? `${baseMessage}: ${bodyText}` : baseMessage);
+    this.name = 'ApiResponseError';
+    this.status = status;
+  }
+}
+
+const ERROR_TEXT_LIMIT = 1000;
+
+async function readResponseSnippet(response: Response, limit: number): Promise<string> {
+  const clone = response.clone();
+  if (!clone.body) return '';
+
+  const reader = clone.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (total < limit) {
+    const { done, value } = await reader.read();
+    if (done || !value) break;
+
+    const remaining = limit - total;
+    const slice = value.length > remaining ? value.subarray(0, remaining) : value;
+    chunks.push(slice);
+    total += slice.length;
+
+    if (total >= limit) {
+      reader.cancel().catch(() => {});
+      break;
+    }
+  }
+
+  const mergedLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const merged = new Uint8Array(mergedLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  return new TextDecoder().decode(merged);
+}
+
 /**
  * Fetch wrapper for API requests with proper type safety and error handling
  * 
@@ -1308,14 +1355,26 @@ export async function apiFetch<T>(
     });
 
     if (!res.ok) {
-      const text = await res.text();
+      let text = '';
+      try {
+        text = await readResponseSnippet(res, ERROR_TEXT_LIMIT);
+        if (text.length >= ERROR_TEXT_LIMIT) {
+          text = `${text.slice(0, ERROR_TEXT_LIMIT)}...`;
+        }
+      } catch {
+        text = '[unavailable]';
+      }
+
       console.error("API error", res.status, text);
-      throw new Error("API request failed");
+      const error = new ApiResponseError(res.status, text);
+      throw error;
     }
 
     return await res.json();
-  } catch (err) {
-    console.error("Network/API failure:", err);
+  } catch (err: unknown) {
+    if (!(err instanceof ApiResponseError)) {
+      console.error("Network/API failure:", err);
+    }
     throw err;
   }
 }
