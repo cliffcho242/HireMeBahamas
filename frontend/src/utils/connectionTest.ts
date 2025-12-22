@@ -53,7 +53,7 @@ export async function testConnection(): Promise<ConnectionTestResult> {
       
       return {
         success: true,
-         apiUrl: baseUrl,
+        apiUrl: baseUrl,
         message: 'Backend is reachable and healthy',
         details: {
           healthCheck: true,
