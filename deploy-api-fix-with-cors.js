@@ -30,7 +30,13 @@ export function getApiBaseUrl(): string {
   const normalize = (url: string) => url.replace(/\/+$/, "");
 
   if (overrideUrl && overrideUrl.startsWith("http://localhost")) return normalize(overrideUrl);
-  if (baseUrl) return normalize(baseUrl);
+  if (baseUrl) {
+    const normalized = normalize(baseUrl);
+    if (!normalized.startsWith("https://") && !normalized.startsWith("http://localhost")) {
+      console.warn("[getApiBaseUrl] Non-HTTPS base URL detected: " + normalized);
+    }
+    return normalized;
+  }
   return "";
 }
 
@@ -76,7 +82,7 @@ try {
 
 // CORS verification
 (async () => {
-  const corsCheckUrl = `${normalized}/openapi.json`; // FastAPI exposes OpenAPI by default
+  const corsCheckUrl = `${normalized}/api/health`;
   console.log("🔹 Checking backend CORS...");
   try {
     const res = await fetch(corsCheckUrl, { method: "OPTIONS" });
@@ -85,8 +91,15 @@ try {
       console.warn("⚠️ CORS header missing. Safari and iOS may block requests.");
     } else {
       const required = ["https://hiremebahamas.com", "https://www.hiremebahamas.com"];
+      const allowedList =
+        allowOrigins === "*"
+          ? required
+          : allowOrigins
+              .split(/[,\\s]+/)
+              .map((origin) => origin.trim())
+              .filter(Boolean);
       required.forEach((domain) => {
-        if (!allowOrigins.includes(domain)) {
+        if (!allowedList.includes(domain)) {
           console.warn(\`⚠️ Backend CORS missing domain: \${domain}\`);
         }
       });

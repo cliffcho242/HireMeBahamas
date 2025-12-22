@@ -7,7 +7,13 @@ export function getApiBaseUrl(): string {
   const normalize = (url: string) => url.replace(/\/+$/, "");
 
   if (overrideUrl && overrideUrl.startsWith("http://localhost")) return normalize(overrideUrl);
-  if (baseUrl) return normalize(baseUrl);
+  if (baseUrl) {
+    const normalized = normalize(baseUrl);
+    if (!normalized.startsWith("https://") && !normalized.startsWith("http://localhost")) {
+      console.warn(`[getApiBaseUrl] Non-HTTPS base URL detected: ${normalized}`);
+    }
+    return normalized;
+  }
   return "";
 }
 
