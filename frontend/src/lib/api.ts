@@ -13,6 +13,7 @@ export function getApiBase(): string {
     throw new Error("❌ VITE_API_BASE_URL is required");
   }
 
+  // Allow http only when using a local override outside production builds
   const requiresHttps = import.meta.env.PROD || !localOverride;
   if (requiresHttps && !raw.startsWith("https://")) {
     throw new Error("❌ VITE_API_BASE_URL must be HTTPS in production");

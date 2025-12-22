@@ -25,6 +25,10 @@ def _is_prod_environment() -> bool:
     return os.getenv("ENVIRONMENT", "").lower() == "production" or os.getenv("VERCEL_ENV", "").lower() == "production"
 
 
+MAX_ERROR_DETAIL_LENGTH = 200
+IS_PROD_ENV = _is_prod_environment()
+
+
 def inject_typing_exports(module):
     """Inject typing module exports into a module's namespace.
     
@@ -438,10 +442,10 @@ if _db_import_error is not None:
 # =============================================================================
 @app.exception_handler(StarletteHTTPException)
 async def http_error_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-    is_prod_env = _is_prod_environment()
+    is_prod_env = IS_PROD_ENV
     detail = "Request error"
     if not is_prod_env and exc.detail:
-        detail = str(exc.detail)[:200]
+        detail = str(exc.detail)[:MAX_ERROR_DETAIL_LENGTH]
 
     if exc.status_code == 404:
         return JSONResponse(status_code=404, content={"error": "NOT_FOUND"})
@@ -468,7 +472,7 @@ async def panic_handler(request: Request, exc: Exception) -> JSONResponse:
     # Log the panic with full details
     logger.error(f"PANIC {request_id}: {exc}", exc_info=True)
 
-    is_prod_env = _is_prod_environment()
+    is_prod_env = IS_PROD_ENV
     detail = str(exc) if not is_prod_env else "An unexpected error occurred"
     
     return JSONResponse(
