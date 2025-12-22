@@ -40,6 +40,15 @@ export function apiUrl(path: string): string {
   return `${getApiBaseUrl()}${path}`;
 }
 
+export function buildApiUrl(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const base = getApiBaseUrl();
+  if (!base) {
+    throw new Error("API base URL is not set");
+  }
+  return `${base}${normalizedPath}`;
+}
+
 // Backward compatibility aliases
 export const getApiBase = getApiBaseUrl;
 export function isApiConfigured(): boolean {

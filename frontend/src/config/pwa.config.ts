@@ -102,7 +102,6 @@ export const pwaConfig = VitePWA({
     ]
   },
   devOptions: {
-    enabled: true,
-    type: 'module'
+    enabled: false
   }
 });

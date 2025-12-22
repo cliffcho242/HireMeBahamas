@@ -103,6 +103,10 @@ _default_origins = [
     "https://hiremebahamas.com",
     "https://www.hiremebahamas.com",
 ]
+_mobile_webview_origins = [
+    "capacitor://localhost",
+    "ionic://localhost",
+]
 _origins_env = os.getenv("ALLOWED_ORIGINS")
 allowed_origins = (
     [origin.strip() for origin in _origins_env.split(",") if origin.strip()]
@@ -110,9 +114,17 @@ allowed_origins = (
     else _default_origins
 )
 allowed_origins = _normalize_allowed_origins(allowed_origins)
+for origin in _mobile_webview_origins:
+    if origin not in allowed_origins:
+        allowed_origins.append(origin)
+allow_origin_regex = None
+if "*" in allowed_origins:
+    allowed_origins = [origin for origin in allowed_origins if origin != "*"]
+    allow_origin_regex = ".*"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,  # replace with frontend URL in production
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -267,10 +279,18 @@ def create_user(request: Request):
 # -----------------------------
 # GLOBAL ERROR HANDLER
 # -----------------------------
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=404,
+        content={"error": "NOT_FOUND"},
+    )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.exception("Unhandled exception in request")
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"},
+        content={"error": "SERVER_ERROR", "detail": str(exc)},
     )
