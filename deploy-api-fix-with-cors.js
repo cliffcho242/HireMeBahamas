@@ -13,6 +13,12 @@ const fs = require("fs");
 const path = require("path");
 const { execSync, execFileSync } = require("child_process");
 
+const DEFAULT_API_BASE_URL = "https://hiremebahamas-backend.onrender.com";
+const REQUIRED_CORS_ORIGINS = [
+  "https://hiremebahamas.com",
+  "https://www.hiremebahamas.com",
+];
+
 const fetchImpl =
   typeof fetch !== "undefined"
     ? fetch
@@ -85,7 +91,7 @@ files.forEach((file) => {
 // Normalize VITE_API_BASE_URL
 const envVar =
   process.env.VITE_API_BASE_URL ||
-  "https://hiremebahamas-backend.onrender.com";
+  DEFAULT_API_BASE_URL;
 const normalized = envVar.replace(/\/+$/, "");
 console.log(`🔹 Normalized VITE_API_BASE_URL: ${normalized}`);
 
@@ -135,7 +141,13 @@ try {
 
   for (const corsCheckUrl of corsTargets) {
     try {
-      const res = await fetchImpl(corsCheckUrl, { method: "OPTIONS" });
+      const res = await fetchImpl(corsCheckUrl, {
+        method: "OPTIONS",
+        headers: {
+          Origin: REQUIRED_CORS_ORIGINS[0],
+          "Access-Control-Request-Method": "GET",
+        },
+      });
       const allowOrigins = res.headers.get("access-control-allow-origin");
 
       if (!allowOrigins) {
@@ -145,23 +157,14 @@ try {
         continue;
       }
 
-      const required = [
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-      ];
-
       const allowList = allowOrigins
         .split(",")
         .map((origin) => origin.trim())
         .filter(Boolean);
 
-      if (!allowList.length && allowOrigins.trim()) {
-        allowList.push(allowOrigins.trim());
-      }
-
       const wildcard = allowList.includes("*");
 
-      required.forEach((domain) => {
+      REQUIRED_CORS_ORIGINS.forEach((domain) => {
         if (!wildcard && !allowList.includes(domain)) {
           console.warn(`⚠️ Backend CORS missing domain: ${domain}`);
         }
