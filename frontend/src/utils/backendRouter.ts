@@ -1,131 +1,80 @@
-/**
- * API URL Configuration
- * 
- * Uses environment variable or defaults to same-origin (Vercel serverless).
- * 
- * Configuration:
- * - VITE_API_URL: Set this to point to your backend (Render, custom domain, or local dev)
- * - VITE_REQUIRE_BACKEND_URL: Set to 'true' to enforce VITE_API_URL (prevents silent failures)
- * - If not set: Uses same-origin (window.location.origin) for Vercel deployments
- * 
- * Examples:
- * - Vercel serverless (same-origin): Don't set VITE_API_URL
- * - Render backend: VITE_API_URL=https://your-app.onrender.com
- * - Production backend: VITE_API_URL=https://api.yourdomain.com
- * - Local dev only: VITE_API_URL=http://localhost:8000
- * - Strict mode: VITE_REQUIRE_BACKEND_URL=true (will throw error if VITE_API_URL not set)
- * 
- * Note: HTTP URLs are only acceptable for local development. Production must use HTTPS.
- */
-
-import { apiUrl, getApiBase, isApiConfigured } from '../lib/api';
+import { API_BASE_URL, apiUrl } from '@/lib/api';
 
 interface BackendConfig {
   url: string;
   available: boolean;
 }
 
-/**
- * Validates that backend URL is configured when required.
- * Throws an error if VITE_REQUIRE_BACKEND_URL is 'true' but VITE_API_URL is not set.
- */
 export function validateBackendUrl(): void {
-  if (import.meta.env.VITE_REQUIRE_BACKEND_URL === 'true' && !import.meta.env.VITE_API_URL) {
-    throw new Error(
-      "VITE_API_URL is not set. " +
-      "Either set VITE_API_URL environment variable or disable VITE_REQUIRE_BACKEND_URL. " +
-      "This prevents silent failures when an explicit backend URL is required."
-    );
+  if (!API_BASE_URL) {
+    throw new Error('VITE_API_BASE_URL is required for backend routing');
   }
 }
 
-// Guard: Prevent silent failures when backend URL is required but not configured
 validateBackendUrl();
 
-// Detect backend URL
 function getBackendConfig(): BackendConfig {
   return {
-    url: getApiBase(),
-    available: isApiConfigured(),
+    url: API_BASE_URL,
+    available: true,
   };
 }
 
-/**
- * Get the full URL for an API endpoint
- */
 export function getApiUrl(endpoint: string): string {
   return apiUrl(endpoint);
 }
 
-/**
- * Test connectivity to backend
- */
 export async function testBackends(): Promise<{
   backend: { available: boolean; latency?: number; error?: string };
 }> {
   const config = getBackendConfig();
-  
   const results = {
     backend: { available: false, latency: 0, error: '' },
   };
-  
-  // Test backend
-  if (config.url) {
-    try {
-      const start = Date.now();
-      const response = await fetch(apiUrl('/api/health'), {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000),
-      });
-      const latency = Date.now() - start;
-      
-      if (response.ok) {
-        results.backend = { available: true, latency, error: '' };
-      } else {
-        results.backend = { 
-          available: false, 
-          error: `HTTP ${response.status}`,
-          latency,
-        };
-      }
-    } catch (error: unknown) {
-      results.backend = { 
-        available: false, 
-        error: error instanceof Error ? error.message : 'Connection failed',
-        latency: 0,
+
+  try {
+    const start = Date.now();
+    const response = await fetch(apiUrl('/health'), {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000),
+    });
+    const latency = Date.now() - start;
+
+    if (response.ok) {
+      results.backend = { available: true, latency, error: '' };
+    } else {
+      results.backend = {
+        available: false,
+        error: `HTTP ${response.status}`,
+        latency,
       };
     }
+  } catch (error: unknown) {
+    results.backend = {
+      available: false,
+      error: error instanceof Error ? error.message : 'Connection failed',
+      latency: 0,
+    };
   }
-  
+
   return results;
 }
 
-/**
- * Log backend configuration on app startup
- */
 export function logBackendConfiguration(): void {
   const config = getBackendConfig();
-  
+
   console.log('='.repeat(60));
   console.log('🌐 BACKEND CONFIGURATION');
   console.log('='.repeat(60));
   console.log('Backend URL:', config.url);
   console.log('Available:', config.available ? '✅ YES' : '❌ NO');
-  console.log('Source:', import.meta.env.VITE_API_URL ? 'Environment Variable' : 'Same-Origin (Vercel)');
+  console.log('Source: VITE_API_BASE_URL');
   console.log('='.repeat(60));
 }
 
-/**
- * Get human-readable backend status
- */
 export function getBackendStatus(): string {
   const config = getBackendConfig();
-  
-  if (config.available) {
-    return '✅ Backend configured and ready';
-  } else {
-    return '❌ No backend configured';
-  }
+  return config.available ? '✅ Backend configured and ready' : '❌ Backend unavailable';
 }
 
 export { getBackendConfig };

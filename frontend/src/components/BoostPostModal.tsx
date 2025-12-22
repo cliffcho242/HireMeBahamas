@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { X, Zap, Star, Award, TrendingUp } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { getApiBase } from '../lib/api';
+import { API_BASE_URL } from '@/lib/api';
 
-const API_URL = getApiBase();
+const API_URL = API_BASE_URL;
 
 interface BoostOption {
   type: 'local' | 'national' | 'featured';

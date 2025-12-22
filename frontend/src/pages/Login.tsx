@@ -121,7 +121,7 @@ const Login = () => {
       if (import.meta.env.DEV) {
         console.log('=== LOGIN ATTEMPT ===');
         console.log('Email:', email);
-        console.log('API URL:', import.meta.env.VITE_API_URL || 'Same-origin (default)');
+        console.log('API URL:', import.meta.env.VITE_API_BASE_URL || 'not set');
         console.log('Window location:', window.location.origin);
       }
       

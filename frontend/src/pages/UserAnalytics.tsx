@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { apiUrl } from '../lib/api';
+import { apiUrl } from '@/lib/api';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import {

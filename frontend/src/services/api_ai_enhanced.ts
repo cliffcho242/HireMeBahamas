@@ -4,25 +4,17 @@
 import axios from 'axios';
 import { User } from '../types/user';
 import { Job } from '../types/job';
-import { getApiBase, apiUrl } from '../lib/api';
-
-// 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
-if (import.meta.env.DEV) {
-  console.log("API URL:", import.meta.env.VITE_API_URL);
-}
+import { API_BASE_URL, apiUrl } from '@/lib/api';
 
 // ✅ CORRECT: Use safe URL builder to get validated backend URL
 const getBackendUrl = (): string => {
-  return getApiBase();
+  return API_BASE_URL;
 };
 
 // AI Error Prevention: Multiple backend endpoints for redundancy
 const BACKEND_ENDPOINTS = (() => {
   const primary = getBackendUrl();
   const endpoints = [primary];
-  
-  // Note: No localhost fallbacks - use VITE_API_URL env var for local development
-  // This prevents production deployments from trying to connect to localhost
   
   return endpoints;
 })();
@@ -31,7 +23,6 @@ const BACKEND_ENDPOINTS = (() => {
 const selectBestEndpoint = async () => {
   // Since we're using the safe URL builder which validates the configured endpoint,
   // we check the health of the current configured endpoint
-  // Note: Multiple endpoints are managed through VITE_API_URL configuration
   const currentEndpoint = BACKEND_ENDPOINTS[0];
   try {
     const healthUrl = apiUrl('/health');

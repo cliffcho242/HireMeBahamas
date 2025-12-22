@@ -9,7 +9,7 @@
  * - Cache hit rates
  */
 
-import { apiUrl } from '../lib/api';
+import { apiUrl } from '@/lib/api';
 
 interface PerformanceMetric {
   name: string;

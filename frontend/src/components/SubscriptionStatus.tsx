@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Crown, TrendingUp, Zap } from 'lucide-react';
 import axios from 'axios';
-import { getApiBase } from '../lib/api';
+import { API_BASE_URL } from '@/lib/api';
 
-const API_URL = getApiBase();
+const API_URL = API_BASE_URL;
 
 interface Subscription {
   id: number;
