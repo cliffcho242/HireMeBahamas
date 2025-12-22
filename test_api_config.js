@@ -11,14 +11,18 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+// Configuration
+const TEST_API_URL = process.env.TEST_API_URL || 'https://api.hiremebahamas.com';
+const TEST_LOCAL_URL = 'http://localhost:8000';
+
 console.log('🧪 Testing API Configuration...\n');
 
 // Test 1: Build with VITE_API_BASE_URL (production)
-console.log('Test 1: Building with VITE_API_BASE_URL=https://api.hiremebahamas.com...');
+console.log(`Test 1: Building with VITE_API_BASE_URL=${TEST_API_URL}...`);
 try {
-  execSync('cd frontend && VITE_API_BASE_URL=https://api.hiremebahamas.com npm run build', {
+  execSync(`cd frontend && VITE_API_BASE_URL=${TEST_API_URL} npm run build`, {
     stdio: 'ignore',
-    env: { ...process.env, VITE_API_BASE_URL: 'https://api.hiremebahamas.com' }
+    env: { ...process.env, VITE_API_BASE_URL: TEST_API_URL }
   });
   console.log('✅ Build succeeded with VITE_API_BASE_URL\n');
 } catch (error) {
@@ -27,11 +31,11 @@ try {
 }
 
 // Test 2: Build with VITE_API_URL (local dev fallback)
-console.log('Test 2: Building with VITE_API_URL=http://localhost:8000...');
+console.log(`Test 2: Building with VITE_API_URL=${TEST_LOCAL_URL}...`);
 try {
-  execSync('cd frontend && VITE_API_URL=http://localhost:8000 npm run build', {
+  execSync(`cd frontend && VITE_API_URL=${TEST_LOCAL_URL} npm run build`, {
     stdio: 'ignore',
-    env: { ...process.env, VITE_API_URL: 'http://localhost:8000' }
+    env: { ...process.env, VITE_API_URL: TEST_LOCAL_URL }
   });
   console.log('✅ Build succeeded with VITE_API_URL\n');
 } catch (error) {

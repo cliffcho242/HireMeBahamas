@@ -26,7 +26,7 @@ export function getApiBaseUrl(): string {
   if (import.meta.env.PROD) {
     throw new Error(
       "CRITICAL: No API base URL configured for production build.\n" +
-      "Set VITE_API_BASE_URL=https://api.hiremebahamas.com in your environment.\n" +
+      "Set VITE_API_BASE_URL=https://api.yourdomain.com in your environment.\n" +
       "See .env.example for configuration details."
     );
   }
@@ -50,6 +50,7 @@ export function isApiConfigured(): boolean {
 const API_TIMEOUT_MS = 30000; // 30 seconds
 const API_RETRY_ATTEMPTS = 3;
 const API_RETRY_DELAY_MS = 1000; // 1 second base delay
+const API_MAX_RETRY_DELAY_MS = 10000; // 10 seconds max delay between retries
 
 // Helper to check if error is retryable
 function isRetryableError(error: unknown): boolean {
@@ -87,7 +88,9 @@ export async function apiFetch<T>(
   for (let attempt = 0; attempt < API_RETRY_ATTEMPTS; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+      const timeoutId = setTimeout(() => {
+        controller.abort(new DOMException('Request timeout', 'TimeoutError'));
+      }, API_TIMEOUT_MS);
 
       try {
         const res = await fetch(url, {
@@ -105,7 +108,10 @@ export async function apiFetch<T>(
         if (!res.ok) {
           // Check if we should retry this status
           if (attempt < API_RETRY_ATTEMPTS - 1 && isRetryableStatus(res.status)) {
-            const delay = API_RETRY_DELAY_MS * Math.pow(2, attempt);
+            const delay = Math.min(
+              API_RETRY_DELAY_MS * Math.pow(2, attempt),
+              API_MAX_RETRY_DELAY_MS
+            );
             console.warn(`API error ${res.status}, retrying in ${delay}ms... (attempt ${attempt + 1}/${API_RETRY_ATTEMPTS})`);
             await sleep(delay);
             continue;
@@ -130,7 +136,10 @@ export async function apiFetch<T>(
 
       // Check if error is retryable
       if (isRetryableError(err)) {
-        const delay = API_RETRY_DELAY_MS * Math.pow(2, attempt);
+        const delay = Math.min(
+          API_RETRY_DELAY_MS * Math.pow(2, attempt),
+          API_MAX_RETRY_DELAY_MS
+        );
         console.warn(`Network error, retrying in ${delay}ms... (attempt ${attempt + 1}/${API_RETRY_ATTEMPTS})`);
         await sleep(delay);
         continue;
