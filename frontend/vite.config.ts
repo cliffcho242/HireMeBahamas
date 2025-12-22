@@ -222,9 +222,14 @@ export default defineConfig({
     // https: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8008',
+        // Use production API for local development (mirrors production setup)
+        // This avoids CORS issues and matches production behavior
+        // Override with VITE_API_BASE_URL environment variable
+        target: process.env.VITE_API_BASE_URL || process.env.VITE_DEFAULT_API_URL || 'https://api.hiremebahamas.com',
         changeOrigin: true,
-        secure: false,
+        secure: true,
+        // If you want to use local backend instead, set VITE_API_URL=http://localhost:8000
+        // and it will override this proxy (see getApiBaseUrl() logic)
       },
     },
   },

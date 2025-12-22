@@ -338,18 +338,20 @@ export function makeErrorFriendly(error: unknown): FriendlyError {
   }
   
   // Generic fallback (but still friendly!)
+  // This is what users see for "Unexpected response from server"
   return {
-    title: 'Something Went Wrong',
-    message: 'We encountered an unexpected issue. Don\'t worry, we\'re here to help!',
+    title: 'Connection Issue',
+    message: 'We\'re having trouble contacting the server. This usually resolves itself quickly.',
     actions: [
-      'Try refreshing the page',
-      'Check your internet connection',
-      'Try logging in again',
-      'Contact support if the problem persists'
+      'Check your internet connection and try again',
+      'Wait a moment for the server to respond',
+      'Refresh the page if the issue persists',
+      'The server may be starting up (can take 30-60 seconds)',
+      'Contact support if you continue to see this error'
     ],
     severity: 'error',
     icon: '❌',
-    helpLink: '/help/general'
+    helpLink: '/help/connection-issues'
   };
 }
 
