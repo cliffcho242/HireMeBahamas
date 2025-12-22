@@ -111,10 +111,11 @@ try {
     console.log(
       "ℹ️ VITE_API_BASE_URL already exists on Vercel. Skipping creation."
     );
+  } else {
+    console.warn(
+      "⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in."
+    );
   }
-  console.warn(
-    "⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in."
-  );
 }
 
 // Redeploy frontend
@@ -145,6 +146,7 @@ try {
   console.log("🔹 Checking backend CORS...");
 
   let verifiedAtLeastOnce = false;
+  const missingDomains = new Set();
 
   for (const corsCheckUrl of corsTargets) {
     for (const origin of REQUIRED_CORS_ORIGINS) {
@@ -173,7 +175,8 @@ try {
         const wildcard = allowList.includes("*");
 
         REQUIRED_CORS_ORIGINS.forEach((domain) => {
-          if (!wildcard && !allowList.includes(domain)) {
+          if (!wildcard && !allowList.includes(domain) && !missingDomains.has(domain)) {
+            missingDomains.add(domain);
             console.warn(`⚠️ Backend CORS missing domain: ${domain}`);
           }
         });
