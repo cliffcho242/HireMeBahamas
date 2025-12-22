@@ -83,7 +83,7 @@ function validateAndGetBaseUrl(): string {
  * 
  * @param path - The API path (e.g., "/admin/users")
  * @returns The complete URL with base URL prepended
- * @throws Error if VITE_API_URL is missing or invalid
+ * @throws Error if URL validation fails
  * 
  * @example
  * ```typescript
@@ -120,7 +120,7 @@ export function isApiConfigured(): boolean {
  * Get the base API URL
  * 
  * @returns The base API URL
- * @throws Error if VITE_API_URL is missing or invalid
+ * @throws Error if URL validation fails
  */
 export function getApiBase(): string {
   const base = validateAndGetBaseUrl();
