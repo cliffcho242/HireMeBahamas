@@ -157,10 +157,13 @@ const ENV_MODE = {
 if (import.meta.env.MODE !== ENV_MODE.TEST) {
   const result = validateEnvironmentVariables();
   if (!result.valid && import.meta.env.PROD) {
-    throw new Error(
+    console.error(
       'Environment variable validation failed for production build.\n' +
         'Check the errors above.',
     );
+    if (typeof window !== 'undefined') {
+      (window as any).__HIREME_ENV_INVALID__ = true;
+    }
   }
 }
 

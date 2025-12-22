@@ -10,13 +10,15 @@ export function getApiBase(): string {
   const raw = localOverride || import.meta.env.VITE_API_BASE_URL;
 
   if (!raw) {
-    throw new Error("❌ VITE_API_BASE_URL is required");
+    console.error("❌ VITE_API_BASE_URL missing");
+    return "";
   }
 
   // Allow http only when using a local override outside production builds
   const requiresHttps = import.meta.env.PROD || !localOverride;
   if (requiresHttps && !raw.startsWith("https://")) {
-    throw new Error("❌ VITE_API_BASE_URL must be HTTPS in production");
+    console.error("❌ VITE_API_BASE_URL must be HTTPS in production");
+    return "";
   }
 
   return raw.replace(/\/+$/, "");
@@ -25,6 +27,11 @@ export function getApiBase(): string {
 export const API_BASE_URL = getApiBase();
 
 export function apiUrl(path: string): string {
+  if (!API_BASE_URL) {
+    console.warn("API base missing, building relative URL", { path });
+    if (!path.startsWith("/")) path = "/" + path;
+    return path;
+  }
   if (!path.startsWith("/")) path = "/" + path;
   return `${API_BASE_URL}${path}`;
 }
@@ -33,6 +40,12 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  if (!API_BASE_URL) {
+    console.warn("API base missing, skipping request", { path });
+    // Return a rejected promise so callers can handle gracefully without crashing render
+    return Promise.reject(new Error("API base URL missing"));
+  }
+
   const res = await fetch(apiUrl(path), {
     credentials: "include",
     headers: {
