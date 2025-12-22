@@ -11,8 +11,18 @@
 
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
-const fetch = global.fetch || require("node-fetch"); // fallback for Node <18
+const { execFileSync } = require("child_process");
+const DEFAULT_API_BASE_URL = "https://hiremebahamas-backend.onrender.com";
+const REQUIRED_CORS_ORIGINS = ["https://hiremebahamas.com", "https://www.hiremebahamas.com"];
+
+let fetch = global.fetch;
+if (!fetch) {
+  try {
+    fetch = require("node-fetch");
+  } catch {
+    fetch = (...args) => import("node-fetch").then(({ default: f }) => f(...args));
+  }
+} // fallback for Node <18
 
 // Files to replace
 const files = [
@@ -58,14 +68,16 @@ files.forEach((file) => {
 });
 
 // Normalize VITE_API_BASE_URL
-const envVar = process.env.VITE_API_BASE_URL || "https://hiremebahamas-backend.onrender.com";
+const envVar = process.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL;
 const normalized = envVar.replace(/\/+$/, "");
 console.log(`🔹 Normalized VITE_API_BASE_URL: ${normalized}`);
 
 // Set Vercel environment variable
 try {
   console.log("🔹 Setting VITE_API_BASE_URL on Vercel...");
-  execSync(`vercel env add VITE_API_BASE_URL ${normalized} production --yes`, { stdio: "inherit" });
+  execFileSync("vercel", ["env", "add", "VITE_API_BASE_URL", normalized, "production", "--yes"], {
+    stdio: "inherit",
+  });
   console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
 } catch (err) {
   console.warn("⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in.");
@@ -74,7 +86,7 @@ try {
 // Redeploy frontend
 try {
   console.log("🔹 Redeploying frontend...");
-  execSync("vercel --prod --confirm", { stdio: "inherit" });
+  execFileSync("vercel", ["--prod", "--confirm"], { stdio: "inherit" });
   console.log("🎉 Frontend redeployed successfully!");
 } catch (err) {
   console.error("❌ Frontend redeploy failed. Check Vercel CLI login and project directory.");
@@ -90,7 +102,7 @@ try {
     if (!allowOrigins) {
       console.warn("⚠️ CORS header missing. Safari and iOS may block requests.");
     } else {
-      const required = ["https://hiremebahamas.com", "https://www.hiremebahamas.com"];
+      const required = REQUIRED_CORS_ORIGINS;
       const allowedList =
         allowOrigins === "*"
           ? required
