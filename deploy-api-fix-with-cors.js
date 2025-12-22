@@ -59,6 +59,9 @@ export function getApiBaseUrl(): string {
     return normalize(baseUrl);
   }
 
+  console.warn(
+    "[getApiBaseUrl] No API base configured. Falling back to same-origin."
+  );
   return "";
 }
 
@@ -106,11 +109,33 @@ try {
   console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
 } catch (err) {
   const errMsg =
-    err?.stderr?.toString?.() || err?.message || String(err ?? "unknown error");
+    (err?.stderr && err.stderr.toString()) ||
+    err?.message ||
+    String(err ?? "unknown error");
   if (errMsg.toLowerCase().includes("already exists")) {
     console.log(
       "ℹ️ VITE_API_BASE_URL already exists on Vercel. Skipping creation."
     );
+    try {
+      console.log("🔄 Updating existing VITE_API_BASE_URL on Vercel...");
+      execFileSync(
+        "vercel",
+        ["env", "rm", "VITE_API_BASE_URL", "production", "--yes"],
+        { stdio: "inherit" }
+      );
+      execFileSync(
+        "vercel",
+        ["env", "add", "VITE_API_BASE_URL", "production", "--yes"],
+        { stdio: ["pipe", "inherit", "inherit"], input: `${normalized}\n` }
+      );
+      console.log("✅ VITE_API_BASE_URL updated on Vercel (Production)");
+      return;
+    } catch (updateErr) {
+      console.warn(
+        "⚠️ Failed to update existing Vercel env variable.",
+        updateErr?.message || updateErr
+      );
+    }
   } else {
     console.warn(
       "⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in."
@@ -175,9 +200,8 @@ try {
         const wildcard = allowList.includes("*");
 
         REQUIRED_CORS_ORIGINS.forEach((domain) => {
-          if (!wildcard && !allowList.includes(domain) && !missingDomains.has(domain)) {
+          if (!wildcard && !allowList.includes(domain)) {
             missingDomains.add(domain);
-            console.warn(`⚠️ Backend CORS missing domain: ${domain}`);
           }
         });
 
@@ -192,6 +216,12 @@ try {
         );
       }
     }
+  }
+
+  if (missingDomains.size) {
+    console.warn(
+      `⚠️ Backend CORS missing domains: ${Array.from(missingDomains).join(", ")}`
+    );
   }
 
   if (!verifiedAtLeastOnce) {
