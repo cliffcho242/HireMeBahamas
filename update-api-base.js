@@ -1,4 +1,13 @@
-/**
+const fs = require("fs");
+const path = require("path");
+
+// List of files to update
+const files = [
+  path.join(__dirname, "frontend/src/lib/api.ts"),
+  path.join(__dirname, "admin-panel/src/lib/apiUrl.ts"),
+];
+
+const replacement = `/**
  * Robust API base URL getter
  *
  * Priority:
@@ -18,9 +27,7 @@ export function getApiBaseUrl(): string {
 
   if (baseUrl) {
     if (!baseUrl.startsWith("https://")) {
-      console.warn(
-        `[getApiBaseUrl] Warning: VITE_API_BASE_URL must be HTTPS in production: ${baseUrl}`
-      );
+      console.warn(\`[getApiBaseUrl] Warning: VITE_API_BASE_URL must be HTTPS in production: \${baseUrl}\`);
     }
     return normalize(baseUrl);
   }
@@ -31,7 +38,7 @@ export function getApiBaseUrl(): string {
 export function buildApiUrl(path: string): string {
   const base = getApiBaseUrl();
   if (!path.startsWith("/")) path = "/" + path;
-  return `${base}${path}`;
+  return \`\${base}\${path}\`;
 }
 
 // Backward compatibility for existing imports
@@ -47,3 +54,13 @@ export function isApiConfigured(): boolean {
     base.startsWith("http://0.0.0.0")
   );
 }
+`;
+
+files.forEach((file) => {
+  if (fs.existsSync(file)) {
+    fs.writeFileSync(file, replacement, "utf8");
+    console.log(\`✅ Updated: \${file}\`);
+  } else {
+    console.warn(\`⚠️ File not found: \${file}\`);
+  }
+});
