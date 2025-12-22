@@ -1,66 +1,43 @@
 const fs = require("fs");
 const path = require("path");
 
-// List of files to update
-const files = [
-  path.join(__dirname, "frontend/src/lib/api.ts"),
-  path.join(__dirname, "admin-panel/src/lib/apiUrl.ts"),
-];
+const sourceFile = path.join(__dirname, "frontend/src/lib/api.ts");
+const targetFiles = [path.join(__dirname, "admin-panel/src/lib/apiUrl.ts")];
+if (!fs.existsSync(sourceFile)) {
+  throw new Error(`Source file missing: ${sourceFile}`);
+}
 
-const replacement = `/**
- * Robust API base URL getter
- *
- * Priority:
- * 1. VITE_API_BASE_URL (production)
- * 2. VITE_API_URL (dev override; HTTP allowed only for localhost)
- * 3. Same-origin fallback (Vercel proxy)
- */
-export function getApiBaseUrl(): string {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
-  const overrideUrl = import.meta.env.VITE_API_URL?.trim();
+const { size } = fs.statSync(sourceFile);
+const MAX_SIZE_BYTES = 1024 * 1024; // 1MB safety cap
+if (size > MAX_SIZE_BYTES) {
+  throw new Error(`Source file too large to process safely: ${sourceFile}`);
+}
 
-  const normalize = (url: string) => url.replace(/\/+$/, "");
+const replacement = fs.readFileSync(sourceFile, "utf8");
 
-  if (overrideUrl && overrideUrl.startsWith("http://localhost")) {
-    return normalize(overrideUrl);
+targetFiles.forEach((file) => {
+  if (!fs.existsSync(file)) {
+    throw new Error(`Target file missing: ${file}`);
   }
 
-  if (baseUrl) {
-    if (!baseUrl.startsWith("https://")) {
-      console.warn(\`[getApiBaseUrl] Warning: VITE_API_BASE_URL must be HTTPS in production: \${baseUrl}\`);
+  const current = fs.readFileSync(file, "utf8");
+  if (current === replacement) {
+    console.log(`ℹ️ No change needed: ${file}`);
+    return;
+  }
+  const tempFile = `${file}.tmp`;
+  try {
+    fs.writeFileSync(tempFile, replacement, "utf8");
+    fs.renameSync(tempFile, file);
+    console.log(`✅ Updated: ${file}`);
+  } catch (error) {
+    try {
+      if (fs.existsSync(tempFile)) {
+        fs.rmSync(tempFile, { force: true });
+      }
+    } catch (cleanupError) {
+      console.warn(`⚠️ Cleanup failed for ${tempFile}:`, cleanupError);
     }
-    return normalize(baseUrl);
-  }
-
-  return "";
-}
-
-export function buildApiUrl(path: string): string {
-  const base = getApiBaseUrl();
-  if (!path.startsWith("/")) path = "/" + path;
-  return \`\${base}\${path}\`;
-}
-
-// Backward compatibility for existing imports
-export const apiUrl = buildApiUrl;
-export const getApiBase = getApiBaseUrl;
-export function isApiConfigured(): boolean {
-  const base = getApiBaseUrl();
-  if (!base) return true; // same-origin fallback
-  return (
-    base.startsWith("https://") ||
-    base.startsWith("http://localhost") ||
-    base.startsWith("http://127.0.0.1") ||
-    base.startsWith("http://0.0.0.0")
-  );
-}
-`;
-
-files.forEach((file) => {
-  if (fs.existsSync(file)) {
-    fs.writeFileSync(file, replacement, "utf8");
-    console.log(\`✅ Updated: \${file}\`);
-  } else {
-    console.warn(\`⚠️ File not found: \${file}\`);
+    throw error;
   }
 });

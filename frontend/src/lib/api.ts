@@ -12,7 +12,12 @@ export function getApiBaseUrl(): string {
 
   const normalize = (url: string) => url.replace(/\/+$/, "");
 
-  if (overrideUrl && overrideUrl.startsWith("http://localhost")) {
+  if (
+    overrideUrl &&
+    (overrideUrl.startsWith("http://localhost") ||
+      overrideUrl.startsWith("http://127.0.0.1") ||
+      overrideUrl.startsWith("http://0.0.0.0"))
+  ) {
     return normalize(overrideUrl);
   }
 
@@ -28,6 +33,11 @@ export function getApiBaseUrl(): string {
   return "";
 }
 
+/**
+ * Helper to build full endpoint URLs safely
+ * Example:
+ *   const url = buildApiUrl("/api/auth/login");
+ */
 export function buildApiUrl(path: string): string {
   const base = getApiBaseUrl();
   if (!path.startsWith("/")) path = "/" + path;
