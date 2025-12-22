@@ -36,7 +36,7 @@ export function buildApiUrl(path: string): string {
   if (!path.startsWith("/")) {
     path = "/" + path;
   }
-  return `${base}${path}`;
+  return base + path;
 }
 
 // Backward compatibility for existing imports
