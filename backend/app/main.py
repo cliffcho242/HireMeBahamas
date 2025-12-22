@@ -11,6 +11,7 @@ import logging
 from typing import Optional, List, Dict, Union, Any
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import text
 
 from .database import get_engine
@@ -431,6 +432,16 @@ if _db_import_error is not None:
 # =============================================================================
 # PANIC SHIELD - GLOBAL EXCEPTION GUARD
 # =============================================================================
+@app.exception_handler(StarletteHTTPException)
+async def http_error_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    if exc.status_code == 404:
+        return JSONResponse(status_code=404, content={"error": "NOT_FOUND"})
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": "HTTP_ERROR", "detail": exc.detail}
+    )
+
+
 @app.exception_handler(Exception)
 async def panic_handler(request: Request, exc: Exception) -> JSONResponse:
     """Global exception guard - catches all unhandled exceptions.
@@ -450,7 +461,7 @@ async def panic_handler(request: Request, exc: Exception) -> JSONResponse:
     
     return JSONResponse(
         status_code=500,
-        content={"error": "Temporary issue. Try again."}
+        content={"error": "SERVER_ERROR", "detail": str(exc)}
     )
 
 # GraphQL support (optional - gracefully degrades if strawberry not available)
@@ -507,6 +518,8 @@ except ImportError:
             "https://hiremebahamas.com",
             "https://www.hiremebahamas.com",
             "https://hire-me-bahamas.vercel.app",
+            "capacitor://localhost",
+            "ionic://localhost",
         ]
     else:
         # Development: includes localhost and production domains for testing
@@ -518,6 +531,8 @@ except ImportError:
             "http://127.0.0.1:3000",
             "http://localhost:5173",  # Vite default
             "http://127.0.0.1:5173",
+            "capacitor://localhost",
+            "ionic://localhost",
         ]
 
 # Apply CORS middleware with credentials support
@@ -527,8 +542,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,  # Explicit origins required for credentials
     allow_credentials=True,          # Enable cookies/auth headers in CORS requests
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Cache control configuration for different endpoint patterns
