@@ -23,6 +23,12 @@ export function apiUrl(path: string): string {
   return `${getApiBaseUrl()}${path}`;
 }
 
+// Backward compatibility aliases
+export const getApiBase = getApiBaseUrl;
+export function isApiConfigured(): boolean {
+  return getApiBaseUrl() !== "";
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
