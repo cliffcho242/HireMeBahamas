@@ -48,10 +48,7 @@ export function buildApiUrl(path: string): string {
 export const apiUrl = buildApiUrl;
 export const getApiBase = getApiBaseUrl;
 export function isApiConfigured(): boolean {
-  try {
-    buildApiUrl("/api/health");
-    return true;
-  } catch {
-    return false;
-  }
+  const base = getApiBaseUrl();
+  if (!base) return true; // same-origin fallback
+  return base.startsWith("https://") || base.startsWith("http://localhost");
 }
