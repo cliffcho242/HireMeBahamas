@@ -140,6 +140,11 @@ if (typeof window !== 'undefined') {
   window.addEventListener('load', () => {
     const backendUrl = API_BASE_URL;
 
+    if (!backendUrl) {
+      console.warn('VITE_API_BASE_URL missing; skipping backend connectivity check');
+      return;
+    }
+
     console.log('🔗 Backend URL:', backendUrl);
 
     if (backendUrl === 'https://hiremebahamas-backend.onrender.com') {
@@ -171,23 +176,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Register Service Worker for PWA (fresh registration after cleanup)
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/service-worker.js')
-      .then((registration) => {
-        console.log('Service Worker registered successfully:', registration.scope);
-        
-        // Check for updates every hour
-        setInterval(() => {
-          registration.update();
-        }, 60 * 60 * 1000);
-      })
-      .catch((error) => {
-        console.log('Service Worker registration failed:', error);
-      });
-  });
-}
+// PWA temporarily disabled to prevent offline cache hijacking
 
 // Enhanced error fallback component with recovery options
 const ErrorFallback = () => (

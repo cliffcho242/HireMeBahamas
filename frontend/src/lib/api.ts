@@ -5,17 +5,23 @@
  * No same-origin
  * Fail fast if misconfigured
  */
-const RAW_API_BASE = import.meta.env.VITE_API_BASE_URL;
+export function getApiBase(): string {
+  const base = import.meta.env.VITE_API_BASE_URL;
 
-if (!RAW_API_BASE) {
-  throw new Error("❌ VITE_API_BASE_URL is required");
+  if (!base) {
+    console.error("❌ VITE_API_BASE_URL missing");
+    return "";
+  }
+
+  if (!base.startsWith("https://")) {
+    console.error("❌ VITE_API_BASE_URL must be HTTPS in production");
+    return "";
+  }
+
+  return base.replace(/\/+$/, "");
 }
 
-if (!RAW_API_BASE.startsWith("https://")) {
-  throw new Error("❌ VITE_API_BASE_URL must be HTTPS in production");
-}
-
-export const API_BASE_URL = RAW_API_BASE.replace(/\/+$/, "");
+export const API_BASE_URL = getApiBase();
 
 export function apiUrl(path: string): string {
   if (!path.startsWith("/")) path = "/" + path;
@@ -26,6 +32,11 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  if (!API_BASE_URL) {
+    console.warn("API base missing, skipping request for", path);
+    return Promise.reject(new Error("API base URL is not configured"));
+  }
+
   const res = await fetch(apiUrl(path), {
     credentials: "include",
     headers: {

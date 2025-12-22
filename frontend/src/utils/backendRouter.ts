@@ -7,16 +7,17 @@ interface BackendConfig {
 
 export function validateBackendUrl(): void {
   if (!API_BASE_URL) {
-    throw new Error('VITE_API_BASE_URL is required for backend routing');
+    console.error('VITE_API_BASE_URL is required for backend routing');
   }
 }
 
+const hasBackendConfig = !!API_BASE_URL;
 validateBackendUrl();
 
 function getBackendConfig(): BackendConfig {
   return {
     url: API_BASE_URL,
-    available: true,
+    available: hasBackendConfig,
   };
 }
 
@@ -31,6 +32,11 @@ export async function testBackends(): Promise<{
   const results = {
     backend: { available: false, latency: 0, error: '' },
   };
+
+  if (!config.available) {
+    results.backend = { available: false, latency: 0, error: 'API base URL is not configured' };
+    return results;
+  }
 
   try {
     const start = Date.now();
