@@ -11,6 +11,8 @@ import { apiFetch } from '../src/services/api';
 // Mock the apiUrl function
 vi.mock('@/lib/api', () => ({
   apiUrl: (path: string) => `https://api.test.com${path}`,
+  getApiBase: () => 'https://api.test.com',
+  isApiConfigured: () => true,
 }));
 
 // Store the original fetch
