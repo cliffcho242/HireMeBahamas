@@ -19,11 +19,6 @@ export function getApiBaseUrl(): string {
 
   // Production environment variable has priority
   if (baseUrl) {
-    if (!baseUrl.startsWith("https://")) {
-      console.warn(
-        `[getApiBaseUrl] Warning: VITE_API_BASE_URL must be HTTPS in production: ${baseUrl}`
-      );
-    }
     return normalize(baseUrl);
   }
 

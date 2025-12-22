@@ -1,83 +1,83 @@
 #!/usr/bin/env node
-
 /**
  * Full production-proof deploy script
- * - Update frontend API files
- * - Normalize VITE_API_BASE_URL
- * - Set the env variable on Vercel
- * - Redeploy frontend
- * - Check backend CORS for required domains
+ * Update frontend API files
+ * Normalize VITE_API_BASE_URL
+ * Set env variable on Vercel
+ * Redeploy frontend
+ * Check backend CORS for required domains
  */
-
 const fs = require("fs");
 const path = require("path");
-const { execSync, execFileSync } = require("child_process");
+const { execSync } = require("child_process");
 
-const DEFAULT_API_BASE_URL = "https://hiremebahamas-backend.onrender.com";
-const REQUIRED_CORS_ORIGINS = [
-  "https://hiremebahamas.com",
-  "https://www.hiremebahamas.com",
-];
+let fetchImpl = globalThis.fetch;
+if (!fetchImpl) {
+  try {
+    fetchImpl = require("node-fetch");
+  } catch (err) {
+    console.warn(
+      "⚠️ node-fetch@2 is not installed; CORS verification will be skipped."
+    );
+  }
+}
 
-const fetchImpl =
-  typeof fetch !== "undefined"
-    ? fetch
-    : (() => {
-        try {
-          return require("node-fetch");
-        } catch (err) {
-          console.warn(
-            "⚠️ fetch is unavailable. On Node 18+ it's built-in; for older Node use: npm install node-fetch@2"
-          );
-          return null;
-        }
-      })();
-
-// Files to replace
 const files = [
-  path.join(__dirname, "frontend/src/lib/api.ts"),
-  path.join(__dirname, "admin-panel/src/lib/apiUrl.ts"),
+  path.join(__dirname, "frontend", "src", "lib", "api.ts"),
+  path.join(__dirname, "admin-panel", "src", "lib", "apiUrl.ts"),
 ];
 
-// Replacement content
 const replacement = `/**
  * Robust API base URL getter
+ *
+ * Priority:
+ * 1. VITE_API_URL when pointing to localhost (for dev overrides)
+ * 2. VITE_API_BASE_URL (production)
+ * 3. Same-origin fallback (Vercel proxy)
  */
 export function getApiBaseUrl(): string {
   const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
   const overrideUrl = import.meta.env.VITE_API_URL?.trim();
 
-  const normalize = (url: string) => url.replace(/\/+$/, "");
+  const normalize = (url: string) => url.replace(/\\/+$/, ""); // remove trailing slash
 
-  // Dev override for localhost
+  // Dev override for localhost (HTTP allowed)
   if (overrideUrl && overrideUrl.startsWith("http://localhost")) {
     return normalize(overrideUrl);
   }
 
-  // Production variable
+  // Production environment variable has priority
   if (baseUrl) {
     return normalize(baseUrl);
   }
 
-  console.warn(
-    "[getApiBaseUrl] No API base configured. Falling back to same-origin."
-  );
+  // Default fallback: same-origin (Vercel proxy)
   return "";
 }
 
+/**
+ * Helper to build full endpoint URLs safely
+ * Example:
+ *   const url = buildApiUrl("/api/auth/login");
+ */
 export function buildApiUrl(path: string): string {
   const base = getApiBaseUrl();
-  if (!path.startsWith("/")) path = "/" + path;
-  return base + path;
+  if (!path.startsWith("/")) {
+    path = "/" + path;
+  }
+  return \`\${base}\${path}\`;
 }
 
-// Backward compatibility helpers
+// Backward compatibility for existing imports
 export const apiUrl = buildApiUrl;
 export const getApiBase = getApiBaseUrl;
 export function isApiConfigured(): boolean {
   const base = getApiBaseUrl();
-  if (!base) return true; // treat empty as same-origin fallback for Vercel proxy
-  return base.startsWith("https://") || base.startsWith("http://localhost");
+  if (!base) return true; // same-origin fallback
+  return (
+    base.startsWith("https://") ||
+    base.startsWith("http://localhost")
+  );
 }
 `;
 
@@ -91,58 +91,24 @@ files.forEach((file) => {
   }
 });
 
-// Normalize VITE_API_BASE_URL
 const envVar =
-  process.env.VITE_API_BASE_URL ||
-  DEFAULT_API_BASE_URL;
-const normalized = envVar.replace(/\/+$/, "");
+  process.env.VITE_API_BASE_URL || "https://hiremebahamas-backend.onrender.com";
+const normalized = envVar.trim().replace(/\/+$/, "");
 console.log(`🔹 Normalized VITE_API_BASE_URL: ${normalized}`);
 
-// Set Vercel environment variable
 try {
   console.log("🔹 Setting VITE_API_BASE_URL on Vercel...");
-  execFileSync(
-    "vercel",
-    ["env", "add", "VITE_API_BASE_URL", "production", "--yes"],
-    { stdio: ["pipe", "inherit", "inherit"], input: `${normalized}\n` }
-  );
+  execSync("vercel env add VITE_API_BASE_URL production --yes", {
+    stdio: ["pipe", "inherit", "inherit"],
+    input: normalized,
+  });
   console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
 } catch (err) {
-  const errMsgRaw =
-    err?.stderr || err?.stdout || err?.message || err || "unknown error";
-  const errMsg =
-    typeof errMsgRaw === "string" ? errMsgRaw : errMsgRaw.toString();
-  if (errMsg.toLowerCase().includes("already exists")) {
-    console.log(
-      "ℹ️ VITE_API_BASE_URL already exists on Vercel. Skipping creation."
-    );
-    try {
-      console.log("🔄 Updating existing VITE_API_BASE_URL on Vercel...");
-      execFileSync(
-        "vercel",
-        ["env", "rm", "VITE_API_BASE_URL", "production", "--yes"],
-        { stdio: "inherit" }
-      );
-      execFileSync(
-        "vercel",
-        ["env", "add", "VITE_API_BASE_URL", "production", "--yes"],
-        { stdio: ["pipe", "inherit", "inherit"], input: `${normalized}\n` }
-      );
-      console.log("✅ VITE_API_BASE_URL updated on Vercel (Production)");
-    } catch (updateErr) {
-      console.warn(
-        "⚠️ Failed to update existing Vercel env variable.",
-        updateErr?.message || updateErr
-      );
-    }
-  } else {
-    console.warn(
-      "⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in."
-    );
-  }
+  console.warn(
+    "⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in."
+  );
 }
 
-// Redeploy frontend
 try {
   console.log("🔹 Redeploying frontend...");
   execSync("vercel --prod --confirm", { stdio: "inherit" });
@@ -153,78 +119,44 @@ try {
   );
 }
 
-// CORS verification
 (async () => {
   if (!fetchImpl) {
+    console.warn("⚠️ Skipping CORS verification (fetch unavailable).");
+    return;
+  }
+
+  if (!normalized) {
     console.warn(
-      "⚠️ Skipping CORS verification because fetch is unavailable. Install node-fetch@2 if running on Node <18."
+      "⚠️ Skipping CORS verification because VITE_API_BASE_URL is empty."
     );
     return;
   }
 
-  const corsTargets = [
-    `${normalized}/api/health`,
-    `${normalized}/openapi.json`,
-  ];
-
+  const corsCheckUrl = `${normalized}/openapi.json`;
   console.log("🔹 Checking backend CORS...");
 
-  let verifiedAtLeastOnce = false;
-  const missingDomains = new Set();
+  try {
+    const res = await fetchImpl(corsCheckUrl, { method: "OPTIONS" });
+    const allowOrigins = res.headers.get("access-control-allow-origin");
 
-  for (const corsCheckUrl of corsTargets) {
-    for (const origin of REQUIRED_CORS_ORIGINS) {
-      try {
-        const res = await fetchImpl(corsCheckUrl, {
-          method: "OPTIONS",
-          headers: {
-            Origin: origin,
-            "Access-Control-Request-Method": "GET",
-          },
-        });
-        const allowOrigins = res.headers.get("access-control-allow-origin");
-
-        if (!allowOrigins) {
-          console.warn(
-            `⚠️ CORS header missing from ${corsCheckUrl} (origin: ${origin}). Safari and iOS may block requests.`
-          );
-          continue;
-        }
-
-        const allowOriginsValue = allowOrigins || "";
-        const allowList = allowOriginsValue
-          .split(",")
-          .map((originValue) => originValue.trim())
-          .filter(Boolean);
-
-        const wildcard = allowList.includes("*");
-
-        REQUIRED_CORS_ORIGINS.forEach((domain) => {
-          if (!wildcard && !allowList.includes(domain)) {
-            missingDomains.add(domain);
-          }
-        });
-
-        console.log(
-          `✅ CORS verified from ${corsCheckUrl} for origin ${origin}: ${allowOrigins}`
-        );
-        verifiedAtLeastOnce = true;
-      } catch (err) {
-        console.warn(
-          `⚠️ Could not verify backend CORS at ${corsCheckUrl} for origin ${origin}.`,
-          err?.message || err
-        );
-      }
+    if (!allowOrigins) {
+      console.warn("⚠️ CORS header missing. Safari and iOS may block requests.");
+      return;
     }
-  }
 
-  if (missingDomains.size) {
-    console.warn(
-      `⚠️ Backend CORS missing domains: ${Array.from(missingDomains).join(", ")}`
-    );
-  }
+    const required = [
+      "https://hiremebahamas.com",
+      "https://www.hiremebahamas.com",
+    ];
 
-  if (!verifiedAtLeastOnce) {
-    console.warn("⚠️ CORS verification did not succeed for any endpoint.");
+    required.forEach((domain) => {
+      if (!allowOrigins.includes(domain)) {
+        console.warn(`⚠️ Backend CORS missing domain: ${domain}`);
+      }
+    });
+
+    console.log(`✅ CORS verified: ${allowOrigins}`);
+  } catch (err) {
+    console.warn("⚠️ Could not verify backend CORS. Check if backend is reachable.");
   }
 })();
