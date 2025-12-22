@@ -434,11 +434,14 @@ if _db_import_error is not None:
 # =============================================================================
 @app.exception_handler(StarletteHTTPException)
 async def http_error_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    is_prod_env = os.getenv("ENVIRONMENT", "").lower() == "production" or os.getenv("VERCEL_ENV", "").lower() == "production"
+    detail = exc.detail if not is_prod_env else "Request error"
+
     if exc.status_code == 404:
         return JSONResponse(status_code=404, content={"error": "NOT_FOUND"})
     return JSONResponse(
         status_code=exc.status_code,
-        content={"error": "HTTP_ERROR", "detail": exc.detail}
+        content={"error": "HTTP_ERROR", "detail": detail}
     )
 
 
@@ -545,8 +548,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,  # Explicit origins required for credentials
     allow_credentials=True,          # Enable cookies/auth headers in CORS requests
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
 )
 
 # Cache control configuration for different endpoint patterns
