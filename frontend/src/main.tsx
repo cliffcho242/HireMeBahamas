@@ -5,6 +5,8 @@ import App from './App'
 import './index.css'
 import './styles/mobile-responsive.css'
 
+console.log('APP VERSION:', import.meta.env.VITE_APP_VERSION);
+
 // 🚫 HARD BLOCK: Prevent loading if served from deprecated Railway domains
 if (typeof window !== 'undefined' && window.location.hostname.includes('railway')) {
   const message = '❌ Deprecated backend detected';

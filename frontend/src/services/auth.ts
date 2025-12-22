@@ -6,7 +6,7 @@
  * with automatic silent token refresh.
  */
 
-import { apiUrl } from '../lib/api';
+import { apiFetch as baseApiFetch, apiUrl } from '../lib/api';
 import { User } from '../types/user';
 
 // Session storage key - must match sessionManager.ts
@@ -31,19 +31,11 @@ let queue: (() => void)[] = [];
  */
 export async function getSession(): Promise<User | null> {
   try {
-    const res = await fetch(apiUrl("/api/auth/me"), {
-      credentials: 'include',
-    });
-
-    if (!res.ok) {
-      // Not authenticated or error - return null safely
-      return null;
-    }
-
-    const data = await res.json();
+    const data = await baseApiFetch<User | null>("/api/auth/me");
     
     // The backend returns UserResponse which contains the user data directly
-    return data as User;
+    if (!data) return null;
+    return data;
   } catch (error) {
     // Network error or other issue - return null safely (no guessing)
     if (import.meta.env.DEV) {
@@ -76,18 +68,11 @@ export async function refreshToken(): Promise<void> {
       throw new Error('No token available to refresh');
     }
 
-    const response = await fetch(apiUrl("/api/auth/refresh"), {
-      credentials: "include",
+    const data = await baseApiFetch<{ access_token?: string; user?: User }>("/api/auth/refresh", {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
     });
-
-    if (!response.ok) {
-      throw new Error(`Token refresh failed: ${response.status}`);
-    }
-
-    const data = await response.json();
     
     // Update token in localStorage
     if (data.access_token) {
@@ -108,60 +93,4 @@ export async function refreshToken(): Promise<void> {
     queue.forEach((resolve) => resolve());
     queue = [];
   }
-}
-
-/**
- * Fetch wrapper with automatic token refresh on 401
- * 
- * @param input - Request URL or Request object
- * @param init - Request init options
- * @returns Response from the API
- */
-export async function apiFetch(
-  input: RequestInfo,
-  init?: RequestInit
-): Promise<Response> {
-  // Add authorization header if token exists
-  const token = localStorage.getItem('token');
-  const headers = {
-    ...init?.headers,
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-  };
-
-  // First attempt
-  const res = await fetch(input, {
-    ...init,
-    headers,
-    credentials: "include",
-  });
-
-  // If unauthorized, refresh token and retry
-  if (res.status === 401) {
-    try {
-      await refreshToken();
-      
-      // Get the new token and retry the original request
-      const newToken = localStorage.getItem('token');
-      const newHeaders = {
-        ...init?.headers,
-        ...(newToken ? { 'Authorization': `Bearer ${newToken}` } : {}),
-      };
-      
-      return fetch(input, {
-        ...init,
-        headers: newHeaders,
-        credentials: "include",
-      });
-    } catch (error) {
-      // If refresh fails, redirect to login
-      console.error('Token refresh failed, redirecting to login');
-      localStorage.removeItem('token');
-      localStorage.removeItem(SESSION_KEY);
-      localStorage.removeItem(USER_KEY);
-      window.location.href = '/login';
-      throw error;
-    }
-  }
-
-  return res;
 }
