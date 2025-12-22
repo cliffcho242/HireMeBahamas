@@ -11,7 +11,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
+const { execSync, execFileSync } = require("child_process");
 
 const fetchImpl =
   typeof fetch !== "undefined"
@@ -67,7 +67,7 @@ export const apiUrl = buildApiUrl;
 export const getApiBase = getApiBaseUrl;
 export function isApiConfigured(): boolean {
   const base = getApiBaseUrl();
-  if (!base) return false;
+  if (!base) return true; // allow same-origin fallback to remain usable
   return base.startsWith("https://") || base.startsWith("http://localhost");
 }
 `;
@@ -92,11 +92,10 @@ console.log(`🔹 Normalized VITE_API_BASE_URL: ${normalized}`);
 // Set Vercel environment variable
 try {
   console.log("🔹 Setting VITE_API_BASE_URL on Vercel...");
-  execSync(
-    `vercel env add VITE_API_BASE_URL ${JSON.stringify(
-      normalized
-    )} production --yes`,
-    { stdio: "inherit" }
+  execFileSync(
+    "vercel",
+    ["env", "add", "VITE_API_BASE_URL", "production", "--yes"],
+    { stdio: ["pipe", "inherit", "inherit"], input: `${normalized}\n` }
   );
   console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
 } catch (err) {
@@ -132,6 +131,8 @@ try {
 
   console.log("🔹 Checking backend CORS...");
 
+  let verifiedAtLeastOnce = false;
+
   for (const corsCheckUrl of corsTargets) {
     try {
       const res = await fetchImpl(corsCheckUrl, { method: "OPTIONS" });
@@ -150,9 +151,13 @@ try {
       ];
 
       const allowList = allowOrigins
-        .split(/[,\s]+/)
+        .split(",")
         .map((origin) => origin.trim())
         .filter(Boolean);
+
+      if (!allowList.length && allowOrigins.trim()) {
+        allowList.push(allowOrigins.trim());
+      }
 
       const wildcard = allowList.includes("*");
 
@@ -163,12 +168,16 @@ try {
       });
 
       console.log(`✅ CORS verified from ${corsCheckUrl}: ${allowOrigins}`);
-      return;
+      verifiedAtLeastOnce = true;
     } catch (err) {
       console.warn(
         `⚠️ Could not verify backend CORS at ${corsCheckUrl}.`,
         err?.message || err
       );
     }
+  }
+
+  if (!verifiedAtLeastOnce) {
+    console.warn("⚠️ CORS verification did not succeed for any endpoint.");
   }
 })();
