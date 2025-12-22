@@ -26,48 +26,89 @@
 // URL validation imports removed - validation happens in safeUrl module
 // Import only when needed to avoid unused imports
 
-const DEFAULT_RENDER_BACKEND_URL = "https://hiremebahamas-backend.onrender.com";
+// Remove one or more trailing slashes to avoid double-slash issues when building URLs
+const stripTrailingSlashes = (url: string = "") => url.replace(/\/+$/, "");
+
+const handleValidationIssue = (message: string): void => {
+  if (import.meta.env.PROD) {
+    throw new Error(message);
+  }
+  console.warn(message);
+};
+
+const getLocalhostOverride = (url?: string): string | null => {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const isLocalhost = parsed.hostname === "localhost" ||
+      parsed.hostname === "127.0.0.1" ||
+      parsed.hostname === "::1";
+    const isAllowedProtocol = parsed.protocol === "http:" || parsed.protocol === "https:";
+    return isLocalhost && isAllowedProtocol ? stripTrailingSlashes(url) : null;
+  } catch {
+    return null;
+  }
+};
 
 /**
- * Validate and get the base API URL from environment
- * RENDER-ONLY: Hard-coded to use Render backend exclusively
- * 🚨 NO Railway URLs allowed
- * 🚨 Environment variables only allowed for localhost development
+ * Get the validated API base URL for frontend requests
+ *
+ * Priority:
+ * 1. VITE_API_BASE_URL (production)
+ * 2. VITE_API_URL (override; allows http only for localhost)
+ * 3. Default same-origin for Vercel proxy
  */
-function validateAndGetBaseUrl(): string {
-  // 🔥 PRODUCTION LOCK: Render backend URL (overridable via env)
-  const RENDER_BACKEND_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_RENDER_BACKEND_URL;
-  
-  // Check if we're in development mode (localhost)
-  // Only localhost development can override the URL via VITE_API_URL
-  if (typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' || 
-    window.location.hostname === '127.0.0.1'
-  )) {
-    // Allow local development override only for localhost URLs
-    const devUrl = import.meta.env.VITE_API_URL as string | undefined;
-    if (devUrl && devUrl.startsWith('http://localhost')) {
-      return devUrl;
-    }
-  }
-  
-  // 🚨 RENDER ONLY: Return hard-coded Render URL for all production traffic
-  const base = RENDER_BACKEND_URL;
+export function getApiBaseUrl(): string {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+  const overrideUrl = import.meta.env.VITE_API_URL?.trim();
 
-  const parsedHost = (() => {
+  const overrideLocalhost = getLocalhostOverride(overrideUrl);
+  const baseLocalhost = getLocalhostOverride(baseUrl);
+
+  // Allow localhost http override in dev
+  if (overrideLocalhost) {
+    return overrideLocalhost;
+  }
+
+  if (baseLocalhost) {
+    return baseLocalhost;
+  }
+
+  if (baseUrl) {
+    let parsedBase: URL | null = null;
     try {
-      return new URL(base).hostname.toLowerCase();
+      parsedBase = new URL(baseUrl);
     } catch {
-      return '';
+      handleValidationIssue(`VITE_API_BASE_URL must be a valid HTTPS URL: ${baseUrl}`);
+      parsedBase = null;
     }
-  })();
-  const isLocal = parsedHost === 'localhost' || parsedHost === '127.0.0.1';
-  const isRenderHost = parsedHost === 'onrender.com' || parsedHost.endsWith('.onrender.com');
-  if (!isRenderHost && !isLocal) {
-    throw new Error('INVALID BACKEND TARGET: use your Render URL (e.g., https://your-backend.onrender.com) or localhost for development.');
+
+    if (parsedBase) {
+      if (parsedBase.protocol !== "https:") {
+        handleValidationIssue(`VITE_API_BASE_URL must be HTTPS in production: ${baseUrl}`);
+        parsedBase = null;
+      } else if (!parsedBase.hostname) {
+        handleValidationIssue(`VITE_API_BASE_URL must include a valid host: ${baseUrl}`);
+        parsedBase = null;
+      }
+    }
+
+    if (parsedBase) {
+      return stripTrailingSlashes(baseUrl);
+    }
   }
 
-  return base;
+  if (overrideUrl) {
+    if (overrideUrl.startsWith("http://")) {
+      const message = `VITE_API_URL should use HTTPS unless pointing to localhost: ${overrideUrl}`;
+      throw new Error(message);
+    }
+
+    return stripTrailingSlashes(overrideUrl);
+  }
+
+  // Fallback: same-origin (Vercel proxy)
+  return "";
 }
 
 /**
@@ -75,7 +116,6 @@ function validateAndGetBaseUrl(): string {
  * 
  * @param path - The API path (e.g., "/api/auth/me")
  * @returns The complete URL with base URL prepended
- * @throws Error if VITE_API_URL is missing or invalid
  * 
  * @example
  * ```typescript
@@ -84,10 +124,10 @@ function validateAndGetBaseUrl(): string {
  * ```
  */
 export function apiUrl(path: string): string {
-  const base = validateAndGetBaseUrl();
+  const base = getApiBaseUrl();
 
   // Normalize the base URL (remove trailing slash) and path (ensure leading slash)
-  const normalizedBase = base.replace(/\/$/, "");
+  const normalizedBase = stripTrailingSlashes(base);
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
   return `${normalizedBase}${normalizedPath}`;
@@ -112,9 +152,8 @@ export function isApiConfigured(): boolean {
  * Get the base API URL
  * 
  * @returns The base API URL
- * @throws Error if VITE_API_URL is missing or invalid
  */
 export function getApiBase(): string {
-  const base = validateAndGetBaseUrl();
-  return base.replace(/\/$/, "");
+  const base = getApiBaseUrl();
+  return stripTrailingSlashes(base);
 }
