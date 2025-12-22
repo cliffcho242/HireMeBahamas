@@ -5,17 +5,24 @@
  * No same-origin
  * Fail fast if misconfigured
  */
-const RAW_API_BASE = import.meta.env.VITE_API_BASE_URL;
+export function getApiBase(): string {
+  const localOverride = import.meta.env.VITE_API_URL;
+  const raw = localOverride || import.meta.env.VITE_API_BASE_URL;
 
-if (!RAW_API_BASE) {
-  throw new Error("❌ VITE_API_BASE_URL is required");
+  if (!raw) {
+    throw new Error("❌ VITE_API_BASE_URL is required");
+  }
+
+  // Allow http only when using a local override outside production builds
+  const requiresHttps = import.meta.env.PROD || !localOverride;
+  if (requiresHttps && !raw.startsWith("https://")) {
+    throw new Error("❌ VITE_API_BASE_URL must be HTTPS in production");
+  }
+
+  return raw.replace(/\/+$/, "");
 }
 
-if (!RAW_API_BASE.startsWith("https://")) {
-  throw new Error("❌ VITE_API_BASE_URL must be HTTPS in production");
-}
-
-export const API_BASE_URL = RAW_API_BASE.replace(/\/+$/, "");
+export const API_BASE_URL = getApiBase();
 
 export function apiUrl(path: string): string {
   if (!path.startsWith("/")) path = "/" + path;
