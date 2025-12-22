@@ -43,7 +43,7 @@ export function getApiBaseUrl(): string {
 export function buildApiUrl(path: string): string {
   const base = getApiBaseUrl();
   if (!path.startsWith("/")) path = "/" + path;
-  return \`\${base}\${path}\`;
+  return base + path;
 }
 `;
 
@@ -51,21 +51,21 @@ console.log("🔹 Updating frontend API files...");
 files.forEach((file) => {
   if (fs.existsSync(file)) {
     fs.writeFileSync(file, replacement, "utf8");
-    console.log(\`✅ Updated: \${file}\`);
+    console.log(`✅ Updated: ${file}`);
   } else {
-    console.warn(\`⚠️ File not found: \${file}\`);
+    console.warn(`⚠️ File not found: ${file}`);
   }
 });
 
 // Normalize VITE_API_BASE_URL
 const envVar = process.env.VITE_API_BASE_URL || "https://hiremebahamas-backend.onrender.com";
 const normalized = envVar.replace(/\/+$/, "");
-console.log(\`🔹 Normalized VITE_API_BASE_URL: \${normalized}\`);
+console.log(`🔹 Normalized VITE_API_BASE_URL: ${normalized}`);
 
 // Set Vercel environment variable
 try {
   console.log("🔹 Setting VITE_API_BASE_URL on Vercel...");
-  execSync(\`vercel env add VITE_API_BASE_URL \${normalized} production --yes\`, { stdio: "inherit" });
+  execSync(`vercel env add VITE_API_BASE_URL ${normalized} production --yes`, { stdio: "inherit" });
   console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
 } catch (err) {
   console.warn("⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in.");
@@ -95,15 +95,15 @@ try {
         allowOrigins === "*"
           ? required
           : allowOrigins
-              .split(/[,\\s]+/)
+              .split(/[,\s]+/)
               .map((origin) => origin.trim())
               .filter(Boolean);
       required.forEach((domain) => {
         if (!allowedList.includes(domain)) {
-          console.warn(\`⚠️ Backend CORS missing domain: \${domain}\`);
+          console.warn(`⚠️ Backend CORS missing domain: ${domain}`);
         }
       });
-      console.log(\`✅ CORS verified: \${allowOrigins}\`);
+      console.log(`✅ CORS verified: ${allowOrigins}`);
     }
   } catch (err) {
     console.warn("⚠️ Could not verify backend CORS. Check if backend is reachable.");
