@@ -75,6 +75,103 @@ VITE_API_URL=http://localhost  # No localhost in production
 
 ---
 
+## 🔌 **API Configuration & Error Handling**
+
+### Required Environment Variables
+
+**Production (Vercel Dashboard or CI/CD):**
+```bash
+VITE_API_BASE_URL=https://api.hiremebahamas.com
+# OR
+VITE_API_BASE_URL=https://hiremebahamas-backend.onrender.com
+```
+
+**Local Development (.env file):**
+```bash
+# Option 1: Use local backend
+VITE_API_URL=http://localhost:8000
+
+# Option 2: Use production API (via dev proxy)
+VITE_API_BASE_URL=https://api.hiremebahamas.com
+```
+
+### Robust API Client Features
+
+The app includes a comprehensive API client with:
+
+✅ **Automatic Retries**: Up to 3 retry attempts with exponential backoff for network/5xx errors  
+✅ **Timeout Handling**: 30-second timeout per request with proper cleanup  
+✅ **Error Recovery**: Intelligent retry logic for transient failures  
+✅ **Typed Errors**: Clear, actionable error messages for users  
+✅ **Health Checks**: Built-in connectivity monitoring with UI feedback  
+✅ **HTTPS Enforcement**: Production builds require HTTPS (no HTTP fallback)  
+
+### Error Handling Behavior
+
+**User-Friendly Messages:**
+- Network errors: "We're having trouble contacting the server. Please retry in a moment."
+- Timeouts: "Server is taking longer than expected. Wait a moment and try again."
+- 404 errors: "The requested item could not be found."
+- 5xx errors: "Server error. The issue has been automatically reported."
+
+**No Raw Exceptions**: Users never see technical error messages like "Unexpected response from server"
+
+### Health Check & Status Indicator
+
+The app displays a connectivity status banner when:
+- Backend is unreachable (shows retry progress)
+- Server is starting up/waking from sleep
+- Network connection is lost
+
+**Banner Features:**
+- Progress bar with ETA during cold starts
+- Retry button for failed connections
+- Dismissible (auto-reappears on next issue)
+- Rotates helpful tips during wait
+
+### Local Development
+
+**Running Against Local Backend:**
+```bash
+# Terminal 1: Start backend
+cd backend
+python -m uvicorn app.main:app --reload --port 8000
+
+# Terminal 2: Start frontend
+cd frontend
+VITE_API_URL=http://localhost:8000 npm run dev
+```
+
+**Running Against Production API:**
+```bash
+cd frontend
+npm run dev  # Uses proxy to https://api.hiremebahamas.com
+```
+
+**Dev Proxy Configuration:**
+- The Vite dev server proxies `/api/*` requests to production
+- Set `VITE_API_BASE_URL` environment variable to override default
+- Enables local development without CORS issues
+- Mimics production path structure
+
+### Testing API Configuration
+
+```bash
+# Verify environment variables
+cd frontend
+npm run build  # Will fail if VITE_API_BASE_URL not set correctly
+
+# Test health check endpoint
+curl https://api.hiremebahamas.com/health
+
+# Test API with authentication
+curl -X POST https://api.hiremebahamas.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"test123"}'
+```
+
+---
+
 ## 🚀 **✅ CORRECT STACK (Industry Standard)**
 
 **The production-ready architecture for maximum performance and stability:**
