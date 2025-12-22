@@ -1,120 +1,57 @@
 /**
- * Safe URL Builder Utility
+ * Robust API base URL getter
  * 
- * This utility ensures that API URLs are always constructed correctly
- * and never fails silently. It validates the base URL and constructs
- * full URLs for API endpoints.
- * 
- * Benefits:
- * - Prevents pattern errors in URL construction
- * - Validates environment configuration at runtime
- * - Provides clear error messages for misconfiguration
- * - Normalizes trailing slashes automatically
- * - Works with both Vite and other build systems
- * 
- * @example
- * ```typescript
- * // Using the utility
- * import { apiUrl } from './lib/api';
- * 
- * fetch(apiUrl("/api/auth/me"), {
- *   credentials: "include",
- * });
- * ```
+ * Priority:
+ * 1. VITE_API_BASE_URL (production)
+ * 2. VITE_API_URL (dev override; HTTP allowed only for localhost)
+ * 3. Same-origin fallback (Vercel proxy)
  */
+export function getApiBaseUrl(): string {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+  const overrideUrl = import.meta.env.VITE_API_URL?.trim();
 
-// URL validation imports removed - validation happens in safeUrl module
-// Import only when needed to avoid unused imports
+  const normalize = (url: string) => url.replace(/\/+$/, ""); // remove trailing slash
 
-const DEFAULT_RENDER_BACKEND_URL = "https://hiremebahamas-backend.onrender.com";
-
-/**
- * Validate and get the base API URL from environment
- * RENDER-ONLY: Hard-coded to use Render backend exclusively
- * 🚨 NO Railway URLs allowed
- * 🚨 Environment variables only allowed for localhost development
- */
-function validateAndGetBaseUrl(): string {
-  // 🔥 PRODUCTION LOCK: Render backend URL (overridable via env)
-  const RENDER_BACKEND_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_RENDER_BACKEND_URL;
-  
-  // Check if we're in development mode (localhost)
-  // Only localhost development can override the URL via VITE_API_URL
-  if (typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' || 
-    window.location.hostname === '127.0.0.1'
-  )) {
-    // Allow local development override only for localhost URLs
-    const devUrl = import.meta.env.VITE_API_URL as string | undefined;
-    if (devUrl && devUrl.startsWith('http://localhost')) {
-      return devUrl;
-    }
-  }
-  
-  // 🚨 RENDER ONLY: Return hard-coded Render URL for all production traffic
-  const base = RENDER_BACKEND_URL;
-
-  const parsedHost = (() => {
-    try {
-      return new URL(base).hostname.toLowerCase();
-    } catch {
-      return '';
-    }
-  })();
-  const isLocal = parsedHost === 'localhost' || parsedHost === '127.0.0.1';
-  const isRenderHost = parsedHost === 'onrender.com' || parsedHost.endsWith('.onrender.com');
-  if (!isRenderHost && !isLocal) {
-    throw new Error('INVALID BACKEND TARGET: use your Render URL (e.g., https://your-backend.onrender.com) or localhost for development.');
+  // Dev override for localhost (HTTP allowed)
+  if (overrideUrl && overrideUrl.startsWith("http://localhost")) {
+    return normalize(overrideUrl);
   }
 
-  return base;
+  // Production environment variable
+  if (baseUrl) {
+    if (!baseUrl.startsWith("https://")) {
+      console.warn(
+        `[getApiBaseUrl] Warning: VITE_API_BASE_URL must be HTTPS in production: ${baseUrl}`
+      );
+    }
+    return normalize(baseUrl);
+  }
+
+  // Default fallback: same-origin (Vercel proxy)
+  return "";
 }
 
 /**
- * Build a complete API URL from a path
- * 
- * @param path - The API path (e.g., "/api/auth/me")
- * @returns The complete URL with base URL prepended
- * @throws Error if VITE_API_URL is missing or invalid
- * 
- * @example
- * ```typescript
- * apiUrl("/api/auth/me") 
- * // Returns: "https://your-backend.com/api/auth/me"
- * ```
+ * Helper to build full endpoint URLs safely
+ * Example:
+ *   const url = buildApiUrl("/api/auth/login");
  */
-export function apiUrl(path: string): string {
-  const base = validateAndGetBaseUrl();
-
-  // Normalize the base URL (remove trailing slash) and path (ensure leading slash)
-  const normalizedBase = base.replace(/\/$/, "");
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-
-  return `${normalizedBase}${normalizedPath}`;
+export function buildApiUrl(path: string): string {
+  const base = getApiBaseUrl();
+  if (!path.startsWith("/")) {
+    path = "/" + path;
+  }
+  return `${base}${path}`;
 }
 
-/**
- * Check if API URL is properly configured
- * 
- * @returns true if API URL is configured and valid, false otherwise
- */
+// Backward compatibility for existing imports
+export const apiUrl = buildApiUrl;
+export const getApiBase = getApiBaseUrl;
 export function isApiConfigured(): boolean {
   try {
-    // Try to construct a test URL
-    apiUrl("/api/health");
+    buildApiUrl("/api/health");
     return true;
   } catch {
     return false;
   }
-}
-
-/**
- * Get the base API URL
- * 
- * @returns The base API URL
- * @throws Error if VITE_API_URL is missing or invalid
- */
-export function getApiBase(): string {
-  const base = validateAndGetBaseUrl();
-  return base.replace(/\/$/, "");
 }
