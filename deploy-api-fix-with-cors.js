@@ -27,7 +27,7 @@ const fetchImpl =
           return require("node-fetch");
         } catch (err) {
           console.warn(
-            "⚠️ node-fetch is not installed. Install with: npm install node-fetch@2"
+            "⚠️ fetch is unavailable. On Node 18+ it's built-in; for older Node use: npm install node-fetch@2"
           );
           return null;
         }
@@ -65,7 +65,7 @@ export function getApiBaseUrl(): string {
 export function buildApiUrl(path: string): string {
   const base = getApiBaseUrl();
   if (!path.startsWith("/")) path = "/" + path;
-  return \`\${base}\${path}\`;
+  return base + path;
 }
 
 // Backward compatibility helpers
@@ -73,7 +73,7 @@ export const apiUrl = buildApiUrl;
 export const getApiBase = getApiBaseUrl;
 export function isApiConfigured(): boolean {
   const base = getApiBaseUrl();
-  if (!base) return true; // allow same-origin fallback to remain usable
+  if (!base) return true; // treat empty as same-origin fallback for Vercel proxy
   return base.startsWith("https://") || base.startsWith("http://localhost");
 }
 `;
@@ -105,6 +105,13 @@ try {
   );
   console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
 } catch (err) {
+  const errMsg =
+    err?.stderr?.toString?.() || err?.message || String(err ?? "unknown error");
+  if (errMsg.toLowerCase().includes("already exists")) {
+    console.log(
+      "ℹ️ VITE_API_BASE_URL already exists on Vercel. Skipping creation."
+    );
+  }
   console.warn(
     "⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in."
   );
@@ -140,43 +147,47 @@ try {
   let verifiedAtLeastOnce = false;
 
   for (const corsCheckUrl of corsTargets) {
-    try {
-      const res = await fetchImpl(corsCheckUrl, {
-        method: "OPTIONS",
-        headers: {
-          Origin: REQUIRED_CORS_ORIGINS[0],
-          "Access-Control-Request-Method": "GET",
-        },
-      });
-      const allowOrigins = res.headers.get("access-control-allow-origin");
+    for (const origin of REQUIRED_CORS_ORIGINS) {
+      try {
+        const res = await fetchImpl(corsCheckUrl, {
+          method: "OPTIONS",
+          headers: {
+            Origin: origin,
+            "Access-Control-Request-Method": "GET",
+          },
+        });
+        const allowOrigins = res.headers.get("access-control-allow-origin");
 
-      if (!allowOrigins) {
-        console.warn(
-          `⚠️ CORS header missing from ${corsCheckUrl}. Safari and iOS may block requests.`
-        );
-        continue;
-      }
-
-      const allowList = allowOrigins
-        .split(",")
-        .map((origin) => origin.trim())
-        .filter(Boolean);
-
-      const wildcard = allowList.includes("*");
-
-      REQUIRED_CORS_ORIGINS.forEach((domain) => {
-        if (!wildcard && !allowList.includes(domain)) {
-          console.warn(`⚠️ Backend CORS missing domain: ${domain}`);
+        if (!allowOrigins) {
+          console.warn(
+            `⚠️ CORS header missing from ${corsCheckUrl} (origin: ${origin}). Safari and iOS may block requests.`
+          );
+          continue;
         }
-      });
 
-      console.log(`✅ CORS verified from ${corsCheckUrl}: ${allowOrigins}`);
-      verifiedAtLeastOnce = true;
-    } catch (err) {
-      console.warn(
-        `⚠️ Could not verify backend CORS at ${corsCheckUrl}.`,
-        err?.message || err
-      );
+        const allowList = allowOrigins
+          .split(",")
+          .map((originValue) => originValue.trim())
+          .filter(Boolean);
+
+        const wildcard = allowList.includes("*");
+
+        REQUIRED_CORS_ORIGINS.forEach((domain) => {
+          if (!wildcard && !allowList.includes(domain)) {
+            console.warn(`⚠️ Backend CORS missing domain: ${domain}`);
+          }
+        });
+
+        console.log(
+          `✅ CORS verified from ${corsCheckUrl} for origin ${origin}: ${allowOrigins}`
+        );
+        verifiedAtLeastOnce = true;
+      } catch (err) {
+        console.warn(
+          `⚠️ Could not verify backend CORS at ${corsCheckUrl} for origin ${origin}.`,
+          err?.message || err
+        );
+      }
     }
   }
 
