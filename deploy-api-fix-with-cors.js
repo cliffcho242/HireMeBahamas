@@ -67,10 +67,8 @@ export const apiUrl = buildApiUrl;
 export const getApiBase = getApiBaseUrl;
 export function isApiConfigured(): boolean {
   const base = getApiBaseUrl();
-  if (!base) return true;
-  return (
-    base.startsWith("https://") || base.startsWith("http://localhost")
-  );
+  if (!base) return false;
+  return base.startsWith("https://") || base.startsWith("http://localhost");
 }
 `;
 
@@ -95,7 +93,9 @@ console.log(`🔹 Normalized VITE_API_BASE_URL: ${normalized}`);
 try {
   console.log("🔹 Setting VITE_API_BASE_URL on Vercel...");
   execSync(
-    `vercel env add VITE_API_BASE_URL ${normalized} production --yes`,
+    `vercel env add VITE_API_BASE_URL ${JSON.stringify(
+      normalized
+    )} production --yes`,
     { stdio: "inherit" }
   );
   console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
@@ -125,33 +125,50 @@ try {
     return;
   }
 
-  const corsCheckUrl = `${normalized}/openapi.json`;
+  const corsTargets = [
+    `${normalized}/api/health`,
+    `${normalized}/openapi.json`,
+  ];
+
   console.log("🔹 Checking backend CORS...");
-  try {
-    const res = await fetchImpl(corsCheckUrl, { method: "OPTIONS" });
-    const allowOrigins = res.headers.get("access-control-allow-origin");
 
-    if (!allowOrigins) {
-      console.warn("⚠️ CORS header missing. Safari and iOS may block requests.");
-      return;
-    }
+  for (const corsCheckUrl of corsTargets) {
+    try {
+      const res = await fetchImpl(corsCheckUrl, { method: "OPTIONS" });
+      const allowOrigins = res.headers.get("access-control-allow-origin");
 
-    const required = [
-      "https://hiremebahamas.com",
-      "https://www.hiremebahamas.com",
-    ];
-
-    required.forEach((domain) => {
-      if (!allowOrigins.includes(domain)) {
-        console.warn(`⚠️ Backend CORS missing domain: ${domain}`);
+      if (!allowOrigins) {
+        console.warn(
+          `⚠️ CORS header missing from ${corsCheckUrl}. Safari and iOS may block requests.`
+        );
+        continue;
       }
-    });
 
-    console.log(`✅ CORS verified: ${allowOrigins}`);
-  } catch (err) {
-    console.warn(
-      "⚠️ Could not verify backend CORS. Check if backend is reachable.",
-      err?.message || err
-    );
+      const required = [
+        "https://hiremebahamas.com",
+        "https://www.hiremebahamas.com",
+      ];
+
+      const allowList = allowOrigins
+        .split(/[,\s]+/)
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+
+      const wildcard = allowList.includes("*");
+
+      required.forEach((domain) => {
+        if (!wildcard && !allowList.includes(domain)) {
+          console.warn(`⚠️ Backend CORS missing domain: ${domain}`);
+        }
+      });
+
+      console.log(`✅ CORS verified from ${corsCheckUrl}: ${allowOrigins}`);
+      return;
+    } catch (err) {
+      console.warn(
+        `⚠️ Could not verify backend CORS at ${corsCheckUrl}.`,
+        err?.message || err
+      );
+    }
   }
 })();
