@@ -20,8 +20,13 @@ async function resolveFetch() {
   try {
     return require("node-fetch");
   } catch {
-    const { default: f } = await import("node-fetch");
-    return f;
+    try {
+      const { default: f } = await import("node-fetch");
+      return f;
+    } catch (err) {
+      console.error("Failed to load a fetch implementation. Install node-fetch or use Node 18+.", err);
+      throw err;
+    }
   }
 }
 
@@ -48,7 +53,7 @@ export function getApiBaseUrl(): string {
   if (baseUrl) {
     const normalized = normalize(baseUrl);
     if (!normalized.startsWith("https://") && !normalized.startsWith("http://localhost")) {
-      console.warn("[getApiBaseUrl] Non-HTTPS base URL detected: " + normalized);
+      console.warn(`[getApiBaseUrl] Non-HTTPS base URL detected: ${normalized}`);
     }
     return normalized;
   }
@@ -58,7 +63,7 @@ export function getApiBaseUrl(): string {
 export function buildApiUrl(path: string): string {
   const base = getApiBaseUrl();
   if (!path.startsWith("/")) path = "/" + path;
-  return base ? base + path : path;
+  return base ? `${base}${path}` : path;
 }
 `;
 
@@ -81,14 +86,26 @@ console.log(`🔹 Normalized VITE_API_BASE_URL: ${normalized}`);
 if (!isValidUrl(normalized)) {
   console.error("❌ Invalid VITE_API_BASE_URL. Skipping Vercel env update.");
 } else {
+  let envExists = false;
   try {
-    console.log("🔹 Setting VITE_API_BASE_URL on Vercel...");
-    execFileSync("vercel", ["env", "add", "VITE_API_BASE_URL", normalized, "production", "--yes"], {
-      stdio: "inherit",
-    });
-    console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
+    const envList = execFileSync("vercel", ["env", "ls"], { encoding: "utf8" });
+    envExists = envList.includes("VITE_API_BASE_URL");
   } catch (err) {
-    console.warn("⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in.");
+    console.warn("⚠️ Could not verify existing Vercel env vars; continuing with update.", err);
+  }
+
+  if (envExists) {
+    console.log("ℹ️ VITE_API_BASE_URL already present on Vercel. Skipping add.");
+  } else {
+    try {
+      console.log("🔹 Setting VITE_API_BASE_URL on Vercel...");
+      execFileSync("vercel", ["env", "add", "VITE_API_BASE_URL", normalized, "production", "--yes"], {
+        stdio: "inherit",
+      });
+      console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
+    } catch (err) {
+      console.warn("⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in.");
+    }
   }
 }
 
