@@ -2,8 +2,8 @@
  * Robust API base URL getter
  * 
  * Priority:
- * 1. VITE_API_BASE_URL (production)
- * 2. VITE_API_URL (dev override; HTTP allowed only for localhost)
+ * 1. VITE_API_URL when pointing to localhost (for dev overrides)
+ * 2. VITE_API_BASE_URL (production)
  * 3. Same-origin fallback (Vercel proxy)
  */
 export function getApiBaseUrl(): string {
@@ -11,6 +11,11 @@ export function getApiBaseUrl(): string {
   const overrideUrl = import.meta.env.VITE_API_URL?.trim();
 
   const normalize = (url: string) => url.replace(/\/+$/, ""); // remove trailing slash
+
+  // Dev override for localhost (HTTP allowed)
+  if (overrideUrl && overrideUrl.startsWith("http://localhost")) {
+    return normalize(overrideUrl);
+  }
 
   // Production environment variable has priority
   if (baseUrl) {
@@ -20,11 +25,6 @@ export function getApiBaseUrl(): string {
       );
     }
     return normalize(baseUrl);
-  }
-
-  // Dev override for localhost (HTTP allowed)
-  if (overrideUrl && overrideUrl.startsWith("http://localhost")) {
-    return normalize(overrideUrl);
   }
 
   // Default fallback: same-origin (Vercel proxy)
