@@ -108,10 +108,10 @@ try {
   );
   console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
 } catch (err) {
+  const errMsgRaw =
+    err?.stderr || err?.stdout || err?.message || err || "unknown error";
   const errMsg =
-    (err?.stderr && err.stderr.toString()) ||
-    err?.message ||
-    String(err ?? "unknown error");
+    typeof errMsgRaw === "string" ? errMsgRaw : errMsgRaw.toString();
   if (errMsg.toLowerCase().includes("already exists")) {
     console.log(
       "ℹ️ VITE_API_BASE_URL already exists on Vercel. Skipping creation."
@@ -129,7 +129,6 @@ try {
         { stdio: ["pipe", "inherit", "inherit"], input: `${normalized}\n` }
       );
       console.log("✅ VITE_API_BASE_URL updated on Vercel (Production)");
-      return;
     } catch (updateErr) {
       console.warn(
         "⚠️ Failed to update existing Vercel env variable.",
@@ -192,7 +191,8 @@ try {
           continue;
         }
 
-        const allowList = allowOrigins
+        const allowOriginsValue = allowOrigins || "";
+        const allowList = allowOriginsValue
           .split(",")
           .map((originValue) => originValue.trim())
           .filter(Boolean);
