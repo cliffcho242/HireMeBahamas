@@ -8,7 +8,7 @@
 const RAW_API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 if (!RAW_API_BASE) {
-  throw new Error("❌ VITE_API_BASE_URL is missing in PRODUCTION build");
+  throw new Error("❌ VITE_API_BASE_URL is required");
 }
 
 if (!RAW_API_BASE.startsWith("https://")) {

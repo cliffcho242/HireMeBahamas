@@ -52,4 +52,4 @@ The utility uses the `VITE_API_BASE_URL` environment variable and fails fast if 
 VITE_API_BASE_URL=https://hiremebahamas-backend.onrender.com
 ```
 
-Trailling slashes and non-HTTPS values are rejected during build.
+Trailing slashes and non-HTTPS values are rejected during build.

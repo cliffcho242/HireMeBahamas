@@ -34,6 +34,7 @@ export async function testBackends(): Promise<{
 
   try {
     const start = Date.now();
+    // Backend exposes /health (no /api prefix) as required by Render health checks
     const response = await fetch(apiUrl('/health'), {
       method: 'GET',
       signal: AbortSignal.timeout(5000),

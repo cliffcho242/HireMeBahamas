@@ -158,7 +158,7 @@ if (import.meta.env.MODE !== ENV_MODE.TEST) {
   const result = validateEnvironmentVariables();
   if (!result.valid && import.meta.env.PROD) {
     throw new Error(
-      '8️⃣ VERCEL ENV LOCK VIOLATION: Environment variable validation failed.\n' +
+      'Environment variable validation failed for production build.\n' +
         'Check the errors above.',
     );
   }
