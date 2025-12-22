@@ -1,13 +1,12 @@
 import axios from 'axios';
 import { User } from '../types/user';
 import { Job } from '../types/job';
-import { debugLog } from '../utils/debugLogger';
-import { getApiUrl, logBackendConfiguration } from '../utils/backendRouter';
-import { ENV_API } from '../config/env';
+import { debugLog } from '@/utils/debugLogger';
+import { getApiUrl, logBackendConfiguration } from '@/utils/backendRouter';
 import { refreshToken } from './auth';
-import { safeParseUrl } from '../lib/safeUrl';
-import { apiUrl, getApiBase } from '../lib/api';
-import { guardMutation, logDemoModeStatus } from '../config/demo';
+import { safeParseUrl } from '@/lib/safeUrl';
+import { API_BASE_URL, apiUrl } from '@/lib/api';
+import { guardMutation, logDemoModeStatus } from '@/config/demo';
 
 // Note: Backend URL validation happens automatically when backendRouter is imported
 // The validateBackendUrl() function is called at module load in backendRouter.ts
@@ -70,11 +69,6 @@ if (import.meta.env.DEV) {
 }
 
 // Use safe URL builder to get validated API base URL
-// getApiBase() returns normalized URL without trailing slash
-// In production (Vercel), this will use same-origin, and Vercel will proxy /api/* to backend
-const API_BASE_URL = getApiBase();
-
-// Export API constant for use in fetch calls (for backward compatibility)
 export const API = API_BASE_URL;
 
 const FETCH_RETRY_DELAY_MS = 1200;
@@ -98,22 +92,6 @@ export const fetchWithRetry = async (
     return fetchWithRetry(url, options, retries - 1);
   }
 };
-
-// 🔍 TEMP DEBUG: Check if API URL is properly configured (development only)
-if (import.meta.env.DEV) {
-  console.log("API URL:", import.meta.env.VITE_API_URL || '(not set - using same-origin)');
-}
-
-// Log API configuration on startup (development only)
-if (typeof window !== 'undefined' && import.meta.env.DEV) {
-  console.log('=== API CONFIGURATION ===');
-  console.log('API Base URL:', API_BASE_URL);
-  console.log('VITE_API_URL:', import.meta.env.VITE_API_URL || '(not set)');
-  console.log('ENV_API:', ENV_API || 'not set');
-  console.log('Window Origin:', window.location.origin);
-  console.log('Using same-origin:', !import.meta.env.VITE_API_URL);
-  console.log('========================');
-}
 
 // Log demo mode status on startup
 if (typeof window !== 'undefined') {
@@ -247,10 +225,8 @@ api.interceptors.request.use((config) => {
       // Throw error with clear guidance
       throw new Error(
         `API URL configuration error: ${urlResult.error}\n\n` +
-        `Possible solutions:\n` +
-        `1. Set VITE_API_URL=https://api.yourdomain.com for production\n` +
-        `2. Set VITE_API_URL=http://localhost:8000 for local dev\n` +
-        `3. Leave VITE_API_URL unset for Vercel serverless (same-origin)`
+        `Possible solution:\n` +
+        `Set VITE_API_BASE_URL=https://hiremebahamas-backend.onrender.com`
       );
     }
   }

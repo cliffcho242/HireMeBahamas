@@ -2,7 +2,7 @@
 // Social feed component with dynamic API responses
 import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { API } from '../services/api';
-import { apiFetch, apiUrl } from '../lib/api';
+import { apiFetch, apiUrl } from '@/lib/api';
 import LazyImage from './LazyImage';
 import './SocialFeed.css';
 

@@ -6,7 +6,7 @@
  * with automatic silent token refresh.
  */
 
-import { apiFetch as baseApiFetch, apiUrl } from '../lib/api';
+import { apiFetch as baseApiFetch, apiUrl } from '@/lib/api';
 import { User } from '../types/user';
 
 // Session storage key - must match sessionManager.ts

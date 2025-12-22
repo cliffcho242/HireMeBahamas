@@ -5,7 +5,7 @@ This document demonstrates how to use the safe URL builder utility.
 ## Import
 
 ```typescript
-import { apiUrl } from '../lib/api';
+import { apiUrl } from '@/lib/api';
 ```
 
 ## Basic Usage
@@ -46,84 +46,10 @@ fetch(apiUrl("/api/posts/123"), {
 
 ## Configuration
 
-The utility uses the `VITE_API_URL` environment variable:
+The utility uses the `VITE_API_BASE_URL` environment variable and fails fast if it is missing or insecure:
 
 ```bash
-# For development
-VITE_API_URL=http://localhost:8000
-
-# For production (Render)
-VITE_API_URL=https://your-app.up.render.app
-
-# For Vercel serverless (no variable needed)
-# It will use window.location.origin automatically
+VITE_API_BASE_URL=https://hiremebahamas-backend.onrender.com
 ```
 
-## Error Handling
-
-The utility validates the configuration and throws clear errors:
-
-```typescript
-// Missing or invalid URL
-// Error: VITE_API_URL is missing or invalid. Set VITE_API_URL environment 
-// variable to your backend URL, or deploy to a serverless environment where 
-// same-origin is used.
-
-// Invalid protocol
-// Error: VITE_API_URL is invalid: "invalid-url". URL must start with 
-// 'http://' or 'https://'. Example: VITE_API_URL=https://your-backend.com
-```
-
-## Benefits
-
-1. **Never fails silently**: Throws clear errors if misconfigured
-2. **Automatic normalization**: Removes trailing slashes, adds leading slashes
-3. **Environment-aware**: Works with VITE_API_URL or falls back to same-origin
-4. **Type-safe**: Full TypeScript support
-5. **Consistent**: One function for all API requests
-
-## Migration Guide
-
-### From Direct Fetch
-
-```typescript
-// Old
-fetch("/api/auth/login", { /* ... */ });
-
-// New
-import { apiUrl } from '../lib/api';
-fetch(apiUrl("/api/auth/login"), { /* ... */ });
-```
-
-### From Manual URL Construction
-
-```typescript
-// Old
-const base = import.meta.env.VITE_API_URL || window.location.origin;
-fetch(`${base}/api/auth/login`, { /* ... */ });
-
-// New
-import { apiUrl } from '../lib/api';
-fetch(apiUrl("/api/auth/login"), { /* ... */ });
-```
-
-## Additional Functions
-
-### Check if API is Configured
-
-```typescript
-import { isApiConfigured } from '../lib/api';
-
-if (isApiConfigured()) {
-  console.log('API is ready');
-}
-```
-
-### Get Base API URL
-
-```typescript
-import { getApiBase } from '../lib/api';
-
-const baseUrl = getApiBase();
-console.log('API Base:', baseUrl);
-```
+Trailing slashes and non-HTTPS values are rejected during build.

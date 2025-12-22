@@ -3,7 +3,7 @@
 /* eslint-disable react-refresh/only-export-components */
 // AI Monitoring uses dynamic window object access and complex hook dependencies
 import { ReactNode, createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { getApiBase, apiUrl } from '../lib/api';
+import { API_BASE_URL, apiUrl } from '@/lib/api';
 interface SystemHealth {
   frontend: boolean;
   backend: boolean;
@@ -43,14 +43,10 @@ interface AIMonitoringProviderProps {
 
 export const AIMonitoringProvider = ({
   children,
-  backendUrl = getApiBase(),
+  backendUrl = API_BASE_URL,
   checkInterval = 30000, // 30 seconds
   maxRecoveryAttempts = 3
 }: AIMonitoringProviderProps) => {
-  // 🔍 TEMP DEBUG: Check if API URL is properly configured
-  if (import.meta.env.DEV) {
-    console.log("API URL:", import.meta.env.VITE_API_URL);
-  }
   const [health, setHealth] = useState<SystemHealth>({
     frontend: true,
     backend: false,

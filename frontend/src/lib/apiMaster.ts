@@ -12,14 +12,14 @@
 
 /**
  * Safe API URL builder with strict validation
- * @throws Error if VITE_API_URL is invalid or missing
+ * @throws Error if VITE_API_BASE_URL is invalid or missing
  */
 export function apiUrl(path: string): string {
-  const base = import.meta.env.VITE_API_URL;
+  const base = import.meta.env.VITE_API_BASE_URL;
   
   // Strict validation
-  if (!base?.startsWith("http")) {
-    throw new Error("VITE_API_URL invalid or missing");
+  if (!base?.startsWith("https://")) {
+    throw new Error("VITE_API_BASE_URL invalid or missing");
   }
   
   // Remove trailing slash from base, ensure leading slash on path

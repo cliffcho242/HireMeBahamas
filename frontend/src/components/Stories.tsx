@@ -2,7 +2,7 @@ import { ChangeEvent, useState, useEffect } from 'react';
 import { PlusIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
-import { apiUrl } from '../lib/api';
+import { apiUrl } from '@/lib/api';
 
 interface Story {
   id: number;

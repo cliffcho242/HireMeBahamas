@@ -10,27 +10,10 @@
  * 
  * This is the base URL for all API requests.
  * 
- * Priority order:
- * 1. VITE_API_BASE_URL (production - recommended)
- * 2. VITE_API_URL (local development fallback)
- * 3. undefined (will be handled by API client)
- * 
- * IMPORTANT: Never defaults to empty string or HTTP in production
- * 
- * @example
- * // Production deployment (REQUIRED)
- * VITE_API_BASE_URL = "https://api.hiremebahamas.com"
- * 
- * @example
- * // Local development
- * VITE_API_URL = "http://localhost:8000"
- * 
- * @example
- * // Vercel serverless (same-origin)
- * ENV_API = undefined (uses window.location.origin via Vercel proxy)
+ * Production-only configuration
+ * VITE_API_BASE_URL is required and must be HTTPS.
  */
-export const ENV_API = (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
-  (import.meta.env.VITE_API_URL as string | undefined);
+export const ENV_API = import.meta.env.VITE_API_BASE_URL as string | undefined;
 
 /**
  * Socket URL for real-time connections
@@ -47,12 +30,6 @@ export const ENV_CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_N
  * Sendbird App ID for messaging
  */
 export const ENV_SENDBIRD_APP_ID = import.meta.env.VITE_SENDBIRD_APP_ID as string | undefined;
-
-/**
- * Whether to require backend URL to be explicitly set
- * Set to 'true' to enforce VITE_API_URL configuration
- */
-export const ENV_REQUIRE_BACKEND_URL = import.meta.env.VITE_REQUIRE_BACKEND_URL === 'true';
 
 /**
  * Google OAuth Client ID

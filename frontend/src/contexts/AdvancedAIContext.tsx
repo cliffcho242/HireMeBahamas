@@ -3,7 +3,7 @@
 // AI Context uses dynamic types for AI responses - any types are intentional
 import { ReactNode, createContext, useCallback, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
-import { apiUrl } from '../lib/api';
+import { apiUrl } from '@/lib/api';
 
 interface AdvancedAIContextType {
   // User Analysis
