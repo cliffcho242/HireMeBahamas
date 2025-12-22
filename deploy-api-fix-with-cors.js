@@ -15,14 +15,19 @@ const { execFileSync } = require("child_process");
 const DEFAULT_API_BASE_URL = "https://hiremebahamas-backend.onrender.com";
 const REQUIRED_CORS_ORIGINS = ["https://hiremebahamas.com", "https://www.hiremebahamas.com"];
 
-let fetch = global.fetch;
-if (!fetch) {
+async function resolveFetch() {
+  if (global.fetch) return global.fetch;
   try {
-    fetch = require("node-fetch");
+    return require("node-fetch");
   } catch {
-    fetch = (...args) => import("node-fetch").then(({ default: f }) => f(...args));
+    const { default: f } = await import("node-fetch");
+    return f;
   }
-} // fallback for Node <18
+}
+
+function isValidUrl(url) {
+  return /^https?:\/\/[^\s]+$/i.test(url);
+}
 
 // Files to replace
 const files = [
@@ -53,7 +58,7 @@ export function getApiBaseUrl(): string {
 export function buildApiUrl(path: string): string {
   const base = getApiBaseUrl();
   if (!path.startsWith("/")) path = "/" + path;
-  return base + path;
+  return base ? base + path : path;
 }
 `;
 
@@ -73,14 +78,18 @@ const normalized = envVar.replace(/\/+$/, "");
 console.log(`🔹 Normalized VITE_API_BASE_URL: ${normalized}`);
 
 // Set Vercel environment variable
-try {
-  console.log("🔹 Setting VITE_API_BASE_URL on Vercel...");
-  execFileSync("vercel", ["env", "add", "VITE_API_BASE_URL", normalized, "production", "--yes"], {
-    stdio: "inherit",
-  });
-  console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
-} catch (err) {
-  console.warn("⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in.");
+if (!isValidUrl(normalized)) {
+  console.error("❌ Invalid VITE_API_BASE_URL. Skipping Vercel env update.");
+} else {
+  try {
+    console.log("🔹 Setting VITE_API_BASE_URL on Vercel...");
+    execFileSync("vercel", ["env", "add", "VITE_API_BASE_URL", normalized, "production", "--yes"], {
+      stdio: "inherit",
+    });
+    console.log("✅ VITE_API_BASE_URL set on Vercel (Production)");
+  } catch (err) {
+    console.warn("⚠️ Failed to set Vercel env variable. Make sure Vercel CLI is installed and logged in.");
+  }
 }
 
 // Redeploy frontend
@@ -95,9 +104,10 @@ try {
 // CORS verification
 (async () => {
   const corsCheckUrl = `${normalized}/api/health`;
+  const fetchFn = await resolveFetch();
   console.log("🔹 Checking backend CORS...");
   try {
-    const res = await fetch(corsCheckUrl, { method: "OPTIONS" });
+    const res = await fetchFn(corsCheckUrl, { method: "OPTIONS" });
     const allowOrigins = res.headers.get("access-control-allow-origin");
     if (!allowOrigins) {
       console.warn("⚠️ CORS header missing. Safari and iOS may block requests.");
