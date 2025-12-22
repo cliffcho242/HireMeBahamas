@@ -197,7 +197,6 @@ api.interceptors.request.use((config) => {
   }
   
   if (config.url) {
-    config.baseURL = undefined;
     config.url = apiUrl(config.url);
   }
   
