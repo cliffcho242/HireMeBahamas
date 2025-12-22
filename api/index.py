@@ -107,6 +107,19 @@ _mobile_webview_origins = [
     "capacitor://localhost",
     "ionic://localhost",
 ]
+
+
+def _strip_wildcards(origins):
+    """Replace wildcard entries with explicit safe defaults for credentialed requests."""
+    if "*" not in origins:
+        return origins
+    sanitized = [origin for origin in origins if origin != "*"]
+    if not sanitized:
+        return _default_origins + _mobile_webview_origins
+    for domain in _default_origins:
+        if domain not in sanitized:
+            sanitized.append(domain)
+    return sanitized
 _origins_env = os.getenv("ALLOWED_ORIGINS")
 allowed_origins = (
     [origin.strip() for origin in _origins_env.split(",") if origin.strip()]
@@ -117,14 +130,10 @@ allowed_origins = _normalize_allowed_origins(allowed_origins)
 for origin in _mobile_webview_origins:
     if origin not in allowed_origins:
         allowed_origins.append(origin)
-allow_origin_regex = None
-if "*" in allowed_origins:
-    allowed_origins = [origin for origin in allowed_origins if origin != "*"]
-    allow_origin_regex = ".*"
+allowed_origins = _strip_wildcards(allowed_origins)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,  # replace with frontend URL in production
-    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -280,10 +289,10 @@ def create_user(request: Request):
 # GLOBAL ERROR HANDLER
 # -----------------------------
 @app.exception_handler(404)
-async def not_found_handler(request: Request, exc: Exception):
+async def not_found_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=404,
-        content={"error": "NOT_FOUND"},
+        content={"error": "NOT_FOUND", "detail": "Resource not found"},
     )
 
 
@@ -292,5 +301,5 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.exception("Unhandled exception in request")
     return JSONResponse(
         status_code=500,
-        content={"error": "SERVER_ERROR", "detail": str(exc)},
+        content={"error": "SERVER_ERROR", "detail": "Internal server error"},
     )
