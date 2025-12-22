@@ -13,7 +13,12 @@ export function getApiBaseUrl(): string {
   const normalize = (url: string) => url.replace(/\/+$/, ""); // remove trailing slash
 
   // Dev override for localhost (HTTP allowed)
-  if (overrideUrl && overrideUrl.startsWith("http://localhost")) {
+  if (
+    overrideUrl &&
+    (overrideUrl.startsWith("http://localhost") ||
+      overrideUrl.startsWith("http://127.0.0.1") ||
+      overrideUrl.startsWith("http://0.0.0.0"))
+  ) {
     return normalize(overrideUrl);
   }
 
@@ -50,5 +55,10 @@ export const getApiBase = getApiBaseUrl;
 export function isApiConfigured(): boolean {
   const base = getApiBaseUrl();
   if (!base) return true; // same-origin fallback
-  return base.startsWith("https://") || base.startsWith("http://localhost");
+  return (
+    base.startsWith("https://") ||
+    base.startsWith("http://localhost") ||
+    base.startsWith("http://127.0.0.1") ||
+    base.startsWith("http://0.0.0.0")
+  );
 }
