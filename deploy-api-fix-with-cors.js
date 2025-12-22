@@ -12,7 +12,7 @@
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
-const fetch = require("node-fetch"); // npm install node-fetch@2
+const fetch = global.fetch || require("node-fetch"); // fallback for Node <18
 
 // Files to replace
 const files = [
@@ -27,7 +27,7 @@ const replacement = `/**
 export function getApiBaseUrl(): string {
   const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
   const overrideUrl = import.meta.env.VITE_API_URL?.trim();
-  const normalize = (url: string) => url.replace(/\\/+$/, "");
+  const normalize = (url: string) => url.replace(/\/+$/, "");
 
   if (overrideUrl && overrideUrl.startsWith("http://localhost")) return normalize(overrideUrl);
   if (baseUrl) return normalize(baseUrl);
