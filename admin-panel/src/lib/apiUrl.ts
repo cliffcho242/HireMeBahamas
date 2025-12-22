@@ -1,26 +1,20 @@
 /**
- * FINAL production-safe API base URL resolver
- * - iOS safe
+ * FINAL, LOCKED, PRODUCTION API HANDLER
+ * - iOS Safari safe
+ * - Chrome safe
  * - No double slashes
- * - Dev + prod compatible
+ * - No silent failures
  */
+
 export function getApiBaseUrl(): string {
   const prod = import.meta.env.VITE_API_BASE_URL?.trim();
   const dev = import.meta.env.VITE_API_URL?.trim();
 
   const normalize = (url: string) => url.replace(/\/+$/, "");
 
-  // Local dev override
-  if (dev && dev.startsWith("http://localhost")) {
-    return normalize(dev);
-  }
+  if (dev && dev.startsWith("http://localhost")) return normalize(dev);
+  if (prod && prod.startsWith("https://")) return normalize(prod);
 
-  // Production
-  if (prod && prod.startsWith("https://")) {
-    return normalize(prod);
-  }
-
-  // Same-origin fallback (Vercel proxy safety)
   return "";
 }
 
@@ -38,11 +32,11 @@ export async function apiFetch<T>(
   try {
     const res = await fetch(url, {
       credentials: "include",
-      ...options,
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),
       },
+      ...options,
     });
 
     if (!res.ok) {
@@ -57,7 +51,3 @@ export async function apiFetch<T>(
     throw err;
   }
 }
-
-// Backward compatibility aliases
-export const buildApiUrl = apiUrl;
-export const getApiBase = getApiBaseUrl;
