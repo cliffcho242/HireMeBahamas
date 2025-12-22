@@ -154,7 +154,14 @@ if (typeof window !== 'undefined') {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    fetch(apiUrl('/health/ping'), {
+    const healthUrl = apiUrl('/health/ping');
+
+    if (!healthUrl) {
+      console.warn('API base not configured; skipping health check fetch');
+      return;
+    }
+
+    fetch(healthUrl, {
       method: 'GET',
       signal: controller.signal,
     })
@@ -176,7 +183,8 @@ if (typeof window !== 'undefined') {
 }
 
 // Register Service Worker for PWA (fresh registration after cleanup)
-// PWA temporarily disabled to prevent offline cache hijacking
+// PWA temporarily disabled to prevent offline cache hijacking during white screen investigation.
+// Re-enable service worker registration only after confirming clean deployments and caches.
 
 // Enhanced error fallback component with recovery options
 const ErrorFallback = () => (

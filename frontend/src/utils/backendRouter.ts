@@ -5,18 +5,19 @@ interface BackendConfig {
   available: boolean;
 }
 
-export function validateBackendUrl(): void {
+export function validateBackendUrl(): boolean {
   if (!API_BASE_URL) {
     console.error('VITE_API_BASE_URL is required for backend routing');
+    return false;
   }
+  return true;
 }
 
-const hasBackendConfig = !!API_BASE_URL;
-validateBackendUrl();
+const hasBackendConfig = validateBackendUrl();
 
 function getBackendConfig(): BackendConfig {
   return {
-    url: API_BASE_URL,
+    url: API_BASE_URL || '',
     available: hasBackendConfig,
   };
 }
