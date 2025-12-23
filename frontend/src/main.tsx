@@ -299,30 +299,43 @@ const ErrorFallback = () => (
 
 const rootElement = document.getElementById('root');
 
-try {
-  if (!rootElement) {
-    throw new Error('Root element not found');
+if (!rootElement) {
+  // Handle missing root element gracefully
+  document.body.innerHTML = '<h1 style="padding: 24px; font-family: system-ui;">Root element missing</h1>';
+} else {
+  try {
+    ReactDOM.createRoot(rootElement).render(
+      <StrictMode>
+        <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
+          <App />
+        </Sentry.ErrorBoundary>
+      </StrictMode>,
+    );
+  } catch (e) {
+    console.error('APP BOOT ERROR:', e);
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    // Create DOM elements manually to avoid XSS vulnerability
+    const container = document.createElement('div');
+    container.style.cssText = 'padding: 24px; font-family: system-ui;';
+    
+    const heading = document.createElement('h2');
+    heading.style.color = '#dc2626';
+    heading.textContent = 'Something went wrong';
+    
+    const pre = document.createElement('pre');
+    pre.style.cssText = 'background: #f3f4f6; padding: 16px; border-radius: 8px; overflow: auto;';
+    pre.textContent = errorMessage;
+    
+    const button = document.createElement('button');
+    button.style.cssText = 'margin-top: 16px; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;';
+    button.textContent = 'Reload Page';
+    button.onclick = () => window.location.reload();
+    
+    container.appendChild(heading);
+    container.appendChild(pre);
+    container.appendChild(button);
+    rootElement.appendChild(container);
   }
-
-  ReactDOM.createRoot(rootElement).render(
-    <StrictMode>
-      <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
-        <App />
-      </Sentry.ErrorBoundary>
-    </StrictMode>,
-  );
-} catch (e) {
-  console.error('APP BOOT ERROR:', e);
-  const errorMessage = e instanceof Error ? e.message : String(e);
-  const errorNode = document.createElement('pre');
-  errorNode.style.padding = '16px';
-  errorNode.style.color = 'red';
-  errorNode.textContent = `APP BOOT ERROR:\n${errorMessage}`;
-
-  const target = rootElement ?? document.body;
-  const container = document.createElement('div');
-  container.appendChild(errorNode);
-  target.appendChild(container);
 }
 
 // Start tracking Web Vitals after the app is mounted

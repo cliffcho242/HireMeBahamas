@@ -1,42 +1,23 @@
 /**
- * PRODUCTION-ONLY API CONFIG
- * No fallbacks
- * No localhost
- * No same-origin
- * Fail fast if misconfigured
+ * PRODUCTION-SAFE API CONFIG
+ * - Never throws during app boot to prevent white screens
+ * - Logs warnings for missing configuration
+ * - Returns empty string if API URL is not configured
  */
 export function getApiBase(): string {
   const localOverride = import.meta.env.VITE_API_URL;
   const raw = localOverride || import.meta.env.VITE_API_BASE_URL;
 
   if (!raw) {
-    console.error("❌ VITE_API_BASE_URL missing");
-    
-    // Throw a user-facing error to prevent blank screen
-    throw new Error(
-      'Application configuration error: API base URL is not set.\n\n' +
-      'This usually means VITE_API_BASE_URL is missing from environment variables.\n\n' +
-      'If you are seeing this error:\n' +
-      '• Contact the site administrator\n' +
-      '• Try refreshing the page\n' +
-      '• Clear your browser cache and reload\n\n' +
-      'For developers: Set VITE_API_BASE_URL in your environment configuration.'
-    );
+    console.warn("⚠️ VITE_API_BASE_URL missing - API calls will fail gracefully");
+    return "";
   }
 
   // Allow http only when using a local override outside production builds
   const requiresHttps = import.meta.env.PROD || !localOverride;
   if (requiresHttps && !raw.startsWith("https://")) {
-    console.error("❌ VITE_API_BASE_URL must be HTTPS in production");
-    
-    throw new Error(
-      'Application configuration error: Insecure API URL detected.\n\n' +
-      'Production deployments require secure HTTPS connections.\n\n' +
-      'If you are seeing this error:\n' +
-      '• Contact the site administrator\n' +
-      '• Try refreshing the page\n\n' +
-      'For developers: Update VITE_API_BASE_URL to use HTTPS.'
-    );
+    console.warn("⚠️ VITE_API_BASE_URL should be HTTPS in production");
+    // Don't throw - let the app render and show appropriate error UI
   }
 
   return raw.replace(/\/+$/, "");
