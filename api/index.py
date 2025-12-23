@@ -22,39 +22,9 @@ api_dir = Path(__file__).parent
 if str(api_dir) not in sys.path:
     sys.path.insert(0, str(api_dir))
 
-from cors_utils import get_vercel_preview_regex, get_allowed_origins as _get_allowed_origins_from_env
+from cors_utils import get_vercel_preview_regex, get_allowed_origins
 
 logger = logging.getLogger(__name__)
-
-# -----------------------------
-# CORS NORMALIZATION
-# -----------------------------
-def _normalize_allowed_origins(origins):
-    """Ensure canonical domains are always allowed and HTTPS enforced."""
-    required = [
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-    ]
-    
-    # Preserve wildcard behavior exactly
-    if any(origin.strip() == "*" for origin in origins):
-        return ["*"]
-    
-    normalized = []
-    for origin in origins:
-        candidate = origin.strip()
-        if not candidate:
-            continue
-        if candidate.startswith("http://"):
-            candidate = "https://" + candidate[len("http://"):]
-        if candidate not in normalized:
-            normalized.append(candidate)
-    
-    for domain in required:
-        if domain not in normalized:
-            normalized.append(domain)
-    
-    return normalized
 
 # -----------------------------
 # CONFIGURATION
@@ -106,10 +76,10 @@ app = FastAPI(title="HireMeBahamas Backend")
 
 
 # -----------------------------
-# CORS - Vercel Preview + Production Support
+# 🔒 STEP 6: CORS - Vercel Preview + Production Support
 # -----------------------------
 # Get explicit origins from environment
-allowed_origins = _normalize_allowed_origins(_get_allowed_origins_from_env())
+allowed_origins = get_allowed_origins()
 
 # Add CORS middleware with Vercel preview support
 app.add_middleware(
