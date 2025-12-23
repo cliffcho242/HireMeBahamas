@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 // Default API base URL for development when not specified
@@ -62,7 +63,22 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
-    plugins: [react()],
+    plugins: [
+      react(),
+      // PWA configuration for production + mobile safety
+      // ✅ No offline hijack
+      // ✅ No broken routing
+      // ✅ Safe mobile refreshes
+      VitePWA({
+        registerType: 'autoUpdate',
+        injectRegister: 'inline',
+        workbox: {
+          cleanupOutdatedCaches: true,
+          // Don't cache API routes - let them go to the real backend
+          navigateFallbackDenylist: [/^\/api\//],
+        },
+      }),
+    ],
     // Dev server configuration with API proxy
     server: {
       port: 3000,
