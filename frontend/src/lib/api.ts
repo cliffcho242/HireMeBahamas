@@ -2,17 +2,19 @@
  * PRODUCTION-SAFE API CONFIG
  * - Never throws during app boot to prevent white screens
  * - Logs warnings for missing configuration
- * - Returns empty string if API URL is not configured
+ * - Provides fallback URL to Render backend
  * - Wrapped in try-catch to ensure env issues never crash rendering
  */
+import { getApiBase as getApiBaseFromEnv } from './env';
+
 export function getApiBase(): string {
   try {
     const localOverride = import.meta.env.VITE_API_URL;
     const raw = localOverride || import.meta.env.VITE_API_BASE_URL;
 
     if (!raw) {
-      console.warn("⚠️ VITE_API_BASE_URL missing - API calls will fail gracefully");
-      return "";
+      // Use fallback from env.ts
+      return getApiBaseFromEnv();
     }
 
     // Allow http only when using a local override outside production builds
@@ -24,8 +26,8 @@ export function getApiBase(): string {
 
     return raw.replace(/\/+$/, "");
   } catch {
-    // If anything fails during API base URL processing, return empty string safely
-    return "";
+    // If anything fails during API base URL processing, use fallback
+    return getApiBaseFromEnv();
   }
 }
 

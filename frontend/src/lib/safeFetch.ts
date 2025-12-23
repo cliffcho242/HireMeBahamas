@@ -15,9 +15,9 @@ export async function safeFetch(endpoint: string, options?: RequestInit) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     }
     return await res.json();
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("⚠️ Network/API error", err);
     // Return degraded fallback to avoid blank screen
-    return { error: true, message: err.message };
+    return { error: true, message: err instanceof Error ? err.message : String(err) };
   }
 }
