@@ -86,6 +86,9 @@ def get_cors_origins() -> List[str]:
     # Check for custom origins from environment variable
     custom_origins_env = os.getenv("ALLOWED_ORIGINS", "")
     
+    # Check for Vercel preview URL (can be set dynamically for preview deployments)
+    vercel_preview_url = os.getenv("VERCEL_PREVIEW_URL", "")
+    
     if is_production():
         # Production mode: strict domain whitelist only
         # 🚫 ABSOLUTE BAN: No wildcard (*) in production
@@ -104,13 +107,25 @@ def get_cors_origins() -> List[str]:
                 "ionic://localhost",
             ]
         
+        # Add Vercel preview URL if set via environment variable
+        if vercel_preview_url and vercel_preview_url not in origins:
+            origins.append(vercel_preview_url)
+        
         # Normalize and ensure required domains are always included
         origins = _normalize_production_origins(origins)
         
-        # Note: For additional Vercel preview deployments, add them to
-        # ALLOWED_ORIGINS environment variable as comma-separated list.
-        # Example: ALLOWED_ORIGINS="https://hiremebahamas.com,https://hiremebahamas-git-feature.vercel.app"
-        # Wildcard patterns (*.vercel.app) are NOT supported in production mode.
+        # Note: Configuring CORS for Vercel preview deployments:
+        # 
+        # Option 1: Use VERCEL_PREVIEW_URL for a single active preview deployment
+        #   Set: VERCEL_PREVIEW_URL=https://your-preview-123.vercel.app
+        #   Best for: Testing a specific preview before merging
+        #
+        # Option 2: Use ALLOWED_ORIGINS for multiple custom origins (replaces defaults)
+        #   Set: ALLOWED_ORIGINS="https://hiremebahamas.com,https://preview1.vercel.app"
+        #   Best for: Advanced configurations with multiple allowed origins
+        #
+        # Note: Wildcard patterns (*.vercel.app) are NOT supported in production mode
+        # due to CORS security requirements when credentials are enabled.
         
     else:
         # Development mode: includes localhost for testing
@@ -127,5 +142,9 @@ def get_cors_origins() -> List[str]:
             "capacitor://localhost",
             "ionic://localhost",
         ]
+        
+        # Add Vercel preview URL if set via environment variable
+        if vercel_preview_url and vercel_preview_url not in origins:
+            origins.append(vercel_preview_url)
     
     return origins

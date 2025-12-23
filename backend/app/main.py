@@ -526,6 +526,7 @@ except ImportError:
     # Fallback to manual configuration if import fails
     import os
     _is_prod = os.getenv("ENVIRONMENT", "").lower() == "production" or os.getenv("VERCEL_ENV", "").lower() == "production"
+    _vercel_preview_url = os.getenv("VERCEL_PREVIEW_URL", "")
     
     # 🚫 SECURITY: No wildcard patterns (*) in production
     if _is_prod:
@@ -550,6 +551,10 @@ except ImportError:
             "capacitor://localhost",
             "ionic://localhost",
         ]
+    
+    # Add Vercel preview URL if set via environment variable
+    if _vercel_preview_url and _vercel_preview_url not in _allowed_origins:
+        _allowed_origins.append(_vercel_preview_url)
 
 # Apply CORS middleware with credentials support
 # ❌ NEVER use allow_origins=["*"] with allow_credentials=True
