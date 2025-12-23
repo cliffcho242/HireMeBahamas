@@ -8,7 +8,7 @@ export default function App() {
         background: 'white',
       }}
     >
-      ✅ APP IS RENDERING
+      {'\u2705 APP IS RENDERING'}
     </div>
   );
 }
