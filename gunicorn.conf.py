@@ -4,6 +4,7 @@ Gunicorn Production Configuration - HireMeBahamas (2025)
 Zero 502, Zero cold starts, Sub-800ms boot, Sub-300ms login globally
 """
 import os
+import sys
 import time
 import logging
 
@@ -17,7 +18,6 @@ _port = os.environ.get('PORT', '10000')
 try:
     _port_int = int(_port)
 except ValueError:
-    import sys
     print("=" * 80, file=sys.stderr)
     print(f"❌ CRITICAL ERROR: PORT environment variable must be numeric", file=sys.stderr)
     print("=" * 80, file=sys.stderr)
@@ -31,7 +31,6 @@ except ValueError:
 
 # DO NOT USE PORT 5432 - This is a PostgreSQL port, not for HTTP backends
 if _port_int == 5432:
-    import sys
     print("=" * 80, file=sys.stderr)
     print("❌ CRITICAL ERROR: HTTP service cannot use port 5432", file=sys.stderr)
     print("=" * 80, file=sys.stderr)
