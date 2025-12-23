@@ -5,10 +5,10 @@
  * ✅ Returns degraded fallback to avoid blank screen
  * ✅ Logs errors for debugging
  */
-import { getApiBase } from "./env";
+import { apiUrl } from "./api";
 
 export async function safeFetch(endpoint: string, options?: RequestInit) {
-  const url = `${getApiBase()}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+  const url = apiUrl(endpoint);
   try {
     const res = await fetch(url, options);
     if (!res.ok) {

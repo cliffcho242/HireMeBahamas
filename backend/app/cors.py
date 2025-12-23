@@ -9,8 +9,11 @@ import os
 import re
 from fastapi.middleware.cors import CORSMiddleware
 
+# Get Vercel project identifier from environment or use default
+VERCEL_PROJECT_ID = os.getenv("VERCEL_PROJECT_ID", "cliffs-projects-a84c76c9")
+
 # Pattern for Vercel preview deployments
-VERCEL_PREVIEW_REGEX = r"^https://frontend-[a-z0-9-]+-cliffs-projects-a84c76c9\.vercel\.app$"
+VERCEL_PREVIEW_REGEX = rf"^https://frontend-[a-z0-9-]+-{re.escape(VERCEL_PROJECT_ID)}\.vercel\.app$"
 
 
 def get_allowed_origins():
