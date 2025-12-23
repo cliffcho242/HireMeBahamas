@@ -6,7 +6,7 @@ across all parts of the application.
 """
 import os
 import re
-from typing import List, Optional
+from typing import List
 
 
 def _normalize_production_origins(origins: List[str]) -> List[str]:
@@ -134,6 +134,8 @@ def get_cors_origins() -> List[str]:
 
 # Vercel project ID pattern for this app's preview deployments
 # Format: frontend-{hash}-cliffs-projects-a84c76c9.vercel.app
+# Note: This is hardcoded for security - only this specific project's
+# preview deployments are allowed. To change, update the pattern directly.
 VERCEL_PROJECT_PATTERN = re.compile(
     r'^https://frontend-[a-z0-9]+-cliffs-projects-a84c76c9\.vercel\.app$'
 )
@@ -154,12 +156,3 @@ def is_valid_vercel_preview_origin(origin: str) -> bool:
     if not origin:
         return False
     return bool(VERCEL_PROJECT_PATTERN.match(origin))
-
-
-def get_vercel_project_id() -> Optional[str]:
-    """Get the Vercel project ID from environment or return the default.
-    
-    Returns:
-        Optional[str]: The Vercel project ID suffix (e.g., 'cliffs-projects-a84c76c9')
-    """
-    return os.getenv("VERCEL_PROJECT_ID", "cliffs-projects-a84c76c9")

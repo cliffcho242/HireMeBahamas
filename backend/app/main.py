@@ -605,6 +605,9 @@ async def cors_middleware(request: Request, call_next):
             response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Requested-With"
             response.headers["Access-Control-Max-Age"] = "600"
             return response
+        else:
+            # Origin not allowed - return 403 for preflight
+            return StarletteResponse(content="CORS origin not allowed", status_code=403)
     
     # Process the request
     response = await call_next(request)
