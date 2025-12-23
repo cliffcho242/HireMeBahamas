@@ -566,19 +566,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setRememberMe,
   };
 
-  // ✅ Auth Boot Guard: Prevent rendering children until auth state is initialized
-  // This prevents:
-  // - Blank screen on refresh
-  // - Mobile cold-start crashes
-  // - Token race conditions
+  // 🧱 LAYER 7: Auth never blocks render - Show simple loading message
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading session…</p>
-        </div>
-      </div>
+      <AuthContext.Provider value={value}>
+        <div style={{ padding: 24 }}>Starting app…</div>
+        {children}
+      </AuthContext.Provider>
     );
   }
 

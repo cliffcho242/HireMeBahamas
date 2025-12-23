@@ -11,6 +11,19 @@
 import { getApiBase } from "./api";
 import { getToken } from "./token";
 
+// 🧱 LAYER 6: Network failures are contained - Never crash the app
+export async function safeFetch(
+  input: RequestInfo,
+  init?: RequestInit
+) {
+  try {
+    return await fetch(input, init);
+  } catch (e) {
+    console.error("NETWORK ERROR", e);
+    throw new Error("Network unavailable");
+  }
+}
+
 /**
  * Make an authenticated API fetch request.
  * 
