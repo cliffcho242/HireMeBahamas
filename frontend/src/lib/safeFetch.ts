@@ -25,11 +25,14 @@ export interface SafeFetchError {
  * @param options - Standard fetch options
  * @returns Promise with JSON response or error object
  */
-export async function safeFetch(
+export async function safeFetch<T = any>(
   endpoint: string,
   options?: RequestInit
-): Promise<any> {
-  const url = `${getApiBase()}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+): Promise<T | SafeFetchError> {
+  // Build URL using standard approach
+  const baseUrl = getApiBase();
+  const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const url = `${baseUrl}${normalizedEndpoint}`;
   
   try {
     const res = await fetch(url, options);
@@ -38,7 +41,7 @@ export async function safeFetch(
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     }
     
-    return await res.json();
+    return await res.json() as T;
   } catch (err: any) {
     console.error("⚠️ Network/API error", err);
     

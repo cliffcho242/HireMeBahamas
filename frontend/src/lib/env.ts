@@ -11,6 +11,12 @@
  * ✅ Prevents white screen on missing env vars
  */
 
+/**
+ * Default fallback API base URL for production
+ * Used when VITE_API_BASE_URL is not set
+ */
+export const DEFAULT_API_BASE_URL = "https://hiremebahamas-backend.onrender.com";
+
 export function getApiBase(): string {
   const url = import.meta.env.VITE_API_BASE_URL;
 
@@ -18,8 +24,7 @@ export function getApiBase(): string {
     console.warn(
       "⚠️ VITE_API_BASE_URL is missing. Falling back to default."
     );
-    // Default fallback: your Render backend
-    return "https://hiremebahamas-backend.onrender.com";
+    return DEFAULT_API_BASE_URL;
   }
 
   return url.replace(/\/+$/, "");
