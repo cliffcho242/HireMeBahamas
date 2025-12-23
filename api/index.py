@@ -26,6 +26,11 @@ from backend_app.cors import apply_cors
 logger = logging.getLogger(__name__)
 
 # -----------------------------
+# BACKEND STATUS FLAG
+# -----------------------------
+HAS_BACKEND = True  # Indicates backend is properly integrated and running
+
+# -----------------------------
 # CONFIGURATION
 # -----------------------------
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
