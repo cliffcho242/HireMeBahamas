@@ -13,9 +13,13 @@ import logging
 bind = "0.0.0.0:10000"
 
 # ============================================================================
-# WORKER CONFIGURATION
+# WORKER CONFIGURATION (Master Playbook Requirement: workers = 1)
 # ============================================================================
-workers = 2
+# CRITICAL: Master Playbook enforces exactly 1 worker for:
+# - Memory Stability: Single worker = predictable memory usage on free tier
+# - Database Connections: Prevents connection pool exhaustion
+# - Neon DB Compatibility: Single worker avoids connection race conditions
+workers = 1
 worker_class = "uvicorn.workers.UvicornWorker"
 
 # ============================================================================
@@ -173,7 +177,7 @@ def on_starting(server):
     print("="*80)
     print("  HireMeBahamas API - Production Configuration")
     print("="*80)
-    print(f"  Workers: {workers}")
+    print(f"  Workers: {workers} (Master Playbook requirement)")
     print(f"  Timeout: {timeout}s")
     print(f"  Keepalive: {keepalive}s")
     print(f"  Preload: {preload_app}")

@@ -3,7 +3,7 @@
 # =============================================================================
 # 
 # ✅ FINAL "DO NOT EVER DO" LIST COMPLIANT:
-# ✅ Zero-downtime dual Gunicorn workers (workers=2)
+# ✅ Single Gunicorn worker (workers=1) - Master Playbook Requirement
 # ✅ No blocking DB calls at import
 # ✅ Health check validates DB availability
 # ✅ No --reload flag
@@ -19,8 +19,8 @@
 #
 # WHY THIS FIX IS PERMANENT:
 #   • Render kills slow starters → We start instantly
-#   • Gunicorn defaults unsafe → We use controlled workers=2
-#   • Recycling workers = predictable memory
+#   • Master Playbook requires workers=1 for stability
+#   • Single worker = predictable memory usage on free tier
 #   • Async startup + DB-aware health = instant readiness
 #   • DB warms after app is alive
 #
@@ -33,7 +33,7 @@
 # - app.main:app - FastAPI application entry point
 # - -k uvicorn.workers.UvicornWorker - ASGI worker for async support
 # - --bind 0.0.0.0:$PORT - Bind to all interfaces on dynamic port
-# - --workers 2 - Two workers for production (zero-downtime recycling)
+# - --workers 1 - One worker for production (Master Playbook requirement)
 # - --timeout 120 - Prevents premature SIGTERM during startup
 # 
 # ❌ NO extra flags (no --reload, no --preload, no SSL flags)
@@ -41,7 +41,7 @@
 #
 # Single worker with UvicornWorker (async event loop) handles 100+ concurrent connections efficiently.
 # This is the correct production pattern for FastAPI on Render/Railway.
-web: cd backend && poetry run gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000} --workers 2 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100
+web: cd backend && poetry run gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000} --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100
 
 # Optional: Use start.sh for migrations + health check
 # web: bash start.sh
