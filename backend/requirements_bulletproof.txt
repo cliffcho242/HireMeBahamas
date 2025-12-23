@@ -19,8 +19,8 @@ mangum==0.19.0
 # JWT Authentication — python-jose[cryptography]
 # Updated to 3.5.0 to fix pyasn1 dependency conflict (allows pyasn1>=0.5.0)
 python-jose[cryptography]==3.5.0
-cryptography==43.0.3
-ecdsa==0.19.0
+cryptography==44.0.1
+ecdsa==0.19.1
 # pyasn1 version is now controlled by python-jose 3.5.0 (requires >=0.5.0)
 rsa==4.9
 
@@ -34,7 +34,7 @@ sqlalchemy[asyncio]==2.0.44
 psycopg2-binary==2.9.11
 
 # Utilities
-python-multipart==0.0.20
+python-multipart==0.0.21
 python-dotenv==1.2.1
 python-decouple==3.8
 email-validator==2.3.0
