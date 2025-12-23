@@ -26,20 +26,18 @@ const Messages = lazy(() => import('./pages/Messages'));
 const PostJob = lazy(() => import('./pages/PostJob'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
+// Cache duration constants
+const CACHE_STALE_TIME = 5 * 60 * 1000; // 5 minutes
+const CACHE_GC_TIME = 10 * 60 * 1000; // 10 minutes
+
 // Loading fallback component for Suspense
+// Uses inline styles to ensure it works even if CSS fails to load
 const PageLoader = () => (
-  <div style={{ padding: 20, textAlign: 'center' }}>
-    <div style={{ 
-      width: 40, 
-      height: 40, 
-      border: '3px solid #e5e7eb', 
-      borderTop: '3px solid #3b82f6', 
-      borderRadius: '50%', 
-      animation: 'spin 1s linear infinite',
-      margin: '0 auto 16px'
-    }} />
-    <p style={{ color: '#6b7280' }}>Loading…</p>
-    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  <div className="flex items-center justify-center min-h-[200px] p-5">
+    <div className="text-center">
+      <div className="w-10 h-10 border-3 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
+      <p className="text-gray-500">Loading…</p>
+    </div>
   </div>
 );
 
@@ -49,8 +47,8 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: CACHE_STALE_TIME,
+      gcTime: CACHE_GC_TIME,
     },
   },
 });
