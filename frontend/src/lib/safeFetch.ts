@@ -1,0 +1,23 @@
+/**
+ * Safe Fetch Wrapper
+ * 
+ * ✅ Prevents fetch crashes from breaking the app
+ * ✅ Returns degraded fallback to avoid blank screen
+ * ✅ Logs errors for debugging
+ */
+import { getApiBase } from "./env";
+
+export async function safeFetch(endpoint: string, options?: RequestInit) {
+  const url = `${getApiBase()}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    return await res.json();
+  } catch (err: any) {
+    console.error("⚠️ Network/API error", err);
+    // Return degraded fallback to avoid blank screen
+    return { error: true, message: err.message };
+  }
+}
