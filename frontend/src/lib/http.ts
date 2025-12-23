@@ -14,6 +14,9 @@ import { getToken } from "./token";
 /**
  * Make an authenticated API fetch request.
  * 
+ * This is a complementary function to the existing apiFetch in api.ts.
+ * Use this when you need automatic token injection from the token module.
+ * 
  * Features:
  * - Automatically retrieves and applies auth token
  * - Handles network errors gracefully
@@ -25,7 +28,7 @@ import { getToken } from "./token";
  * @returns Parsed JSON response
  * @throws Error with status and message for failed requests
  */
-export async function apiFetch<T = unknown>(
+export async function authenticatedFetch<T = unknown>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
@@ -36,13 +39,22 @@ export async function apiFetch<T = unknown>(
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = base ? `${base}${normalizedPath}` : normalizedPath;
 
+  // Build headers - only set Content-Type for requests with JSON body
+  const headers: Record<string, string> = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  
+  // Only add Content-Type: application/json when body is present and is a string (JSON)
+  if (options.body && typeof options.body === "string") {
+    headers["Content-Type"] = "application/json";
+  }
+
   try {
     const res = await fetch(url, {
       ...options,
       credentials: "include", // Include cookies for Safari support
       headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
         ...options.headers,
       },
     });
@@ -79,13 +91,13 @@ export const http = {
    * Make a GET request
    */
   get: <T = unknown>(path: string, options?: RequestInit) =>
-    apiFetch<T>(path, { ...options, method: "GET" }),
+    authenticatedFetch<T>(path, { ...options, method: "GET" }),
 
   /**
    * Make a POST request with JSON body
    */
   post: <T = unknown>(path: string, body?: unknown, options?: RequestInit) =>
-    apiFetch<T>(path, {
+    authenticatedFetch<T>(path, {
       ...options,
       method: "POST",
       body: body ? JSON.stringify(body) : undefined,
@@ -95,7 +107,7 @@ export const http = {
    * Make a PUT request with JSON body
    */
   put: <T = unknown>(path: string, body?: unknown, options?: RequestInit) =>
-    apiFetch<T>(path, {
+    authenticatedFetch<T>(path, {
       ...options,
       method: "PUT",
       body: body ? JSON.stringify(body) : undefined,
@@ -105,7 +117,7 @@ export const http = {
    * Make a PATCH request with JSON body
    */
   patch: <T = unknown>(path: string, body?: unknown, options?: RequestInit) =>
-    apiFetch<T>(path, {
+    authenticatedFetch<T>(path, {
       ...options,
       method: "PATCH",
       body: body ? JSON.stringify(body) : undefined,
@@ -115,5 +127,5 @@ export const http = {
    * Make a DELETE request
    */
   delete: <T = unknown>(path: string, options?: RequestInit) =>
-    apiFetch<T>(path, { ...options, method: "DELETE" }),
+    authenticatedFetch<T>(path, { ...options, method: "DELETE" }),
 };
