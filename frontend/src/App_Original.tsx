@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 
-// Import ErrorBoundary for error safety (Layer 3: App Root Protection)
+// Import ErrorBoundary for error safety (Layer 2: Runtime Error Protection)
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Critical components - import directly to avoid blank screens
@@ -53,7 +53,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// ✅ LAYER 3: App Root with ErrorBoundary protection
+// ✅ LAYER 2: App Root with ErrorBoundary protection
 function App() {
   return (
     <ErrorBoundary>

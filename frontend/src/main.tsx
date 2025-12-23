@@ -305,7 +305,13 @@ const ErrorFallback = () => (
 );
 
 // 🧱 LAYER 1: Safe Bootstrap - Guarantees something is always visible
-const rootEl = document.getElementById("root")!;
+const rootEl = document.getElementById("root");
+
+if (!rootEl) {
+  // Root element missing - critical failure
+  document.body.innerHTML = '<div style="padding:32px;font-family:sans-serif"><h2>Critical Error: Root element not found</h2></div>';
+  throw new Error("Root element missing");
+}
 
 try {
   ReactDOM.createRoot(rootEl).render(
@@ -317,13 +323,26 @@ try {
   );
 } catch (err) {
   console.error("💥 BOOT FAILURE", err);
-  rootEl.innerHTML = `
-    <div style="padding:32px;font-family:sans-serif">
-      <h2>App failed to start</h2>
-      <pre>${String(err)}</pre>
-      <button onclick="location.reload()">Reload</button>
-    </div>
-  `;
+  // Safe DOM manipulation to avoid XSS
+  const container = document.createElement('div');
+  container.style.cssText = 'padding:32px;font-family:sans-serif';
+  
+  const heading = document.createElement('h2');
+  heading.textContent = 'App failed to start';
+  
+  const pre = document.createElement('pre');
+  pre.textContent = String(err);
+  
+  const button = document.createElement('button');
+  button.textContent = 'Reload';
+  button.onclick = () => location.reload();
+  
+  container.appendChild(heading);
+  container.appendChild(pre);
+  container.appendChild(button);
+  
+  rootEl.innerHTML = '';
+  rootEl.appendChild(container);
 }
 
 // Start tracking Web Vitals after the app is mounted
