@@ -13,3 +13,7 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// Global constant injected by Vite at build time
+// Provides safe fallback API URL when VITE_API_BASE_URL is not set
+declare const __API_BASE__: string

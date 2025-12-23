@@ -7,27 +7,46 @@
  * Features:
  * ✅ Never throws or blocks rendering
  * ✅ Logs warnings for missing configuration
- * ✅ Falls back to default Render backend
+ * ✅ Falls back to build-time injected __API_BASE__ (set in vite.config.ts)
  * ✅ Prevents white screen on missing env vars
+ * 
+ * Fallback order:
+ * 1. Runtime env: import.meta.env.VITE_API_BASE_URL
+ * 2. Build-time global: window.__API_BASE__ or __API_BASE__
+ * 3. Default: "https://hiremebahamas-backend.onrender.com"
  */
 
 /**
  * Default fallback API base URL for production
- * Used when VITE_API_BASE_URL is not set
+ * Used when both VITE_API_BASE_URL and __API_BASE__ are not available
  */
 export const DEFAULT_API_BASE_URL = "https://hiremebahamas-backend.onrender.com";
 
 export function getApiBase(): string {
-  const url = import.meta.env.VITE_API_BASE_URL;
-
-  if (!url || url.trim() === "") {
-    console.warn(
-      "⚠️ VITE_API_BASE_URL is missing. Falling back to default."
-    );
-    return DEFAULT_API_BASE_URL;
+  // Try runtime environment variable first
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  
+  if (envUrl && envUrl.trim() !== "") {
+    return envUrl.replace(/\/+$/, "");
   }
 
-  return url.replace(/\/+$/, "");
+  // Try build-time injected global (from vite.config.ts define)
+  try {
+    const buildTimeUrl = (typeof window !== 'undefined' && (window as any).__API_BASE__) || 
+                         (typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined);
+    if (buildTimeUrl && buildTimeUrl.trim() !== "") {
+      return buildTimeUrl.replace(/\/+$/, "");
+    }
+  } catch (e) {
+    // Ignore errors accessing __API_BASE__
+  }
+
+  // Final fallback
+  console.warn(
+    "⚠️ VITE_API_BASE_URL is missing. Falling back to default:",
+    DEFAULT_API_BASE_URL
+  );
+  return DEFAULT_API_BASE_URL;
 }
 
 /**
