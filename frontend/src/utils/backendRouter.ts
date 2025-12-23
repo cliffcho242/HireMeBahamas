@@ -7,7 +7,7 @@ interface BackendConfig {
 
 export function validateBackendUrl(): void {
   if (!API_BASE_URL) {
-    throw new Error('VITE_API_BASE_URL is required for backend routing');
+    console.warn('VITE_API_BASE_URL missing; backend routing will use relative paths');
   }
 }
 

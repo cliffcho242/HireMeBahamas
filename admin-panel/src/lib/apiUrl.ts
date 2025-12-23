@@ -23,6 +23,9 @@ export function apiUrl(path: string): string {
   return `${getApiBaseUrl()}${path}`;
 }
 
+// Alias used across the app to keep imports consistent with frontend package
+export const getApiBase = getApiBaseUrl;
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
