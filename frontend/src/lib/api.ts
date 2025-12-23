@@ -3,24 +3,30 @@
  * - Never throws during app boot to prevent white screens
  * - Logs warnings for missing configuration
  * - Returns empty string if API URL is not configured
+ * - Wrapped in try-catch to ensure env issues never crash rendering
  */
 export function getApiBase(): string {
-  const localOverride = import.meta.env.VITE_API_URL;
-  const raw = localOverride || import.meta.env.VITE_API_BASE_URL;
+  try {
+    const localOverride = import.meta.env.VITE_API_URL;
+    const raw = localOverride || import.meta.env.VITE_API_BASE_URL;
 
-  if (!raw) {
-    console.warn("⚠️ VITE_API_BASE_URL missing - API calls will fail gracefully");
+    if (!raw) {
+      console.warn("⚠️ VITE_API_BASE_URL missing - API calls will fail gracefully");
+      return "";
+    }
+
+    // Allow http only when using a local override outside production builds
+    const requiresHttps = import.meta.env.PROD || !localOverride;
+    if (requiresHttps && !raw.startsWith("https://")) {
+      console.warn("⚠️ VITE_API_BASE_URL should be HTTPS in production");
+      // Don't throw - let the app render and show appropriate error UI
+    }
+
+    return raw.replace(/\/+$/, "");
+  } catch {
+    // If anything fails during API base URL processing, return empty string safely
     return "";
   }
-
-  // Allow http only when using a local override outside production builds
-  const requiresHttps = import.meta.env.PROD || !localOverride;
-  if (requiresHttps && !raw.startsWith("https://")) {
-    console.warn("⚠️ VITE_API_BASE_URL should be HTTPS in production");
-    // Don't throw - let the app render and show appropriate error UI
-  }
-
-  return raw.replace(/\/+$/, "");
 }
 
 export const API_BASE_URL = getApiBase();
