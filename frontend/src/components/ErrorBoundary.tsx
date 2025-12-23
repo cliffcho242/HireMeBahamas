@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component<
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log the error to console for debugging
-    console.error("ErrorBoundary caught an error:", error);
+    console.error("🔥 App crash caught:", error);
     console.error("Error info:", errorInfo);
   }
 

@@ -2,6 +2,9 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+// PWA configuration imported from centralized config
+import { pwaConfig } from './src/config/pwa.config';
+
 // Default API base URL for development when not specified
 const DEFAULT_API_BASE_URL = 'https://api.hiremebahamas.com';
 
@@ -62,7 +65,14 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
-    plugins: [react()],
+    plugins: [
+      react(),
+      // PWA configuration from centralized config (src/config/pwa.config.ts)
+      // ✅ No offline hijack
+      // ✅ No broken routing
+      // ✅ Safe mobile refreshes
+      pwaConfig,
+    ],
     // Dev server configuration with API proxy
     server: {
       port: 3000,

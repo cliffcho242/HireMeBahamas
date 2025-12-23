@@ -1,7 +1,21 @@
 import { VitePWA } from 'vite-plugin-pwa';
 
+/**
+ * PWA Configuration for HireBahamas
+ * 
+ * CRITICAL SETTINGS (from Master Production Combine):
+ * - registerType: 'autoUpdate' - Auto-update service worker
+ * - injectRegister: 'inline' - Inline registration for reliability
+ * - cleanupOutdatedCaches: true - Remove stale cached content
+ * - navigateFallbackDenylist: [/^\/api\//] - Don't intercept API routes
+ * 
+ * ✅ No offline hijack
+ * ✅ No broken routing
+ * ✅ Safe mobile refreshes
+ */
 export const pwaConfig = VitePWA({
   registerType: 'autoUpdate',
+  injectRegister: 'inline',
   includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
   manifest: {
     name: 'HireBahamas - Caribbean Job Platform',
@@ -46,6 +60,10 @@ export const pwaConfig = VitePWA({
     ]
   },
   workbox: {
+    // CRITICAL: Clean up outdated caches to prevent stale content
+    cleanupOutdatedCaches: true,
+    // CRITICAL: Don't intercept API routes - let them go to the real backend
+    navigateFallbackDenylist: [/^\/api\//],
     // Cache strategies for optimal performance
     runtimeCaching: [
       {
@@ -85,18 +103,6 @@ export const pwaConfig = VitePWA({
             maxEntries: 50,
             maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
           }
-        }
-      },
-      {
-        urlPattern: /\/api\/.*/,
-        handler: 'NetworkFirst',
-        options: {
-          cacheName: 'api-cache',
-          expiration: {
-            maxEntries: 50,
-            maxAgeSeconds: 60 * 5 // 5 minutes
-          },
-          networkTimeoutSeconds: 10
         }
       }
     ]
