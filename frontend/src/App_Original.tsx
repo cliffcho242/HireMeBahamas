@@ -6,7 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 
 // Import ErrorBoundary for error safety
-import { ErrorBoundary } from './components/ErrorBoundary';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Critical components - import directly to avoid blank screens
 import Navbar from './components/Navbar';
@@ -56,10 +56,10 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<PageLoader />}>
-        <QueryClientProvider client={queryClient}>
-          <Router>
-            <AuthProvider>
+      <AuthProvider>
+        <Router>
+          <Suspense fallback={<PageLoader />}>
+            <QueryClientProvider client={queryClient}>
               <SocketProvider>
                 <div className="min-h-screen bg-gray-50 flex flex-col">
                   <Navbar />
@@ -128,10 +128,10 @@ function App() {
                   />
                 </div>
               </SocketProvider>
-            </AuthProvider>
-          </Router>
-        </QueryClientProvider>
-      </Suspense>
+            </QueryClientProvider>
+          </Suspense>
+        </Router>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

@@ -318,30 +318,15 @@ if (!rootElement) {
         </Sentry.ErrorBoundary>
       </StrictMode>,
     );
-  } catch (e) {
-    console.error('APP BOOT ERROR:', e);
-    const errorMessage = e instanceof Error ? e.message : String(e);
-    // Create DOM elements manually to avoid XSS vulnerability
-    const container = document.createElement('div');
-    container.style.cssText = 'padding: 24px; font-family: system-ui;';
-    
-    const heading = document.createElement('h2');
-    heading.style.color = '#dc2626';
-    heading.textContent = 'Something went wrong';
-    
-    const pre = document.createElement('pre');
-    pre.style.cssText = 'background: #f3f4f6; padding: 16px; border-radius: 8px; overflow: auto;';
-    pre.textContent = errorMessage;
-    
-    const button = document.createElement('button');
-    button.style.cssText = 'margin-top: 16px; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;';
-    button.textContent = 'Reload Page';
-    button.onclick = () => window.location.reload();
-    
-    container.appendChild(heading);
-    container.appendChild(pre);
-    container.appendChild(button);
-    rootElement.appendChild(container);
+  } catch (err) {
+    console.error('💥 BOOT FAILURE', err);
+    rootElement.innerHTML = `
+      <div style="padding:32px;font-family:sans-serif">
+        <h2>App failed to start</h2>
+        <pre>${String(err)}</pre>
+        <button onclick="location.reload()">Reload</button>
+      </div>
+    `;
   }
 }
 

@@ -4,48 +4,22 @@ Includes: Auth, Jobs, Users, Lazy DB, Health check
 """
 import logging
 import os
+import sys
 import threading
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
-logger = logging.getLogger(__name__)
+# Add parent directory to path for app.cors import
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.cors import apply_cors
 
-# -----------------------------
-# CORS NORMALIZATION
-# -----------------------------
-def _normalize_allowed_origins(origins):
-    """Ensure canonical domains are always allowed and HTTPS enforced."""
-    required = [
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-    ]
-    
-    # Preserve wildcard behavior exactly
-    if any(origin.strip() == "*" for origin in origins):
-        return ["*"]
-    
-    normalized = []
-    for origin in origins:
-        candidate = origin.strip()
-        if not candidate:
-            continue
-        if candidate.startswith("http://"):
-            candidate = "https://" + candidate[len("http://"):]
-        if candidate not in normalized:
-            normalized.append(candidate)
-    
-    for domain in required:
-        if domain not in normalized:
-            normalized.append(domain)
-    
-    return normalized
+logger = logging.getLogger(__name__)
 
 # -----------------------------
 # CONFIGURATION
@@ -95,28 +69,8 @@ def get_engine():
 # -----------------------------
 app = FastAPI(title="HireMeBahamas Backend")
 
-
-# -----------------------------
-# CORS
-# -----------------------------
-_default_origins = [
-    "https://hiremebahamas.com",
-    "https://www.hiremebahamas.com",
-]
-_origins_env = os.getenv("ALLOWED_ORIGINS")
-allowed_origins = (
-    [origin.strip() for origin in _origins_env.split(",") if origin.strip()]
-    if _origins_env
-    else _default_origins
-)
-allowed_origins = _normalize_allowed_origins(allowed_origins)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,  # replace with frontend URL in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Apply CORS configuration
+apply_cors(app)
 
 
 # -----------------------------
