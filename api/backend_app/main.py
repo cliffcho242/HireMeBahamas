@@ -297,19 +297,21 @@ add_timeout_middleware(app, timeout=60)
 # =============================================================================
 add_rate_limiting_middleware(app)
 
-# Configure CORS with credentials support for secure cookie-based authentication
-# Production-grade CORS: explicit origins for cookies (required by CORS spec)
-from app.core.environment import get_cors_origins
-cors_origins = get_cors_origins()
+# =============================================================================
+# CORS CONFIGURATION - Vercel Preview + Production Support
+# =============================================================================
+# Enterprise-grade CORS that allows:
+# - Explicit production domains (hiremebahamas.com, www.hiremebahamas.com)
+# - ALL Vercel preview deployments via regex pattern
+# - NO wildcards (maintains security)
+# - Credentials support for authentication
+#
+# This permanently fixes the white screen on Vercel preview deployments.
+# =============================================================================
+from backend_app.cors import apply_cors
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,  # Required for HttpOnly cookies
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["Set-Cookie"],  # Allow clients to access Set-Cookie header
-)
+# Apply CORS middleware BEFORE routes are registered
+apply_cors(app)
 
 # Cache control configuration for different endpoint patterns
 CACHE_CONTROL_RULES = {
