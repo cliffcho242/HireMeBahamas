@@ -13,7 +13,22 @@ import logging
 # ============================================================================
 # ⚠️ CRITICAL: Validate port before binding
 _port = os.environ.get('PORT', '10000')
-_port_int = int(_port)
+
+# Validate that PORT is numeric
+try:
+    _port_int = int(_port)
+except ValueError:
+    import sys
+    print("=" * 80, file=sys.stderr)
+    print(f"❌ CRITICAL ERROR: PORT environment variable must be numeric", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    print(f"Current value: PORT='{_port}'", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("To fix this:", file=sys.stderr)
+    print("  1. Set PORT to a valid number: export PORT=8000", file=sys.stderr)
+    print("  2. Or unset PORT to use default: unset PORT", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    sys.exit(1)
 
 # DO NOT USE PORT 5432 - This is a PostgreSQL port, not for HTTP backends
 if _port_int == 5432:
