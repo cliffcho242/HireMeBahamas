@@ -99,6 +99,9 @@ def get_cors_origins() -> List[str]:
                 "https://www.hiremebahamas.com",
                 "https://hiremebahamas.vercel.app",  # Vercel production deployment
                 "https://hire-me-bahamas.vercel.app",  # Canonical Vercel domain
+                # Mobile app origins (Capacitor/Ionic)
+                "capacitor://localhost",
+                "ionic://localhost",
             ]
         
         # Normalize and ensure required domains are always included
@@ -120,6 +123,9 @@ def get_cors_origins() -> List[str]:
             "http://127.0.0.1:3000",
             "http://localhost:5173",  # Vite default
             "http://127.0.0.1:5173",
+            # Mobile app origins (Capacitor/Ionic)
+            "capacitor://localhost",
+            "ionic://localhost",
         ]
     
     return origins
