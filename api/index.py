@@ -97,22 +97,29 @@ app = FastAPI(title="HireMeBahamas Backend")
 
 
 # -----------------------------
-# CORS
+# CORS - Vercel Preview + Production Support
 # -----------------------------
-_default_origins = [
-    "https://hiremebahamas.com",
-    "https://www.hiremebahamas.com",
-]
+# Vercel preview deployment pattern
+_VERCEL_PREVIEW_REGEX = r"^https://frontend-[a-z0-9-]+-cliffs-projects-a84c76c9\.vercel\.app$"
+
+# Get explicit origins from environment
 _origins_env = os.getenv("ALLOWED_ORIGINS")
-allowed_origins = (
-    [origin.strip() for origin in _origins_env.split(",") if origin.strip()]
-    if _origins_env
-    else _default_origins
-)
+if _origins_env:
+    allowed_origins = [origin.strip() for origin in _origins_env.split(",") if origin.strip()]
+else:
+    allowed_origins = [
+        "https://hiremebahamas.com",
+        "https://www.hiremebahamas.com",
+    ]
+
+# Normalize origins (ensure HTTPS, add required domains)
 allowed_origins = _normalize_allowed_origins(allowed_origins)
+
+# Add CORS middleware with Vercel preview support
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,  # replace with frontend URL in production
+    allow_origins=allowed_origins,  # Explicit production domains
+    allow_origin_regex=_VERCEL_PREVIEW_REGEX,  # All Vercel previews
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

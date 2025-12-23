@@ -82,36 +82,29 @@ except ImportError as e:
         openapi_url=None,
     )
     
-    # CORS Configuration (Fallback mode - still secure)
-    # Use specific origins even in fallback mode for security
-    # NOTE: Using allow_credentials=True for production security
-    import os
-    _is_prod = os.getenv("ENVIRONMENT", "").lower() == "production" or os.getenv("VERCEL_ENV", "").lower() == "production"
+    # CORS Configuration (Fallback mode with Vercel preview support)
+    # Vercel preview deployment pattern
+    _VERCEL_PREVIEW_REGEX = r"^https://frontend-[a-z0-9-]+-cliffs-projects-a84c76c9\.vercel\.app$"
     
-    # 🚫 SECURITY: No wildcard patterns (*) in production
-    if _is_prod:
-        _fallback_origins = [
-            "https://hiremebahamas.com",
-            "https://www.hiremebahamas.com",
-            "https://hiremebahamas.vercel.app",
-        ]
+    # Get explicit origins from environment or use defaults
+    import os
+    _allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+    if _allowed_origins_env:
+        _fallback_origins = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]
     else:
         _fallback_origins = [
             "https://hiremebahamas.com",
             "https://www.hiremebahamas.com",
-            "https://hiremebahamas.vercel.app",
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
         ]
     
+    # Add CORS middleware with Vercel preview support
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_fallback_origins,
+        allow_origins=_fallback_origins,  # Explicit production domains
+        allow_origin_regex=_VERCEL_PREVIEW_REGEX,  # All Vercel previews
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
     
     @app.get("/api/health", include_in_schema=False)
