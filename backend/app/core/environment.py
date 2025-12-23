@@ -192,7 +192,7 @@ def get_cors_origins() -> List[str]:
 # Note: This is hardcoded for security - only this specific project's
 # preview deployments are allowed. To change, update the pattern directly.
 VERCEL_PROJECT_PATTERN = re.compile(
-    r'^https://frontend-[a-z0-9-]+-cliffs-projects-a84c76c9\.vercel\.app$'
+    r'^https://frontend-[a-z0-9\-]+-cliffs-projects-a84c76c9\.vercel\.app$'
 )
 
 

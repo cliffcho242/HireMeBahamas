@@ -40,13 +40,13 @@ Updated the pattern in `backend/app/core/environment.py` to include hyphens:
 
 ```python
 VERCEL_PROJECT_PATTERN = re.compile(
-    r'^https://frontend-[a-z0-9-]+-cliffs-projects-a84c76c9\.vercel\.app$'
+    r'^https://frontend-[a-z0-9\-]+-cliffs-projects-a84c76c9\.vercel\.app$'
 )
 ```
 
-**Change**: `[a-z0-9]+` → `[a-z0-9-]+`
+**Change**: `[a-z0-9]+` → `[a-z0-9\-]+`
 
-This now matches all valid Vercel preview URLs for this project.
+The hyphen is escaped (`\-`) to avoid ambiguity in the character class, though placing it at the end of the class would also work. This now matches all valid Vercel preview URLs for this project.
 
 ### 2. How It Works
 
@@ -224,9 +224,9 @@ This fix specifically addresses mobile Safari's strict CORS enforcement:
 
 ```diff
 - r'^https://frontend-[a-z0-9]+-cliffs-projects-a84c76c9\.vercel\.app$'
-+ r'^https://frontend-[a-z0-9-]+-cliffs-projects-a84c76c9\.vercel\.app$'
++ r'^https://frontend-[a-z0-9\-]+-cliffs-projects-a84c76c9\.vercel\.app$'
 ```
 
-This single character addition (`-` in the character class) enables all Vercel preview deployments to work seamlessly while maintaining enterprise-grade security.
+This single character addition (escaped hyphen `\-` in the character class) enables all Vercel preview deployments to work seamlessly while maintaining enterprise-grade security.
 
 🎉 **Your app will literally not know what a white screen is anymore.**
