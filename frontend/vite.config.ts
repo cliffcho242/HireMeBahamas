@@ -2,6 +2,9 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+// Default API base URL for development when not specified
+const DEFAULT_API_BASE_URL = 'https://api.hiremebahamas.com';
+
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
   const env = loadEnv(mode, process.cwd(), '');
@@ -66,7 +69,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         // Proxy /api requests to backend to avoid CORS during local development
         '/api': {
-          target: env.VITE_API_BASE_URL || 'https://api.hiremebahamas.com',
+          target: env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL,
           changeOrigin: true,
           secure: true,
           // Uncomment for debugging proxy issues:

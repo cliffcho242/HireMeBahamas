@@ -113,9 +113,17 @@ function getBackoffDelay(attempt: number, baseDelay: number): number {
 
 /**
  * Check if HTTP method is idempotent (safe to retry)
+ * 
+ * Note: Only GET, HEAD, and OPTIONS are truly safe to retry.
+ * PUT and DELETE can have side effects on retry:
+ * - PUT: May fail if resource state has changed
+ * - DELETE: Will fail if resource is already deleted
+ * 
+ * We intentionally exclude PUT and DELETE from retries to prevent
+ * unintended side effects and confusing error messages.
  */
 function isIdempotent(method: string): boolean {
-  const idempotentMethods = ['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'];
+  const idempotentMethods = ['GET', 'HEAD', 'OPTIONS'];
   return idempotentMethods.includes(method.toUpperCase());
 }
 
