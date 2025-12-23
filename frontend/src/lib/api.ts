@@ -24,7 +24,7 @@ export function getApiBase(): string {
 
     return raw.replace(/\/+$/, "");
   } catch {
-    // If anything fails during env access, return empty string safely
+    // If anything fails during API base URL processing, return empty string safely
     return "";
   }
 }
