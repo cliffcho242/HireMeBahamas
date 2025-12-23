@@ -1,13 +1,17 @@
 // 🧱 LAYER 2: Runtime Error Boundary - Catches runtime errors and shows graceful fallback
 import React from "react";
 
+interface ErrorBoundaryState {
+  error?: Error;
+}
+
 export default class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { error?: Error }
+  ErrorBoundaryState
 > {
-  state = {};
+  state: ErrorBoundaryState = {};
 
-  static getDerivedStateFromError(error: Error) {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { error };
   }
 

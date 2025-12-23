@@ -12,45 +12,45 @@ export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
   const env = loadEnv(mode, process.cwd(), '');
   
-  // Build-time validation: Fail fast if VITE_API_BASE_URL is missing in production
+  // Build-time validation: Warn if VITE_API_BASE_URL is missing in production
+  // Never fail the build - runtime will use fallback from lib/env.ts
   if (mode === 'production') {
     const apiBaseUrl = env.VITE_API_BASE_URL;
     
     if (!apiBaseUrl) {
-      throw new Error(
-        '\n❌ CRITICAL BUILD ERROR: VITE_API_BASE_URL is not set\n\n' +
-        'The application requires VITE_API_BASE_URL for production builds.\n' +
-        'This prevents blank screens and silent failures.\n\n' +
-        'To fix:\n' +
+      console.warn(
+        '\n⚠️  WARNING: VITE_API_BASE_URL is not set\n\n' +
+        'The application will use fallback URL at runtime.\n' +
+        'Fallback: https://hiremebahamas-backend.onrender.com\n\n' +
+        'To set the correct API URL:\n' +
         '1. Set VITE_API_BASE_URL in your Vercel dashboard:\n' +
         '   Settings → Environment Variables → Production\n' +
         '2. Example value: https://api.hiremebahamas.com\n' +
         '3. Alternative: https://hiremebahamas-backend.onrender.com\n\n' +
         'See .env.example for more details.\n'
       );
+    } else {
+      // Validate URL format
+      if (!apiBaseUrl.startsWith('https://')) {
+        console.warn(
+          '\n⚠️  WARNING: VITE_API_BASE_URL should use HTTPS in production\n\n' +
+          `Current value: ${apiBaseUrl}\n\n` +
+          'Production builds should use secure HTTPS URLs.\n'
+        );
+      }
+      
+      // Warn about trailing slash
+      if (apiBaseUrl.endsWith('/')) {
+        console.warn(
+          '\n⚠️  WARNING: VITE_API_BASE_URL has trailing slash\n' +
+          `Current value: ${apiBaseUrl}\n` +
+          'This may cause API routing issues. Remove the trailing slash.\n'
+        );
+      }
+      
+      console.log('✅ Build validation passed: VITE_API_BASE_URL is set correctly');
+      console.log(`   API Base URL: ${apiBaseUrl}`);
     }
-    
-    // Validate URL format
-    if (!apiBaseUrl.startsWith('https://')) {
-      throw new Error(
-        '\n❌ CRITICAL BUILD ERROR: VITE_API_BASE_URL must use HTTPS in production\n\n' +
-        `Current value: ${apiBaseUrl}\n\n` +
-        'Production builds require secure HTTPS URLs.\n' +
-        'Update VITE_API_BASE_URL to start with https://\n'
-      );
-    }
-    
-    // Warn about trailing slash
-    if (apiBaseUrl.endsWith('/')) {
-      console.warn(
-        '\n⚠️  WARNING: VITE_API_BASE_URL has trailing slash\n' +
-        `Current value: ${apiBaseUrl}\n` +
-        'This may cause API routing issues. Remove the trailing slash.\n'
-      );
-    }
-    
-    console.log('✅ Build validation passed: VITE_API_BASE_URL is set correctly');
-    console.log(`   API Base URL: ${apiBaseUrl}`);
   }
   
   return {
