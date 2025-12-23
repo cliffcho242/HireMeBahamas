@@ -5,7 +5,8 @@ This module provides centralized environment detection to ensure consistent beha
 across all parts of the application.
 """
 import os
-from typing import List
+import re
+from typing import List, Optional
 
 
 def _normalize_production_origins(origins: List[str]) -> List[str]:
@@ -129,3 +130,36 @@ def get_cors_origins() -> List[str]:
         ]
     
     return origins
+
+
+# Vercel project ID pattern for this app's preview deployments
+# Format: frontend-{hash}-cliffs-projects-a84c76c9.vercel.app
+VERCEL_PROJECT_PATTERN = re.compile(
+    r'^https://frontend-[a-z0-9]+-cliffs-projects-a84c76c9\.vercel\.app$'
+)
+
+
+def is_valid_vercel_preview_origin(origin: str) -> bool:
+    """Check if an origin is a valid Vercel preview deployment for this project.
+    
+    This allows dynamic CORS validation for Vercel preview deployments
+    without requiring manual updates for each new deployment.
+    
+    Args:
+        origin: The origin URL to validate
+        
+    Returns:
+        bool: True if origin matches the Vercel preview pattern for this project
+    """
+    if not origin:
+        return False
+    return bool(VERCEL_PROJECT_PATTERN.match(origin))
+
+
+def get_vercel_project_id() -> Optional[str]:
+    """Get the Vercel project ID from environment or return the default.
+    
+    Returns:
+        Optional[str]: The Vercel project ID suffix (e.g., 'cliffs-projects-a84c76c9')
+    """
+    return os.getenv("VERCEL_PROJECT_ID", "cliffs-projects-a84c76c9")
