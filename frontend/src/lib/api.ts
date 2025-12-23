@@ -4,20 +4,26 @@
  * No localhost
  * No same-origin
  * Non-fatal: warns instead of throwing to prevent white screen
+ * 
+ * Note: When getApiBase returns an empty string, API calls will gracefully fail
+ * via apiFetch which rejects with "API base URL missing" error. This allows
+ * the app to render while showing appropriate error UI for API-dependent features.
  */
 export function getApiBase(): string {
   const localOverride = import.meta.env.VITE_API_URL;
   const raw = localOverride || import.meta.env.VITE_API_BASE_URL;
 
   if (!raw) {
-    console.warn("VITE_API_BASE_URL missing");
+    // Return empty string to allow app to render; API calls will be rejected gracefully
+    console.warn("VITE_API_BASE_URL missing - API calls will fail gracefully");
     return "";
   }
 
   // Allow http only when using a local override outside production builds
   const requiresHttps = import.meta.env.PROD || !localOverride;
   if (requiresHttps && !raw.startsWith("https://")) {
-    console.warn("VITE_API_BASE_URL must be HTTPS in production");
+    // Return empty string to allow app to render; insecure URL is blocked
+    console.warn("VITE_API_BASE_URL must be HTTPS in production - API calls will fail gracefully");
     return "";
   }
 
