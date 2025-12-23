@@ -56,7 +56,7 @@ export { default as AISystemStatus } from './AISystemStatus';
 export { QueryErrorBoundary } from './QueryErrorBoundary'; // Named export, not default
 export { default as QueryErrorBoundaryTest } from './QueryErrorBoundaryTest';
 export { default as ErrorFallback } from './ErrorFallback';
-export { ErrorBoundary } from './ErrorBoundary'; // Class-based error boundary
+export { default as ErrorBoundary } from './ErrorBoundary'; // Class-based error boundary
 
 // Sendbird components
 export { default as SendbirdMessages } from './SendbirdMessages';
