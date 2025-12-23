@@ -632,11 +632,13 @@ jobs:
             echo "ℹ️  No output directory found (OK for API-only deployment)"
           fi
           
-          # Check for API functions configuration (required)
-          if grep -q '"api/' vercel.json || grep -q '"functions"' vercel.json; then
-            echo "✅ API functions configured"
+          # Check for API routing configuration (functions, builds, or rewrites)
+          # Note: HireMeBahamas uses Vercel for frontend and Render for backend
+          # API requests are proxied via rewrites, not Vercel functions
+          if grep -q '"api/' vercel.json || grep -q '"functions"' vercel.json || grep -q '"rewrites"' vercel.json; then
+            echo "✅ API routing configured (functions, builds, or rewrites)"
           else
-            echo "❌ API functions missing - vercel.json must have functions or builds configuration"
+            echo "❌ API routing missing - vercel.json must have functions, builds, or rewrites configuration"
             exit 1
           fi
           
