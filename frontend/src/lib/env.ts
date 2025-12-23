@@ -16,11 +16,9 @@
  * 3. Default: "https://hiremebahamas-backend.onrender.com"
  */
 
-/**
- * Default fallback API base URL for production
- * Used when both VITE_API_BASE_URL and __API_BASE__ are not available
- */
-export const DEFAULT_API_BASE_URL = "https://hiremebahamas-backend.onrender.com";
+// Import shared constant
+export { DEFAULT_API_BASE_URL } from '../config/constants';
+import { DEFAULT_API_BASE_URL } from '../config/constants';
 
 /**
  * Helper function to safely access __API_BASE__ global
@@ -28,9 +26,9 @@ export const DEFAULT_API_BASE_URL = "https://hiremebahamas-backend.onrender.com"
  */
 function getBuildTimeApiBase(): string | undefined {
   try {
-    // Check window object (for runtime in browser)
-    if (typeof window !== 'undefined' && (window as any).__API_BASE__) {
-      return (window as any).__API_BASE__;
+    // Check window object (for runtime in browser) - now type-safe
+    if (typeof window !== 'undefined' && window.__API_BASE__) {
+      return window.__API_BASE__;
     }
     
     // Check global variable (for module evaluation time)

@@ -162,7 +162,7 @@ if (import.meta.env.MODE !== ENV_MODE.TEST) {
         'Check the errors above.',
     );
     if (typeof window !== 'undefined') {
-      (window as any).__HIREME_ENV_INVALID__ = true;
+      window.__HIREME_ENV_INVALID__ = true;
     }
   }
 }

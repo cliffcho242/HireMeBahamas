@@ -11,11 +11,11 @@
  */
 
 // Import the safe API base URL from env.ts
-import { API_BASE_URL } from './env';
+import { API_BASE_URL, DEFAULT_API_BASE_URL } from './env';
 
 /**
  * Safe API URL builder with strict validation
- * Uses fallback URL if VITE_API_BASE_URL is invalid or missing
+ * Uses fallback URL if API_BASE_URL is invalid or missing
  * Logs warnings instead of throwing to prevent build failures
  */
 export function apiUrl(path: string): string {
@@ -24,11 +24,12 @@ export function apiUrl(path: string): string {
   // Validate base URL exists (env.ts provides fallback)
   if (!base || !base.startsWith("https://")) {
     console.warn(
-      "⚠️ API base URL is missing or invalid. API calls may fail.",
-      { base, path }
+      "⚠️ API base URL is missing or invalid. Using default fallback.",
+      { base, path, fallback: DEFAULT_API_BASE_URL }
     );
-    // Return path as-is for relative URL fallback
-    return path.startsWith("/") ? path : `/${path}`;
+    // Use default fallback instead of relative URL for consistency
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    return `${DEFAULT_API_BASE_URL}${normalizedPath}`;
   }
   
   // Remove trailing slash from base, ensure leading slash on path

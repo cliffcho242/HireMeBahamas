@@ -5,17 +5,15 @@ import path from 'path';
 // PWA configuration imported from centralized config
 import { pwaConfig } from './src/config/pwa.config';
 
-// Default API base URL for development when not specified
-const DEFAULT_API_BASE_URL = 'https://api.hiremebahamas.com';
+// Import shared constant for single source of truth
+import { DEFAULT_API_BASE_URL } from './src/config/constants';
 
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
   const env = loadEnv(mode, process.cwd(), '');
   
   // Safe API base URL with fallback - NEVER throws
-  const apiBase =
-    env.VITE_API_BASE_URL ||
-    "https://hiremebahamas-backend.onrender.com";
+  const apiBase = env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL;
 
   // Build-time validation: Warn if VITE_API_BASE_URL is missing
   // Never fail the build - runtime will use fallback

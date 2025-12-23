@@ -17,3 +17,9 @@ interface ImportMeta {
 // Global constant injected by Vite at build time
 // Provides safe fallback API URL when VITE_API_BASE_URL is not set
 declare const __API_BASE__: string
+
+// Extend Window interface for type-safe access to __API_BASE__
+interface Window {
+  __API_BASE__?: string
+  __HIREME_ENV_INVALID__?: boolean
+}
