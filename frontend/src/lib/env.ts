@@ -22,6 +22,28 @@
  */
 export const DEFAULT_API_BASE_URL = "https://hiremebahamas-backend.onrender.com";
 
+/**
+ * Helper function to safely access __API_BASE__ global
+ * Returns undefined if not available
+ */
+function getBuildTimeApiBase(): string | undefined {
+  try {
+    // Check window object (for runtime in browser)
+    if (typeof window !== 'undefined' && (window as any).__API_BASE__) {
+      return (window as any).__API_BASE__;
+    }
+    
+    // Check global variable (for module evaluation time)
+    if (typeof __API_BASE__ !== 'undefined') {
+      return __API_BASE__;
+    }
+  } catch {
+    // Ignore errors accessing __API_BASE__
+  }
+  
+  return undefined;
+}
+
 export function getApiBase(): string {
   // Try runtime environment variable first
   const envUrl = import.meta.env.VITE_API_BASE_URL;
@@ -31,14 +53,9 @@ export function getApiBase(): string {
   }
 
   // Try build-time injected global (from vite.config.ts define)
-  try {
-    const buildTimeUrl = (typeof window !== 'undefined' && (window as any).__API_BASE__) || 
-                         (typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined);
-    if (buildTimeUrl && buildTimeUrl.trim() !== "") {
-      return buildTimeUrl.replace(/\/+$/, "");
-    }
-  } catch (e) {
-    // Ignore errors accessing __API_BASE__
+  const buildTimeUrl = getBuildTimeApiBase();
+  if (buildTimeUrl && buildTimeUrl.trim() !== "") {
+    return buildTimeUrl.replace(/\/+$/, "");
   }
 
   // Final fallback

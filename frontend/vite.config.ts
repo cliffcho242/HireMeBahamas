@@ -26,24 +26,26 @@ export default defineConfig(({ mode }) => {
     );
   } else {
     // Validate URL format (non-blocking warnings only)
-    if (!apiBase.startsWith('https://')) {
+    const envApiBase = env.VITE_API_BASE_URL;
+    
+    if (!envApiBase.startsWith('https://')) {
       console.warn(
         '\n⚠️  WARNING: VITE_API_BASE_URL should use HTTPS in production\n\n' +
-        `Current value: ${apiBase}\n\n` +
+        `Current value: ${envApiBase}\n\n` +
         'Production builds should use secure HTTPS URLs.\n'
       );
     }
     
     // Warn about trailing slash
-    if (apiBase.endsWith('/')) {
+    if (envApiBase.endsWith('/')) {
       console.warn(
         '\n⚠️  WARNING: VITE_API_BASE_URL has trailing slash\n' +
-        `Current value: ${apiBase}\n` +
+        `Current value: ${envApiBase}\n` +
         'This may cause API routing issues. Remove the trailing slash.\n'
       );
     } else {
       console.log('✅ Build validation passed: VITE_API_BASE_URL is set correctly');
-      console.log(`   API Base URL: ${apiBase}`);
+      console.log(`   API Base URL: ${envApiBase}`);
     }
   }
   
