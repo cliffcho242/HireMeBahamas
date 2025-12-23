@@ -23,6 +23,9 @@ export function apiUrl(path: string): string {
   return `${getApiBaseUrl()}${path}`;
 }
 
+// Alias export to mirror the frontend package (`getApiBase`) so shared imports keep working
+export const getApiBase = getApiBaseUrl;
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
