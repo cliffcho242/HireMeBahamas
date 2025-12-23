@@ -67,16 +67,16 @@ const Login = () => {
         await runConnectionDiagnostic();
       }
       
-      // Test connection to current API
+      // Test connection to current API (uses configured API_BASE_URL)
       const apiUrl = getCurrentApiUrl();
-      const result = await testConnection(apiUrl);
+      const result = await testConnection();
       
-      // Also test both backends if in dual mode
+      // Also test Render backend if configured separately
       const renderUrl = import.meta.env.VITE_RENDER_API_URL;
       if (renderUrl && apiUrl !== renderUrl) {
-        console.log('🔍 Testing Render backend...');
-        const renderResult = await testConnection(renderUrl);
-        console.log('Render backend:', renderResult.success ? '✅ Available' : '❌ Unavailable');
+        console.log('🔍 Render backend URL configured:', renderUrl);
+        // Note: testConnection uses the configured API_BASE_URL
+        // Render URL would need separate fetch if needed
       }
       
       if (result.success) {

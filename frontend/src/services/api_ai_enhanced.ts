@@ -44,11 +44,11 @@ const selectBestEndpoint = async () => {
 };
 
 // Get optimal API base URL
-let API_BASE_URL = getBackendUrl();
+let currentApiBase = getBackendUrl();
 
 // AI-Enhanced axios instance with error recovery
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: currentApiBase,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -68,7 +68,7 @@ api.interceptors.response.use(
       const newEndpoint = await selectBestEndpoint();
       if (newEndpoint !== originalRequest.baseURL) {
         originalRequest.baseURL = newEndpoint;
-        API_BASE_URL = newEndpoint;
+        currentApiBase = newEndpoint;
         
         // Update the default baseURL for future requests
         api.defaults.baseURL = newEndpoint;
@@ -189,13 +189,13 @@ export const healthAPI = {
       return {
         healthy: response.status === 200,
         data: response.data,
-        endpoint: API_BASE_URL
+        endpoint: currentApiBase
       };
     } catch (error) {
       return {
         healthy: false,
         error: error,
-        endpoint: API_BASE_URL
+        endpoint: currentApiBase
       };
     }
   }
@@ -206,5 +206,5 @@ export default api;
 
 // AI Status Logger
 console.log('AI API System: Initialized with intelligent error recovery');
-console.log(`Primary endpoint: ${API_BASE_URL}`);
+console.log(`Primary endpoint: ${currentApiBase}`);
 console.log('Features: Auto-recovery, Token validation, Health monitoring');
