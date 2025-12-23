@@ -5,8 +5,8 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 
-// Import ErrorBoundary for error safety
-import { ErrorBoundary } from './components/ErrorBoundary';
+// Import ErrorBoundary for error safety (Layer 3: App Root Protection)
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Critical components - import directly to avoid blank screens
 import Navbar from './components/Navbar';
@@ -53,14 +53,15 @@ const queryClient = new QueryClient({
   },
 });
 
+// ✅ LAYER 3: App Root with ErrorBoundary protection
 function App() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<PageLoader />}>
-        <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
           <Router>
-            <AuthProvider>
-              <SocketProvider>
+            <SocketProvider>
+              <Suspense fallback={<PageLoader />}>
                 <div className="min-h-screen bg-gray-50 flex flex-col">
                   <Navbar />
                   
@@ -127,11 +128,11 @@ function App() {
                     }}
                   />
                 </div>
-              </SocketProvider>
-            </AuthProvider>
+              </Suspense>
+            </SocketProvider>
           </Router>
-        </QueryClientProvider>
-      </Suspense>
+        </AuthProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
