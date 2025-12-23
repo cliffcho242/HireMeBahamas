@@ -8,6 +8,13 @@ import './styles/mobile-responsive.css'
 
 console.log('APP VERSION:', import.meta.env.VITE_APP_VERSION);
 
+// 🚀 Startup smoke test - if this log disappears, the app didn't boot
+console.info('🚀 App booting', {
+  apiBase: import.meta.env.VITE_API_BASE_URL,
+  mode: import.meta.env.MODE,
+  timestamp: new Date().toISOString(),
+});
+
 // 🚫 HARD BLOCK: Prevent loading if served from deprecated Railway domains
 if (typeof window !== 'undefined' && window.location.hostname.includes('railway')) {
   const message = '❌ Deprecated backend detected';
