@@ -80,6 +80,14 @@ hiredis==3.1.0
 # OAuth Libraries
 authlib==1.6.5
 
+# Async SQLite support (for development/testing)
+aiosqlite==0.20.0
+
+# Google OAuth authentication
+google-auth==2.36.0
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
+
 # Real-time Communication (Socket.IO for real-time features)
 python-socketio==5.15.0
 flask-socketio==5.4.1
