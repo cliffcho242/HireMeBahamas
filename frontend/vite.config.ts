@@ -5,6 +5,10 @@ import path from 'path';
 export default defineConfig({
   // Explicit base required for Vercel static asset resolution
   base: '/',
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
