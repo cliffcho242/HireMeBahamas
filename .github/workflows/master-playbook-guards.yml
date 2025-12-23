@@ -127,8 +127,8 @@ jobs:
           echo "🔍 Checking for hardcoded ports..."
           
           # Check for hardcoded port 5432 (PostgreSQL) in HTTP bind config
-          # Exclude error messages that warn about not using this port
-          if grep -r "bind.*5432" --include="*.py" backend/ 2>/dev/null | grep -v -E "(print|error|CRITICAL|Cannot|warning|stderr|sys\.stderr)"; then
+          # Exclude error messages that warn about not using this port, and comments
+          if grep -r "bind.*5432" --include="*.py" backend/ 2>/dev/null | grep -v -E "(^[[:space:]]*#|print|error|CRITICAL|Cannot|warning|stderr|sys\.stderr)"; then
             echo "::error::❌ FORBIDDEN: Hardcoded port 5432 in HTTP configuration"
             echo "Master Playbook violation: Port 5432 is for PostgreSQL, not HTTP"
             exit 1
