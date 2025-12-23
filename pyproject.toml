@@ -13,7 +13,7 @@ packages = [{include = "api"}, {include = "backend"}]
 python = "^3.11"
 gunicorn = "^23.0.0"
 flask = "^3.1.0"
-flask-cors = "^5.0.0"
+flask-cors = "^6.0.0"
 flask-caching = "^2.3.0"
 flask-limiter = "^3.8.0"
 fastapi = "^0.115.6"
