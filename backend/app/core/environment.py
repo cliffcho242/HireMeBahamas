@@ -5,6 +5,7 @@ This module provides centralized environment detection to ensure consistent beha
 across all parts of the application.
 """
 import os
+import re
 from typing import List
 
 
@@ -148,3 +149,29 @@ def get_cors_origins() -> List[str]:
             origins.append(vercel_preview_url)
     
     return origins
+
+
+# Vercel project ID pattern for this app's preview deployments
+# Format: frontend-{hash}-cliffs-projects-a84c76c9.vercel.app
+# Note: This is hardcoded for security - only this specific project's
+# preview deployments are allowed. To change, update the pattern directly.
+VERCEL_PROJECT_PATTERN = re.compile(
+    r'^https://frontend-[a-z0-9]+-cliffs-projects-a84c76c9\.vercel\.app$'
+)
+
+
+def is_valid_vercel_preview_origin(origin: str) -> bool:
+    """Check if an origin is a valid Vercel preview deployment for this project.
+    
+    This allows dynamic CORS validation for Vercel preview deployments
+    without requiring manual updates for each new deployment.
+    
+    Args:
+        origin: The origin URL to validate
+        
+    Returns:
+        bool: True if origin matches the Vercel preview pattern for this project
+    """
+    if not origin:
+        return False
+    return bool(VERCEL_PROJECT_PATTERN.match(origin))

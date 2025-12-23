@@ -516,12 +516,15 @@ app.openapi_url = "/openapi.json"
 # 
 # Production origins are explicitly listed to prevent security vulnerabilities.
 # Development includes localhost for testing but is excluded in production.
+# Vercel preview deployments are validated dynamically for this project.
 # =============================================================================
 
 # Import environment utilities for consistent production checks
+_is_valid_vercel_preview_origin = None
 try:
-    from .core.environment import get_cors_origins
+    from .core.environment import get_cors_origins, is_valid_vercel_preview_origin
     _allowed_origins = get_cors_origins()  # Excludes localhost in production
+    _is_valid_vercel_preview_origin = is_valid_vercel_preview_origin
 except ImportError:
     # Fallback to manual configuration if import fails
     import os
@@ -556,16 +559,70 @@ except ImportError:
     if _vercel_preview_url and _vercel_preview_url not in _allowed_origins:
         _allowed_origins.append(_vercel_preview_url)
 
-# Apply CORS middleware with credentials support
-# ❌ NEVER use allow_origins=["*"] with allow_credentials=True
-# ✅ ALWAYS use explicit origin list when credentials are enabled
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_allowed_origins,  # Explicit origins required for credentials
-    allow_credentials=True,          # Enable cookies/auth headers in CORS requests
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
-)
+
+def _check_origin_allowed(origin: str) -> bool:
+    """Check if an origin is allowed for CORS requests.
+    
+    This function checks both the static origin list and validates
+    Vercel preview deployment origins dynamically.
+    
+    Args:
+        origin: The origin URL to check
+        
+    Returns:
+        bool: True if origin is allowed
+    """
+    if not origin:
+        return False
+    
+    # Check static allowed origins
+    if origin in _allowed_origins:
+        return True
+    
+    # Check if it's a valid Vercel preview deployment
+    if _is_valid_vercel_preview_origin and _is_valid_vercel_preview_origin(origin):
+        return True
+    
+    return False
+
+
+# Custom CORS middleware to support dynamic Vercel preview origins
+@app.middleware("http")
+async def cors_middleware(request: Request, call_next):
+    """Custom CORS middleware that supports dynamic Vercel preview origins.
+    
+    This middleware adds CORS headers for requests from:
+    - Static allowed origins (production domains, localhost in dev)
+    - Vercel preview deployments matching the project pattern
+    
+    For security, credentials are only allowed with explicit origins,
+    never with wildcards.
+    """
+    origin = request.headers.get("origin")
+    
+    # Handle preflight OPTIONS requests
+    if request.method == "OPTIONS":
+        if origin and _check_origin_allowed(origin):
+            response = StarletteResponse(content="", status_code=200)
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Requested-With"
+            response.headers["Access-Control-Max-Age"] = "600"
+            return response
+        else:
+            # Origin not allowed - return 403 for preflight
+            return StarletteResponse(content="CORS origin not allowed", status_code=403)
+    
+    # Process the request
+    response = await call_next(request)
+    
+    # Add CORS headers if origin is allowed
+    if origin and _check_origin_allowed(origin):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    
+    return response
 
 # Cache control configuration for different endpoint patterns
 CACHE_CONTROL_RULES = {
