@@ -3,6 +3,41 @@ Environment detection utilities for consistent production/development mode check
 
 This module provides centralized environment detection to ensure consistent behavior
 across all parts of the application.
+
+CORS Configuration:
+-------------------
+This module handles CORS (Cross-Origin Resource Sharing) configuration for the application,
+including support for dynamic Vercel preview deployments.
+
+Key Features:
+1. Environment-aware CORS origins (production vs development)
+2. Dynamic Vercel preview URL validation via regex pattern matching
+3. ALLOWED_ORIGINS environment variable support
+4. Strict security: No wildcards in production, credentials-safe
+
+Vercel Preview Support:
+-----------------------
+Vercel creates preview deployments with URLs like:
+  https://frontend-{hash}-cliffs-projects-a84c76c9.vercel.app
+
+The hash changes with each deployment. This module automatically validates these
+preview URLs using a controlled regex pattern, so you don't need to manually add
+each preview URL to your CORS configuration.
+
+Security:
+---------
+- ✅ No wildcards (*) allowed in production
+- ✅ Only this project's preview deployments are allowed (via project ID in regex)
+- ✅ HTTPS enforced for all origins
+- ✅ Exact pattern matching prevents subdomain attacks
+- ✅ Safe to use with credentials (cookies, auth headers)
+
+Example Usage:
+--------------
+In production (Render), set:
+  ALLOWED_ORIGINS=https://hiremebahamas.com,https://www.hiremebahamas.com
+
+Preview deployments are handled automatically - no additional configuration needed!
 """
 import os
 import re
@@ -153,10 +188,11 @@ def get_cors_origins() -> List[str]:
 
 # Vercel project ID pattern for this app's preview deployments
 # Format: frontend-{hash}-cliffs-projects-a84c76c9.vercel.app
+# The hash can contain lowercase letters, numbers, and hyphens
 # Note: This is hardcoded for security - only this specific project's
 # preview deployments are allowed. To change, update the pattern directly.
 VERCEL_PROJECT_PATTERN = re.compile(
-    r'^https://frontend-[a-z0-9]+-cliffs-projects-a84c76c9\.vercel\.app$'
+    r'^https://frontend-[a-z0-9-]+-cliffs-projects-a84c76c9\.vercel\.app$'
 )
 
 
