@@ -1,4 +1,4 @@
-import React from "react";
+import React, { ErrorInfo } from "react";
 
 /**
  * 🔒 STEP 6: ERROR BOUNDARY FOR RUNTIME ERRORS
@@ -14,7 +14,7 @@ export default class ErrorBoundary extends React.Component<
     return { error };
   }
 
-  componentDidCatch(error: Error, info: any) {
+  componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("🔥 RUNTIME ERROR", error, info);
   }
 

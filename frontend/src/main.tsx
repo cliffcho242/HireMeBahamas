@@ -305,7 +305,13 @@ const ErrorFallback = () => (
 );
 
 // 🔒 STEP 6: SAFE BOOTSTRAP - Guarantees something is always visible
-const rootEl = document.getElementById('root')!;
+const rootEl = document.getElementById('root');
+
+if (!rootEl) {
+  // Handle missing root element
+  document.body.innerHTML = '<h1 style="padding: 24px; font-family: system-ui;">Root element missing</h1>';
+  throw new Error('Root element not found');
+}
 
 try {
   ReactDOM.createRoot(rootEl).render(
@@ -317,13 +323,24 @@ try {
   );
 } catch (err) {
   console.error('💥 BOOT FAILURE', err);
-  rootEl.innerHTML = `
-    <div style="padding:32px;font-family:sans-serif">
-      <h2>App failed to start</h2>
-      <pre>${String(err)}</pre>
-      <button onclick="location.reload()">Reload</button>
-    </div>
-  `;
+  // Use textContent to safely display error message (prevents XSS)
+  const errorDiv = document.createElement('div');
+  errorDiv.style.cssText = 'padding:32px;font-family:sans-serif';
+  
+  const heading = document.createElement('h2');
+  heading.textContent = 'App failed to start';
+  
+  const pre = document.createElement('pre');
+  pre.textContent = String(err);
+  
+  const button = document.createElement('button');
+  button.textContent = 'Reload';
+  button.onclick = () => location.reload();
+  
+  errorDiv.appendChild(heading);
+  errorDiv.appendChild(pre);
+  errorDiv.appendChild(button);
+  rootEl.appendChild(errorDiv);
 }
 
 // Start tracking Web Vitals after the app is mounted
