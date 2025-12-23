@@ -6,7 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 
 // Import ErrorBoundary for error safety
-import { ErrorBoundary } from './components/ErrorBoundary';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Critical components - import directly to avoid blank screens
 import Navbar from './components/Navbar';

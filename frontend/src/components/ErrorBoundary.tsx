@@ -8,7 +8,7 @@ export default class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { error?: Error }
 > {
-  state = {};
+  state: { error?: Error } = {};
 
   static getDerivedStateFromError(error: Error) {
     return { error };
