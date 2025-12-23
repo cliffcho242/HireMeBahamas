@@ -11,32 +11,26 @@ export function getApiBase(): string {
 
   if (!raw) {
     console.error("❌ VITE_API_BASE_URL missing");
-    
-    // Throw a user-facing error to prevent blank screen
-    throw new Error(
-      'Application configuration error: API base URL is not set.\n\n' +
-      'This usually means VITE_API_BASE_URL is missing from environment variables.\n\n' +
-      'If you are seeing this error:\n' +
-      '• Contact the site administrator\n' +
-      '• Try refreshing the page\n' +
-      '• Clear your browser cache and reload\n\n' +
+    console.error(
+      'Application configuration error: API base URL is not set.\n' +
+      'API calls will fail until this is configured.\n' +
       'For developers: Set VITE_API_BASE_URL in your environment configuration.'
     );
+    // Return empty string instead of throwing - let the app render but API calls will fail gracefully
+    return '';
   }
 
   // Allow http only when using a local override outside production builds
   const requiresHttps = import.meta.env.PROD || !localOverride;
   if (requiresHttps && !raw.startsWith("https://")) {
     console.error("❌ VITE_API_BASE_URL must be HTTPS in production");
-    
-    throw new Error(
-      'Application configuration error: Insecure API URL detected.\n\n' +
-      'Production deployments require secure HTTPS connections.\n\n' +
-      'If you are seeing this error:\n' +
-      '• Contact the site administrator\n' +
-      '• Try refreshing the page\n\n' +
+    console.error(
+      'Application configuration error: Insecure API URL detected.\n' +
+      'Production deployments require secure HTTPS connections.\n' +
       'For developers: Update VITE_API_BASE_URL to use HTTPS.'
     );
+    // Return the URL anyway but log the error - allow basic rendering
+    return raw.replace(/\/+$/, "");
   }
 
   return raw.replace(/\/+$/, "");

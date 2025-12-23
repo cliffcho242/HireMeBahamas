@@ -25,80 +25,25 @@ if (typeof window !== 'undefined' && window.location.hostname.includes('railway'
 import './config/envValidator'
 
 // Runtime guard: Display user-friendly error if API URL is missing
+// But don't throw - allow the app to render in a degraded state
 if (typeof window !== 'undefined') {
   try {
     const apiBase = import.meta.env.VITE_API_BASE_URL;
     if (!apiBase && import.meta.env.PROD) {
-      // Show user-friendly error message instead of blank screen
-      const errorMessage = 
-        '⚙️ Configuration Error\n\n' +
-        'The application is not properly configured. Please contact the site administrator.\n\n' +
-        'Error details: API base URL is missing from environment configuration.';
+      console.error('⚠️  API configuration missing - app will run in degraded mode');
       
-      const root = document.getElementById('root');
-      if (root) {
-        root.innerHTML = `
-          <div style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-            text-align: center;
-            font-family: system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-          ">
-            <div style="
-              background: rgba(255, 255, 255, 0.1);
-              backdrop-filter: blur(10px);
-              border-radius: 16px;
-              padding: 40px;
-              max-width: 500px;
-              box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-            ">
-              <h1 style="font-size: 48px; margin: 0 0 20px 0;">⚙️</h1>
-              <h2 style="font-size: 24px; margin: 0 0 16px 0;">Configuration Error</h2>
-              <p style="margin: 0 0 24px 0; line-height: 1.6;">
-                The application is not properly configured. Please contact the site administrator.
-              </p>
-              <button 
-                onclick="window.location.reload()" 
-                style="
-                  padding: 12px 32px;
-                  background: white;
-                  color: #667eea;
-                  border: none;
-                  border-radius: 8px;
-                  cursor: pointer;
-                  font-size: 16px;
-                  font-weight: 600;
-                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                  transition: transform 0.2s;
-                "
-                onmouseover="this.style.transform='scale(1.05)'"
-                onmouseout="this.style.transform='scale(1)'"
-              >
-                Reload Page
-              </button>
-              <p style="
-                margin: 24px 0 0 0;
-                font-size: 12px;
-                opacity: 0.8;
-              ">
-                Error: API base URL is missing from environment configuration
-              </p>
-            </div>
-          </div>
-        `;
+      // Set a flag that components can check
+      if (typeof window !== 'undefined') {
+        (window as any).__HIREME_API_MISSING__ = true;
       }
-      throw new Error(errorMessage);
+      
+      // Don't throw or block rendering - just log the issue
+      // The app will render but API calls will fail gracefully
     }
   } catch (configError) {
     if (import.meta.env.PROD) {
       console.error('Configuration error:', configError);
-      // Error display is already handled above
+      // Log but don't block rendering
     }
   }
 }

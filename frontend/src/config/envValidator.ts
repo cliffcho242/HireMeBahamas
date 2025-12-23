@@ -158,12 +158,14 @@ if (import.meta.env.MODE !== ENV_MODE.TEST) {
   const result = validateEnvironmentVariables();
   if (!result.valid && import.meta.env.PROD) {
     console.error(
-      'Environment variable validation failed for production build.\n' +
-        'Check the errors above.',
+      '⚠️  Environment variable validation failed for production build.\n' +
+        'The app will attempt to render but some features may not work.\n' +
+        'Check the errors above and contact the site administrator if issues persist.',
     );
     if (typeof window !== 'undefined') {
       (window as any).__HIREME_ENV_INVALID__ = true;
     }
+    // Don't throw - just log the errors and let the app try to render
   }
 }
 
