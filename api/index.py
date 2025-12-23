@@ -10,51 +10,20 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
-# Import shared CORS utilities
+# Import CORS configuration
 api_dir = Path(__file__).parent
 if str(api_dir) not in sys.path:
     sys.path.insert(0, str(api_dir))
 
-from cors_utils import get_vercel_preview_regex, get_allowed_origins as _get_allowed_origins_from_env
+from backend_app.cors import apply_cors
 
 logger = logging.getLogger(__name__)
-
-# -----------------------------
-# CORS NORMALIZATION
-# -----------------------------
-def _normalize_allowed_origins(origins):
-    """Ensure canonical domains are always allowed and HTTPS enforced."""
-    required = [
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-    ]
-    
-    # Preserve wildcard behavior exactly
-    if any(origin.strip() == "*" for origin in origins):
-        return ["*"]
-    
-    normalized = []
-    for origin in origins:
-        candidate = origin.strip()
-        if not candidate:
-            continue
-        if candidate.startswith("http://"):
-            candidate = "https://" + candidate[len("http://"):]
-        if candidate not in normalized:
-            normalized.append(candidate)
-    
-    for domain in required:
-        if domain not in normalized:
-            normalized.append(domain)
-    
-    return normalized
 
 # -----------------------------
 # CONFIGURATION
@@ -104,22 +73,10 @@ def get_engine():
 # -----------------------------
 app = FastAPI(title="HireMeBahamas Backend")
 
-
 # -----------------------------
-# CORS - Vercel Preview + Production Support
+# CORS - Apply Forever Lock
 # -----------------------------
-# Get explicit origins from environment
-allowed_origins = _normalize_allowed_origins(_get_allowed_origins_from_env())
-
-# Add CORS middleware with Vercel preview support
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,  # Explicit production domains
-    allow_origin_regex=get_vercel_preview_regex(),  # All Vercel previews
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+apply_cors(app)
 
 
 # -----------------------------

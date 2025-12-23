@@ -1,53 +1,50 @@
 """
-CORS Configuration for Vercel Preview + Production Deployments
-Eliminates white screen by allowing ALL valid frontends (production + previews)
+CORS Configuration for Production + Vercel Preview Deployments
+Forever lock: Ensures frontend never shows white screen due to CORS
 """
-import sys
-from pathlib import Path
-from typing import List
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import shared CORS utilities (no FastAPI dependency)
-api_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(api_dir))
-from cors_utils import get_vercel_preview_regex, get_allowed_origins as _get_allowed_origins
 
-
-def apply_cors(app: FastAPI) -> None:
+def get_vercel_preview_regex() -> str:
     """
-    Apply CORS middleware to FastAPI app with Vercel preview support.
+    Get Vercel preview deployment regex pattern.
     
-    This configuration:
-    - Allows explicit production domains (from ALLOWED_ORIGINS env var)
-    - Allows ALL Vercel preview deployments via regex pattern
-    - Maintains security by NOT using wildcards
-    - Supports credentials for authentication
+    The project ID can be customized via VERCEL_PROJECT_ID environment variable.
+    Default: cliffs-projects-a84c76c9
     
-    Args:
-        app: FastAPI application instance
+    Returns:
+        str: Regex pattern for Vercel preview URLs
+    """
+    import re
+    project_id = os.getenv("VERCEL_PROJECT_ID", "cliffs-projects-a84c76c9")
+    # Escape any special regex characters in the project ID
+    project_id_escaped = re.escape(project_id)
+    return f"^https://frontend-[a-z0-9-]+-{project_id_escaped}\\.vercel\\.app$"
+
+
+def get_allowed_origins():
+    """Get explicit production origins from environment variable."""
+    env = os.getenv("ALLOWED_ORIGINS", "")
+    return [o.strip() for o in env.split(",") if o.strip()]
+
+
+def apply_cors(app: FastAPI):
+    """
+    Apply CORS middleware with production domains + Vercel preview support.
+    
+    Configuration:
+    - Explicit production domains: From ALLOWED_ORIGINS env var
+    - Vercel preview URLs: Handled by regex pattern (configurable via VERCEL_PROJECT_ID)
+    - Credentials: Enabled for authentication
+    - Methods/Headers: All allowed
     """
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_get_allowed_origins(),  # Explicit production domains
-        allow_origin_regex=get_vercel_preview_regex(),  # All Vercel previews
-        allow_credentials=True,  # Required for authentication cookies
-        allow_methods=["*"],  # All HTTP methods
-        allow_headers=["*"],  # All headers
+        allow_origins=get_allowed_origins(),
+        allow_origin_regex=get_vercel_preview_regex(),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
-
-
-def get_cors_config_summary() -> dict:
-    """
-    Get summary of current CORS configuration for debugging.
-    
-    Returns:
-        dict: Configuration summary
-    """
-    return {
-        "explicit_origins": _get_allowed_origins(),
-        "vercel_preview_regex": get_vercel_preview_regex(),
-        "credentials_enabled": True,
-        "methods": ["*"],
-        "headers": ["*"],
-    }

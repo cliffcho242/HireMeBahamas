@@ -1,33 +1,27 @@
-// 🧱 LAYER 3: Runtime Error Boundary - Runtime crashes cannot kill UI
+// 🧱 LAYER 2: Runtime Error Boundary - Catches runtime errors and shows graceful fallback
 import React from "react";
-
-interface ErrorBoundaryState {
-  error?: Error;
-}
 
 export default class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  ErrorBoundaryState
+  { error?: Error }
 > {
-  state: ErrorBoundaryState = {};
+  state = {};
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error) {
     return { error };
   }
 
   componentDidCatch(error: Error, info: any) {
-    console.error("RUNTIME CRASH", error, info);
+    console.error("🔥 RUNTIME ERROR", error, info);
   }
 
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 24 }}>
+        <div style={{ padding: 24, fontFamily: "sans-serif" }}>
           <h1>Something went wrong</h1>
           <pre>{this.state.error.message}</pre>
-          <button onClick={() => location.reload()}>
-            Reload
-          </button>
+          <button onClick={() => location.reload()}>Reload</button>
         </div>
       );
     }
