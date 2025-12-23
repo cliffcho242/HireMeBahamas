@@ -1,7 +1,9 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+
+// PWA configuration imported from centralized config
+import { pwaConfig } from './src/config/pwa.config';
 
 // Default API base URL for development when not specified
 const DEFAULT_API_BASE_URL = 'https://api.hiremebahamas.com';
@@ -65,19 +67,11 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
-      // PWA configuration for production + mobile safety
+      // PWA configuration from centralized config (src/config/pwa.config.ts)
       // ✅ No offline hijack
       // ✅ No broken routing
       // ✅ Safe mobile refreshes
-      VitePWA({
-        registerType: 'autoUpdate',
-        injectRegister: 'inline',
-        workbox: {
-          cleanupOutdatedCaches: true,
-          // Don't cache API routes - let them go to the real backend
-          navigateFallbackDenylist: [/^\/api\//],
-        },
-      }),
+      pwaConfig,
     ],
     // Dev server configuration with API proxy
     server: {
