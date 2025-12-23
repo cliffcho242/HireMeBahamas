@@ -106,6 +106,12 @@ if (typeof window !== 'undefined') {
 // Performance monitoring: Track Core Web Vitals
 import { reportWebVitals } from './utils/webVitals'
 
+// Global error handler: Catch all unhandled errors
+import { initGlobalErrorHandler } from './utils/globalErrorHandler'
+
+// Initialize global error handler before anything else
+initGlobalErrorHandler();
+
 // Initialize Sentry for production error monitoring with Web Vitals tracking
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
