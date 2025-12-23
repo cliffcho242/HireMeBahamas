@@ -364,12 +364,10 @@
     </style>
   </head>
   <body>
-    <!-- SSR-like shell for instant visual feedback before JavaScript loads -->
+    <!-- 🧱 LAYER 0: HTML BASE - This div is ALWAYS visible, even if JS fails -->
     <div id="root">
-      <div class="ssr-shell" aria-label="Loading HireMeBahamas">
-        <div class="ssr-shell__logo">HireMeBahamas</div>
-        <div class="ssr-shell__tagline">Connect. Share. Grow Your Career.</div>
-        <div class="ssr-shell__loader" role="status" aria-label="Loading application"></div>
+      <div style="padding:24px;font-family:system-ui">
+        Loading HireMeBahamas…
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>

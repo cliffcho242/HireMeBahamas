@@ -304,11 +304,11 @@ const ErrorFallback = () => (
   </div>
 );
 
+// 🧱 LAYER 2: React Boot Safety - Boot failure must show visible error
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {
-  // Handle missing root element gracefully
-  document.body.innerHTML = '<h1 style="padding: 24px; font-family: system-ui;">Root element missing</h1>';
+  document.body.innerHTML = "<h1>Root missing</h1>";
 } else {
   try {
     ReactDOM.createRoot(rootElement).render(
@@ -319,24 +319,20 @@ if (!rootElement) {
       </StrictMode>,
     );
   } catch (e) {
-    console.error('APP BOOT ERROR:', e);
-    const errorMessage = e instanceof Error ? e.message : String(e);
-    // Create DOM elements manually to avoid XSS vulnerability
+    console.error("BOOT FAILURE", e);
+    // Safe DOM creation to avoid XSS
     const container = document.createElement('div');
-    container.style.cssText = 'padding: 24px; font-family: system-ui;';
+    container.style.padding = '32px';
     
     const heading = document.createElement('h2');
-    heading.style.color = '#dc2626';
-    heading.textContent = 'Something went wrong';
+    heading.textContent = 'App failed to start';
     
     const pre = document.createElement('pre');
-    pre.style.cssText = 'background: #f3f4f6; padding: 16px; border-radius: 8px; overflow: auto;';
-    pre.textContent = errorMessage;
+    pre.textContent = String(e);
     
     const button = document.createElement('button');
-    button.style.cssText = 'margin-top: 16px; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;';
-    button.textContent = 'Reload Page';
-    button.onclick = () => window.location.reload();
+    button.textContent = 'Reload';
+    button.onclick = () => location.reload();
     
     container.appendChild(heading);
     container.appendChild(pre);
