@@ -74,10 +74,10 @@ export function validateEnvironmentVariables(): ValidationResult {
   const apiVarName = 'VITE_API_BASE_URL';
 
   if (!apiUrl) {
-    result.valid = false;
-    result.errors.push(
-      `❌ MISSING REQUIRED VARIABLE: ${apiVarName}\n` +
-        `   Set ${apiVarName}=https://hiremebahamas-backend.onrender.com`,
+    // With __API_BASE__ fallback from vite.config.ts, this is now a warning not error
+    result.warnings.push(
+      `⚠️  ${apiVarName} not set - using fallback URL\n` +
+        `   For best results, set ${apiVarName}=https://hiremebahamas-backend.onrender.com in Vercel`,
     );
   } else {
     if (!isValidUrl(apiUrl)) {
