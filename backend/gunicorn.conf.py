@@ -15,11 +15,11 @@ import logging
 _port = os.environ.get('PORT', '10000')
 _port_int = int(_port)
 
-# DO NOT BIND TO PORT 5432 - This is a PostgreSQL port, not for HTTP backends
+# DO NOT USE PORT 5432 - This is a PostgreSQL port, not for HTTP backends
 if _port_int == 5432:
     import sys
     print("=" * 80, file=sys.stderr)
-    print("❌ CRITICAL ERROR: Cannot bind to port 5432", file=sys.stderr)
+    print("❌ CRITICAL ERROR: HTTP service cannot use port 5432", file=sys.stderr)
     print("=" * 80, file=sys.stderr)
     print("", file=sys.stderr)
     print("Port 5432 is reserved for PostgreSQL database servers.", file=sys.stderr)
