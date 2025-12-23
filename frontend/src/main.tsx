@@ -33,9 +33,7 @@ if (typeof window !== 'undefined') {
       console.error('⚠️  API configuration missing - app will run in degraded mode');
       
       // Set a flag that components can check
-      if (typeof window !== 'undefined') {
-        (window as any).__HIREME_API_MISSING__ = true;
-      }
+      (window as any).__HIREME_API_MISSING__ = true;
       
       // Don't throw or block rendering - just log the issue
       // The app will render but API calls will fail gracefully

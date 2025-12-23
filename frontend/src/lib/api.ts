@@ -54,8 +54,9 @@ export async function apiFetch<T>(
 ): Promise<T> {
   if (!API_BASE_URL) {
     console.warn("API base missing, skipping request", { path });
-    // Return a rejected promise so callers can handle gracefully without crashing render
-    return Promise.reject(new Error("API base URL missing"));
+    // Return a rejected promise with a clear error message
+    // This allows callers to catch and handle the error gracefully
+    return Promise.reject(new Error("API base URL missing - check configuration"));
   }
 
   const res = await fetch(apiUrl(path), {
