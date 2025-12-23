@@ -1,4 +1,4 @@
-import React from "react";
+import React, { ErrorInfo } from "react";
 
 interface ErrorBoundaryState {
   error?: Error;
@@ -14,7 +14,7 @@ export default class ErrorBoundary extends React.Component<
     return { error };
   }
 
-  componentDidCatch(error: Error, info: any) {
+  componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("🔥 RUNTIME ERROR", error, info);
   }
 
@@ -23,7 +23,7 @@ export default class ErrorBoundary extends React.Component<
       return (
         <div style={{ padding: 24, fontFamily: "sans-serif" }}>
           <h1>Something went wrong</h1>
-          <pre>{this.state.error.message}</pre>
+          <pre>{this.state.error?.message || String(this.state.error)}</pre>
           <button onClick={() => location.reload()}>Reload</button>
         </div>
       );

@@ -320,13 +320,24 @@ if (!rootElement) {
     );
   } catch (err) {
     console.error('💥 BOOT FAILURE', err);
-    rootElement.innerHTML = `
-      <div style="padding:32px;font-family:sans-serif">
-        <h2>App failed to start</h2>
-        <pre>${String(err)}</pre>
-        <button onclick="location.reload()">Reload</button>
-      </div>
-    `;
+    // Create DOM elements manually to avoid XSS vulnerability
+    const container = document.createElement('div');
+    container.style.cssText = 'padding:32px;font-family:sans-serif';
+    
+    const heading = document.createElement('h2');
+    heading.textContent = 'App failed to start';
+    
+    const pre = document.createElement('pre');
+    pre.textContent = String(err);
+    
+    const button = document.createElement('button');
+    button.textContent = 'Reload';
+    button.onclick = () => location.reload();
+    
+    container.appendChild(heading);
+    container.appendChild(pre);
+    container.appendChild(button);
+    rootElement.appendChild(container);
   }
 }
 

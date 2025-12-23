@@ -56,10 +56,10 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <Suspense fallback={<PageLoader />}>
-            <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <Router>
+            <Suspense fallback={<PageLoader />}>
               <SocketProvider>
                 <div className="min-h-screen bg-gray-50 flex flex-col">
                   <Navbar />
@@ -128,10 +128,10 @@ function App() {
                   />
                 </div>
               </SocketProvider>
-            </QueryClientProvider>
-          </Suspense>
-        </Router>
-      </AuthProvider>
+            </Suspense>
+          </Router>
+        </AuthProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
