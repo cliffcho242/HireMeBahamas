@@ -1,13 +1,17 @@
 // 🧱 LAYER 3: Runtime Error Boundary - Runtime crashes cannot kill UI
 import React from "react";
 
+interface ErrorBoundaryState {
+  error?: Error;
+}
+
 export default class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { error?: Error }
+  ErrorBoundaryState
 > {
-  state = {};
+  state: ErrorBoundaryState = {};
 
-  static getDerivedStateFromError(error: Error) {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { error };
   }
 
