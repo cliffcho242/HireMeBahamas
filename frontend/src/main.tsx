@@ -1,8 +1,9 @@
-import { StrictMode } from 'react'
+import React from 'react'
 import ReactDOM from 'react-dom/client'
 import * as Sentry from '@sentry/react'
 import { API_BASE_URL, apiUrl } from '@/lib/api'
 import App from './App'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import './index.css'
 import './styles/mobile-responsive.css'
 
@@ -293,30 +294,31 @@ const ErrorFallback = () => (
 
 const rootElement = document.getElementById('root');
 
-try {
-  if (!rootElement) {
-    throw new Error('Root element not found');
+if (!rootElement) {
+  document.body.innerHTML = "<h1>Root element missing</h1>";
+} else {
+  try {
+    ReactDOM.createRoot(rootElement).render(
+      <React.StrictMode>
+        <ErrorBoundary>
+          <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
+            <App />
+          </Sentry.ErrorBoundary>
+        </ErrorBoundary>
+      </React.StrictMode>,
+    );
+  } catch (e) {
+    console.error('APP BOOT ERROR:', e);
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    const errorNode = document.createElement('pre');
+    errorNode.style.padding = '16px';
+    errorNode.style.color = 'red';
+    errorNode.textContent = `APP BOOT ERROR:\n${errorMessage}`;
+
+    const container = document.createElement('div');
+    container.appendChild(errorNode);
+    rootElement.appendChild(container);
   }
-
-  ReactDOM.createRoot(rootElement).render(
-    <StrictMode>
-      <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
-        <App />
-      </Sentry.ErrorBoundary>
-    </StrictMode>,
-  );
-} catch (e) {
-  console.error('APP BOOT ERROR:', e);
-  const errorMessage = e instanceof Error ? e.message : String(e);
-  const errorNode = document.createElement('pre');
-  errorNode.style.padding = '16px';
-  errorNode.style.color = 'red';
-  errorNode.textContent = `APP BOOT ERROR:\n${errorMessage}`;
-
-  const target = rootElement ?? document.body;
-  const container = document.createElement('div');
-  container.appendChild(errorNode);
-  target.appendChild(container);
 }
 
 // Start tracking Web Vitals after the app is mounted
