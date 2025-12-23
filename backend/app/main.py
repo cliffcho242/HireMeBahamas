@@ -1205,10 +1205,10 @@ if __name__ == "__main__":
     port = int(os.getenv('PORT', 10000))
     
     # ⚠️ CRITICAL: Port 5432 is for PostgreSQL, NOT HTTP services
-    # DO NOT BIND TO PORT 5432 - This is a PostgreSQL port, not for your backend
+    # DO NOT USE PORT 5432 - This is a PostgreSQL port, not for your backend
     if port == 5432:
         print("=" * 80, file=sys.stderr)
-        print("❌ CRITICAL ERROR: Cannot bind to port 5432", file=sys.stderr)
+        print("❌ CRITICAL ERROR: HTTP service cannot use port 5432", file=sys.stderr)
         print("=" * 80, file=sys.stderr)
         print("", file=sys.stderr)
         print("Port 5432 is reserved for PostgreSQL database servers.", file=sys.stderr)

@@ -4,13 +4,54 @@ Gunicorn Production Configuration - HireMeBahamas (2025)
 Zero 502, Zero cold starts, Sub-800ms boot, Sub-300ms login globally
 """
 import os
+import sys
 import time
 import logging
 
 # ============================================================================
 # BIND CONFIGURATION
 # ============================================================================
-bind = "0.0.0.0:10000"
+# ⚠️ CRITICAL: Validate port before binding
+_port = os.environ.get('PORT', '10000')
+
+# Validate that PORT is numeric
+try:
+    _port_int = int(_port)
+except ValueError:
+    print("=" * 80, file=sys.stderr)
+    print(f"❌ CRITICAL ERROR: PORT environment variable must be numeric", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    print(f"Current value: PORT='{_port}'", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("To fix this:", file=sys.stderr)
+    print("  1. Set PORT to a valid number: export PORT=8000", file=sys.stderr)
+    print("  2. Or unset PORT to use default: unset PORT", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    sys.exit(1)
+
+# DO NOT USE PORT 5432 - This is a PostgreSQL port, not for HTTP backends
+if _port_int == 5432:
+    print("=" * 80, file=sys.stderr)
+    print("❌ CRITICAL ERROR: HTTP service cannot use port 5432", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    print("", file=sys.stderr)
+    print("Port 5432 is reserved for PostgreSQL database servers.", file=sys.stderr)
+    print("Your HTTP backend (gunicorn) should use a different port.", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("Common HTTP ports:", file=sys.stderr)
+    print("  • 8000, 8080, 8888: Common development ports", file=sys.stderr)
+    print("  • 10000: Render default", file=sys.stderr)
+    print("  • Use $PORT environment variable for cloud deployments", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("To fix this:", file=sys.stderr)
+    print("  1. Check your PORT environment variable: echo $PORT", file=sys.stderr)
+    print("  2. Unset PORT if it's 5432: unset PORT", file=sys.stderr)
+    print("  3. Use correct port for HTTP: export PORT=8000", file=sys.stderr)
+    print("  4. Never set PORT=5432 for web services", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    sys.exit(1)
+
+bind = f"0.0.0.0:{_port}"
 
 # ============================================================================
 # WORKER CONFIGURATION (Master Playbook Requirement: workers = 1)

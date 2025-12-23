@@ -4,6 +4,7 @@ Gunicorn Production Configuration - HireMeBahamas (2025)
 Zero 502, Zero cold starts, Sub-800ms boot, Sub-300ms login globally
 """
 import os
+import sys
 import multiprocessing
 import time
 import logging
@@ -13,13 +14,26 @@ import logging
 # ============================================================================
 # ⚠️ CRITICAL: Validate port before binding
 _port = os.environ.get('PORT', '10000')
-_port_int = int(_port)
 
-# DO NOT BIND TO PORT 5432 - This is a PostgreSQL port, not for HTTP backends
-if _port_int == 5432:
-    import sys
+# Validate that PORT is numeric
+try:
+    _port_int = int(_port)
+except ValueError:
     print("=" * 80, file=sys.stderr)
-    print("❌ CRITICAL ERROR: Cannot bind to port 5432", file=sys.stderr)
+    print(f"❌ CRITICAL ERROR: PORT environment variable must be numeric", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    print(f"Current value: PORT='{_port}'", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("To fix this:", file=sys.stderr)
+    print("  1. Set PORT to a valid number: export PORT=8000", file=sys.stderr)
+    print("  2. Or unset PORT to use default: unset PORT", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    sys.exit(1)
+
+# DO NOT USE PORT 5432 - This is a PostgreSQL port, not for HTTP backends
+if _port_int == 5432:
+    print("=" * 80, file=sys.stderr)
+    print("❌ CRITICAL ERROR: HTTP service cannot use port 5432", file=sys.stderr)
     print("=" * 80, file=sys.stderr)
     print("", file=sys.stderr)
     print("Port 5432 is reserved for PostgreSQL database servers.", file=sys.stderr)
