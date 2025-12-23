@@ -99,6 +99,60 @@ VITE_API_BASE_URL=https://api.hiremebahamas.com
 
 The app includes a comprehensive API client with:
 
+## 🔧 Troubleshooting
+
+### Blank White Screen Issues
+
+If you encounter a blank white screen or the app isn't loading:
+
+1. **Check Browser Console** - Open DevTools (F12) and look for errors
+2. **View Recent Errors** - Run in console:
+   ```javascript
+   window.debugErrors.display()
+   ```
+3. **Validate Environment** - Run:
+   ```bash
+   npm run validate-env
+   ```
+4. **Clear Cache** - Hard reload with Ctrl+Shift+R
+
+**📖 Full troubleshooting guide**: [TROUBLESHOOTING_BLANK_SCREEN.md](./TROUBLESHOOTING_BLANK_SCREEN.md)
+
+### Common Issues
+
+- **Missing API URL**: Set `VITE_API_BASE_URL` in environment variables
+- **CORS errors**: Verify backend allows your frontend origin
+- **Build failures**: Check Node.js version (requires 20+)
+- **Backend connection**: Verify health endpoint responds:
+  ```bash
+  curl https://hiremebahamas-backend.onrender.com/health
+  ```
+
+## 🛠️ Development Tools
+
+### Environment Validation
+```bash
+npm run validate-env
+```
+Checks all required environment variables and configuration.
+
+### Debug Utilities
+The app provides debug utilities in the browser console:
+```javascript
+// Display recent errors
+window.debugErrors.display()
+
+// Clear stored errors
+window.debugErrors.clear()
+
+// Get error details
+window.debugErrors.getRecent()
+```
+
+### Robust API Client Features
+
+The app includes a comprehensive API client with:
+
 ✅ **Automatic Retries**: Up to 3 retry attempts with exponential backoff for network/5xx errors  
 ✅ **Timeout Handling**: 30-second timeout per request with proper cleanup  
 ✅ **Error Recovery**: Intelligent retry logic for transient failures  
