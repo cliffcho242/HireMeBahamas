@@ -7,27 +7,61 @@
  * Features:
  * ✅ Never throws or blocks rendering
  * ✅ Logs warnings for missing configuration
- * ✅ Falls back to default Render backend
+ * ✅ Falls back to build-time injected __API_BASE__ (set in vite.config.ts)
  * ✅ Prevents white screen on missing env vars
+ * 
+ * Fallback order:
+ * 1. Runtime env: import.meta.env.VITE_API_BASE_URL
+ * 2. Build-time global: window.__API_BASE__ or __API_BASE__
+ * 3. Default: "https://hiremebahamas-backend.onrender.com"
  */
+
+// Import shared constant
+export { DEFAULT_API_BASE_URL } from '../config/constants';
+import { DEFAULT_API_BASE_URL } from '../config/constants';
 
 /**
- * Default fallback API base URL for production
- * Used when VITE_API_BASE_URL is not set
+ * Helper function to safely access __API_BASE__ global
+ * Returns undefined if not available
  */
-export const DEFAULT_API_BASE_URL = "https://hiremebahamas-backend.onrender.com";
+function getBuildTimeApiBase(): string | undefined {
+  try {
+    // Check window object (for runtime in browser) - now type-safe
+    if (typeof window !== 'undefined' && window.__API_BASE__) {
+      return window.__API_BASE__;
+    }
+    
+    // Check global variable (for module evaluation time)
+    if (typeof __API_BASE__ !== 'undefined') {
+      return __API_BASE__;
+    }
+  } catch {
+    // Ignore errors accessing __API_BASE__
+  }
+  
+  return undefined;
+}
 
 export function getApiBase(): string {
-  const url = import.meta.env.VITE_API_BASE_URL;
-
-  if (!url || url.trim() === "") {
-    console.warn(
-      "⚠️ VITE_API_BASE_URL is missing. Falling back to default."
-    );
-    return DEFAULT_API_BASE_URL;
+  // Try runtime environment variable first
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  
+  if (envUrl && envUrl.trim() !== "") {
+    return envUrl.replace(/\/+$/, "");
   }
 
-  return url.replace(/\/+$/, "");
+  // Try build-time injected global (from vite.config.ts define)
+  const buildTimeUrl = getBuildTimeApiBase();
+  if (buildTimeUrl && buildTimeUrl.trim() !== "") {
+    return buildTimeUrl.replace(/\/+$/, "");
+  }
+
+  // Final fallback
+  console.warn(
+    "⚠️ VITE_API_BASE_URL is missing. Falling back to default:",
+    DEFAULT_API_BASE_URL
+  );
+  return DEFAULT_API_BASE_URL;
 }
 
 /**

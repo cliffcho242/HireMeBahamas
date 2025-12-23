@@ -5,51 +5,45 @@ import path from 'path';
 // PWA configuration imported from centralized config
 import { pwaConfig } from './src/config/pwa.config';
 
-// Default API base URL for development when not specified
-const DEFAULT_API_BASE_URL = 'https://api.hiremebahamas.com';
+// Import shared constant for single source of truth
+import { DEFAULT_API_BASE_URL } from './src/config/constants';
 
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
   const env = loadEnv(mode, process.cwd(), '');
   
-  // Build-time validation: Warn if VITE_API_BASE_URL is missing in production
-  // Never fail the build - runtime will use fallback from lib/env.ts
-  if (mode === 'production') {
-    const apiBaseUrl = env.VITE_API_BASE_URL;
+  // Safe API base URL with fallback - NEVER throws
+  const apiBase = env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL;
+
+  // Build-time validation: Warn if VITE_API_BASE_URL is missing
+  // Never fail the build - runtime will use fallback
+  if (!env.VITE_API_BASE_URL) {
+    console.warn(
+      "⚠️ VITE_API_BASE_URL not set at build time. Using fallback:",
+      apiBase
+    );
+  } else {
+    // Validate URL format (non-blocking warnings only)
+    const envApiBase = env.VITE_API_BASE_URL;
     
-    if (!apiBaseUrl) {
+    if (!envApiBase.startsWith('https://')) {
       console.warn(
-        '\n⚠️  WARNING: VITE_API_BASE_URL is not set\n\n' +
-        'The application will use fallback URL at runtime.\n' +
-        'Fallback: https://hiremebahamas-backend.onrender.com\n\n' +
-        'To set the correct API URL:\n' +
-        '1. Set VITE_API_BASE_URL in your Vercel dashboard:\n' +
-        '   Settings → Environment Variables → Production\n' +
-        '2. Example value: https://api.hiremebahamas.com\n' +
-        '3. Alternative: https://hiremebahamas-backend.onrender.com\n\n' +
-        'See .env.example for more details.\n'
+        '\n⚠️  WARNING: VITE_API_BASE_URL should use HTTPS in production\n\n' +
+        `Current value: ${envApiBase}\n\n` +
+        'Production builds should use secure HTTPS URLs.\n'
+      );
+    }
+    
+    // Warn about trailing slash
+    if (envApiBase.endsWith('/')) {
+      console.warn(
+        '\n⚠️  WARNING: VITE_API_BASE_URL has trailing slash\n' +
+        `Current value: ${envApiBase}\n` +
+        'This may cause API routing issues. Remove the trailing slash.\n'
       );
     } else {
-      // Validate URL format
-      if (!apiBaseUrl.startsWith('https://')) {
-        console.warn(
-          '\n⚠️  WARNING: VITE_API_BASE_URL should use HTTPS in production\n\n' +
-          `Current value: ${apiBaseUrl}\n\n` +
-          'Production builds should use secure HTTPS URLs.\n'
-        );
-      }
-      
-      // Warn about trailing slash
-      if (apiBaseUrl.endsWith('/')) {
-        console.warn(
-          '\n⚠️  WARNING: VITE_API_BASE_URL has trailing slash\n' +
-          `Current value: ${apiBaseUrl}\n` +
-          'This may cause API routing issues. Remove the trailing slash.\n'
-        );
-      }
-      
       console.log('✅ Build validation passed: VITE_API_BASE_URL is set correctly');
-      console.log(`   API Base URL: ${apiBaseUrl}`);
+      console.log(`   API Base URL: ${envApiBase}`);
     }
   }
   
@@ -73,6 +67,11 @@ export default defineConfig(({ mode }) => {
       // ✅ Safe mobile refreshes
       pwaConfig,
     ],
+    define: {
+      // Inject API base URL as a global constant at build time
+      // This ensures runtime code always has a fallback value
+      __API_BASE__: JSON.stringify(apiBase),
+    },
     // Dev server configuration with API proxy
     server: {
       port: 3000,

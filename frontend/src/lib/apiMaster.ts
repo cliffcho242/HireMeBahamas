@@ -6,20 +6,30 @@
  * ABSOLUTE LAWS:
  * ✅ ALWAYS use VITE_* prefix (not NEXT_PUBLIC_*)
  * ✅ ALWAYS validate URL format
- * ✅ ALWAYS throw on misconfiguration
- * ✅ NEVER fail silently
+ * ✅ ALWAYS use fallback on misconfiguration (never throw during build)
+ * ✅ NEVER fail silently (log warnings)
  */
+
+// Import the safe API base URL from env.ts
+import { API_BASE_URL, DEFAULT_API_BASE_URL } from './env';
 
 /**
  * Safe API URL builder with strict validation
- * @throws Error if VITE_API_BASE_URL is invalid or missing
+ * Uses fallback URL if API_BASE_URL is invalid or missing
+ * Logs warnings instead of throwing to prevent build failures
  */
 export function apiUrl(path: string): string {
-  const base = import.meta.env.VITE_API_BASE_URL;
+  const base = API_BASE_URL;
   
-  // Strict validation
-  if (!base?.startsWith("https://")) {
-    throw new Error("VITE_API_BASE_URL invalid or missing");
+  // Validate base URL exists (env.ts provides fallback)
+  if (!base || !base.startsWith("https://")) {
+    console.warn(
+      "⚠️ API base URL is missing or invalid. Using default fallback.",
+      { base, path, fallback: DEFAULT_API_BASE_URL }
+    );
+    // Use default fallback instead of relative URL for consistency
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    return `${DEFAULT_API_BASE_URL}${normalizedPath}`;
   }
   
   // Remove trailing slash from base, ensure leading slash on path
