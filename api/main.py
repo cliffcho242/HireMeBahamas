@@ -83,25 +83,21 @@ except ImportError as e:
     )
     
     # CORS Configuration (Fallback mode with Vercel preview support)
-    # Vercel preview deployment pattern
-    _VERCEL_PREVIEW_REGEX = r"^https://frontend-[a-z0-9-]+-cliffs-projects-a84c76c9\.vercel\.app$"
+    # Import shared CORS utilities (no FastAPI dependency)
+    import sys
+    from pathlib import Path
     
-    # Get explicit origins from environment or use defaults
-    import os
-    _allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
-    if _allowed_origins_env:
-        _fallback_origins = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]
-    else:
-        _fallback_origins = [
-            "https://hiremebahamas.com",
-            "https://www.hiremebahamas.com",
-        ]
+    api_dir = Path(__file__).parent
+    if str(api_dir) not in sys.path:
+        sys.path.insert(0, str(api_dir))
+    
+    from cors_utils import get_vercel_preview_regex, get_allowed_origins
     
     # Add CORS middleware with Vercel preview support
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_fallback_origins,  # Explicit production domains
-        allow_origin_regex=_VERCEL_PREVIEW_REGEX,  # All Vercel previews
+        allow_origins=get_allowed_origins(),  # Explicit production domains
+        allow_origin_regex=get_vercel_preview_regex(),  # All Vercel previews
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

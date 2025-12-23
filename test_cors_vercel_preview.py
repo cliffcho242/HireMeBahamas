@@ -7,8 +7,18 @@ import os
 
 def test_vercel_preview_regex():
     """Test that the Vercel preview regex matches expected URLs"""
-    # The regex pattern from cors.py
-    VERCEL_PREVIEW_REGEX = r"^https://frontend-[a-z0-9-]+-cliffs-projects-a84c76c9\.vercel\.app$"
+    import sys
+    from pathlib import Path
+    
+    # Add api directory to path
+    api_dir = Path(__file__).parent / "api"
+    if str(api_dir) not in sys.path:
+        sys.path.insert(0, str(api_dir))
+    
+    from cors_utils import get_vercel_preview_regex
+    
+    # The regex pattern from cors_utils
+    VERCEL_PREVIEW_REGEX = get_vercel_preview_regex()
     
     # Test cases that SHOULD match
     valid_urls = [
@@ -49,16 +59,16 @@ def test_cors_module():
     try:
         # First check if we're in an environment with dependencies
         import sys
-        sys.path.insert(0, '/home/runner/work/HireMeBahamas/HireMeBahamas')
+        from pathlib import Path
         
-        from api.backend_app.cors import (
-            get_allowed_origins,
-            apply_cors,
-            get_cors_config_summary,
-            VERCEL_PREVIEW_REGEX
-        )
+        # Add api directory to path using dynamic path detection
+        api_dir = Path(__file__).parent / "api"
+        if str(api_dir) not in sys.path:
+            sys.path.insert(0, str(api_dir))
         
-        print("\n✅ CORS module imports successfully")
+        from cors_utils import get_allowed_origins, get_vercel_preview_regex
+        
+        print("\n✅ CORS utilities import successfully")
         
         # Test getting allowed origins
         origins = get_allowed_origins()
@@ -66,16 +76,13 @@ def test_cors_module():
         assert isinstance(origins, list), "get_allowed_origins should return a list"
         assert len(origins) > 0, "Should have at least one allowed origin"
         
-        # Test config summary
-        summary = get_cors_config_summary()
-        print(f"\nCORS config summary:")
-        print(f"  - Explicit origins: {summary['explicit_origins']}")
-        print(f"  - Vercel preview regex: {summary['vercel_preview_regex']}")
-        print(f"  - Credentials enabled: {summary['credentials_enabled']}")
-        print(f"  - Methods: {summary['methods']}")
-        print(f"  - Headers: {summary['headers']}")
+        # Test regex generation
+        regex = get_vercel_preview_regex()
+        print(f"\nVercel preview regex: {regex}")
+        assert isinstance(regex, str), "get_vercel_preview_regex should return a string"
+        assert "vercel" in regex and "app" in regex, "Regex should reference vercel.app domain"
         
-        print("\n✅ CORS module functions work correctly")
+        print("\n✅ CORS utility functions work correctly")
         
     except ImportError as e:
         print(f"\nℹ️  Skipping module import test (dependencies not installed)")
@@ -88,7 +95,12 @@ def test_environment_variable():
     """Test that ALLOWED_ORIGINS environment variable is read correctly"""
     try:
         import sys
-        sys.path.insert(0, '/home/runner/work/HireMeBahamas/HireMeBahamas')
+        from pathlib import Path
+        
+        # Add api directory to path using dynamic path detection
+        api_dir = Path(__file__).parent / "api"
+        if str(api_dir) not in sys.path:
+            sys.path.insert(0, str(api_dir))
         
         # Save original value
         original_value = os.environ.get("ALLOWED_ORIGINS")
@@ -97,7 +109,7 @@ def test_environment_variable():
             # Test with custom origins
             os.environ["ALLOWED_ORIGINS"] = "https://example.com,https://test.com"
             
-            from api.backend_app.cors import get_allowed_origins
+            from cors_utils import get_allowed_origins
             
             origins = get_allowed_origins()
             print(f"\nWith ALLOWED_ORIGINS set: {origins}")

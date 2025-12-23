@@ -4,8 +4,10 @@ Includes: Auth, Jobs, Users, Lazy DB, Health check
 """
 import logging
 import os
+import sys
 import threading
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +16,13 @@ from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+
+# Import shared CORS utilities
+api_dir = Path(__file__).parent
+if str(api_dir) not in sys.path:
+    sys.path.insert(0, str(api_dir))
+
+from cors_utils import get_vercel_preview_regex, get_allowed_origins as _get_allowed_origins_from_env
 
 logger = logging.getLogger(__name__)
 
@@ -99,27 +108,14 @@ app = FastAPI(title="HireMeBahamas Backend")
 # -----------------------------
 # CORS - Vercel Preview + Production Support
 # -----------------------------
-# Vercel preview deployment pattern
-_VERCEL_PREVIEW_REGEX = r"^https://frontend-[a-z0-9-]+-cliffs-projects-a84c76c9\.vercel\.app$"
-
 # Get explicit origins from environment
-_origins_env = os.getenv("ALLOWED_ORIGINS")
-if _origins_env:
-    allowed_origins = [origin.strip() for origin in _origins_env.split(",") if origin.strip()]
-else:
-    allowed_origins = [
-        "https://hiremebahamas.com",
-        "https://www.hiremebahamas.com",
-    ]
-
-# Normalize origins (ensure HTTPS, add required domains)
-allowed_origins = _normalize_allowed_origins(allowed_origins)
+allowed_origins = _normalize_allowed_origins(_get_allowed_origins_from_env())
 
 # Add CORS middleware with Vercel preview support
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,  # Explicit production domains
-    allow_origin_regex=_VERCEL_PREVIEW_REGEX,  # All Vercel previews
+    allow_origin_regex=get_vercel_preview_regex(),  # All Vercel previews
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
