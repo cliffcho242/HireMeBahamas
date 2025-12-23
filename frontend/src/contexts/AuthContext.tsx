@@ -571,7 +571,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return (
       <AuthContext.Provider value={value}>
         <div style={{ padding: 24 }}>Starting app…</div>
-        {children}
       </AuthContext.Provider>
     );
   }
