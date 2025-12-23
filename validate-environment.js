@@ -93,7 +93,12 @@ function validateApiUrl(url, varName) {
   }
   
   // Check if it's a placeholder
-  if (url.includes('your_') || url.includes('example.com')) {
+  // Use more specific checks to avoid false positives with legitimate URLs
+  const urlLower = url.toLowerCase();
+  const hasYourPlaceholder = urlLower.includes('your_') || urlLower.includes('your-');
+  const isExampleDomain = urlLower === 'https://example.com' || urlLower === 'http://example.com' || urlLower === 'example.com';
+  
+  if (hasYourPlaceholder || isExampleDomain) {
     error(`${varName} contains placeholder value: ${url}`);
     info('Replace with actual API URL');
     hasErrors = true;
