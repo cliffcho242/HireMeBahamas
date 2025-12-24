@@ -42,7 +42,7 @@ jobs:
         working-directory: frontend
         run: npm run test:auth-logout
 
-      - name: Upload test output
+      - name: Upload test output on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
@@ -71,7 +71,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Check node version
+      - name: Check Node.js version
         working-directory: frontend
         run: node -v
 
@@ -79,7 +79,7 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Install OS packages for Playwright (Ubuntu)
+      - name: Install OS packages for Playwright (Linux only)
         if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt-get update
@@ -126,7 +126,7 @@ jobs:
           retention-days: 7
 
       - name: Configure AWS credentials (optional)
-        if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' && env.PLAYWRIGHT_S3_BUCKET != '' }}
+        if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.PLAYWRIGHT_S3_BUCKET }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
@@ -139,7 +139,7 @@ jobs:
           PLAYWRIGHT_S3_BUCKET: ${{ secrets.PLAYWRIGHT_S3_BUCKET }}
 
       - name: Upload Playwright artifacts to S3 (optional)
-        if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' && env.PLAYWRIGHT_S3_BUCKET != '' }}
+        if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.PLAYWRIGHT_S3_BUCKET }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -152,7 +152,7 @@ jobs:
           aws s3 sync frontend/test-results s3://$PLAYWRIGHT_S3_BUCKET/test-results/${{ github.run_id }}/ --acl private
           aws s3 sync frontend/playwright-tests s3://$PLAYWRIGHT_S3_BUCKET/playwright-tests/${{ github.run_id }}/ --acl private
 
-      - name: Upload Playwright artifacts (report / test-results / traces)
+      - name: Upload Playwright artifacts on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
