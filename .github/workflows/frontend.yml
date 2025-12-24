@@ -1,14 +1,21 @@
-name: Frontend CI & Deploy to GitHub Pages
+name: Frontend CI & Deploy to GitHub Pages with Render Health Check
 
 on:
   push:
     branches: ["main"]
   workflow_dispatch:
+    inputs:
+      create_issue_on_failure:
+        description: 'Create GitHub issue if Render backend health check fails'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write
 
 concurrency:
   group: "frontend-pages"
@@ -23,45 +30,122 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Setup Node.js
+      # Step 2: Preflight Health Check
+      - name: Preflight Health Check
+        id: preflight
+        run: |
+          echo "🔍 Running preflight checks..."
+          REQUIRED_FILES=(".github/workflows/ci.yml" "frontend/package.json" "api/index.py" "api/requirements.txt")
+          MISSING_FILES=()
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              MISSING_FILES+=("$file")
+            fi
+          done
+          if [ ${#MISSING_FILES[@]} -ne 0 ]; then
+            echo "❌ Missing files:"; printf '%s\n' "${MISSING_FILES[@]}"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "✅ All required files present"
+          echo "status=passed" >> $GITHUB_OUTPUT
+
+      # Step 3: Render Backend Health Check
+      - name: Render Backend Health Check
+        id: render_health
+        continue-on-error: true
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+        run: |
+          if [ -z "$RENDER_BACKEND_URL" ]; then
+            echo "ℹ️ RENDER_BACKEND_URL not configured"
+            echo "status=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Render backend healthy"
+            echo "$BODY" | jq . || echo "$BODY"
+            DB_STATUS=$(echo "$BODY" | jq -r '.database.status // "unknown"' 2>/dev/null)
+            if [ "$DB_STATUS" = "healthy" ]; then
+              echo "status=healthy" >> $GITHUB_OUTPUT
+            elif [ "$DB_STATUS" = "degraded" ]; then
+              echo "status=degraded" >> $GITHUB_OUTPUT
+            else
+              echo "status=partial" >> $GITHUB_OUTPUT
+            fi
+          elif [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" != "000" ]; then
+            echo "status=error" >> $GITHUB_OUTPUT
+          else
+            echo "status=down" >> $GITHUB_OUTPUT
+          fi
+
+      # Optional: Create GitHub Issue if backend is down
+      - name: Create Issue on Render Downtime
+        if: steps.render_health.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ steps.render_health.outputs.status }}';
+            if (status !== 'down') return;
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['alert:downtime']
+            });
+            if (existing.data.length > 0) { console.log('Issue already exists, skipping'); return; }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Render Backend Downtime Alert',
+              body: `Render backend unreachable at ${new Date().toISOString()}`,
+              labels: ['alert:downtime', 'priority:high']
+            });
+
+      # Step 4: Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # Step 3: Install system dependencies
+      # Step 5: Install system dependencies
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential jq
 
-      # Step 4: Install frontend dependencies
+      # Step 6: Install frontend dependencies
       - name: Install dependencies
         working-directory: ./frontend
         run: npm ci
 
-      # Step 5: Build frontend with TypeScript check
+      # Step 7: Build frontend
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
 
-      # Step 6: Configure GitHub Pages
+      # Step 8: Configure GitHub Pages
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
-      # Step 7: Upload artifact for deployment
+      # Step 9: Upload artifact for deployment
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./frontend/dist
           if-no-files-found: error
 
-      # Step 8: Deploy to GitHub Pages
+      # Step 10: Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
-      # Step 9: Echo deployed site URL
+      # Step 11: Echo deployed site URL
       - name: Show deployed site URL
         run: |
           REPO_NAME=$(basename $GITHUB_REPOSITORY)
