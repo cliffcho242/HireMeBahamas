@@ -1,53 +1,142 @@
-# Workflow to deploy static content to GitHub Pages
-name: Deploy static content to Pages
+name: SonarCloud + Health Check + Pages Deployment
 
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       deploy_path:
         description: 'Path to the content to deploy (default: ./docs)'
         required: false
         default: './docs'
+      create_issue_on_failure:
+        description: 'Create issue if backend health check fails'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write
+  pull-requests: read
 
 concurrency:
-  group: "pages"
+  group: sonarcloud-pages-deploy
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  sonarcloud-analysis:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if SONAR_TOKEN is set
+        id: check_token
+        run: |
+          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+            echo "token_set=false" >> $GITHUB_OUTPUT
+          else
+            echo "token_set=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Analyze with SonarCloud
+        if: steps.check_token.outputs.token_set == 'true'
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=cliffcho242_HireMeBahamas
+            -Dsonar.organization=cliffcho242
+          projectBaseDir: .
+
+  health-check:
+    name: Render Backend Health Check
+    runs-on: ubuntu-latest
+    needs: sonarcloud-analysis
+    outputs:
+      backend_status: ${{ steps.check-render.outputs.status }}
+    steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Check Render Backend
+        id: check-render
+        continue-on-error: true
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+        run: |
+          if [ -z "$RENDER_BACKEND_URL" ]; then
+            echo "status=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          response=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
+          http_code=$(echo "$response" | tail -n1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "status=healthy" >> $GITHUB_OUTPUT
+          else
+            echo "status=down" >> $GITHUB_OUTPUT
+
+      - name: Create Issue on Backend Failure
+        if: steps.check-render.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ steps.check-render.outputs.status }}';
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'alert:downtime'
+            });
+            if (existing.data.length > 0) return;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Render Backend Downtime Detected',
+              body: `Backend health check failed at ${new Date().toISOString()}`,
+              labels: ['alert:downtime', 'priority:high']
+            });
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: health-check
+    if: needs.health-check.outputs.backend_status == 'healthy' || needs.health-check.outputs.backend_status == 'skipped'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-
     steps:
-      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Configure Pages environment
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      # Step 3: Upload content artifact
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ github.event.inputs.deploy_path }}
           if-no-files-found: error
 
-      # Step 4: Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
-      # Step 5: Output deployed site URL
       - name: Show deployed site URL
         run: echo "🎉 Site deployed at ${{ steps.deployment.outputs.page_url }}"
