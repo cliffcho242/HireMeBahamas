@@ -1,52 +1,45 @@
-name: CI/CD Pipeline - Preflight + SonarCloud + Lighthouse + Pages + Render Health
+name: Frontend CI & Deploy to GitHub Pages with Render Health Check
 
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
     inputs:
-      deploy_path:
-        description: 'Path to static content for GitHub Pages (default: ./frontend/dist)'
-        required: false
-        default: './frontend/dist'
       create_issue_on_failure:
         description: 'Create GitHub issue if Render backend health check fails'
         required: false
         type: boolean
         default: false
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
   pages: write
   id-token: write
-  pull-requests: write
   issues: write
 
+concurrency:
+  group: "frontend-pages"
+  cancel-in-progress: false
+
 jobs:
-  preflight:
-    name: Pre-Flight Health Check
+  build-and-deploy:
     runs-on: ubuntu-latest
-    outputs:
-      status: ${{ steps.health_check.outputs.status }}
 
     steps:
-      - uses: actions/checkout@v4
+      # --- Checkout repository ---
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Environment Health Check
-        id: health_check
+      # --- Preflight checks for required files ---
+      - name: Preflight Health Check
+        id: preflight
         run: |
-          echo "🔍 Running pre-flight health checks..."
+          echo "🔍 Running preflight checks..."
           REQUIRED_FILES=(
             ".github/workflows/ci.yml"
+            "frontend/package.json"
             "api/index.py"
             "api/requirements.txt"
-            "frontend/package.json"
           )
           MISSING_FILES=()
           for file in "${REQUIRED_FILES[@]}"; do
@@ -54,68 +47,29 @@ jobs:
           done
 
           if [ ${#MISSING_FILES[@]} -ne 0 ]; then
-            echo "❌ Missing required files:"; printf '%s\n' "${MISSING_FILES[@]}"
+            echo "❌ Missing files:"; printf '%s\n' "${MISSING_FILES[@]}"
             echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
 
-          echo "✅ All required files are present"
+          echo "✅ All required files present"
           echo "status=passed" >> $GITHUB_OUTPUT
 
-      - name: Pre-Flight Summary
-        if: always()
+      # --- Install system dependencies for scripts ---
+      - name: Install system dependencies
         run: |
-          echo "## 📝 Pre-Flight Health Check Summary" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.health_check.outputs.status }}" == "passed" ]; then
-            echo "✅ Pre-flight checks passed successfully" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ Pre-flight checks failed" >> $GITHUB_STEP_SUMMARY
+          sudo apt-get update
+          sudo apt-get install -y build-essential jq
 
-  sonarcloud-analysis:
-    name: SonarCloud Analysis
-    needs: preflight
-    if: needs.preflight.outputs.status == 'passed'
-    runs-on: ubuntu-latest
-    continue-on-error: true
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run SonarCloud
-        uses: SonarSource/sonarcloud-github-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=cliffcho242_HireMeBahamas
-            -Dsonar.organization=cliffcho242
-          projectBaseDir: .
-
-  render-health-check:
-    name: Render Backend Health Check
-    needs: preflight
-    if: needs.preflight.outputs.status == 'passed'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      issues: write
-    outputs:
-      backend_status: ${{ steps.check-backend.outputs.status }}
-      overall_status: ${{ steps.summary.outputs.overall_status }}
-
-    steps:
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Check Render Backend Health
-        id: check-backend
+      # --- Render backend health check ---
+      - name: Render Backend Health Check
+        id: render_health
         continue-on-error: true
         env:
           RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         run: |
           if [ -z "$RENDER_BACKEND_URL" ]; then
-            echo "ℹ️ RENDER_BACKEND_URL not configured, skipping health check"
+            echo "ℹ️ RENDER_BACKEND_URL not configured"
             echo "status=skipped" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -125,134 +79,74 @@ jobs:
           BODY=$(echo "$RESPONSE" | head -n -1)
 
           if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Render backend is healthy"
+            echo "✅ Render backend healthy"
             echo "$BODY" | jq . || echo "$BODY"
             DB_STATUS=$(echo "$BODY" | jq -r '.database.status // "unknown"' 2>/dev/null)
-            if [ "$DB_STATUS" = "healthy" ]; then
-              echo "status=healthy" >> $GITHUB_OUTPUT
-            elif [ "$DB_STATUS" = "degraded" ]; then
-              echo "status=degraded" >> $GITHUB_OUTPUT
-            else
-              echo "status=partial" >> $GITHUB_OUTPUT
-            fi
+            case "$DB_STATUS" in
+              healthy) echo "status=healthy" >> $GITHUB_OUTPUT ;;
+              degraded) echo "status=degraded" >> $GITHUB_OUTPUT ;;
+              *)        echo "status=partial" >> $GITHUB_OUTPUT ;;
+            esac
           elif [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" != "000" ]; then
-            echo "❌ HTTP error detected ($HTTP_CODE)"
             echo "status=error" >> $GITHUB_OUTPUT
           else
-            echo "❌ Render backend unreachable"
             echo "status=down" >> $GITHUB_OUTPUT
 
-      - name: Measure Render Response Time
-        id: backend-latency
-        if: steps.check-backend.outputs.status == 'healthy'
-        continue-on-error: true
-        env:
-          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
-        run: |
-          start=$(date +%s%N)
-          curl -s --max-time 10 "$RENDER_BACKEND_URL/ping" > /dev/null || true
-          end=$(date +%s%N)
-          LATENCY=$(( (end - start) / 1000000 ))
-          echo "latency_ms=$LATENCY" >> $GITHUB_OUTPUT
-          echo "⏱️ Backend response time: ${LATENCY}ms"
-
-      - name: Generate Render Backend Summary
-        id: summary
-        run: |
-          STATUS="${{ steps.check-backend.outputs.status }}"
-          LATENCY="${{ steps.backend-latency.outputs.latency_ms }}"
-          echo "## 📊 Render Backend Health Report" >> $GITHUB_STEP_SUMMARY
-          echo "| Service | Status | Details |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|--------|---------|" >> $GITHUB_STEP_SUMMARY
-
-          case "$STATUS" in
-            healthy) echo "| Render Backend | ✅ Healthy | Latency: ${LATENCY:-N/A}ms |" >> $GITHUB_STEP_SUMMARY; OVERALL="healthy" ;;
-            degraded) echo "| Render Backend | ⚠️ Degraded | Database issues |" >> $GITHUB_STEP_SUMMARY; OVERALL="degraded" ;;
-            partial) echo "| Render Backend | ⚠️ Partial | Some components may have issues |" >> $GITHUB_STEP_SUMMARY; OVERALL="partial" ;;
-            error) echo "| Render Backend | ❌ Error | HTTP error |" >> $GITHUB_STEP_SUMMARY; OVERALL="error" ;;
-            down) echo "| Render Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY; OVERALL="critical" ;;
-            skipped) echo "| Render Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY; OVERALL="skipped" ;;
-            *) echo "| Render Backend | ❓ Unknown | Status: $STATUS |" >> $GITHUB_STEP_SUMMARY; OVERALL="unknown" ;;
-          esac
-
-          echo "overall_status=$OVERALL" >> $GITHUB_OUTPUT
-
-      - name: Create Issue on Critical Failure
-        if: steps.check-backend.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
+      # --- Optional: Create GitHub Issue if backend is down ---
+      - name: Create Issue on Render Downtime
+        if: steps.render_health.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
         uses: actions/github-script@v7
         with:
           script: |
-            const status = '${{ steps.check-backend.outputs.status }}';
+            const status = '${{ steps.render_health.outputs.status }}';
             if (status !== 'down') return;
+
             const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
               labels: ['alert:downtime']
             });
-            if (existing.data.length > 0) {
-              console.log('Issue already exists, skipping');
-              return;
-            }
+            if (existing.data.length > 0) return;
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: '🚨 Render Backend Downtime Alert',
               body: `Render backend unreachable at ${new Date().toISOString()}`,
               labels: ['alert:downtime', 'priority:high']
-            })
+            });
 
-  lighthouse:
-    name: Lighthouse CI
-    needs: [preflight, render-health-check]
-    if: needs.preflight.outputs.status == 'passed'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      pull-requests: write
-
-    steps:
-      - uses: actions/checkout@v4
+      # --- Node.js setup & frontend build ---
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      - name: Install dependencies
+          node-version: 20
+
+      - name: Install frontend dependencies
         working-directory: ./frontend
         run: npm ci
+
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
-      - name: Install Lighthouse CI
-        run: npm install -g @lhci/cli@0.13.x
-      - name: Run Lighthouse CI
-        run: lhci autorun
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
 
-  deploy-pages:
-    name: Deploy to GitHub Pages
-    needs: [preflight, lighthouse]
-    if: needs.preflight.outputs.status == 'passed'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Pages
+      # --- GitHub Pages deployment ---
+      - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ github.event.inputs.deploy_path }}
+          path: ./frontend/dist
           if-no-files-found: error
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
       - name: Show deployed site URL
-        run: echo "🎉 Site deployed at ${{ steps.deployment.outputs.page_url }}"
+        run: |
+          REPO_NAME=$(basename $GITHUB_REPOSITORY)
+          echo "✅ Frontend deployed successfully!"
+          echo "🔗 URL: https://${GITHUB_ACTOR}.github.io/${REPO_NAME}/"
