@@ -8,7 +8,8 @@ on:
       create_issue_on_failure:
         description: 'Create GitHub issue if service is down'
         required: false
-        default: 'false'
+        type: boolean
+        default: false
 
 concurrency:
   group: uptime-monitoring
@@ -38,18 +39,17 @@ jobs:
         env:
           BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
         run: |
-          echo "Checking backend: $BACKEND_URL"
+          echo "🔍 Checking backend: $BACKEND_URL"
 
           response=$(curl -s -m 30 -w "\n%{http_code}" "$BACKEND_URL/api/health" || true)
-          code=$(echo "$response" | tail -n1)
+          http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | head -n -1)
 
-          echo "HTTP_CODE=$code" >> $GITHUB_ENV
-          echo "BODY=$body" >> $GITHUB_ENV
+          echo "HTTP_CODE=$http_code" >> $GITHUB_ENV
 
-          if [ "$code" = "200" ]; then
+          if [ "$http_code" = "200" ]; then
             echo "status=healthy" >> $GITHUB_OUTPUT
-          elif [ -n "$code" ]; then
+          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
             echo "status=error" >> $GITHUB_OUTPUT
           else
             echo "status=down" >> $GITHUB_OUTPUT
@@ -57,18 +57,20 @@ jobs:
 
       - name: Measure backend latency
         if: steps.backend.outputs.status == 'healthy'
+        env:
+          BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
         run: |
           start=$(date +%s%N)
           curl -s "$BACKEND_URL/ping" >/dev/null || true
           end=$(date +%s%N)
           latency=$(( (end - start) / 1000000 ))
-          echo "Latency: ${latency}ms"
+          echo "⏱ Latency: ${latency}ms"
 
       - name: Generate summary
         run: |
           echo "## 📊 HireMeBahamas Uptime Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "**Time (UTC):** $(date -u '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Service | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
@@ -82,32 +84,38 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const existing = await github.rest.issues.listForRepo({
+              owner,
+              repo,
               state: 'open',
               labels: 'alert:downtime'
             });
 
-            if (issues.data.length > 0) {
-              console.log('Existing downtime issue found');
+            if (existing.data.length > 0) {
+              console.log('⚠️ Existing downtime issue already open');
               return;
             }
 
             await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner,
+              repo,
               title: '🚨 HireMeBahamas Backend Down',
-              body: `
-              ## Backend service is unreachable
-
-              **Time:** ${new Date().toISOString()}
-              **Endpoint:** ${{ vars.RAILWAY_BACKEND_URL }}/api/health
-
-              ### Actions
-              - Check Railway logs
-              - Verify database connectivity
-              - Review latest deployments
-              `,
+              body: [
+                '## Backend service is unreachable',
+                '',
+                `**Time:** ${new Date().toISOString()}`,
+                `**Endpoint:** ${process.env.RAILWAY_BACKEND_URL}/api/health`,
+                '',
+                '### Recommended Actions',
+                '- Check Railway logs',
+                '- Verify database connectivity',
+                '- Review latest deployments'
+              ].join('\n'),
               labels: ['alert:downtime', 'priority:high']
             });
+
+        env:
+          RAILWAY_BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
