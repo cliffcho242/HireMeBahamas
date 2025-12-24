@@ -43,7 +43,7 @@ jobs:
         run: npm run test:auth-logout
 
       - name: Upload test output
-        if: failure()
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
           name: auth-logout-test-logs
@@ -80,7 +80,7 @@ jobs:
         run: npm ci
 
       - name: Install OS packages for Playwright (Ubuntu)
-        if: runner.os == 'Linux'
+        if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -116,7 +116,7 @@ jobs:
         run: npm run test:playwright
 
       - name: Upload Playwright report (always)
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
@@ -153,7 +153,7 @@ jobs:
           aws s3 sync frontend/playwright-tests s3://$PLAYWRIGHT_S3_BUCKET/playwright-tests/${{ github.run_id }}/ --acl private
 
       - name: Upload Playwright artifacts (report / test-results / traces)
-        if: failure()
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-artifacts
