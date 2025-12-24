@@ -47,11 +47,11 @@ jobs:
           echo "HTTP code: $http_code"
 
           if [ "$http_code" = "200" ]; then
-            echo "status=healthy" >> $GITHUB_OUTPUT
+            echo "status=healthy" >> "$GITHUB_OUTPUT"
           elif [ "$http_code" != "000" ]; then
-            echo "status=error" >> $GITHUB_OUTPUT
+            echo "status=error" >> "$GITHUB_OUTPUT"
           else
-            echo "status=down" >> $GITHUB_OUTPUT
+            echo "status=down" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Measure backend latency
@@ -67,16 +67,16 @@ jobs:
 
       - name: Generate summary
         run: |
-          echo "## 📊 HireMeBahamas Uptime Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Time (UTC):** $(date -u '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Service | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Render Backend | ${{ steps.backend.outputs.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 HireMeBahamas Uptime Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Time (UTC):** $(date -u '+%Y-%m-%d %H:%M:%S')" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Service | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Render Backend | ${{ steps.backend.outputs.status }} |" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create GitHub issue on downtime
-        if: |
+        if: >
           steps.backend.outputs.status == 'down' &&
           (github.event_name == 'schedule' ||
            github.event.inputs.create_issue_on_failure == 'true')
@@ -85,8 +85,7 @@ jobs:
           BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         with:
           script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
+            const { owner, repo } = context.repo;
 
             const existing = await github.rest.issues.listForRepo({
               owner,
@@ -96,7 +95,7 @@ jobs:
             });
 
             if (existing.data.length > 0) {
-              console.log("⚠️ Downtime issue already exists");
+              console.log("Downtime issue already exists");
               return;
             }
 
