@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - Preflight + SonarCloud + Lighthouse + Pages
+name: CI/CD Pipeline - Preflight + SonarCloud + Lighthouse + Pages + Render Health
 
 on:
   push:
@@ -11,6 +11,11 @@ on:
         description: 'Path to static content for GitHub Pages (default: ./frontend/dist)'
         required: false
         default: './frontend/dist'
+      create_issue_on_failure:
+        description: 'Create issue if backend health check fails'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -37,7 +42,12 @@ jobs:
         id: health_check
         run: |
           echo "🔍 Running pre-flight health checks..."
-          REQUIRED_FILES=(".github/workflows/ci.yml" "api/index.py" "api/requirements.txt" "frontend/package.json")
+          REQUIRED_FILES=(
+            ".github/workflows/ci.yml"
+            "api/index.py"
+            "api/requirements.txt"
+            "frontend/package.json"
+          )
           MISSING_FILES=()
           for file in "${REQUIRED_FILES[@]}"; do
             if [ ! -f "$file" ]; then
@@ -70,7 +80,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - name: Run SonarCloud
         uses: SonarSource/sonarcloud-github-action@v2
         env:
@@ -82,9 +91,137 @@ jobs:
             -Dsonar.organization=cliffcho242
           projectBaseDir: .
 
+  render-health-check:
+    name: Render Backend Health Check
+    needs: preflight
+    if: needs.preflight.outputs.status == 'passed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    outputs:
+      backend_status: ${{ steps.check-backend.outputs.status }}
+      overall_status: ${{ steps.summary.outputs.overall_status }}
+
+    steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Check Render Backend Health
+        id: check-backend
+        continue-on-error: true
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+        run: |
+          if [ -z "$RENDER_BACKEND_URL" ]; then
+            echo "ℹ️ RENDER_BACKEND_URL not configured"
+            echo "status=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          response=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Render backend healthy"
+            echo "$body" | jq . || echo "$body"
+            db_status=$(echo "$body" | jq -r '.database.status // "unknown"' 2>/dev/null)
+            if [ "$db_status" = "healthy" ]; then
+              echo "status=healthy" >> $GITHUB_OUTPUT
+            elif [ "$db_status" = "degraded" ]; then
+              echo "status=degraded" >> $GITHUB_OUTPUT
+            else
+              echo "status=partial" >> $GITHUB_OUTPUT
+            fi
+          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
+            echo "status=error" >> $GITHUB_OUTPUT
+          else
+            echo "status=down" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Measure Render Response Time
+        id: backend-latency
+        if: steps.check-backend.outputs.status == 'healthy'
+        continue-on-error: true
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+        run: |
+          start=$(date +%s%N)
+          curl -s --max-time 10 "$RENDER_BACKEND_URL/ping" > /dev/null || true
+          end=$(date +%s%N)
+          latency=$(( (end - start) / 1000000 ))
+          echo "latency_ms=$latency" >> $GITHUB_OUTPUT
+
+      - name: Generate Summary
+        id: summary
+        run: |
+          status="${{ steps.check-backend.outputs.status }}"
+          latency="${{ steps.backend-latency.outputs.latency_ms }}"
+
+          echo "## 📊 Render Backend Health Report" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+
+          case "$status" in
+            healthy)
+              echo "| Render Backend | ✅ Healthy | Latency: ${latency:-N/A}ms |" >> $GITHUB_STEP_SUMMARY
+              overall="healthy"
+              ;;
+            degraded)
+              echo "| Render Backend | ⚠️ Degraded | Database issues |" >> $GITHUB_STEP_SUMMARY
+              overall="degraded"
+              ;;
+            partial)
+              echo "| Render Backend | ⚠️ Partial | Some components may have issues |" >> $GITHUB_STEP_SUMMARY
+              overall="partial"
+              ;;
+            error)
+              echo "| Render Backend | ❌ Error | HTTP error |" >> $GITHUB_STEP_SUMMARY
+              overall="error"
+              ;;
+            down)
+              echo "| Render Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY
+              overall="critical"
+              ;;
+            skipped)
+              echo "| Render Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY
+              overall="skipped"
+              ;;
+            *)
+              echo "| Render Backend | ❓ Unknown | Status: $status |" >> $GITHUB_STEP_SUMMARY
+              overall="unknown"
+              ;;
+          esac
+
+          echo "overall_status=$overall" >> $GITHUB_OUTPUT
+
+      - name: Create Issue on Critical Failure
+        if: steps.check-backend.outputs.status == 'down' && (github.event_name == 'schedule' || github.event.inputs.create_issue_on_failure == 'true')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ steps.check-backend.outputs.status }}';
+            if (status !== 'down') return;
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'alert:downtime'
+            });
+            if (existing.data.length > 0) { console.log('Issue exists, skipping'); return; }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Render Backend Downtime Alert`,
+              body: `Backend unreachable at ${new Date().toISOString()}`,
+              labels: ['alert:downtime','priority:high']
+            });
+
   lighthouse:
     name: Lighthouse CI
-    needs: preflight
+    needs: [preflight, render-health-check]
     if: needs.preflight.outputs.status == 'passed'
     runs-on: ubuntu-latest
     timeout-minutes: 20
