@@ -3,6 +3,7 @@ name: Frontend CI & Deploy to GitHub Pages with Render Health Check
 on:
   push:
     branches: ["main"]
+
   workflow_dispatch:
     inputs:
       create_issue_on_failure:
@@ -28,9 +29,9 @@ jobs:
 
     steps:
       # =================================================
-      # Checkout source code
+      # Checkout repository
       # =================================================
-      - name: Checkout repository
+      - name: Checkout source code
         uses: actions/checkout@v4
 
       # =================================================
@@ -64,7 +65,7 @@ jobs:
           echo "status=passed" >> "$GITHUB_OUTPUT"
 
       # =================================================
-      # System dependencies
+      # Install system dependencies
       # =================================================
       - name: Install system dependencies
         run: |
@@ -112,7 +113,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       # =================================================
-      # Optional latency measurement
+      # Optional latency measurement (healthy only)
       # =================================================
       - name: Measure Render Backend Latency
         if: steps.render_health.outputs.status == 'healthy'
@@ -127,7 +128,7 @@ jobs:
           echo "- **Latency:** ${latency}ms" >> "$GITHUB_STEP_SUMMARY"
 
       # =================================================
-      # Optional GitHub issue on downtime
+      # Optional GitHub issue creation on downtime
       # =================================================
       - name: Create Issue on Render Downtime
         if: steps.render_health.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
@@ -170,7 +171,7 @@ jobs:
         run: npm run build
 
       # =================================================
-      # Deploy to GitHub Pages
+      # Deploy frontend to GitHub Pages
       # =================================================
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
