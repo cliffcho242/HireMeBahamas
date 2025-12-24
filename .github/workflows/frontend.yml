@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       create_issue_on_failure:
-        description: 'Create GitHub issue if Render backend health check fails'
+        description: "Create GitHub issue if Render backend health check fails"
         required: false
         type: boolean
         default: false
@@ -18,7 +18,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: "frontend-pages"
+  group: frontend-pages
   cancel-in-progress: false
 
 jobs:
@@ -26,15 +26,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # --------------------------
-      # Checkout repository
-      # --------------------------
+      # -------------------------------------------------
+      # Checkout source code
+      # -------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --------------------------
-      # Preflight checks
-      # --------------------------
+      # -------------------------------------------------
+      # Preflight validation (repo sanity checks)
+      # -------------------------------------------------
       - name: Preflight Health Check
         id: preflight
         run: |
@@ -45,13 +45,15 @@ jobs:
             "api/index.py"
             "api/requirements.txt"
           )
+
           MISSING_FILES=()
           for file in "${REQUIRED_FILES[@]}"; do
             [ ! -f "$file" ] && MISSING_FILES+=("$file")
           done
 
           if [ ${#MISSING_FILES[@]} -ne 0 ]; then
-            echo "❌ Missing files:"; printf '%s\n' "${MISSING_FILES[@]}"
+            echo "❌ Missing files:"
+            printf '%s\n' "${MISSING_FILES[@]}"
             echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
@@ -59,17 +61,17 @@ jobs:
           echo "✅ All required files present"
           echo "status=passed" >> $GITHUB_OUTPUT
 
-      # --------------------------
-      # Install system dependencies
-      # --------------------------
+      # -------------------------------------------------
+      # System dependencies
+      # -------------------------------------------------
       - name: Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential jq
 
-      # --------------------------
-      # Render backend health check
-      # --------------------------
+      # -------------------------------------------------
+      # Render backend uptime monitoring
+      # -------------------------------------------------
       - name: Render Backend Health Check
         id: render_health
         continue-on-error: true
@@ -87,49 +89,65 @@ jobs:
           BODY=$(echo "$RESPONSE" | head -n -1)
 
           if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Render backend healthy"
-            echo "$BODY" | jq . || echo "$BODY"
             DB_STATUS=$(echo "$BODY" | jq -r '.database.status // "unknown"' 2>/dev/null)
             case "$DB_STATUS" in
-              healthy) echo "status=healthy" >> $GITHUB_OUTPUT ;;
-              degraded) echo "status=degraded" >> $GITHUB_OUTPUT ;;
-              *)        echo "status=partial" >> $GITHUB_OUTPUT ;;
+              healthy)  STATUS="healthy" ;;
+              degraded) STATUS="degraded" ;;
+              *)         STATUS="partial" ;;
             esac
-          elif [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" != "000" ]; then
-            echo "status=error" >> $GITHUB_OUTPUT
+          elif [ "$HTTP_CODE" != "000" ]; then
+            STATUS="error"
           else
-            echo "status=down" >> $GITHUB_OUTPUT
+            STATUS="down"
+          fi
 
-      # --------------------------
-      # Optional: Create GitHub Issue if backend is down
-      # --------------------------
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "## 🔌 Render Backend Health" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "- **HTTP Code:** $HTTP_CODE" >> $GITHUB_STEP_SUMMARY
+
+      # -------------------------------------------------
+      # Optional latency measurement
+      # -------------------------------------------------
+      - name: Measure Render Backend Latency
+        if: steps.render_health.outputs.status == 'healthy'
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+        run: |
+          start=$(date +%s%N)
+          curl -s --max-time 10 "$RENDER_BACKEND_URL/ping" > /dev/null || true
+          end=$(date +%s%N)
+          latency=$(( (end - start)/1000000 ))
+          echo "- **Latency:** ${latency}ms" >> $GITHUB_STEP_SUMMARY
+
+      # -------------------------------------------------
+      # Optional GitHub issue creation on downtime
+      # -------------------------------------------------
       - name: Create Issue on Render Downtime
         if: steps.render_health.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
         uses: actions/github-script@v7
         with:
           script: |
-            const status = '${{ steps.render_health.outputs.status }}';
-            if (status !== 'down') return;
-
             const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              state: 'open',
-              labels: ['alert:downtime']
+              state: "open",
+              labels: ["alert:downtime"]
             });
+
             if (existing.data.length > 0) return;
 
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: '🚨 Render Backend Downtime Alert',
+              title: "🚨 Render Backend Down",
               body: `Render backend unreachable at ${new Date().toISOString()}`,
-              labels: ['alert:downtime', 'priority:high']
+              labels: ["alert:downtime", "priority:high"]
             });
 
-      # --------------------------
-      # Node.js setup & frontend build
-      # --------------------------
+      # -------------------------------------------------
+      # Frontend build
+      # -------------------------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -143,9 +161,9 @@ jobs:
         working-directory: ./frontend
         run: npm run build
 
-      # --------------------------
-      # GitHub Pages deployment
-      # --------------------------
+      # -------------------------------------------------
+      # Deploy to GitHub Pages
+      # -------------------------------------------------
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
@@ -161,6 +179,5 @@ jobs:
 
       - name: Show Deployed Site URL
         run: |
-          REPO_NAME=$(basename $GITHUB_REPOSITORY)
           echo "✅ Frontend deployed successfully!"
-          echo "🔗 URL: https://${GITHUB_ACTOR}.github.io/${REPO_NAME}/"
+          echo "🔗 URL: ${{ steps.deployment.outputs.page_url }}"
