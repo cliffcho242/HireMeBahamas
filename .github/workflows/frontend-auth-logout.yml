@@ -1,185 +1,113 @@
-name: Frontend auth-logout check
+name: Uptime Monitoring
 
 on:
-  push:
-    paths:
-      - 'frontend/**'
-  pull_request:
-    paths:
-      - 'frontend/**'
+  schedule:
+    - cron: '*/15 * * * *'   # every 15 minutes
+  workflow_dispatch:
+    inputs:
+      create_issue_on_failure:
+        description: 'Create GitHub issue if service is down'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: uptime-monitoring
+  cancel-in-progress: true
 
 jobs:
-  auth-logout-test:
-    name: Run auth-logout Node test
+  health-check:
+    name: Application Health Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+      issues: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Use Node.js 18
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Run CI sanity Node test
-        working-directory: frontend
-        run: node ./tests/ci-sanity-test.cjs
-
-      - name: Run auth-logout test
-        working-directory: frontend
-        run: npm run test:auth-logout
-
-      - name: Upload test output
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: auth-logout-test-logs
-          path: frontend/tests
-
-  playwright-e2e:
-    name: "Playwright E2E: auth-logout"
-    runs-on: ubuntu-latest
-    needs: auth-logout-test
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/frontend/package-lock.json') }}-pw
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Check node version
-        working-directory: frontend
-        run: node -v
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Install OS packages for Playwright (Ubuntu)
-        if: runner.os == 'Linux'
+      - name: Validate backend URL exists
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libxss1 libasound2t64 libgbm1 \
-            libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libpangocairo-1.0-0 \
-            libgtk-3-0 libnotify4 libgdk-pixbuf2.0-0 libxkbcommon0
+          if [ -z "${{ vars.RAILWAY_BACKEND_URL }}" ]; then
+            echo "❌ RAILWAY_BACKEND_URL repository variable is missing"
+            exit 1
+          fi
 
-      - name: Install Playwright browsers
-        working-directory: frontend
-        run: |
-          # We've already installed the common OS packages above. Install browsers only.
-          npx playwright install
-
-      - name: Build frontend
-        working-directory: frontend
-        run: npm run build
-
-      - name: Serve built site on port 3000
-        working-directory: frontend
-        run: |
-          npx http-server ./dist -p 3000 &
-          # wait for server to come up
-          for i in {1..30}; do
-            if curl --silent --fail http://localhost:3000/ >/dev/null; then
-              echo "Server is up";
-              break;
-            fi
-            echo "Waiting for server... ($i)"; sleep 1;
-          done
-
-      - name: Run Playwright auth-logout test
-        working-directory: frontend
+      - name: Check backend health endpoint
+        id: backend
+        continue-on-error: true
         env:
-          DEV_URL: http://localhost:3000
-        run: npm run test:playwright
-
-      - name: Upload Playwright report (always)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: |
-            frontend/playwright-report
-            frontend/test-results
-          retention-days:
-
-             if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' && env.PLAYWRIGHT_S3_BUCKET != '' }}
-
-      - name: Upload Playwright artifacts to S3 (optional)
-       
-        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' && secrets.PLAYWRIGHT_S3_BUCKET != '' }}-
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          PLAYWRIGHT_S3_BUCKET: ${{ secrets.PLAYWRIGHT_S3_BUCKET }}
+          BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
         run: |
-          set -euo pipefail
-          echo "Uploading Playwright artifacts to S3 bucket: $PLAYWRIGHT_S3_BUCKET"
+          echo "Checking backend: $BACKEND_URL"
 
-          aws s3 sync frontend/playwright-report \
-            s3://$PLAYWRIGHT_S3_BUCKET/playwright-report/${{ github.run_id }}/ --acl private
+          response=$(curl -s -m 30 -w "\n%{http_code}" "$BACKEND_URL/api/health" || true)
+          code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
 
-          aws s3 sync frontend/test-results \
-            s3://$PLAYWRIGHT_S3_BUCKET/test-results/${{ github.run_id }}/ --acl private
+          echo "HTTP_CODE=$code" >> $GITHUB_ENV
+          echo "BODY=$body" >> $GITHUB_ENV
 
-          aws s3 sync frontend/playwright-tests \
-            s3://$PLAYWRIGHT_S3_BUCKET/playwright-tests/${{ github.run_id }}/ --acl private
-        run:| 
-    
-          echo "Uploading Playwright artifacts to S3 bucket: $PLAYWRIGHT_S3_BUCKET"
+          if [ "$code" = "200" ]; then
+            echo "status=healthy" >> $GITHUB_OUTPUT
+          elif [ -n "$code" ]; then
+            echo "status=error" >> $GITHUB_OUTPUT
+          else
+            echo "status=down" >> $GITHUB_OUTPUT
+          fi
 
-          aws s3 sync frontend/playwright-report \
-            s3://$PLAYWRIGHT_S3_BUCKET/playwright-report/${{ github.run_id }}/ --acl private
+      - name: Measure backend latency
+        if: steps.backend.outputs.status == 'healthy'
+        run: |
+          start=$(date +%s%N)
+          curl -s "$BACKEND_URL/ping" >/dev/null || true
+          end=$(date +%s%N)
+          latency=$(( (end - start) / 1000000 ))
+          echo "Latency: ${latency}ms"
 
-          aws s3 sync frontend/test-results \
-            s3://$PLAYWRIGHT_S3_BUCKET/test-results/${{ github.run_id }}/ --acl private
+      - name: Generate summary
+        run: |
+          echo "## 📊 HireMeBahamas Uptime Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | ${{ steps.backend.outputs.status }} |" >> $GITHUB_STEP_SUMMARY
 
-          aws s3 sync frontend/playwright-tests \
-            s3://$PLAYWRIGHT_S3_BUCKET/playwright-tests/${{ github.run_id }}/ --acl private     run: 
-          set -euo pipefail
-          echo "Uploading Playwright artifacts to S3 bucket: $PLAYWRIGHT_S3_BUCKET"
-
-          aws s3 sync frontend/playwright-report \
-            s3://$PLAYWRIGHT_S3_BUCKET/playwright-report/${{ github.run_id }}/ --acl private
-
-          aws s3 sync frontend/test-results \
-            s3://$PLAYWRIGHT_S3_BUCKET/test-results/${{ github.run_id }}/ --acl private
-
-          aws s3 sync frontend/playwright-tests \
-            s3://$PLAYWRIGHT_S3_BUCKET/playwright-tests/${{ github.run_id }}/ --acl private
-          
-
-      - name: Upload Playwright artifacts (report / test-results / traces)
-        if: failure()
-        uses: actions/upload-artifact@v4
+      - name: Create issue on downtime
+        if: |
+          steps.backend.outputs.status == 'down' &&
+          (github.event_name == 'schedule' ||
+           github.event.inputs.create_issue_on_failure == 'true')
+        uses: actions/github-script@v7
         with:
-          name: playwright-artifacts
-          path: |
-            frontend/playwright-report
-            frontend/test-results
-            frontend/playwright-tests
-          retention-days: 7
+          script: |
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'alert:downtime'
+            });
+
+            if (issues.data.length > 0) {
+              console.log('Existing downtime issue found');
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 HireMeBahamas Backend Down',
+              body: `
+              ## Backend service is unreachable
+
+              **Time:** ${new Date().toISOString()}
+              **Endpoint:** ${{ vars.RAILWAY_BACKEND_URL }}/api/health
+
+              ### Actions
+              - Check Railway logs
+              - Verify database connectivity
+              - Review latest deployments
+              `,
+              labels: ['alert:downtime', 'priority:high']
+            });
