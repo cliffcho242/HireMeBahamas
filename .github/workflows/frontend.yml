@@ -1,125 +1,71 @@
-name: Preflight Check & Render Health Monitor
+name: Render Backend Uptime Monitoring
 
 on:
-  push:
-    branches: ["main"]
-
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
   workflow_dispatch:
-    inputs:
-      create_issue_on_failure:
-        description: "Create a GitHub issue if the Render backend health check fails"
-        required: false
-        type: boolean
-        default: false
 
-# Minimal permissions required
-permissions:
-  contents: read
-  issues: write
-
-# Prevent overlapping preflight runs
 concurrency:
-  group: preflight-check
+  group: render-uptime-monitoring
   cancel-in-progress: true
 
 jobs:
-  preflight:
-    name: Validate Repository & Check Render Backend
+  health-check:
+    name: Application Health Check (Render)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      # issues permission removed since we no longer create issues
 
     steps:
-      # =================================================
-      # Checkout repository
-      # =================================================
-      - name: Checkout source code
-        uses: actions/checkout@v4
+      # --------------------------------------------------
+      # Install jq for JSON parsing
+      # --------------------------------------------------
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
-      # =================================================
-      # Preflight repository validation
-      # Ensures critical files exist before CI/CD proceeds
-      # =================================================
-      - name: Validate required files
-        id: preflight
-        run: |
-          echo "🔍 Running preflight validation..."
-
-          REQUIRED_FILES=(
-            ".github/workflows/ci.yml"
-            "frontend/package.json"
-            "api/index.py"
-            "api/requirements.txt"
-          )
-
-          MISSING_FILES=()
-          for file in "${REQUIRED_FILES[@]}"; do
-            [[ ! -f "$file" ]] && MISSING_FILES+=("$file")
-          done
-
-          if (( ${#MISSING_FILES[@]} > 0 )); then
-            echo "❌ Missing required files:"
-            printf ' - %s\n' "${MISSING_FILES[@]}"
-            echo "status=failed" >> "$GITHUB_OUTPUT"
-            exit 1
-          fi
-
-          echo "✅ All required files present"
-          echo "status=passed" >> "$GITHUB_OUTPUT"
-
-      # =================================================
-      # System dependencies
-      # jq is required to parse Render health responses
-      # =================================================
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-
-      # =================================================
+      # --------------------------------------------------
       # Render backend health check
-      # Non-blocking: reports status but does not fail CI
-      # =================================================
-      - name: Render Backend Health Check
-        id: render_health
+      # --------------------------------------------------
+      - name: Check Render Backend Health
+        id: check-render
         continue-on-error: true
         env:
           RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         run: |
-          if [[ -z "$RENDER_BACKEND_URL" ]]; then
+          if [ -z "$RENDER_BACKEND_URL" ]; then
             echo "ℹ️ RENDER_BACKEND_URL not configured"
-            echo "status=skipped" >> "$GITHUB_OUTPUT"
+            echo "status=skipped" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
-          HTTP_CODE=$(tail -n1 <<< "$RESPONSE")
-          BODY=$(head -n -1 <<< "$RESPONSE")
+          echo "🔍 Checking Render backend health"
+          response=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
 
-          if [[ "$HTTP_CODE" == "200" ]]; then
-            DB_STATUS=$(jq -r '.database.status // "unknown"' <<< "$BODY" 2>/dev/null)
-            case "$DB_STATUS" in
-              healthy)  STATUS="healthy" ;;
-              degraded) STATUS="degraded" ;;
-              *)         STATUS="partial" ;;
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
+          if [ "$http_code" = "200" ]; then
+            db_status=$(echo "$body" | jq -r '.database.status // "unknown"' 2>/dev/null)
+            case "$db_status" in
+              healthy)  status="healthy" ;;
+              degraded) status="degraded" ;;
+              *)         status="partial" ;;
             esac
-          elif [[ "$HTTP_CODE" != "000" ]]; then
-            STATUS="error"
+          elif [ "$http_code" != "000" ]; then
+            status="error"
           else
-            STATUS="down"
+            status="down"
           fi
 
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "status=$status" >> $GITHUB_OUTPUT
 
-          {
-            echo "## 🔌 Render Backend Health"
-            echo "- **Status:** $STATUS"
-            echo "- **HTTP Code:** $HTTP_CODE"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      # =================================================
-      # Optional latency measurement (healthy only)
-      # =================================================
-      - name: Measure Render Backend Latency
-        if: steps.render_health.outputs.status == 'healthy'
+      # --------------------------------------------------
+      # Measure latency (only if healthy)
+      # --------------------------------------------------
+      - name: Measure Render Response Time
+        if: steps.check-render.outputs.status == 'healthy'
         env:
           RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         run: |
@@ -127,33 +73,27 @@ jobs:
           curl -s --max-time 10 "$RENDER_BACKEND_URL/ping" > /dev/null || true
           end=$(date +%s%N)
           latency=$(( (end - start) / 1000000 ))
+          echo "latency_ms=$latency" >> $GITHUB_OUTPUT
 
-          echo "- **Latency:** ${latency}ms" >> "$GITHUB_STEP_SUMMARY"
+      # --------------------------------------------------
+      # Generate monitoring summary (no issue creation)
+      # --------------------------------------------------
+      - name: Generate Summary
+        run: |
+          status="${{ steps.check-render.outputs.status }}"
 
-      # =================================================
-      # Optional incident automation
-      # Creates an issue only if explicitly requested
-      # =================================================
-      - name: Create GitHub Issue on Render Downtime
-        if: steps.render_health.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
+          echo "## 📊 Render Backend Uptime Report" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
 
-            const existing = await github.rest.issues.listForRepo({
-              owner,
-              repo,
-              state: "open",
-              labels: ["alert:downtime"]
-            });
-
-            if (existing.data.length > 0) return;
-
-            await github.rest.issues.create({
-              owner,
-              repo,
-              title: "🚨 Render Backend Down",
-              body: `Render backend unreachable at ${new Date().toISOString()}`,
-              labels: ["alert:downtime", "priority:high"]
-            });
+          case "$status" in
+            healthy)  echo "| Render Backend | ✅ Healthy |" >> $GITHUB_STEP_SUMMARY ;;
+            degraded) echo "| Render Backend | ⚠️ Degraded |" >> $GITHUB_STEP_SUMMARY ;;
+            partial)  echo "| Render Backend | ⚠️ Partial |" >> $GITHUB_STEP_SUMMARY ;;
+            error)    echo "| Render Backend | ❌ Error |" >> $GITHUB_STEP_SUMMARY ;;
+            down)     echo "| Render Backend | ❌ Down |" >> $GITHUB_STEP_SUMMARY ;;
+            skipped)  echo "| Render Backend | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY ;;
+            *)        echo "| Render Backend | ❓ Unknown |" >> $GITHUB_STEP_SUMMARY ;;
+          esac
