@@ -46,14 +46,14 @@ jobs:
         run: npm run test:auth-logout
 
       - name: Upload test output on failure
-        if: ${{ failure() }}
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: auth-logout-test-logs
           path: frontend/tests
 
   playwright-e2e:
-    name: "Playwright E2E: auth-logout"
+    name: Playwright E2E: auth-logout
     runs-on: ubuntu-latest
     needs: auth-logout-test
 
@@ -83,7 +83,7 @@ jobs:
         run: npm ci
 
       - name: Install OS packages for Playwright (Linux only)
-        if: ${{ runner.os == 'Linux' }}
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -119,7 +119,7 @@ jobs:
         run: npm run test:playwright
 
       - name: Upload Playwright report (always)
-        if: ${{ always() }}
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
@@ -129,34 +129,24 @@ jobs:
           retention-days: 7
 
       - name: Configure AWS credentials (optional)
-        if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.PLAYWRIGHT_S3_BUCKET }}
+        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' && secrets.PLAYWRIGHT_S3_BUCKET != '' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          PLAYWRIGHT_S3_BUCKET: ${{ secrets.PLAYWRIGHT_S3_BUCKET }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Upload Playwright artifacts to S3 (optional)
-        if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.PLAYWRIGHT_S3_BUCKET }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          PLAYWRIGHT_S3_BUCKET: ${{ secrets.PLAYWRIGHT_S3_BUCKET }}
+        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' && secrets.PLAYWRIGHT_S3_BUCKET != '' }}
         run: |
           set -euo pipefail
-          echo "Uploading Playwright artifacts to S3 bucket: $PLAYWRIGHT_S3_BUCKET"
-          aws s3 sync frontend/playwright-report s3://$PLAYWRIGHT_S3_BUCKET/playwright-report/${{ github.run_id }}/ --acl private
-          aws s3 sync frontend/test-results s3://$PLAYWRIGHT_S3_BUCKET/test-results/${{ github.run_id }}/ --acl private
-          aws s3 sync frontend/playwright-tests s3://$PLAYWRIGHT_S3_BUCKET/playwright-tests/${{ github.run_id }}/ --acl private
+          echo "Uploading Playwright artifacts to S3 bucket: ${{ secrets.PLAYWRIGHT_S3_BUCKET }}"
+          aws s3 sync frontend/playwright-report s3://${{ secrets.PLAYWRIGHT_S3_BUCKET }}/playwright-report/${{ github.run_id }}/ --acl private
+          aws s3 sync frontend/test-results s3://${{ secrets.PLAYWRIGHT_S3_BUCKET }}/test-results/${{ github.run_id }}/ --acl private
+          aws s3 sync frontend/playwright-tests s3://${{ secrets.PLAYWRIGHT_S3_BUCKET }}/playwright-tests/${{ github.run_id }}/ --acl private
 
       - name: Upload Playwright artifacts on failure
-        if: ${{ failure() }}
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-artifacts
