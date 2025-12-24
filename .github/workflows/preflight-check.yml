@@ -30,13 +30,13 @@ jobs:
 
     steps:
       # ==========================================================
-      # 1. Checkout Source Code
+      # 1. Checkout source code
       # ==========================================================
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # ==========================================================
-      # 2. Preflight Validation
+      # 2. Preflight validation
       #    Fail fast if critical files are missing
       # ==========================================================
       - name: Preflight Health Check
@@ -53,10 +53,10 @@ jobs:
 
           MISSING_FILES=()
           for file in "${REQUIRED_FILES[@]}"; do
-            [ ! -f "$file" ] && MISSING_FILES+=("$file")
+            [[ ! -f "$file" ]] && MISSING_FILES+=("$file")
           done
 
-          if [ ${#MISSING_FILES[@]} -ne 0 ]; then
+          if (( ${#MISSING_FILES[@]} > 0 )); then
             echo "❌ Missing required files:"
             printf ' - %s\n' "${MISSING_FILES[@]}"
             echo "status=failed" >> "$GITHUB_OUTPUT"
@@ -67,8 +67,8 @@ jobs:
           echo "status=passed" >> "$GITHUB_OUTPUT"
 
       # ==========================================================
-      # 3. System Dependencies
-      #    jq is required for parsing Render health JSON
+      # 3. System dependencies
+      #    jq is required for parsing Render health responses
       # ==========================================================
       - name: Install system dependencies
         run: |
@@ -76,7 +76,7 @@ jobs:
           sudo apt-get install -y build-essential jq
 
       # ==========================================================
-      # 4. Render Backend Health Check (Non-Blocking)
+      # 4. Render backend health check (non-blocking)
       #    Frontend deploys even if backend is down
       # ==========================================================
       - name: Render Backend Health Check
@@ -85,7 +85,7 @@ jobs:
         env:
           RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         run: |
-          if [ -z "$RENDER_BACKEND_URL" ]; then
+          if [[ -z "$RENDER_BACKEND_URL" ]]; then
             echo "ℹ️ RENDER_BACKEND_URL not configured"
             echo "status=skipped" >> "$GITHUB_OUTPUT"
             exit 0
@@ -95,14 +95,14 @@ jobs:
           HTTP_CODE=$(tail -n1 <<< "$RESPONSE")
           BODY=$(head -n -1 <<< "$RESPONSE")
 
-          if [ "$HTTP_CODE" = "200" ]; then
+          if [[ "$HTTP_CODE" == "200" ]]; then
             DB_STATUS=$(jq -r '.database.status // "unknown"' <<< "$BODY" 2>/dev/null)
             case "$DB_STATUS" in
               healthy)  STATUS="healthy" ;;
               degraded) STATUS="degraded" ;;
               *)         STATUS="partial" ;;
             esac
-          elif [ "$HTTP_CODE" != "000" ]; then
+          elif [[ "$HTTP_CODE" != "000" ]]; then
             STATUS="error"
           else
             STATUS="down"
@@ -117,7 +117,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       # ==========================================================
-      # 5. Optional Incident Automation
+      # 5. Optional incident automation
       #    Creates an issue only when explicitly requested
       # ==========================================================
       - name: Create GitHub Issue on Render Downtime
@@ -145,7 +145,7 @@ jobs:
             });
 
       # ==========================================================
-      # 6. Frontend Build
+      # 6. Frontend build
       # ==========================================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
