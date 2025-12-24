@@ -36,10 +36,8 @@ jobs:
       status: ${{ steps.health_check.outputs.status }}
 
     steps:
-      # Checkout the repository
       - uses: actions/checkout@v4
 
-      # Verify required project files exist
       - name: Environment Health Check
         id: health_check
         run: |
@@ -62,10 +60,10 @@ jobs:
             echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
+
           echo "✅ All required files are present"
           echo "status=passed" >> $GITHUB_OUTPUT
 
-      # Summarize pre-flight check results
       - name: Pre-Flight Summary
         if: always()
         run: |
@@ -109,11 +107,9 @@ jobs:
       overall_status: ${{ steps.summary.outputs.overall_status }}
 
     steps:
-      # Install jq for JSON parsing
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # Check backend health on Render
       - name: Check Render Backend Health
         id: check-backend
         continue-on-error: true
@@ -149,7 +145,6 @@ jobs:
             echo "❌ Render backend unreachable"
             echo "status=down" >> $GITHUB_OUTPUT
 
-      # Measure backend response latency
       - name: Measure Render Response Time
         id: backend-latency
         if: steps.check-backend.outputs.status == 'healthy'
@@ -164,7 +159,6 @@ jobs:
           echo "latency_ms=$LATENCY" >> $GITHUB_OUTPUT
           echo "⏱️ Backend response time: ${LATENCY}ms"
 
-      # Generate Markdown summary
       - name: Generate Render Backend Summary
         id: summary
         run: |
@@ -207,7 +201,6 @@ jobs:
 
           echo "overall_status=$OVERALL" >> $GITHUB_OUTPUT
 
-      # Optionally create issue if backend is down
       - name: Create Issue on Critical Failure
         if: steps.check-backend.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
         uses: actions/github-script@v7
