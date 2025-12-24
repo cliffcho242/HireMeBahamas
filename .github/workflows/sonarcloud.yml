@@ -4,12 +4,6 @@ on:
   schedule:
     - cron: '*/15 * * * *'  # Every 15 minutes
   workflow_dispatch:
-    inputs:
-      create_issue_on_failure:
-        description: 'Create issue if health check fails'
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: render-uptime-monitoring
@@ -22,16 +16,18 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-      issues: write
-
-    outputs:
-      render_status: ${{ steps.check-render.outputs.status }}
-      overall_status: ${{ steps.summary.outputs.overall_status }}
+      # issues permission removed since we no longer create issues
 
     steps:
+      # --------------------------------------------------
+      # Install jq for JSON parsing
+      # --------------------------------------------------
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
+      # --------------------------------------------------
+      # Render backend health check
+      # --------------------------------------------------
       - name: Check Render Backend Health
         id: check-render
         continue-on-error: true
@@ -44,33 +40,32 @@ jobs:
             exit 0
           fi
 
-          echo "🔍 Checking Render backend health at $RENDER_BACKEND_URL/health"
-
+          echo "🔍 Checking Render backend health"
           response=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
+
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | head -n -1)
 
           if [ "$http_code" = "200" ]; then
-            echo "✅ Render backend healthy (HTTP $http_code)"
-            echo "$body" | jq . || echo "$body"
             db_status=$(echo "$body" | jq -r '.database.status // "unknown"' 2>/dev/null)
-            if [ "$db_status" = "healthy" ]; then
-              echo "status=healthy" >> $GITHUB_OUTPUT
-            elif [ "$db_status" = "degraded" ]; then
-              echo "status=degraded" >> $GITHUB_OUTPUT
-            else
-              echo "status=partial" >> $GITHUB_OUTPUT
-            fi
-          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
-            echo "status=error" >> $GITHUB_OUTPUT
+            case "$db_status" in
+              healthy)  status="healthy" ;;
+              degraded) status="degraded" ;;
+              *)         status="partial" ;;
+            esac
+          elif [ "$http_code" != "000" ]; then
+            status="error"
           else
-            echo "status=down" >> $GITHUB_OUTPUT
+            status="down"
           fi
 
+          echo "status=$status" >> $GITHUB_OUTPUT
+
+      # --------------------------------------------------
+      # Measure latency (only if healthy)
+      # --------------------------------------------------
       - name: Measure Render Response Time
-        id: render-latency
         if: steps.check-render.outputs.status == 'healthy'
-        continue-on-error: true
         env:
           RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         run: |
@@ -80,88 +75,25 @@ jobs:
           latency=$(( (end - start) / 1000000 ))
           echo "latency_ms=$latency" >> $GITHUB_OUTPUT
 
+      # --------------------------------------------------
+      # Generate monitoring summary (no issue creation)
+      # --------------------------------------------------
       - name: Generate Summary
-        id: summary
         run: |
           status="${{ steps.check-render.outputs.status }}"
-          latency="${{ steps.render-latency.outputs.latency_ms }}"
 
           echo "## 📊 Render Backend Uptime Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Service | Status | Details |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
 
           case "$status" in
-            healthy)
-              echo "| Render Backend | ✅ Healthy | Latency: ${latency:-N/A}ms |" >> $GITHUB_STEP_SUMMARY
-              overall="healthy"
-              ;;
-            degraded)
-              echo "| Render Backend | ⚠️ Degraded | Database issues detected |" >> $GITHUB_STEP_SUMMARY
-              overall="degraded"
-              ;;
-            partial)
-              echo "| Render Backend | ⚠️ Partial | Some components may have issues |" >> $GITHUB_STEP_SUMMARY
-              overall="partial"
-              ;;
-            error)
-              echo "| Render Backend | ❌ Error | HTTP error response |" >> $GITHUB_STEP_SUMMARY
-              overall="error"
-              ;;
-            down)
-              echo "| Render Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY
-              overall="critical"
-              ;;
-            skipped)
-              echo "| Render Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY
-              overall="skipped"
-              ;;
-            *)
-              echo "| Render Backend | ❓ Unknown | Status: $status |" >> $GITHUB_STEP_SUMMARY
-              overall="unknown"
-              ;;
+            healthy)  echo "| Render Backend | ✅ Healthy |" >> $GITHUB_STEP_SUMMARY ;;
+            degraded) echo "| Render Backend | ⚠️ Degraded |" >> $GITHUB_STEP_SUMMARY ;;
+            partial)  echo "| Render Backend | ⚠️ Partial |" >> $GITHUB_STEP_SUMMARY ;;
+            error)    echo "| Render Backend | ❌ Error |" >> $GITHUB_STEP_SUMMARY ;;
+            down)     echo "| Render Backend | ❌ Down |" >> $GITHUB_STEP_SUMMARY ;;
+            skipped)  echo "| Render Backend | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY ;;
+            *)        echo "| Render Backend | ❓ Unknown |" >> $GITHUB_STEP_SUMMARY ;;
           esac
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Overall Status: ${overall^^}" >> $GITHUB_STEP_SUMMARY
-          echo "overall_status=$overall" >> $GITHUB_OUTPUT
-
-      - name: Create Issue on Critical Failure
-        if: steps.check-render.outputs.status == 'down' && (github.event_name == 'schedule' || github.event.inputs.create_issue_on_failure == 'true')
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const status = '${{ steps.check-render.outputs.status }}';
-            if (status !== 'down') return;
-
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'alert:downtime'
-            });
-
-            if (existing.data.length > 0) {
-              console.log('Issue exists, skipping creation');
-              return;
-            }
-
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '🚨 Render Backend Downtime Detected',
-              body: `## Service Downtime Detected
-
-**Time:** ${new Date().toISOString()}
-
-The Render backend service is unreachable.
-
-**Recommended actions:**
-1. Check Render dashboard logs
-2. Verify database connectivity
-3. Review recent deployments
-`,
-              labels: ['alert:downtime','priority:high']
-            });
