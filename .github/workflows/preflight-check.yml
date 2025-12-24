@@ -50,9 +50,7 @@ jobs:
           )
           MISSING_FILES=()
           for file in "${REQUIRED_FILES[@]}"; do
-            if [ ! -f "$file" ]; then
-              MISSING_FILES+=("$file")
-            fi
+            [ ! -f "$file" ] && MISSING_FILES+=("$file")
           done
 
           if [ ${#MISSING_FILES[@]} -ne 0 ]; then
@@ -122,7 +120,6 @@ jobs:
             exit 0
           fi
 
-          echo "🔍 Checking Render backend at $RENDER_BACKEND_URL/health..."
           RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | head -n -1)
@@ -169,34 +166,13 @@ jobs:
           echo "|---------|--------|---------|" >> $GITHUB_STEP_SUMMARY
 
           case "$STATUS" in
-            healthy)
-              echo "| Render Backend | ✅ Healthy | Latency: ${LATENCY:-N/A}ms |" >> $GITHUB_STEP_SUMMARY
-              OVERALL="healthy"
-              ;;
-            degraded)
-              echo "| Render Backend | ⚠️ Degraded | Database issues |" >> $GITHUB_STEP_SUMMARY
-              OVERALL="degraded"
-              ;;
-            partial)
-              echo "| Render Backend | ⚠️ Partial | Some components may have issues |" >> $GITHUB_STEP_SUMMARY
-              OVERALL="partial"
-              ;;
-            error)
-              echo "| Render Backend | ❌ Error | HTTP error |" >> $GITHUB_STEP_SUMMARY
-              OVERALL="error"
-              ;;
-            down)
-              echo "| Render Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY
-              OVERALL="critical"
-              ;;
-            skipped)
-              echo "| Render Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY
-              OVERALL="skipped"
-              ;;
-            *)
-              echo "| Render Backend | ❓ Unknown | Status: $STATUS |" >> $GITHUB_STEP_SUMMARY
-              OVERALL="unknown"
-              ;;
+            healthy) echo "| Render Backend | ✅ Healthy | Latency: ${LATENCY:-N/A}ms |" >> $GITHUB_STEP_SUMMARY; OVERALL="healthy" ;;
+            degraded) echo "| Render Backend | ⚠️ Degraded | Database issues |" >> $GITHUB_STEP_SUMMARY; OVERALL="degraded" ;;
+            partial) echo "| Render Backend | ⚠️ Partial | Some components may have issues |" >> $GITHUB_STEP_SUMMARY; OVERALL="partial" ;;
+            error) echo "| Render Backend | ❌ Error | HTTP error |" >> $GITHUB_STEP_SUMMARY; OVERALL="error" ;;
+            down) echo "| Render Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY; OVERALL="critical" ;;
+            skipped) echo "| Render Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY; OVERALL="skipped" ;;
+            *) echo "| Render Backend | ❓ Unknown | Status: $STATUS |" >> $GITHUB_STEP_SUMMARY; OVERALL="unknown" ;;
           esac
 
           echo "overall_status=$OVERALL" >> $GITHUB_OUTPUT
@@ -224,7 +200,7 @@ jobs:
               title: '🚨 Render Backend Downtime Alert',
               body: `Render backend unreachable at ${new Date().toISOString()}`,
               labels: ['alert:downtime', 'priority:high']
-            });
+            })
 
   lighthouse:
     name: Lighthouse CI
