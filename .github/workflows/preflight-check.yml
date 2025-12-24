@@ -12,7 +12,7 @@ on:
         required: false
         default: './frontend/dist'
       create_issue_on_failure:
-        description: 'Create issue if Render backend health check fails'
+        description: 'Create GitHub issue if Render backend health check fails'
         required: false
         type: boolean
         default: false
@@ -36,8 +36,10 @@ jobs:
       status: ${{ steps.health_check.outputs.status }}
 
     steps:
+      # Checkout the repository
       - uses: actions/checkout@v4
 
+      # Verify required project files exist
       - name: Environment Health Check
         id: health_check
         run: |
@@ -54,20 +56,22 @@ jobs:
               MISSING_FILES+=("$file")
             fi
           done
+
           if [ ${#MISSING_FILES[@]} -ne 0 ]; then
-            echo "❌ Missing files:"; printf '%s\n' "${MISSING_FILES[@]}"
+            echo "❌ Missing required files:"; printf '%s\n' "${MISSING_FILES[@]}"
             echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
-          echo "✅ All required files present"
+          echo "✅ All required files are present"
           echo "status=passed" >> $GITHUB_OUTPUT
 
-      - name: Summary
+      # Summarize pre-flight check results
+      - name: Pre-Flight Summary
         if: always()
         run: |
-          echo "## Pre-Flight Health Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 📝 Pre-Flight Health Check Summary" >> $GITHUB_STEP_SUMMARY
           if [ "${{ steps.health_check.outputs.status }}" == "passed" ]; then
-            echo "✅ All pre-flight checks passed" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Pre-flight checks passed successfully" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Pre-flight checks failed" >> $GITHUB_STEP_SUMMARY
 
@@ -105,9 +109,11 @@ jobs:
       overall_status: ${{ steps.summary.outputs.overall_status }}
 
     steps:
+      # Install jq for JSON parsing
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
+      # Check backend health on Render
       - name: Check Render Backend Health
         id: check-backend
         continue-on-error: true
@@ -115,31 +121,35 @@ jobs:
           RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         run: |
           if [ -z "$RENDER_BACKEND_URL" ]; then
-            echo "ℹ️ RENDER_BACKEND_URL not configured"
+            echo "ℹ️ RENDER_BACKEND_URL not configured, skipping health check"
             echo "status=skipped" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          response=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | head -n -1)
+          echo "🔍 Checking Render backend at $RENDER_BACKEND_URL/health..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
 
-          if [ "$http_code" = "200" ]; then
-            echo "✅ Render backend healthy"
-            echo "$body" | jq . || echo "$body"
-            db_status=$(echo "$body" | jq -r '.database.status // "unknown"' 2>/dev/null)
-            if [ "$db_status" = "healthy" ]; then
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Render backend is healthy"
+            echo "$BODY" | jq . || echo "$BODY"
+            DB_STATUS=$(echo "$BODY" | jq -r '.database.status // "unknown"' 2>/dev/null)
+            if [ "$DB_STATUS" = "healthy" ]; then
               echo "status=healthy" >> $GITHUB_OUTPUT
-            elif [ "$db_status" = "degraded" ]; then
+            elif [ "$DB_STATUS" = "degraded" ]; then
               echo "status=degraded" >> $GITHUB_OUTPUT
             else
               echo "status=partial" >> $GITHUB_OUTPUT
             fi
-          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
+          elif [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" != "000" ]; then
+            echo "❌ HTTP error detected ($HTTP_CODE)"
             echo "status=error" >> $GITHUB_OUTPUT
           else
+            echo "❌ Render backend unreachable"
             echo "status=down" >> $GITHUB_OUTPUT
 
+      # Measure backend response latency
       - name: Measure Render Response Time
         id: backend-latency
         if: steps.check-backend.outputs.status == 'healthy'
@@ -150,52 +160,54 @@ jobs:
           start=$(date +%s%N)
           curl -s --max-time 10 "$RENDER_BACKEND_URL/ping" > /dev/null || true
           end=$(date +%s%N)
-          latency=$(( (end - start) / 1000000 ))
-          echo "latency_ms=$latency" >> $GITHUB_OUTPUT
+          LATENCY=$(( (end - start) / 1000000 ))
+          echo "latency_ms=$LATENCY" >> $GITHUB_OUTPUT
+          echo "⏱️ Backend response time: ${LATENCY}ms"
 
-      - name: Generate Summary
+      # Generate Markdown summary
+      - name: Generate Render Backend Summary
         id: summary
         run: |
-          status="${{ steps.check-backend.outputs.status }}"
-          latency="${{ steps.backend-latency.outputs.latency_ms }}"
-
+          STATUS="${{ steps.check-backend.outputs.status }}"
+          LATENCY="${{ steps.backend-latency.outputs.latency_ms }}"
           echo "## 📊 Render Backend Health Report" >> $GITHUB_STEP_SUMMARY
           echo "| Service | Status | Details |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|--------|---------|" >> $GITHUB_STEP_SUMMARY
 
-          case "$status" in
+          case "$STATUS" in
             healthy)
-              echo "| Render Backend | ✅ Healthy | Latency: ${latency:-N/A}ms |" >> $GITHUB_STEP_SUMMARY
-              overall="healthy"
+              echo "| Render Backend | ✅ Healthy | Latency: ${LATENCY:-N/A}ms |" >> $GITHUB_STEP_SUMMARY
+              OVERALL="healthy"
               ;;
             degraded)
               echo "| Render Backend | ⚠️ Degraded | Database issues |" >> $GITHUB_STEP_SUMMARY
-              overall="degraded"
+              OVERALL="degraded"
               ;;
             partial)
               echo "| Render Backend | ⚠️ Partial | Some components may have issues |" >> $GITHUB_STEP_SUMMARY
-              overall="partial"
+              OVERALL="partial"
               ;;
             error)
               echo "| Render Backend | ❌ Error | HTTP error |" >> $GITHUB_STEP_SUMMARY
-              overall="error"
+              OVERALL="error"
               ;;
             down)
               echo "| Render Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY
-              overall="critical"
+              OVERALL="critical"
               ;;
             skipped)
               echo "| Render Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY
-              overall="skipped"
+              OVERALL="skipped"
               ;;
             *)
-              echo "| Render Backend | ❓ Unknown | Status: $status |" >> $GITHUB_STEP_SUMMARY
-              overall="unknown"
+              echo "| Render Backend | ❓ Unknown | Status: $STATUS |" >> $GITHUB_STEP_SUMMARY
+              OVERALL="unknown"
               ;;
           esac
 
-          echo "overall_status=$overall" >> $GITHUB_OUTPUT
+          echo "overall_status=$OVERALL" >> $GITHUB_OUTPUT
 
+      # Optionally create issue if backend is down
       - name: Create Issue on Critical Failure
         if: steps.check-backend.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
         uses: actions/github-script@v7
@@ -209,13 +221,16 @@ jobs:
               state: 'open',
               labels: ['alert:downtime']
             });
-            if (existing.data.length > 0) { console.log('Issue exists, skipping'); return; }
+            if (existing.data.length > 0) {
+              console.log('Issue already exists, skipping');
+              return;
+            }
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🚨 Render Backend Downtime Alert`,
-              body: `Backend unreachable at ${new Date().toISOString()}`,
-              labels: ['alert:downtime','priority:high']
+              title: '🚨 Render Backend Downtime Alert',
+              body: `Render backend unreachable at ${new Date().toISOString()}`,
+              labels: ['alert:downtime', 'priority:high']
             });
 
   lighthouse:
