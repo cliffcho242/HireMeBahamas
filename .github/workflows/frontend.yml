@@ -26,11 +26,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # --- Checkout repository ---
+      # --------------------------
+      # Checkout repository
+      # --------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- Preflight checks for required files ---
+      # --------------------------
+      # Preflight checks
+      # --------------------------
       - name: Preflight Health Check
         id: preflight
         run: |
@@ -55,13 +59,17 @@ jobs:
           echo "✅ All required files present"
           echo "status=passed" >> $GITHUB_OUTPUT
 
-      # --- Install system dependencies for scripts ---
-      - name: Install system dependencies
+      # --------------------------
+      # Install system dependencies
+      # --------------------------
+      - name: Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential jq
 
-      # --- Render backend health check ---
+      # --------------------------
+      # Render backend health check
+      # --------------------------
       - name: Render Backend Health Check
         id: render_health
         continue-on-error: true
@@ -92,7 +100,9 @@ jobs:
           else
             echo "status=down" >> $GITHUB_OUTPUT
 
-      # --- Optional: Create GitHub Issue if backend is down ---
+      # --------------------------
+      # Optional: Create GitHub Issue if backend is down
+      # --------------------------
       - name: Create Issue on Render Downtime
         if: steps.render_health.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
         uses: actions/github-script@v7
@@ -117,25 +127,29 @@ jobs:
               labels: ['alert:downtime', 'priority:high']
             });
 
-      # --- Node.js setup & frontend build ---
+      # --------------------------
+      # Node.js setup & frontend build
+      # --------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install frontend dependencies
+      - name: Install Frontend Dependencies
         working-directory: ./frontend
         run: npm ci
 
-      - name: Build frontend
+      - name: Build Frontend
         working-directory: ./frontend
         run: npm run build
 
-      # --- GitHub Pages deployment ---
+      # --------------------------
+      # GitHub Pages deployment
+      # --------------------------
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload Pages artifact
+      - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./frontend/dist
@@ -145,7 +159,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Show deployed site URL
+      - name: Show Deployed Site URL
         run: |
           REPO_NAME=$(basename $GITHUB_REPOSITORY)
           echo "✅ Frontend deployed successfully!"
