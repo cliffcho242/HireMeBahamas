@@ -1,35 +1,74 @@
-name: Lighthouse CI - Performance Monitoring
+name: SonarCloud + Lighthouse + Pages Deployment
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
-    branches:
-      - main
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
+    inputs:
+      deploy_path:
+        description: 'Path to static content for GitHub Pages (default: ./frontend/dist)'
+        required: false
+        default: './frontend/dist'
 
-# Prevent concurrent runs
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  pull-requests: write
+  issues: write
+
 jobs:
-  lighthouse:
+  sonarcloud-analysis:
+    name: SonarCloud Analysis
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check SONAR_TOKEN
+        id: check_token
+        run: |
+          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+            echo "token_set=false" >> $GITHUB_OUTPUT
+          else
+            echo "token_set=true" >> $GITHUB_OUTPUT
+
+      - name: Run SonarCloud
+        if: steps.check_token.outputs.token_set == 'true'
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=cliffcho242_HireMeBahamas
+            -Dsonar.organization=cliffcho242
+          projectBaseDir: .
+
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: sonarcloud-analysis
     permissions:
       contents: read
       pull-requests: write
-    
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential
+        run: sudo apt-get update && sudo apt-get install -y build-essential jq
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -41,47 +80,28 @@ jobs:
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: |
-          # Add retry logic for npm ci
           for i in 1 2 3; do
             if npm ci; then
-              echo "✅ Dependencies installed successfully"
+              echo "✅ Installed dependencies"
               break
             else
-              if [ $i -eq 3 ]; then
-                echo "::error::❌ Failed to install dependencies after 3 attempts"
-                exit 1
-              fi
-              echo "⚠️ Attempt $i failed, retrying..."
+              if [ $i -eq 3 ]; then exit 1; fi
               sleep 5
             fi
           done
 
-      - name: Build frontend for production
+      - name: Build frontend
         working-directory: ./frontend
         run: npm run build
         env:
-          # Use production-like settings
           NODE_ENV: production
           VITE_API_URL: https://hiremebahamas.onrender.com
-
-      - name: Bundle size analysis
-        working-directory: ./frontend
-        run: |
-          echo "## 📦 Bundle Size Analysis" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -f "dist/bundle-report.json" ]; then
-            # Extract and display bundle sizes
-            echo "Bundle analysis completed successfully" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "See detailed output in the build logs above." >> $GITHUB_STEP_SUMMARY
-          fi
 
       - name: Install Lighthouse CI
         run: npm install -g @lhci/cli@0.13.x
 
       - name: Run Lighthouse CI
-        run: |
-          lhci autorun
+        run: lhci autorun
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
 
@@ -93,45 +113,6 @@ jobs:
           path: lighthouse-reports/
           retention-days: 30
 
-      - name: Install jq for JSON parsing
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Check performance scores
-        if: always()
-        run: |
-          echo "## 🎯 Lighthouse Performance Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Parse the latest manifest.json for scores
-          if [ -f "lighthouse-reports/manifest.json" ]; then
-            echo "✅ Lighthouse CI completed successfully" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            
-            # Extract actual scores from the manifest using jq
-            PERF_SCORE=$(jq -r '.[0].summary.performance // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
-            A11Y_SCORE=$(jq -r '.[0].summary.accessibility // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
-            BP_SCORE=$(jq -r '.[0].summary."best-practices" // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
-            SEO_SCORE=$(jq -r '.[0].summary.seo // "N/A"' lighthouse-reports/manifest.json 2>/dev/null || echo "N/A")
-            
-            echo "**Scores:**" >> $GITHUB_STEP_SUMMARY
-            echo "- Performance: ${PERF_SCORE}" >> $GITHUB_STEP_SUMMARY
-            echo "- Accessibility: ${A11Y_SCORE}" >> $GITHUB_STEP_SUMMARY
-            echo "- Best Practices: ${BP_SCORE}" >> $GITHUB_STEP_SUMMARY
-            echo "- SEO: ${SEO_SCORE}" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            
-            echo "**Performance targets:**" >> $GITHUB_STEP_SUMMARY
-            echo "- 🎯 Target: 90+ for all categories" >> $GITHUB_STEP_SUMMARY
-            echo "- ⚡ First Contentful Paint: < 1.8s" >> $GITHUB_STEP_SUMMARY
-            echo "- 🖼️ Largest Contentful Paint: < 2.5s" >> $GITHUB_STEP_SUMMARY
-            echo "- 📏 Cumulative Layout Shift: < 0.1" >> $GITHUB_STEP_SUMMARY
-            echo "- 🚀 Total Blocking Time: < 200ms" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "📊 Detailed reports are available in the artifacts." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ No Lighthouse reports found" >> $GITHUB_STEP_SUMMARY
-          fi
-
       - name: Comment PR with Lighthouse results
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
@@ -140,42 +121,28 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            
-            // Check if manifest exists
             const manifestPath = path.join(process.cwd(), 'lighthouse-reports', 'manifest.json');
-            if (!fs.existsSync(manifestPath)) {
-              console.log('No manifest file found, skipping PR comment');
-              return;
-            }
-            
-            // Read manifest
+            if (!fs.existsSync(manifestPath)) return;
+
             const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-            
-            // Helper to format score with emoji
             const formatScore = (score) => {
               if (score === null || score === undefined) return 'N/A';
-              const percentage = Math.round(score * 100);
-              const emoji = percentage >= 90 ? '✅' : percentage >= 50 ? '⚠️' : '❌';
-              return `${emoji} ${percentage}`;
+              const pct = Math.round(score * 100);
+              const emoji = pct >= 90 ? '✅' : pct >= 50 ? '⚠️' : '❌';
+              return `${emoji} ${pct}`;
             };
-            
-            // Build comment
+
             let comment = '## 🎯 Lighthouse CI Performance Report\n\n';
-            
-            // Try to extract scores from first result
             if (manifest.length > 0 && manifest[0].summary) {
-              const summary = manifest[0].summary;
-              
+              const s = manifest[0].summary;
               comment += '| Category | Score | Target |\n';
               comment += '|----------|-------|--------|\n';
-              comment += `| Performance | ${formatScore(summary.performance)} | 90+ |\n`;
-              comment += `| Accessibility | ${formatScore(summary.accessibility)} | 90+ |\n`;
-              comment += `| Best Practices | ${formatScore(summary['best-practices'])} | 90+ |\n`;
-              comment += `| SEO | ${formatScore(summary.seo)} | 90+ |\n`;
-              comment += '\n';
+              comment += `| Performance | ${formatScore(s.performance)} | 90+ |\n`;
+              comment += `| Accessibility | ${formatScore(s.accessibility)} | 90+ |\n`;
+              comment += `| Best Practices | ${formatScore(s['best-practices'])} | 90+ |\n`;
+              comment += `| SEO | ${formatScore(s.seo)} | 90+ |\n\n`;
             }
-            
-            // Add performance budget details
+
             comment += '### 📏 Performance Budget\n\n';
             comment += '| Metric | Target |\n';
             comment += '|--------|--------|\n';
@@ -183,29 +150,23 @@ jobs:
             comment += '| Largest Contentful Paint | < 2.5s |\n';
             comment += '| Cumulative Layout Shift | < 0.1 |\n';
             comment += '| Total Blocking Time | < 200ms |\n';
-            comment += '| Speed Index | < 3.4s |\n';
-            comment += '\n';
-            
-            // Add bundle size info if available
-            const bundleReportPath = path.join(process.cwd(), 'frontend', 'dist', 'bundle-report.json');
-            if (fs.existsSync(bundleReportPath)) {
-              const bundleReport = JSON.parse(fs.readFileSync(bundleReportPath, 'utf8'));
+            comment += '| Speed Index | < 3.4s |\n\n';
+
+            const bundlePath = path.join(process.cwd(), 'frontend', 'dist', 'bundle-report.json');
+            if (fs.existsSync(bundlePath)) {
+              const bundle = JSON.parse(fs.readFileSync(bundlePath, 'utf8'));
               comment += '### 📦 Bundle Size\n\n';
-              comment += `- Total JS: ${bundleReport.stats.totalJS.toFixed(2)} KB\n`;
-              comment += `- Total CSS: ${bundleReport.stats.totalCSS.toFixed(2)} KB\n`;
-              
-              if (bundleReport.warnings.length > 0) {
-                comment += '\n⚠️ **Warnings:**\n';
-                bundleReport.warnings.forEach(w => {
-                  comment += `- ${w}\n`;
-                });
+              comment += `- Total JS: ${bundle.stats.totalJS.toFixed(2)} KB\n`;
+              comment += `- Total CSS: ${bundle.stats.totalCSS.toFixed(2)} KB\n`;
+              if (bundle.warnings.length > 0) {
+                comment += '\n⚠️ Warnings:\n';
+                bundle.warnings.forEach(w => { comment += `- ${w}\n`; });
               }
               comment += '\n';
             }
-            
-            comment += '📊 View detailed reports in the [workflow artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).\n';
-            
-            // Post comment
+
+            comment += `📊 [View workflow artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -213,35 +174,29 @@ jobs:
               body: comment
             });
 
-  # Monitor performance with Sentry
-  sentry-performance:
+  deploy-pages:
+    name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     needs: lighthouse
-    permissions:
-      contents: read
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
-      - name: Create Sentry release
-        uses: getsentry/action-release@v1
-        if: env.SENTRY_AUTH_TOKEN != ''
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          environment: production
-          version: ${{ github.sha }}
-          
-      - name: Upload source maps to Sentry
-        if: env.SENTRY_AUTH_TOKEN != ''
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-        run: |
-          echo "Sentry source maps upload would happen here"
-          echo "This requires building with source maps and using @sentry/cli"
+          path: ${{ github.event.inputs.deploy_path }}
+          if-no-files-found: error
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Show deployed site URL
+        run: echo "🎉 Site deployed at ${{ steps.deployment.outputs.page_url }}"
