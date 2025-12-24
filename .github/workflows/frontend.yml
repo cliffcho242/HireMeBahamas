@@ -1,27 +1,69 @@
-name: Frontend CI
+name: Frontend CI & Deploy to GitHub Pages
 
-on: [push]
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "frontend-pages"
+  cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Step 1: Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      
+
+      # Step 3: Install system dependencies
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential
-      
+
+      # Step 4: Install frontend dependencies
       - name: Install dependencies
         working-directory: ./frontend
         run: npm ci
-      
-      - name: Build frontend with TypeScript check
+
+      # Step 5: Build frontend with TypeScript check
+      - name: Build frontend
         working-directory: ./frontend
         run: npm run build
+
+      # Step 6: Configure GitHub Pages
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      # Step 7: Upload artifact for deployment
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./frontend/dist
+          if-no-files-found: error
+
+      # Step 8: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      # Step 9: Echo deployed site URL
+      - name: Show deployed site URL
+        run: |
+          REPO_NAME=$(basename $GITHUB_REPOSITORY)
+          echo "✅ Frontend deployed successfully!"
+          echo "🔗 URL: https://${GITHUB_ACTOR}.github.io/${REPO_NAME}/"
