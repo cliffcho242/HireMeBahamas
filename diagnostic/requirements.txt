@@ -5,10 +5,10 @@
 #
 
 # HTTP client with retry logic and connection pooling
-requests==2.31.0
+requests==2.32.4
 
 # SSL/TLS support
-urllib3==2.1.0
+urllib3==2.6.0
 
 # Optional: For better JSON handling
 # (requests includes json support, so this is optional)

@@ -91,7 +91,7 @@ google-auth-httplib2==0.2.0
 # Real-time Communication (Socket.IO for real-time features)
 python-socketio==5.15.0
 flask-socketio==5.4.1
-eventlet==0.37.0
+eventlet==0.40.3
 
 # GraphQL API (optional - enables /api/graphql endpoint)
 strawberry-graphql==0.287.3
