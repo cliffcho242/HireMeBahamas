@@ -26,14 +26,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # --- Checkout repository ---
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # --- Preflight checks for required files ---
       - name: Preflight Health Check
         id: preflight
         run: |
           echo "🔍 Running preflight checks..."
-          REQUIRED_FILES=(".github/workflows/ci.yml" "frontend/package.json" "api/index.py" "api/requirements.txt")
+          REQUIRED_FILES=(
+            ".github/workflows/ci.yml"
+            "frontend/package.json"
+            "api/index.py"
+            "api/requirements.txt"
+          )
           MISSING_FILES=()
           for file in "${REQUIRED_FILES[@]}"; do
             [ ! -f "$file" ] && MISSING_FILES+=("$file")
@@ -48,11 +55,13 @@ jobs:
           echo "✅ All required files present"
           echo "status=passed" >> $GITHUB_OUTPUT
 
+      # --- Install system dependencies for scripts ---
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential jq
 
+      # --- Render backend health check ---
       - name: Render Backend Health Check
         id: render_health
         continue-on-error: true
@@ -73,18 +82,17 @@ jobs:
             echo "✅ Render backend healthy"
             echo "$BODY" | jq . || echo "$BODY"
             DB_STATUS=$(echo "$BODY" | jq -r '.database.status // "unknown"' 2>/dev/null)
-            if [ "$DB_STATUS" = "healthy" ]; then
-              echo "status=healthy" >> $GITHUB_OUTPUT
-            elif [ "$DB_STATUS" = "degraded" ]; then
-              echo "status=degraded" >> $GITHUB_OUTPUT
-            else
-              echo "status=partial" >> $GITHUB_OUTPUT
-            fi
+            case "$DB_STATUS" in
+              healthy) echo "status=healthy" >> $GITHUB_OUTPUT ;;
+              degraded) echo "status=degraded" >> $GITHUB_OUTPUT ;;
+              *)        echo "status=partial" >> $GITHUB_OUTPUT ;;
+            esac
           elif [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" != "000" ]; then
             echo "status=error" >> $GITHUB_OUTPUT
           else
             echo "status=down" >> $GITHUB_OUTPUT
 
+      # --- Optional: Create GitHub Issue if backend is down ---
       - name: Create Issue on Render Downtime
         if: steps.render_health.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
         uses: actions/github-script@v7
@@ -92,13 +100,15 @@ jobs:
           script: |
             const status = '${{ steps.render_health.outputs.status }}';
             if (status !== 'down') return;
+
             const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
               labels: ['alert:downtime']
             });
-            if (existing.data.length > 0) { console.log('Issue already exists, skipping'); return; }
+            if (existing.data.length > 0) return;
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -107,12 +117,13 @@ jobs:
               labels: ['alert:downtime', 'priority:high']
             });
 
+      # --- Node.js setup & frontend build ---
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         working-directory: ./frontend
         run: npm ci
 
@@ -120,6 +131,7 @@ jobs:
         working-directory: ./frontend
         run: npm run build
 
+      # --- GitHub Pages deployment ---
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
