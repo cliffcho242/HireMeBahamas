@@ -1,10 +1,8 @@
 name: Uptime Monitoring
 
-# name: Uptime Monitoring
-
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/15 * * * *'  # Run every 15 minutes
   workflow_dispatch:
     inputs:
       create_issue_on_failure:
@@ -22,177 +20,18 @@ jobs:
     name: Application Health Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     permissions:
       contents: read
       issues: write
 
     outputs:
-      backend_status: ${{ steps.check-backend.outputs.status }}
+      railway_status: ${{ steps.check-railway.outputs.status }}
       overall_status: ${{ steps.summary.outputs.overall_status }}
 
     steps:
       - name: Install jq (required)
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Check Backend Health (Render / Railway)
-        id: check-backend
-        continue-on-error: true
-        env:
-          BACKEND_URL: ${{ vars.BACKEND_URL }}
-        run: |
-          if [ -z "$BACKEND_URL" ]; then
-            echo "ℹ️ BACKEND_URL not configured"
-            echo "status=skipped" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "🔍 Checking backend health at $BACKEND_URL/health"
-
-          response=$(curl -s -w "\n%{http_code}" --max-time 30 "$BACKEND_URL/health" || true)
-
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | head -n -1)
-
-          if [ "$http_code" = "200" ]; then
-            echo "✅ Backend healthy"
-            echo "$body" | jq . || echo "$body"
-            echo "status=healthy" >> $GITHUB_OUTPUT
-          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
-            echo "⚠️ Backend returned HTTP $http_code"
-            echo "status=error" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Backend unreachable"
-            echo "status=down" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Measure Backend Latency
-        id: backend-latency
-        if: steps.check-backend.outputs.status == 'healthy'
-        continue-on-error: true
-        env:
-          BACKEND_URL: ${{ vars.BACKEND_URL }}
-        run: |
-          start=$(date +%s%N)
-          curl -s --max-time 10 "$BACKEND_URL/health" > /dev/null || true
-          end=$(date +%s%N)
-          latency=$(( (end - start) / 1000000 ))
-          echo "latency_ms=$latency" >> $GITHUB_OUTPUT
-          echo "Latency: ${latency}ms"
-
-      - name: Generate Summary
-        id: summary
-        run: |
-          status="${{ steps.check-backend.outputs.status }}"
-          latency="${{ steps.backend-latency.outputs.latency_ms }}"
-
-          echo "## 📊 Uptime Monitoring Report" >> $GITHUB_STEP_SUMMARY
-          echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Service | Status | Details |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|--------|---------|" >> $GITHUB_STEP_SUMMARY
-
-          case "$status" in
-            healthy)
-              echo "| Backend | ✅ Healthy | Latency: ${latency:-N/A}ms |" >> $GITHUB_STEP_SUMMARY
-              overall="healthy"
-              ;;
-            error)
-              echo "| Backend | ⚠️ Error | HTTP error |" >> $GITHUB_STEP_SUMMARY
-              overall="error"
-              ;;
-            down)
-              echo "| Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY
-              overall="critical"
-              ;;
-            skipped)
-              echo "| Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY
-              overall="skipped"
-              ;;
-            *)
-              echo "| Backend | ❓ Unknown | Status: $status |" >> $GITHUB_STEP_SUMMARY
-              overall="unknown"
-              ;;
-          esac
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Overall Status: ${overall^^}" >> $GITHUB_STEP_SUMMARY
-
-          echo "overall_status=$overall" >> $GITHUB_OUTPUT
-
-      - name: Create Issue on Critical Failure
-        if: |
-          steps.check-backend.outputs.status == 'down' &&
-          (github.event_name == 'schedule' || github.event.inputs.create_issue_on_failure == 'true')
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'alert:downtime'
-            });
-
-            if (existing.data.length > 0) {
-              console.log('Downtime issue already exists');
-              return;
-            }
-
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '🚨 Backend Downtime Detected',
-              body: `
-              **Time:** ${new Date().toISOString()}
-
-              The backend service is unreachable.
-
-              **Recommended actions:**
-              1. Check Render / Railway logs
-              2. Verify database connectivity
-              3. Review recent deployments
-              `,
-              labels: ['alert:downtime', 'priority:high']
-            });Monitor application uptime and health, with alerts for issues.
-# This workflow provides:
-# - Regular health checks (every 15 minutes)
-# - Immediate notifications on failures
-# - Detailed health status in workflow summary
-# - Automatic issue creation for persistent problems
-
-on:
-  schedule:
-    # Run every 15 minutes to check application health
-    # This balances monitoring frequency with GitHub Actions minutes usage
-    - cron: '*/15 * * * *'
-  workflow_dispatch:
-    # Allow manual trigger for testing or immediate checks
-    inputs:
-      create_issue_on_failure:
-        description: 'Create issue if health check fails'
-        required: false
-        type: boolean
-        default: false
-
-concurrency:
-  group: uptime-monitoring
-  cancel-in-progress: true
-
-jobs:
-  health-check:
-    name: Application Health Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      issues: write  # Required for creating issues on failure
-    
-    outputs:
-      railway_status: ${{ steps.check-railway.outputs.status }}
-      overall_status: ${{ steps.summary.outputs.overall_status }}
-
-    steps:
       - name: Check Railway Backend Health
         id: check-railway
         continue-on-error: true
@@ -205,189 +44,106 @@ jobs:
             exit 0
           fi
 
-          echo "🔍 Checking Railway backend health..."
-          
-          # Check main health endpoint
-          # Note: Flask backend uses /api/health, FastAPI backend uses /health
-          # The deployed production backend (Railway) uses Flask, so /api/health is correct
-          health_response=$(curl -s -w "\n%{http_code}" \
-            --max-time 30 \
-            "$RAILWAY_BACKEND_URL/api/health" 2>/dev/null) || true
-          
-          http_code=$(echo "$health_response" | tail -n1)
-          body=$(echo "$health_response" | head -n -1)
-          
+          response=$(curl -s -w "\n%{http_code}" --max-time 30 "$RAILWAY_BACKEND_URL/api/health" || true)
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
           if [ "$http_code" = "200" ]; then
-            echo "✅ Railway backend is healthy (HTTP $http_code)"
-            echo "$body" | jq . 2>/dev/null || echo "$body"
-            
-            # Check database status from response
+            echo "✅ Railway backend healthy"
+            echo "$body" | jq . || echo "$body"
             db_status=$(echo "$body" | jq -r '.database.status // "unknown"' 2>/dev/null)
             if [ "$db_status" = "healthy" ]; then
-              echo "✅ Database is healthy"
               echo "status=healthy" >> $GITHUB_OUTPUT
             elif [ "$db_status" = "degraded" ]; then
-              echo "⚠️ Database is degraded"
               echo "status=degraded" >> $GITHUB_OUTPUT
             else
-              echo "⚠️ Database status unknown"
               echo "status=partial" >> $GITHUB_OUTPUT
             fi
           elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
-            echo "⚠️ Railway backend returned HTTP $http_code"
             echo "status=error" >> $GITHUB_OUTPUT
           else
-            echo "❌ Railway backend is unreachable"
             echo "status=down" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check Railway Response Time
+      - name: Measure Railway Response Time
         id: railway-latency
-        continue-on-error: true
         if: steps.check-railway.outputs.status == 'healthy'
+        continue-on-error: true
         env:
           RAILWAY_BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
         run: |
-          if [ -z "$RAILWAY_BACKEND_URL" ]; then
-            exit 0
-          fi
-
-          echo "📊 Measuring Railway response time..."
-          
-          # Measure ping endpoint latency (fast endpoint)
-          start_time=$(date +%s%N)
-          curl -s --max-time 10 "$RAILWAY_BACKEND_URL/ping" > /dev/null 2>&1 || true
-          end_time=$(date +%s%N)
-          
-          latency_ms=$(( (end_time - start_time) / 1000000 ))
-          echo "Response time: ${latency_ms}ms"
-          
-          if [ "$latency_ms" -lt 500 ]; then
-            echo "✅ Response time is excellent (<500ms)"
-          elif [ "$latency_ms" -lt 1000 ]; then
-            echo "✅ Response time is good (<1000ms)"
-          elif [ "$latency_ms" -lt 3000 ]; then
-            echo "⚠️ Response time is slow (${latency_ms}ms)"
-          else
-            echo "❌ Response time is very slow (${latency_ms}ms)"
-          fi
-          
-          echo "latency_ms=$latency_ms" >> $GITHUB_OUTPUT
-
-
+          start=$(date +%s%N)
+          curl -s --max-time 10 "$RAILWAY_BACKEND_URL/ping" > /dev/null || true
+          end=$(date +%s%N)
+          latency=$(( (end - start) / 1000000 ))
+          echo "latency_ms=$latency" >> $GITHUB_OUTPUT
 
       - name: Generate Summary
         id: summary
         run: |
+          status="${{ steps.check-railway.outputs.status }}"
+          latency="${{ steps.railway-latency.outputs.latency_ms }}"
+
           echo "## 📊 Uptime Monitoring Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Health Status" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Service | Status | Details |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|--------|---------|" >> $GITHUB_STEP_SUMMARY
-          
-          railway_status="${{ steps.check-railway.outputs.status }}"
-          railway_latency="${{ steps.railway-latency.outputs.latency_ms }}"
-          
-          # Railway status
-          case "$railway_status" in
+
+          case "$status" in
             healthy)
-              echo "| Railway Backend | ✅ Healthy | Latency: ${railway_latency:-N/A}ms |" >> $GITHUB_STEP_SUMMARY
+              echo "| Railway Backend | ✅ Healthy | Latency: ${latency:-N/A}ms |" >> $GITHUB_STEP_SUMMARY
+              overall="healthy"
               ;;
             degraded)
               echo "| Railway Backend | ⚠️ Degraded | Database issues detected |" >> $GITHUB_STEP_SUMMARY
+              overall="degraded"
               ;;
             partial)
               echo "| Railway Backend | ⚠️ Partial | Some components may have issues |" >> $GITHUB_STEP_SUMMARY
+              overall="partial"
               ;;
             error)
-              echo "| Railway Backend | ❌ Error | HTTP error response |" >> $GITHUB_STEP_SUMMARY
+              echo "| Railway Backend | ❌ Error | HTTP error |" >> $GITHUB_STEP_SUMMARY
+              overall="error"
               ;;
             down)
               echo "| Railway Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY
+              overall="critical"
               ;;
             skipped)
               echo "| Railway Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY
+              overall="skipped"
               ;;
             *)
-              echo "| Railway Backend | ❓ Unknown | Status: $railway_status |" >> $GITHUB_STEP_SUMMARY
+              echo "| Railway Backend | ❓ Unknown | Status: $status |" >> $GITHUB_STEP_SUMMARY
+              overall="unknown"
               ;;
           esac
-          
-          # Determine overall status
-          overall="healthy"
-          if [ "$railway_status" = "down" ]; then
-            overall="critical"
-          elif [ "$railway_status" = "error" ]; then
-            overall="error"
-          elif [ "$railway_status" = "degraded" ]; then
-            overall="degraded"
-          elif [ "$railway_status" = "partial" ]; then
-            overall="partial"
-          fi
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Overall Status: $(echo $overall | tr '[:lower:]' '[:upper:]')" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          echo "*This check runs every 15 minutes. For more frequent monitoring, consider using external monitoring services like UptimeRobot or Pingdom.*" >> $GITHUB_STEP_SUMMARY
-          
+          echo "### Overall Status: ${overall^^}" >> $GITHUB_STEP_SUMMARY
           echo "overall_status=$overall" >> $GITHUB_OUTPUT
 
       - name: Create Issue on Critical Failure
-        if: |
-          (steps.check-railway.outputs.status == 'down') &&
-          (github.event_name == 'schedule' || github.event.inputs.create_issue_on_failure == 'true')
+        if: steps.check-railway.outputs.status == 'down' && (github.event_name == 'schedule' || github.event.inputs.create_issue_on_failure == 'true')
         uses: actions/github-script@v7
         with:
           script: |
-            const railwayStatus = '${{ steps.check-railway.outputs.status }}';
-            const timestamp = new Date().toISOString();
-            
-            // Check for existing open issues to avoid duplicates
-            const existingIssues = await github.rest.issues.listForRepo({
+            const status = '${{ steps.check-railway.outputs.status }}';
+            if (status !== 'down') return;
+            const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
               labels: 'alert:downtime'
             });
-            
-            if (existingIssues.data.length > 0) {
-              console.log('Existing downtime issue found, skipping creation');
-              return;
-            }
-            
-            // Create issue for downtime
-            const services = [];
-            if (railwayStatus === 'down') services.push('Railway Backend');
-            
-            const title = `🚨 Service Downtime Alert: ${services.join(', ')}`;
-            const body = `## Service Downtime Detected
-            
-            **Time:** ${timestamp}
-            **Affected Services:**
-            ${services.map(s => `- ${s}`).join('\n')}
-            
-            ### Status Details
-            - Railway Backend: ${railwayStatus}
-            
-            ### Recommended Actions
-            1. Check service logs on Railway/Render dashboard
-            2. Verify database connectivity
-            3. Check for deployment issues
-            4. Review recent changes
-            
-            ---
-            *This issue was automatically created by the uptime monitoring workflow.*`;
-            
+            if (existing.data.length > 0) { console.log('Issue exists, skipping'); return; }
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: title,
-              body: body,
-              labels: ['alert:downtime', 'priority:high']
+              title: `🚨 Service Downtime Alert`,
+              body: `Backend unreachable at ${new Date().toISOString()}`,
+              labels: ['alert:downtime','priority:high']
             });
-            
-            console.log('Created downtime alert issue');
