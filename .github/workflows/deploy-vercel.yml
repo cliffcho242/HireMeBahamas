@@ -1,124 +1,20 @@
-name: Deploy to Vercel
+name: "Frogbot PR Scan (Disabled)"
 
+# Workflow triggers exist but will not run any jobs
 on:
-  push:
-    branches:
-      - main
+  pull_request_target:
+    types: [opened, synchronize]
   workflow_dispatch:
 
+permissions:
+  pull-requests: write
+  contents: read
+  security-events: write
+
 jobs:
-  deploy-vercel:
+  scan-pull-request:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    
+    if: false   # Completely disables this job
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Build frontend
-        working-directory: ./frontend
-        run: npm run build
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL || '' }}
-
-      - name: Check Vercel secrets
-        id: check-vercel
-        run: |
-          echo "Checking Vercel deployment secrets..."
-          
-          CONFIGURED=true
-          
-          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
-            echo "⚠️ WARNING: VERCEL_TOKEN secret is not set"
-            CONFIGURED=false
-          elif [ -z "${{ secrets.VERCEL_ORG_ID }}" ]; then
-            echo "⚠️ WARNING: VERCEL_ORG_ID secret is not set"
-            CONFIGURED=false
-          elif [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
-            echo "⚠️ WARNING: VERCEL_PROJECT_ID secret is not set"
-            CONFIGURED=false
-          else
-            echo "✅ All Vercel secrets are configured"
-          fi
-          
-          echo "configured=$CONFIGURED" >> $GITHUB_OUTPUT
-          
-          if [ "$CONFIGURED" != "true" ]; then
-            echo ""
-            echo "⏭️ Skipping Vercel deployment - secrets not configured"
-            echo "📖 To enable Vercel deployment, add the required secrets:"
-            echo "   • VERCEL_TOKEN"
-            echo "   • VERCEL_ORG_ID"
-            echo "   • VERCEL_PROJECT_ID"
-            echo ""
-            echo "🔗 Setup guide: FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
-            echo "🔗 ${{ github.server_url }}/${{ github.repository }}/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
-          fi
-
-      - name: Deploy to Vercel
-        if: steps.check-vercel.outputs.configured == 'true'
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          working-directory: ./
-
-      - name: Verify deployment
-        if: steps.check-vercel.outputs.configured == 'true'
-        run: |
-          echo "✅ Deployment complete!"
-          echo "Frontend + Backend deployed to Vercel"
-          echo "API endpoints available at /api/*"
-          echo ""
-          echo "🔍 Next steps:"
-          echo "1. Verify DATABASE_URL is set in Vercel environment variables"
-          echo "2. Verify SECRET_KEY and JWT_SECRET_KEY are set"
-          echo "3. Test sign-in at your Vercel deployment URL"
-          echo ""
-          echo "📖 Full deployment guide:"
-          echo "   ${{ github.server_url }}/${{ github.repository }}/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md"
-      
-      - name: Deployment Summary
-        if: always()
-        run: |
-          echo "## Vercel Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.check-vercel.outputs.configured }}" = "true" ]; then
-            echo "✅ Vercel deployment completed successfully" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Frontend**: Deployed to Vercel" >> $GITHUB_STEP_SUMMARY
-            echo "**Backend**: Serverless functions deployed" >> $GITHUB_STEP_SUMMARY
-            echo "**API**: Available at /api/*" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
-            echo "1. ✅ Configure environment variables in Vercel dashboard" >> $GITHUB_STEP_SUMMARY
-            echo "2. ✅ Test the deployment at your Vercel URL" >> $GITHUB_STEP_SUMMARY
-            echo "3. ✅ Verify sign-in functionality" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⏭️ Vercel deployment skipped" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Reason**: Required secrets not configured" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### To Enable Vercel Deployment:" >> $GITHUB_STEP_SUMMARY
-            echo "1. Get your Vercel token from https://vercel.com/account/tokens" >> $GITHUB_STEP_SUMMARY
-            echo "2. Find your Vercel Org ID and Project ID in project settings" >> $GITHUB_STEP_SUMMARY
-            echo "3. Add these as GitHub repository secrets:" >> $GITHUB_STEP_SUMMARY
-            echo "   - VERCEL_TOKEN" >> $GITHUB_STEP_SUMMARY
-            echo "   - VERCEL_ORG_ID" >> $GITHUB_STEP_SUMMARY
-            echo "   - VERCEL_PROJECT_ID" >> $GITHUB_STEP_SUMMARY
-            echo "4. See [FIX_SIGN_IN_DEPLOYMENT_GUIDE.md](${{ github.server_url }}/${{ github.repository }}/blob/main/FIX_SIGN_IN_DEPLOYMENT_GUIDE.md) for details" >> $GITHUB_STEP_SUMMARY
-          fi
+      - name: Disabled Frogbot scan
+        run: echo "⚠️ Frogbot scan is disabled. No actions will run."
