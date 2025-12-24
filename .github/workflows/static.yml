@@ -1,4 +1,4 @@
-name: Full CI/CD Workflow with Health Checks, SonarCloud, Lighthouse & Pages
+name: Full CI/CD Pipeline with Render Health Checks, Quality Gates & GitHub Pages
 
 on:
   push:
@@ -7,10 +7,12 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+# Prevent duplicate runs on the same ref
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Minimum permissions required across jobs
 permissions:
   contents: read
   issues: write
@@ -18,128 +20,170 @@ permissions:
   id-token: write
   pull-requests: write
 
+# Shared environment variables
 env:
-  BACKEND_URL: ${{ vars.BACKEND_URL }}
-  VITE_API_URL: ${{ vars.BACKEND_URL }}
+  BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+  VITE_API_URL: ${{ vars.RENDER_BACKEND_URL }}
 
+# ============================================================
+# 1. Preflight Validation & Render Backend Health Check
+# ============================================================
 jobs:
   preflight:
-    name: Pre-Flight Health Check
+    name: Preflight Validation & Health Check
     runs-on: ubuntu-latest
-    outputs:
-      status: ${{ steps.health_check.outputs.status }}
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Environment Health Check
-        id: health_check
+    outputs:
+      status: ${{ steps.health.outputs.status }}
+
+    steps:
+      # --------------------------------------------------------
+      # Checkout repository
+      # --------------------------------------------------------
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # --------------------------------------------------------
+      # Repository & Backend Health Validation
+      # --------------------------------------------------------
+      - name: Repository & Render Health Check
+        id: health
         run: |
-          echo "🔍 Running pre-flight health checks..."
-          # Check required files
-          REQUIRED_FILES=(".github/workflows/ci.yml" "api/index.py" "api/requirements.txt" "frontend/package.json")
-          MISSING_FILES=()
+          echo "🔍 Running preflight validation..."
+
+          # ----------------------------
+          # Required repository files
+          # ----------------------------
+          REQUIRED_FILES=(
+            ".github/workflows/static.yml"
+            "api/index.py"
+            "api/requirements.txt"
+            "frontend/package.json"
+          )
+
+          MISSING=()
           for file in "${REQUIRED_FILES[@]}"; do
-            if [ ! -f "$file" ]; then
-              MISSING_FILES+=("$file")
-            fi
+            [[ ! -f "$file" ]] && MISSING+=("$file")
           done
-          if [ ${#MISSING_FILES[@]} -ne 0 ]; then
-            echo "❌ Missing required files:"; printf '%s\n' "${MISSING_FILES[@]}"
-            echo "status=failed" >> $GITHUB_OUTPUT
+
+          if [[ ${#MISSING[@]} -gt 0 ]]; then
+            echo "❌ Missing required files:"
+            printf ' - %s\n' "${MISSING[@]}"
+            echo "status=failed" >> "$GITHUB_OUTPUT"
             exit 1
           fi
-          echo "✅ All required files present"
 
+          echo "✅ Repository structure valid"
+
+          # ----------------------------
           # Render backend health check
-          if [ -z "$BACKEND_URL" ]; then
-            echo "⚠️ BACKEND_URL not configured, skipping backend health check"
-            echo "status=passed" >> $GITHUB_OUTPUT
+          # ----------------------------
+          if [[ -z "$BACKEND_URL" ]]; then
+            echo "⚠️ RENDER_BACKEND_URL not set — skipping backend check"
+            echo "status=passed" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "🔍 Checking Render backend at $BACKEND_URL/health..."
-          start=$(date +%s%N)
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$BACKEND_URL/health" || true)
-          end=$(date +%s%N)
-          LATENCY_MS=$(( (end - start)/1000000 ))
-          echo "Latency: ${LATENCY_MS}ms"
+          echo "🔌 Checking Render backend: $BACKEND_URL/health"
 
-          if [ "$RESPONSE" = "200" ]; then
-            echo "✅ Render backend is healthy"
-            echo "status=passed" >> $GITHUB_OUTPUT
+          START=$(date +%s%N)
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$BACKEND_URL/health" || true)
+          END=$(date +%s%N)
+          LATENCY=$(( (END - START) / 1000000 ))
+
+          echo "Latency: ${LATENCY}ms"
+
+          if [[ "$HTTP_CODE" == "200" ]]; then
+            echo "✅ Render backend healthy"
+            echo "status=passed" >> "$GITHUB_OUTPUT"
           else
-            echo "❌ Render backend unreachable or returned HTTP $RESPONSE"
-            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "❌ Render backend unhealthy (HTTP $HTTP_CODE)"
+            echo "status=failed" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
-      - name: Validate Python Syntax
+      # --------------------------------------------------------
+      # Python syntax validation
+      # --------------------------------------------------------
+      - name: Validate Python syntax
         run: |
-          echo "🐍 Validating Python syntax..."
-          python3 -m py_compile api/index.py || { echo "❌ Python syntax error"; exit 1; }
+          echo "🐍 Checking backend Python syntax..."
+          python3 -m py_compile api/index.py
           echo "✅ Python syntax valid"
 
-      - name: Validate Node.js Configuration
+      # --------------------------------------------------------
+      # Node.js configuration validation
+      # --------------------------------------------------------
+      - name: Validate frontend configuration
         run: |
-          echo "📦 Validating Node.js configuration..."
+          echo "📦 Validating frontend package.json..."
           cd frontend
-          node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8'))" || { echo "❌ Invalid package.json"; exit 1; }
-          echo "✅ Node.js configuration valid"
+          node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
+          echo "✅ Frontend configuration valid"
 
+      # --------------------------------------------------------
+      # Preflight summary
+      # --------------------------------------------------------
       - name: Preflight Summary
         if: always()
         run: |
-          echo "## Pre-Flight Health Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Preflight Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.health_check.outputs.status }}" == "passed" ]; then
-            echo "✅ All pre-flight checks passed" >> $GITHUB_STEP_SUMMARY
-            echo "Latency: ${LATENCY_MS}ms" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.health.outputs.status }}" == "passed" ]]; then
+            echo "- Status: **PASSED**" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Pre-flight checks failed" >> $GITHUB_STEP_SUMMARY
+            echo "- Status: **FAILED**" >> $GITHUB_STEP_SUMMARY
+          fi
 
-      - name: Create Issue on Failure
+      # --------------------------------------------------------
+      # Issue automation on failure (push only)
+      # --------------------------------------------------------
+      - name: Create issue on preflight failure
         if: failure() && github.event_name == 'push'
         uses: actions/github-script@v7
         with:
           script: |
-            const title = '🚨 Pre-Flight Health Check Failed';
-            const body = `The pre-flight health check failed on commit ${process.env.GITHUB_SHA}.
-            
-Workflow run: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-            const issues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: ['ci-health-check', 'automated']
-            });
-            if (issues.data.length === 0) {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                body,
-                labels: ['ci-health-check', 'automated', 'bug']
-              });
-            }
+            const { owner, repo } = context.repo;
 
+            const existing = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: ['ci-health-check']
+            });
+
+            if (existing.data.length > 0) return;
+
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title: '🚨 Preflight Health Check Failed',
+              body: `Preflight checks failed on commit ${context.sha}.
+              
+Run: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+              labels: ['ci-health-check', 'automated', 'bug']
+            });
+
+# ============================================================
+# 2. SonarCloud Analysis (Optional / Non-blocking)
+# ============================================================
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
     needs: preflight
     if: needs.preflight.outputs.status == 'passed'
     continue-on-error: true
+
     steps:
       - uses: actions/checkout@v4
-      - name: Check SONAR_TOKEN
-        id: check_token
+
+      - name: Check Sonar token
+        id: sonar
         run: |
-          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
-            echo "token_set=false" >> $GITHUB_OUTPUT
-          else
-            echo "token_set=true" >> $GITHUB_OUTPUT
-          fi
-      - name: Analyze with SonarCloud
-        if: steps.check_token.outputs.token_set == 'true'
+          [[ -z "${{ secrets.SONAR_TOKEN }}" ]] && echo "enabled=false" >> $GITHUB_OUTPUT || echo "enabled=true" >> $GITHUB_OUTPUT
+
+      - name: Run SonarCloud
+        if: steps.sonar.outputs.enabled == 'true'
         uses: SonarSource/sonarcloud-github-action@v2.2.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -148,32 +192,42 @@ Workflow run: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/
           args: >
             -Dsonar.projectKey=cliffcho242_HireMeBahamas
             -Dsonar.organization=cliffcho242
-          projectBaseDir: .
 
+# ============================================================
+# 3. Lighthouse CI (Frontend Quality)
+# ============================================================
   lighthouse:
     name: Lighthouse CI
     runs-on: ubuntu-latest
     needs: preflight
     if: needs.preflight.outputs.status == 'passed'
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
+
       - name: Install frontend dependencies
-        working-directory: ./frontend
+        working-directory: frontend
         run: npm ci
+
       - name: Build frontend
-        working-directory: ./frontend
-        run: npm run build
+        working-directory: frontend
         env:
           NODE_ENV: production
           VITE_API_URL: ${{ env.VITE_API_URL }}
+        run: npm run build
+
       - name: Run Lighthouse CI
-        run: npm install -g @lhci/cli@0.13.x && lhci autorun
+        run: |
+          npm install -g @lhci/cli@0.13.x
+          lhci autorun
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
       - name: Upload Lighthouse reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -182,21 +236,33 @@ Workflow run: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/
           path: lighthouse-reports/
           retention-days: 30
 
+# ============================================================
+# 4. Deploy Frontend to GitHub Pages
+# ============================================================
   pages:
     name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
     needs: [preflight, lighthouse]
     if: needs.preflight.outputs.status == 'passed'
+
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url }}
+
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: ./frontend/docs
-      - id: deployment
+          path: frontend/dist
+
+      - name: Deploy to GitHub Pages
+        id: deploy
         uses: actions/deploy-pages@v4
-      - name: Show deployed site URL
-        run: echo "🎉 Site deployed at ${{ steps.deployment.outputs.page_url }}"
+
+      - name: Show deployed URL
+        run: echo "🎉 Site deployed at ${{ steps.deploy.outputs.page_url }}"
