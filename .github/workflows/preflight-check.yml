@@ -11,14 +11,14 @@ on:
         type: boolean
         default: false
 
-# Minimal permissions required for Pages deploy + issue creation
+# Minimal permissions for Pages deployment + issue automation
 permissions:
   contents: read
   pages: write
   id-token: write
   issues: write
 
-# Prevent overlapping frontend deployments
+# Prevent concurrent frontend deployments
 concurrency:
   group: frontend-pages
   cancel-in-progress: false
@@ -30,14 +30,14 @@ jobs:
 
     steps:
       # ==========================================================
-      # Source Checkout
+      # 1. Checkout Source Code
       # ==========================================================
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # ==========================================================
-      # Preflight Validation
-      # Ensures required files exist before continuing
+      # 2. Preflight Validation
+      #    Fail fast if critical files are missing
       # ==========================================================
       - name: Preflight Health Check
         id: preflight
@@ -58,7 +58,7 @@ jobs:
 
           if [ ${#MISSING_FILES[@]} -ne 0 ]; then
             echo "❌ Missing required files:"
-            printf '%s\n' "${MISSING_FILES[@]}"
+            printf ' - %s\n' "${MISSING_FILES[@]}"
             echo "status=failed" >> "$GITHUB_OUTPUT"
             exit 1
           fi
@@ -67,8 +67,8 @@ jobs:
           echo "status=passed" >> "$GITHUB_OUTPUT"
 
       # ==========================================================
-      # System Dependencies
-      # jq is used for parsing Render health responses
+      # 3. System Dependencies
+      #    jq is required for parsing Render health JSON
       # ==========================================================
       - name: Install system dependencies
         run: |
@@ -76,8 +76,8 @@ jobs:
           sudo apt-get install -y build-essential jq
 
       # ==========================================================
-      # Render Backend Health Check
-      # Non-blocking: frontend still deploys if backend is down
+      # 4. Render Backend Health Check (Non-Blocking)
+      #    Frontend deploys even if backend is down
       # ==========================================================
       - name: Render Backend Health Check
         id: render_health
@@ -92,53 +92,60 @@ jobs:
           fi
 
           RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | head -n -1)
+          HTTP_CODE=$(tail -n1 <<< "$RESPONSE")
+          BODY=$(head -n -1 <<< "$RESPONSE")
 
           if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Render backend responded successfully"
-            echo "$BODY" | jq . || echo "$BODY"
-
-            DB_STATUS=$(echo "$BODY" | jq -r '.database.status // "unknown"' 2>/dev/null)
+            DB_STATUS=$(jq -r '.database.status // "unknown"' <<< "$BODY" 2>/dev/null)
             case "$DB_STATUS" in
-              healthy)  echo "status=healthy"  >> "$GITHUB_OUTPUT" ;;
-              degraded) echo "status=degraded" >> "$GITHUB_OUTPUT" ;;
-              *)        echo "status=partial"  >> "$GITHUB_OUTPUT" ;;
+              healthy)  STATUS="healthy" ;;
+              degraded) STATUS="degraded" ;;
+              *)         STATUS="partial" ;;
             esac
-          elif [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" != "000" ]; then
-            echo "status=error" >> "$GITHUB_OUTPUT"
+          elif [ "$HTTP_CODE" != "000" ]; then
+            STATUS="error"
           else
-            echo "status=down" >> "$GITHUB_OUTPUT"
+            STATUS="down"
           fi
 
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## 🔌 Render Backend Health"
+            echo "- **Status:** $STATUS"
+            echo "- **HTTP Code:** $HTTP_CODE"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # ==========================================================
-      # Optional Incident Automation
-      # Creates an issue only if explicitly requested
+      # 5. Optional Incident Automation
+      #    Creates an issue only when explicitly requested
       # ==========================================================
       - name: Create GitHub Issue on Render Downtime
         if: steps.render_health.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
         uses: actions/github-script@v7
         with:
           script: |
+            const { owner, repo } = context.repo;
+
             const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: ['alert:downtime']
+              owner,
+              repo,
+              state: "open",
+              labels: ["alert:downtime"]
             });
 
             if (existing.data.length > 0) return;
 
             await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '🚨 Render Backend Downtime Alert',
+              owner,
+              repo,
+              title: "🚨 Render Backend Down",
               body: `Render backend unreachable at ${new Date().toISOString()}`,
-              labels: ['alert:downtime', 'priority:high']
+              labels: ["alert:downtime", "priority:high"]
             });
 
       # ==========================================================
-      # Frontend Build
+      # 6. Frontend Build
       # ==========================================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -154,7 +161,7 @@ jobs:
         run: npm run build
 
       # ==========================================================
-      # GitHub Pages Deployment
+      # 7. Deploy to GitHub Pages
       # ==========================================================
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -171,6 +178,5 @@ jobs:
 
       - name: Display deployed site URL
         run: |
-          REPO_NAME=$(basename "$GITHUB_REPOSITORY")
           echo "✅ Frontend deployed successfully"
-          echo "🔗 https://${GITHUB_ACTOR}.github.io/${REPO_NAME}/"
+          echo "🔗 ${{ steps.deployment.outputs.page_url }}"
