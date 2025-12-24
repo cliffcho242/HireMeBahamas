@@ -1,201 +1,79 @@
-name: Full CI/CD & Uptime Monitoring
-
-on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
-  workflow_dispatch:
-  schedule:
-    - cron: '*/15 * * * *'  # Uptime monitoring
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  issues: write
-  pages: write
-  id-token: write
-  pull-requests: write
-
-env:
-  BACKEND_URL: ${{ vars.BACKEND_URL }}
-  RAILWAY_BACKEND_URL: ${{ vars.RAILWAY_BACKEND_URL }}
-  VITE_API_URL: ${{ vars.BACKEND_URL }}
-
-jobs:
-  preflight:
-    name: Pre-Flight Health Check
-    runs-on: ubuntu-latest
-    outputs:
-      status: ${{ steps.health_check.outputs.status }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Environment Health Check
-        id: health_check
-        run: |
-          echo "🔍 Running pre-flight health checks..."
-          REQUIRED_FILES=(".github/workflows/ci.yml" "api/index.py" "api/requirements.txt" "frontend/package.json")
-          MISSING_FILES=()
-          for file in "${REQUIRED_FILES[@]}"; do
-            [ ! -f "$file" ] && MISSING_FILES+=("$file")
-          done
-          if [ ${#MISSING_FILES[@]} -ne 0 ]; then
-            echo "❌ Missing files: ${MISSING_FILES[*]}"
-            echo "status=failed" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-          echo "✅ All required files present"
-
-      - name: Validate Python Syntax
-        run: python3 -m py_compile api/index.py
-
-      - name: Validate Node.js Config
-        run: |
-          cd frontend
-          node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8'))"
-
-      - name: Preflight Summary
-        if: always()
-        run: |
-          echo "## Pre-Flight Health Check Summary" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.health_check.outputs.status }}" == "passed" ]; then
-            echo "✅ Pre-flight checks passed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ Pre-flight checks failed" >> $GITHUB_STEP_SUMMARY
-
-  sonarcloud:
-    name: SonarCloud Analysis
-    runs-on: ubuntu-latest
-    needs: preflight
-    if: needs.preflight.outputs.status == 'passed'
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2.2.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=cliffcho242_HireMeBahamas
-            -Dsonar.organization=cliffcho242
-          projectBaseDir: .
-
-  lighthouse:
-    name: Lighthouse CI
-    runs-on: ubuntu-latest
-    needs: preflight
-    if: needs.preflight.outputs.status == 'passed'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: node-version: 22
-      - run: |
-          cd frontend
-          npm ci
-          npm run build
-      - run: npm install -g @lhci/cli@0.13.x && lhci autorun
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: lighthouse-reports
-          path: lighthouse-reports/
-          retention-days: 30
-
-  pages:
-    name: Deploy to GitHub Pages
-    runs-on: ubuntu-latest
-    needs: [preflight, lighthouse]
-    if: needs.preflight.outputs.status == 'passed'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./frontend/docs
-      - id: deployment
-        uses: actions/deploy-pages@v4
-      - run: echo "🎉 Site deployed at ${{ steps.deployment.outputs.page_url }}"
-
+  # --------------------------
+  # Render backend uptime monitoring
+  # --------------------------
   uptime-monitoring:
-    name: Railway Backend Health Check
+    name: Render Backend Health Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
       issues: write
     steps:
-      - run: sudo apt-get update && sudo apt-get install -y jq
-        name: Install jq
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Check Railway Backend Health
-        id: check-railway
+      - name: Check Render Backend Health
+        id: check-render
         continue-on-error: true
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         run: |
-          if [ -z "$RAILWAY_BACKEND_URL" ]; then
+          if [ -z "$RENDER_BACKEND_URL" ]; then
             echo "status=skipped" >> $GITHUB_OUTPUT
             exit 0
           fi
-          response=$(curl -s -w "\n%{http_code}" --max-time 30 "$RAILWAY_BACKEND_URL/api/health" || true)
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | head -n -1)
-          if [ "$http_code" = "200" ]; then
-            db_status=$(echo "$body" | jq -r '.database.status // "unknown"' 2>/dev/null)
-            if [ "$db_status" = "healthy" ]; then
-              echo "status=healthy" >> $GITHUB_OUTPUT
-            elif [ "$db_status" = "degraded" ]; then
-              echo "status=degraded" >> $GITHUB_OUTPUT
-            else
-              echo "status=partial" >> $GITHUB_OUTPUT
-            fi
-          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            DB_STATUS=$(echo "$BODY" | jq -r '.database.status // "unknown"' 2>/dev/null)
+            case "$DB_STATUS" in
+              healthy) echo "status=healthy" >> $GITHUB_OUTPUT ;;
+              degraded) echo "status=degraded" >> $GITHUB_OUTPUT ;;
+              *)        echo "status=partial" >> $GITHUB_OUTPUT ;;
+            esac
+          elif [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" != "000" ]; then
             echo "status=error" >> $GITHUB_OUTPUT
           else
             echo "status=down" >> $GITHUB_OUTPUT
-          fi
 
-      - name: Measure Railway Latency
-        id: railway-latency
-        if: steps.check-railway.outputs.status == 'healthy'
+      - name: Measure Render Backend Latency
+        id: render-latency
+        if: steps.check-render.outputs.status == 'healthy'
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         run: |
           start=$(date +%s%N)
-          curl -s --max-time 10 "$RAILWAY_BACKEND_URL/ping" > /dev/null || true
+          curl -s --max-time 10 "$RENDER_BACKEND_URL/ping" > /dev/null || true
           end=$(date +%s%N)
           latency=$(( (end - start)/1000000 ))
           echo "latency_ms=$latency" >> $GITHUB_OUTPUT
 
-      - name: Generate Summary
+      - name: Generate Uptime Summary
         id: summary
         run: |
-          status="${{ steps.check-railway.outputs.status }}"
-          latency="${{ steps.railway-latency.outputs.latency_ms }}"
-          echo "## 📊 Uptime Monitoring Report" >> $GITHUB_STEP_SUMMARY
+          status="${{ steps.check-render.outputs.status }}"
+          latency="${{ steps.render-latency.outputs.latency_ms }}"
+          echo "## 📊 Render Backend Uptime Report" >> $GITHUB_STEP_SUMMARY
           echo "| Service | Status | Details |" >> $GITHUB_STEP_SUMMARY
           case "$status" in
-            healthy) echo "| Railway Backend | ✅ Healthy | Latency: ${latency:-N/A}ms |" >> $GITHUB_STEP_SUMMARY ;;
-            degraded) echo "| Railway Backend | ⚠️ Degraded | Database issues detected |" >> $GITHUB_STEP_SUMMARY ;;
-            partial) echo "| Railway Backend | ⚠️ Partial | Some components may have issues |" >> $GITHUB_STEP_SUMMARY ;;
-            error) echo "| Railway Backend | ❌ Error | HTTP error |" >> $GITHUB_STEP_SUMMARY ;;
-            down) echo "| Railway Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY ;;
-            skipped) echo "| Railway Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY ;;
+            healthy) echo "| Render Backend | ✅ Healthy | Latency: ${latency:-N/A}ms |" >> $GITHUB_STEP_SUMMARY ;;
+            degraded) echo "| Render Backend | ⚠️ Degraded | Database issues detected |" >> $GITHUB_STEP_SUMMARY ;;
+            partial) echo "| Render Backend | ⚠️ Partial | Some components may have issues |" >> $GITHUB_STEP_SUMMARY ;;
+            error) echo "| Render Backend | ❌ Error | HTTP error |" >> $GITHUB_STEP_SUMMARY ;;
+            down) echo "| Render Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY ;;
+            skipped) echo "| Render Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY ;;
           esac
           echo "overall_status=$status" >> $GITHUB_OUTPUT
 
       - name: Create Issue on Critical Failure
-        if: steps.check-railway.outputs.status == 'down'
+        if: steps.check-render.outputs.status == 'down'
         uses: actions/github-script@v7
         with:
           script: |
-            const status = '${{ steps.check-railway.outputs.status }}';
+            const status = '${{ steps.check-render.outputs.status }}';
             if (status !== 'down') return;
             const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
@@ -207,7 +85,7 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🚨 Railway Backend Down`,
-              body: `Backend unreachable at ${new Date().toISOString()}`,
+              title: `🚨 Render Backend Down`,
+              body: `Render backend unreachable at ${new Date().toISOString()}`,
               labels: ['alert:downtime','priority:high']
             });
