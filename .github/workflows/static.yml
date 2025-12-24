@@ -5,6 +5,11 @@ on:
   push:
     branches: ["main"]
   workflow_dispatch:
+    inputs:
+      deploy_path:
+        description: 'Path to the content to deploy (default: ./docs)'
+        required: false
+        default: './docs'
 
 permissions:
   contents: read
@@ -23,22 +28,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Configure GitHub Pages
+      # Step 2: Configure Pages environment
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      # Step 3: Upload the content to be deployed
-      - name: Upload artifact
+      # Step 3: Upload content artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './docs'  # Adjust if your site content is elsewhere
+          path: ${{ github.event.inputs.deploy_path }}
           if-no-files-found: error
 
       # Step 4: Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # Step 5: Output deployed site URL
+      - name: Show deployed site URL
+        run: echo "🎉 Site deployed at ${{ steps.deployment.outputs.page_url }}"
