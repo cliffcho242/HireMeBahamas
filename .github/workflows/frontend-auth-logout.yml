@@ -7,9 +7,9 @@ on:
   pull_request:
     paths:
       - 'frontend/**'
-  workflow_dispatch:
+  workflow_dispatch: {}
   schedule:
-    - cron: '*/15 * * * *'  # runs every 15 minutes for backend health check
+    - cron: '*/15 * * * *' # every 15 minutes
 
 jobs:
   auth-logout-test:
@@ -20,7 +20,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Use Node.js 20
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -69,7 +69,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Use Node.js 20
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -82,15 +82,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Check Node.js version
-        working-directory: frontend
-        run: node -v
-
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Install OS packages for Playwright (Linux only)
+      - name: Install Linux dependencies for Playwright
         if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt-get update
@@ -107,7 +103,7 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Serve built site on port 3000
+      - name: Serve frontend for Playwright
         working-directory: frontend
         run: |
           npx http-server ./dist -p 3000 &
@@ -120,11 +116,11 @@ jobs:
             sleep 1
           done
 
-      - name: Run Playwright auth-logout test
+      - name: Run Playwright tests
         working-directory: frontend
         run: npm run test:playwright
 
-      - name: Upload Playwright report (always)
+      - name: Upload Playwright report
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
@@ -134,16 +130,8 @@ jobs:
             frontend/test-results
           retention-days: 7
 
-      - name: Configure AWS credentials (optional)
-        if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' && env.PLAYWRIGHT_S3_BUCKET != '' }}
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
       - name: Upload Playwright artifacts to S3 (optional)
-        if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' && env.PLAYWRIGHT_S3_BUCKET != '' }}
+        if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.PLAYWRIGHT_S3_BUCKET }}
         run: |
           set -euo pipefail
           echo "Uploading Playwright artifacts to S3 bucket: $PLAYWRIGHT_S3_BUCKET"
@@ -151,7 +139,7 @@ jobs:
           aws s3 sync frontend/test-results s3://$PLAYWRIGHT_S3_BUCKET/test-results/${{ github.run_id }}/ --acl private
           aws s3 sync frontend/playwright-tests s3://$PLAYWRIGHT_S3_BUCKET/playwright-tests/${{ github.run_id }}/ --acl private
 
-      - name: Upload Playwright artifacts on failure
+      - name: Upload artifacts on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
@@ -169,16 +157,16 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
 
     steps:
-      - name: Validate Render backend URL exists
+      - name: Validate Render backend URL
         run: |
           if [ -z "${RENDER_BACKEND_URL}" ]; then
-            echo "RENDER_BACKEND_URL repository variable is missing"
+            echo "RENDER_BACKEND_URL is missing"
             exit 1
           fi
         env:
           RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
 
-      - name: Check Render backend health
+      - name: Check backend health
         id: backend
         continue-on-error: true
         run: |
@@ -196,17 +184,16 @@ jobs:
         env:
           RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
 
-      - name: Generate summary
+      - name: Generate backend summary
         run: |
-          echo "## 📊 HireMeBahamas Uptime Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 📊 HireMeBahamas Backend Uptime" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Time (UTC):** $(date -u '+%Y-%m-%d %H:%M:%S')" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Service | Status |" >> "$GITHUB_STEP_SUMMARY"
           echo "|--------|--------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Render Backend | ${{ steps.backend.outputs.status }} |" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Create GitHub issue on downtime
+      - name: Create GitHub issue if backend is down
         if: steps.backend.outputs.status == 'down'
         uses: actions/github-script@v7
         env:
