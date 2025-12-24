@@ -1,128 +1,167 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-# This workflow helps you trigger a SonarCloud analysis of your code and populates
-# GitHub Code Scanning alerts with the vulnerabilities found.
-# Free for open source project.
-
-# 1. Login to SonarCloud.io using your GitHub account
-
-# 2. Import your project on SonarCloud
-#     * Add your GitHub organization first, then add your repository as a new project.
-#     * Please note that many languages are eligible for automatic analysis,
-#       which means that the analysis will start automatically without the need to set up GitHub Actions.
-#     * This behavior can be changed in Administration > Analysis Method.
-#
-# 3. Follow the SonarCloud in-product tutorial
-#     * a. Copy/paste the Project Key and the Organization Key into the args parameter below
-#          (You'll find this information in SonarCloud. Click on "Information" at the bottom left)
-#
-#     * b. Generate a new token and add it to your Github repository's secrets using the name SONAR_TOKEN
-#          (On SonarCloud, click on your avatar on top-right > My account > Security
-#           or go directly to https://sonarcloud.io/account/security/)
-
-# Feel free to take a look at our documentation (https://docs.sonarcloud.io/getting-started/github/)
-# or reach out to our community forum if you need some help (https://community.sonarsource.com/c/help/sc/9)
-
-name: SonarCloud analysis
+name: Render Backend Uptime Monitoring
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-    types: [opened, synchronize, reopened]
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
   workflow_dispatch:
+    inputs:
+      create_issue_on_failure:
+        description: 'Create issue if health check fails'
+        required: false
+        type: boolean
+        default: false
 
-permissions:
-  pull-requests: read # allows SonarCloud to decorate PRs with analysis results
+concurrency:
+  group: render-uptime-monitoring
+  cancel-in-progress: true
 
 jobs:
-  Analysis:
+  health-check:
+    name: Application Health Check (Render)
     runs-on: ubuntu-latest
-    # Continue on error to prevent blocking CI/CD if SonarCloud is not yet set up
-    continue-on-error: true
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+
+    outputs:
+      render_status: ${{ steps.check-render.outputs.status }}
+      overall_status: ${{ steps.summary.outputs.overall_status }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for better analysis relevance
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Check if SONAR_TOKEN is set
-        id: check_token
+      - name: Check Render Backend Health
+        id: check-render
+        continue-on-error: true
+        env:
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         run: |
-          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
-            echo "SONAR_TOKEN is not set. Please follow the setup instructions in SONARCLOUD_SETUP.md"
-            echo "token_set=false" >> $GITHUB_OUTPUT
+          if [ -z "$RENDER_BACKEND_URL" ]; then
+            echo "ℹ️ RENDER_BACKEND_URL not configured"
+            echo "status=skipped" >> $GITHUB_OUTPUT
             exit 0
-          else
-            echo "token_set=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check if SonarCloud project exists
-        id: check_project
-        if: steps.check_token.outputs.token_set == 'true'
+          echo "🔍 Checking Render backend health at $RENDER_BACKEND_URL/health"
+
+          response=$(curl -s -w "\n%{http_code}" --max-time 30 "$RENDER_BACKEND_URL/health" || true)
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Render backend healthy (HTTP $http_code)"
+            echo "$body" | jq . || echo "$body"
+            db_status=$(echo "$body" | jq -r '.database.status // "unknown"' 2>/dev/null)
+            if [ "$db_status" = "healthy" ]; then
+              echo "status=healthy" >> $GITHUB_OUTPUT
+            elif [ "$db_status" = "degraded" ]; then
+              echo "status=degraded" >> $GITHUB_OUTPUT
+            else
+              echo "status=partial" >> $GITHUB_OUTPUT
+            fi
+          elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
+            echo "status=error" >> $GITHUB_OUTPUT
+          else
+            echo "status=down" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Measure Render Response Time
+        id: render-latency
+        if: steps.check-render.outputs.status == 'healthy'
+        continue-on-error: true
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         run: |
-          # Check if the SonarCloud project exists by querying the API
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -u "${SONAR_TOKEN}:" \
-            "https://sonarcloud.io/api/components/show?component=cliffcho242_HireMeBahamas")
-          
-          if [ "$HTTP_STATUS" = "200" ]; then
-            echo "SonarCloud project exists"
-            echo "project_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "SonarCloud project not found (HTTP status: $HTTP_STATUS)"
-            echo "project_exists=false" >> $GITHUB_OUTPUT
-          fi
+          start=$(date +%s%N)
+          curl -s --max-time 10 "$RENDER_BACKEND_URL/ping" > /dev/null || true
+          end=$(date +%s%N)
+          latency=$(( (end - start) / 1000000 ))
+          echo "latency_ms=$latency" >> $GITHUB_OUTPUT
 
-      - name: Analyze with SonarCloud
-        if: steps.check_token.outputs.token_set == 'true' && steps.check_project.outputs.project_exists == 'true'
-        # You can pin the exact commit or the version.
-        # uses: SonarSource/sonarcloud-github-action@v2.2.0
-        uses: SonarSource/sonarcloud-github-action@4006f663ecaf1f8093e8e4abb9227f6041f52216
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # Generate a token on Sonarcloud.io, add it to the secrets of this repo with the name SONAR_TOKEN at: https://github.com/cliffcho242/HireMeBahamas/settings/secrets/actions
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+      - name: Generate Summary
+        id: summary
+        run: |
+          status="${{ steps.check-render.outputs.status }}"
+          latency="${{ steps.render-latency.outputs.latency_ms }}"
+
+          echo "## 📊 Render Backend Uptime Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+
+          case "$status" in
+            healthy)
+              echo "| Render Backend | ✅ Healthy | Latency: ${latency:-N/A}ms |" >> $GITHUB_STEP_SUMMARY
+              overall="healthy"
+              ;;
+            degraded)
+              echo "| Render Backend | ⚠️ Degraded | Database issues detected |" >> $GITHUB_STEP_SUMMARY
+              overall="degraded"
+              ;;
+            partial)
+              echo "| Render Backend | ⚠️ Partial | Some components may have issues |" >> $GITHUB_STEP_SUMMARY
+              overall="partial"
+              ;;
+            error)
+              echo "| Render Backend | ❌ Error | HTTP error response |" >> $GITHUB_STEP_SUMMARY
+              overall="error"
+              ;;
+            down)
+              echo "| Render Backend | ❌ Down | Unreachable |" >> $GITHUB_STEP_SUMMARY
+              overall="critical"
+              ;;
+            skipped)
+              echo "| Render Backend | ⏭️ Skipped | Not configured |" >> $GITHUB_STEP_SUMMARY
+              overall="skipped"
+              ;;
+            *)
+              echo "| Render Backend | ❓ Unknown | Status: $status |" >> $GITHUB_STEP_SUMMARY
+              overall="unknown"
+              ;;
+          esac
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Overall Status: ${overall^^}" >> $GITHUB_STEP_SUMMARY
+          echo "overall_status=$overall" >> $GITHUB_OUTPUT
+
+      - name: Create Issue on Critical Failure
+        if: steps.check-render.outputs.status == 'down' && (github.event_name == 'schedule' || github.event.inputs.create_issue_on_failure == 'true')
+        uses: actions/github-script@v7
         with:
-          # Additional arguments for the SonarScanner CLI
-          args:
-            # Unique keys of your project and organization. You can find them in SonarCloud > Information (bottom-left menu)
-            # mandatory
-            -Dsonar.projectKey=cliffcho242_HireMeBahamas
-            -Dsonar.organization=cliffcho242
-            # Comma-separated paths to directories containing main source files.
-            #-Dsonar.sources= # optional, default is project base directory
-            # Comma-separated paths to directories containing test source files.
-            #-Dsonar.tests= # optional. For more info about Code Coverage, please refer to https://docs.sonarcloud.io/enriching/test-coverage/overview/
-            # Adds more detail to both client and server-side analysis logs, activating DEBUG mode for the scanner, and adding client-side environment variables and system properties to the server-side log of analysis report processing.
-            #-Dsonar.verbose= # optional, default is false
-          # When you need the analysis to take place in a directory other than the one from which it was launched, default is .
-          projectBaseDir: .
-      
-      - name: Project Not Found Instructions
-        if: steps.check_token.outputs.token_set == 'true' && steps.check_project.outputs.project_exists == 'false'
-        run: |
-          echo "::warning::SonarCloud project 'cliffcho242_HireMeBahamas' not found. The project needs to be imported first."
-          echo "::warning::Follow these steps to set up the project:"
-          echo "::warning::1. Go to https://sonarcloud.io and log in with GitHub"
-          echo "::warning::2. Click the '+' button in the top right and select 'Analyze new project'"
-          echo "::warning::3. Select your GitHub organization 'cliffcho242'"
-          echo "::warning::4. Choose the 'HireMeBahamas' repository and click 'Set Up'"
-          echo "::warning::5. Once imported, re-run this workflow"
-          echo "::warning::See SONARCLOUD_SETUP.md for detailed instructions"
+          script: |
+            const status = '${{ steps.check-render.outputs.status }}';
+            if (status !== 'down') return;
 
-      - name: Setup Instructions
-        if: steps.check_token.outputs.token_set == 'false'
-        run: |
-          echo "::warning::SonarCloud is not configured. Follow these steps to set it up:"
-          echo "::warning::1. Go to https://sonarcloud.io and log in with GitHub"
-          echo "::warning::2. Import the HireMeBahamas project"
-          echo "::warning::3. Generate a token at https://sonarcloud.io/account/security/"
-          echo "::warning::4. Add it as SONAR_TOKEN secret at https://github.com/cliffcho242/HireMeBahamas/settings/secrets/actions"
-          echo "::warning::5. See SONARCLOUD_SETUP.md for detailed instructions"
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'alert:downtime'
+            });
+
+            if (existing.data.length > 0) {
+              console.log('Issue exists, skipping creation');
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Render Backend Downtime Detected',
+              body: `## Service Downtime Detected
+
+**Time:** ${new Date().toISOString()}
+
+The Render backend service is unreachable.
+
+**Recommended actions:**
+1. Check Render dashboard logs
+2. Verify database connectivity
+3. Review recent deployments
+`,
+              labels: ['alert:downtime','priority:high']
+            });
