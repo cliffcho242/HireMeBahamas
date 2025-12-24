@@ -1,4 +1,4 @@
-name: Frontend CI & Render Backend Uptime
+name: Frontend CI & Backend Uptime Monitoring
 
 on:
   push:
@@ -9,21 +9,16 @@ on:
       - 'frontend/**'
   workflow_dispatch:
   schedule:
-    - cron: '*/15 * * * *' # Every 15 minutes
-
-env:
-  DEV_URL: ${{ secrets.RENDER_BACKEND_URL }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  PLAYWRIGHT_S3_BUCKET: ${{ secrets.PLAYWRIGHT_S3_BUCKET }}
+    - cron: '*/15 * * * *'  # runs every 15 minutes for backend health check
 
 jobs:
   auth-logout-test:
-    name: Node auth-logout Test
+    name: Run auth-logout Node test
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
@@ -48,6 +43,8 @@ jobs:
 
       - name: Run auth-logout test
         working-directory: frontend
+        env:
+          DEV_URL: ${{ secrets.RENDER_BACKEND_URL }}
         run: npm run test:auth-logout
 
       - name: Upload test output on failure
@@ -58,11 +55,19 @@ jobs:
           path: frontend/tests
 
   playwright-e2e:
-    name: Playwright E2E: auth-logout
+    name: Playwright E2E:auth-logout
     runs-on: ubuntu-latest
     needs: auth-logout-test
+    env:
+      DEV_URL: ${{ secrets.RENDER_BACKEND_URL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      PLAYWRIGHT_S3_BUCKET: ${{ secrets.PLAYWRIGHT_S3_BUCKET }}
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
@@ -76,6 +81,10 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/frontend/package-lock.json') }}-pw
           restore-keys: |
             ${{ runner.os }}-node-
+
+      - name: Check Node.js version
+        working-directory: frontend
+        run: node -v
 
       - name: Install dependencies
         working-directory: frontend
@@ -126,7 +135,7 @@ jobs:
           retention-days: 7
 
       - name: Configure AWS credentials (optional)
-        if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.PLAYWRIGHT_S3_BUCKET }}
+        if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' && env.PLAYWRIGHT_S3_BUCKET != '' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
@@ -134,9 +143,10 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Upload Playwright artifacts to S3 (optional)
-        if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.PLAYWRIGHT_S3_BUCKET }}
+        if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' && env.PLAYWRIGHT_S3_BUCKET != '' }}
         run: |
           set -euo pipefail
+          echo "Uploading Playwright artifacts to S3 bucket: $PLAYWRIGHT_S3_BUCKET"
           aws s3 sync frontend/playwright-report s3://$PLAYWRIGHT_S3_BUCKET/playwright-report/${{ github.run_id }}/ --acl private
           aws s3 sync frontend/test-results s3://$PLAYWRIGHT_S3_BUCKET/test-results/${{ github.run_id }}/ --acl private
           aws s3 sync frontend/playwright-tests s3://$PLAYWRIGHT_S3_BUCKET/playwright-tests/${{ github.run_id }}/ --acl private
@@ -153,33 +163,45 @@ jobs:
           retention-days: 7
 
   backend-uptime-monitor:
-    name: Render Backend Uptime Monitoring
+    name: Backend Uptime Monitoring
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
     steps:
-      - name: Validate backend URL
+      - name: Validate Render backend URL exists
         run: |
-          if [ -z "$DEV_URL" ]; then
-            echo "DEV_URL secret is missing"
+          if [ -z "${RENDER_BACKEND_URL}" ]; then
+            echo "RENDER_BACKEND_URL repository variable is missing"
             exit 1
           fi
+        env:
+          RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
 
-      - name: Check backend health
+      - name: Check Render backend health
         id: backend
         continue-on-error: true
         run: |
-          RESPONSE=$(curl -s -m 30 -w "\n%{http_code}" "$DEV_URL/health" || true)
+          echo "Checking backend at $RENDER_BACKEND_URL"
+          RESPONSE=$(curl -s -m 30 -w "\n%{http_code}" "$RENDER_BACKEND_URL/health" || true)
           CODE=$(echo "$RESPONSE" | tail -n1)
+
           if [ "$CODE" = "200" ]; then
             echo "status=healthy" >> "$GITHUB_OUTPUT"
           elif [ "$CODE" = "000" ]; then
             echo "status=down" >> "$GITHUB_OUTPUT"
           else
             echo "status=error" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
 
       - name: Generate summary
         run: |
-          echo "## 📊 HireMeBahamas Backend Uptime Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 📊 HireMeBahamas Uptime Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Time (UTC):** $(date -u '+%Y-%m-%d %H:%M:%S')" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Service | Status |" >> "$GITHUB_STEP_SUMMARY"
           echo "|--------|--------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Render Backend | ${{ steps.backend.outputs.status }} |" >> "$GITHUB_STEP_SUMMARY"
@@ -187,29 +209,38 @@ jobs:
       - name: Create GitHub issue on downtime
         if: steps.backend.outputs.status == 'down'
         uses: actions/github-script@v7
+        env:
+          BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
         with:
           script: |
             const { owner, repo } = context.repo;
+
             const existing = await github.rest.issues.listForRepo({
               owner,
               repo,
               state: 'open',
               labels: 'alert:downtime'
             });
-            if (existing.data.length > 0) return;
+
+            if (existing.data.length > 0) {
+              console.log('Downtime issue already exists');
+              return;
+            }
+
             await github.rest.issues.create({
               owner,
               repo,
               title: '🚨 HireMeBahamas Backend Down (Render)',
               body: [
                 '## Backend service is unreachable',
+                '',
                 `Time: ${new Date().toISOString()}`,
-                `Endpoint: ${process.env.DEV_URL}/health`,
+                `Endpoint: ${process.env.BACKEND_URL}/health`,
                 '',
                 '### Recommended Actions',
                 '- Check Render logs',
                 '- Verify database connectivity',
                 '- Review latest deployment'
               ].join('\n'),
-              labels: ['alert:downtime','priority:high']
+              labels: ['alert:downtime', 'priority:high']
             });
