@@ -7,7 +7,6 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
-# Prevent concurrent runs
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -36,7 +35,6 @@ jobs:
         id: health_check
         run: |
           echo "🔍 Running pre-flight health checks..."
-
           # Check required files
           REQUIRED_FILES=(".github/workflows/ci.yml" "api/index.py" "api/requirements.txt" "frontend/package.json")
           MISSING_FILES=()
@@ -52,7 +50,7 @@ jobs:
           fi
           echo "✅ All required files present"
 
-          # Check Render backend health
+          # Render backend health check
           if [ -z "$BACKEND_URL" ]; then
             echo "⚠️ BACKEND_URL not configured, skipping backend health check"
             echo "status=passed" >> $GITHUB_OUTPUT
@@ -70,7 +68,7 @@ jobs:
             echo "✅ Render backend is healthy"
             echo "status=passed" >> $GITHUB_OUTPUT
           else
-            echo "❌ Render backend is unreachable or returned HTTP $RESPONSE"
+            echo "❌ Render backend unreachable or returned HTTP $RESPONSE"
             echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
@@ -98,7 +96,6 @@ jobs:
             echo "Latency: ${LATENCY_MS}ms" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Pre-flight checks failed" >> $GITHUB_STEP_SUMMARY
-          fi
 
       - name: Create Issue on Failure
         if: failure() && github.event_name == 'push'
@@ -108,8 +105,7 @@ jobs:
             const title = '🚨 Pre-Flight Health Check Failed';
             const body = `The pre-flight health check failed on commit ${process.env.GITHUB_SHA}.
             
-            Workflow run: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-            
+Workflow run: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
             const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
