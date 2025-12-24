@@ -1,58 +1,185 @@
-name: Uptime Monitoring (Render Backend)
+name: Frontend CI & Render Backend Uptime
 
 on:
-  schedule:
-    - cron: '*/15 * * * *'
+  push:
+    paths:
+      - 'frontend/**'
+  pull_request:
+    paths:
+      - 'frontend/**'
   workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *' # Every 15 minutes
 
-concurrency:
-  group: uptime-monitoring
-  cancel-in-progress: true
+env:
+  DEV_URL: ${{ secrets.RENDER_BACKEND_URL }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  PLAYWRIGHT_S3_BUCKET: ${{ secrets.PLAYWRIGHT_S3_BUCKET }}
 
 jobs:
-  health-check:
+  auth-logout-test:
+    name: Node auth-logout Test
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    permissions:
-      contents: read
-      issues: write
-
     steps:
-      - name: Validate Render backend URL exists
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run CI sanity Node test
+        working-directory: frontend
+        run: node ./tests/ci-sanity-test.cjs
+
+      - name: Run auth-logout test
+        working-directory: frontend
+        run: npm run test:auth-logout
+
+      - name: Upload test output on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-logout-test-logs
+          path: frontend/tests
+
+  playwright-e2e:
+    name: Playwright E2E: auth-logout
+    runs-on: ubuntu-latest
+    needs: auth-logout-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/frontend/package-lock.json') }}-pw
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install OS packages for Playwright (Linux only)
+        if: ${{ runner.os == 'Linux' }}
         run: |
-          if [ -z "${RENDER_BACKEND_URL}" ]; then
-            echo "RENDER_BACKEND_URL repository variable is missing"
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libxss1 libasound2t64 libgbm1 \
+            libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libpangocairo-1.0-0 \
+            libgtk-3-0 libnotify4 libgdk-pixbuf2.0-0 libxkbcommon0
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Serve built site on port 3000
+        working-directory: frontend
+        run: |
+          npx http-server ./dist -p 3000 &
+          for i in {1..30}; do
+            if curl --silent --fail http://localhost:3000/ >/dev/null; then
+              echo "Server is up"
+              break
+            fi
+            echo "Waiting for server... ($i)"
+            sleep 1
+          done
+
+      - name: Run Playwright auth-logout test
+        working-directory: frontend
+        run: npm run test:playwright
+
+      - name: Upload Playwright report (always)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 7
+
+      - name: Configure AWS credentials (optional)
+        if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.PLAYWRIGHT_S3_BUCKET }}
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload Playwright artifacts to S3 (optional)
+        if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.PLAYWRIGHT_S3_BUCKET }}
+        run: |
+          set -euo pipefail
+          aws s3 sync frontend/playwright-report s3://$PLAYWRIGHT_S3_BUCKET/playwright-report/${{ github.run_id }}/ --acl private
+          aws s3 sync frontend/test-results s3://$PLAYWRIGHT_S3_BUCKET/test-results/${{ github.run_id }}/ --acl private
+          aws s3 sync frontend/playwright-tests s3://$PLAYWRIGHT_S3_BUCKET/playwright-tests/${{ github.run_id }}/ --acl private
+
+      - name: Upload Playwright artifacts on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+            frontend/playwright-tests
+          retention-days: 7
+
+  backend-uptime-monitor:
+    name: Render Backend Uptime Monitoring
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate backend URL
+        run: |
+          if [ -z "$DEV_URL" ]; then
+            echo "DEV_URL secret is missing"
             exit 1
           fi
-        env:
-          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
 
-      - name: Check Render backend health
+      - name: Check backend health
         id: backend
         continue-on-error: true
         run: |
-          echo "Checking backend at $RENDER_BACKEND_URL"
-
-          RESPONSE=$(curl -s -m 30 -w "\n%{http_code}" "$RENDER_BACKEND_URL/health" || true)
+          RESPONSE=$(curl -s -m 30 -w "\n%{http_code}" "$DEV_URL/health" || true)
           CODE=$(echo "$RESPONSE" | tail -n1)
-
           if [ "$CODE" = "200" ]; then
             echo "status=healthy" >> "$GITHUB_OUTPUT"
           elif [ "$CODE" = "000" ]; then
             echo "status=down" >> "$GITHUB_OUTPUT"
           else
             echo "status=error" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
 
       - name: Generate summary
         run: |
-          echo "## 📊 HireMeBahamas Uptime Report" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 📊 HireMeBahamas Backend Uptime Report" >> "$GITHUB_STEP_SUMMARY"
           echo "**Time (UTC):** $(date -u '+%Y-%m-%d %H:%M:%S')" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Service | Status |" >> "$GITHUB_STEP_SUMMARY"
           echo "|--------|--------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Render Backend | ${{ steps.backend.outputs.status }} |" >> "$GITHUB_STEP_SUMMARY"
@@ -60,38 +187,29 @@ jobs:
       - name: Create GitHub issue on downtime
         if: steps.backend.outputs.status == 'down'
         uses: actions/github-script@v7
-        env:
-          BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
         with:
           script: |
             const { owner, repo } = context.repo;
-
             const existing = await github.rest.issues.listForRepo({
               owner,
               repo,
               state: 'open',
               labels: 'alert:downtime'
             });
-
-            if (existing.data.length > 0) {
-              console.log('Downtime issue already exists');
-              return;
-            }
-
+            if (existing.data.length > 0) return;
             await github.rest.issues.create({
               owner,
               repo,
               title: '🚨 HireMeBahamas Backend Down (Render)',
               body: [
                 '## Backend service is unreachable',
-                '',
                 `Time: ${new Date().toISOString()}`,
-                `Endpoint: ${process.env.BACKEND_URL}/health`,
+                `Endpoint: ${process.env.DEV_URL}/health`,
                 '',
                 '### Recommended Actions',
                 '- Check Render logs',
                 '- Verify database connectivity',
                 '- Review latest deployment'
               ].join('\n'),
-              labels: ['alert:downtime', 'priority:high']
+              labels: ['alert:downtime','priority:high']
             });
