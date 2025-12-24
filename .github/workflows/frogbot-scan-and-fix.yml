@@ -1,39 +1,31 @@
-name: "Frogbot Scan and Fix"
-# DISABLED: This workflow is disabled. Remove 'if: false' to enable.
+name: "Disabled CI Scans - HireMeBahamas"
+
+# Workflow triggers exist but no jobs will run
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:  # Allow manual trigger if needed
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
   security-events: write
+
 jobs:
-  create-fix-pull-requests:
+  master-playbook-guards:
     runs-on: ubuntu-latest
-    # DISABLED: Set to false to disable this workflow
-    if: false
+    if: false   # Completely disables Master Playbook
     steps:
-      - uses: actions/checkout@v4
+      - name: Disabled Master Playbook
+        run: echo "⚠️ Master Playbook is disabled. No security checks will run."
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libjpeg-dev libpng-dev libwebp-dev zlib1g-dev
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - uses: jfrog/frogbot@v2
-        env:
-          JF_URL: ${{ secrets.JF_URL }}
-          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-          JF_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JF_INSTALL_DEPS_CMD: "pip install --only-binary=:all: -r backend/requirements.txt && cd frontend && npm ci"
+  frogbot-scan:
+    runs-on: ubuntu-latest
+    if: false   # Completely disables JFrogBot
+    steps:
+      - name: Disabled Frogbot scan
+        run: echo "⚠️ Frogbot scan is disabled. No actions will run."
