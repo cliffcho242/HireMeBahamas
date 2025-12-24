@@ -26,11 +26,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Preflight Health Check
       - name: Preflight Health Check
         id: preflight
         run: |
@@ -38,25 +36,23 @@ jobs:
           REQUIRED_FILES=(".github/workflows/ci.yml" "frontend/package.json" "api/index.py" "api/requirements.txt")
           MISSING_FILES=()
           for file in "${REQUIRED_FILES[@]}"; do
-            if [ ! -f "$file" ]; then
-              MISSING_FILES+=("$file")
-            fi
+            [ ! -f "$file" ] && MISSING_FILES+=("$file")
           done
+
           if [ ${#MISSING_FILES[@]} -ne 0 ]; then
             echo "❌ Missing files:"; printf '%s\n' "${MISSING_FILES[@]}"
             echo "status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi
+
           echo "✅ All required files present"
           echo "status=passed" >> $GITHUB_OUTPUT
 
-      # Step 3: Install system dependencies (jq needed for health check)
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential jq
 
-      # Step 4: Render Backend Health Check
       - name: Render Backend Health Check
         id: render_health
         continue-on-error: true
@@ -89,7 +85,6 @@ jobs:
           else
             echo "status=down" >> $GITHUB_OUTPUT
 
-      # Step 5: Optional: Create GitHub Issue if backend is down
       - name: Create Issue on Render Downtime
         if: steps.render_health.outputs.status == 'down' && github.event.inputs.create_issue_on_failure == 'true'
         uses: actions/github-script@v7
@@ -112,39 +107,32 @@ jobs:
               labels: ['alert:downtime', 'priority:high']
             });
 
-      # Step 6: Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # Step 7: Install frontend dependencies
       - name: Install dependencies
         working-directory: ./frontend
         run: npm ci
 
-      # Step 8: Build frontend
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
 
-      # Step 9: Configure GitHub Pages
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
-      # Step 10: Upload artifact for deployment
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./frontend/dist
           if-no-files-found: error
 
-      # Step 11: Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
-      # Step 12: Show deployed site URL
       - name: Show deployed site URL
         run: |
           REPO_NAME=$(basename $GITHUB_REPOSITORY)
