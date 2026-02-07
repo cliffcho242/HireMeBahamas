@@ -8,8 +8,8 @@
 
 # Core Framework & Server (Latest stable versions)
 # Flask is included for Railway deployment (final_backend_postgresql.py) and api/backend_app/flask_backend.py
-flask==3.1.0
-flask-cors==5.0.0
+flask==3.1.1
+flask-cors==6.0.0
 flask-caching==2.3.0
 flask-limiter==3.8.0
 fastapi==0.115.6
@@ -37,8 +37,8 @@ psycopg2-binary==2.9.11
 python-jose[cryptography]==3.5.0
 
 # Cryptography dependencies (ensures 'jose' module works)
-cryptography==43.0.3
-ecdsa==0.19.0
+cryptography==44.0.1
+ecdsa==0.19.1
 # pyasn1 version is now controlled by python-jose 3.5.0 (requires >=0.5.0)
 rsa==4.9
 
@@ -60,7 +60,7 @@ python-decouple==3.8
 email-validator==2.3.0
 
 # File Upload Handling
-python-multipart==0.0.20
+python-multipart==0.0.21
 aiofiles==25.1.0
 
 # Media & File Processing
